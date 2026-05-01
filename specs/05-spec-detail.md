@@ -18,12 +18,13 @@
   - shows a small badge per endpoint with the count of open findings, coloured by max severity
 - Findings list (right pane):
   - default sort: severity desc → category asc → endpoint-path asc
-  - filter bar above the list:
-    - severity multi-select (`critical | high | medium | low`)
-    - category multi-select (`clarity | design | risk`)
-    - status toggle (default: `open` only; toggle to also show `applied`, `rejected`, `stale`, `outdated`)
-    - endpoint-path free-text search
-  - each finding card shows:
+  - filter bar above the list (state persisted in URL query string per `specs/ind-epic-review.md` Q5 — reload, share-link, and browser-back all preserve the filter):
+    - severity multi-select (`critical | high | medium | low`) → `?severity=critical,high`
+    - category multi-select (`clarity | design | risk`) → `?category=design`
+    - status toggle (default: `open` only; toggle to also show `applied`, `rejected`, `stale`, `outdated`) → `?status=open,applied`
+    - endpoint-path free-text search → `?search=/orders`
+    - URL is updated via Next.js `useRouter().replace()` (no history pollution); on first load filters are read from the URL query and applied as initial state
+  - each finding card uses the compact card density (`p-4`) per `prd-decisions.md` §"Components" Cards and shows:
     - title (headline)
     - severity badge (colour-coded) + category badge
     - "N endpoints affected" with expandable list of `METHOD path` rows
@@ -47,19 +48,19 @@
 
 ## Acceptance criteria
 
-1. `/specs/[specId]` for a valid spec in the user's workspace renders the header with name, score badge, status pill, source URL, last-analyzed timestamp.
+1. `/specs/[specId]` for a valid spec in the user's workspace renders the header with name, quality-score badge (colour thresholds per `prd-decisions.md` §"Color Palette" — ≥80 emerald, 60–79 amber, <60 red), status pill (colours per `prd-decisions.md` §"Components" Status-Pills mapping), source URL, last-analyzed timestamp.
 2. While `analysisStatus = analyzing`, the right pane shows a spinner and the client polls every 3 s; when status flips to `completed`, the findings render without a manual refresh.
 3. Findings render in the default sort: severity desc → category asc → endpoint-path asc.
-4. Each finding card shows title, severity badge, category badge, "N endpoints affected" (with `affectedEndpoints[]` expanded), narration, rationale, patch summary.
-5. "Show diff" expands to a side-by-side diff of the affected JSON sub-tree (computed by applying `patchOps` to the relevant slice of `Spec.currentJson`).
-6. "Show JSON Patch ops" expands to a table of `op` / `path` / `value` rows.
+4. Each finding card shows title, severity badge (colour per `prd-decisions.md` §"Color Palette" semantic mapping: critical→red, high→orange, medium→amber, low→blue), category badge, "N endpoints affected" (with `affectedEndpoints[]` expanded), narration, rationale, patch summary.
+5. "Show diff" expands to a side-by-side `react-diff-viewer-continued` diff of the affected JSON sub-tree (computed by applying `patchOps` to the relevant slice of `Spec.currentJson`), themed per `prd-decisions.md` §"Color Palette" Diff-Viewer (green-500/15 additions, red-500/15 deletions), monospace, with line numbers.
+6. "Show JSON Patch ops" expands to a table of `op` / `path` / `value` rows, with `path` and `value` cells rendered in monospace (JetBrains Mono per `prd-decisions.md` §"Typography").
 7. Apply / Reject buttons are rendered, disabled, with tooltip "Implemented in Epic 06".
-8. Severity, category, and status filters narrow the list. Default status filter is `open`.
-9. Endpoint-path search narrows by substring match against any of the finding's `affectedEndpoints[].path`.
-10. Endpoint list (left pane) groups endpoints by `tags[0]` (or "untagged"), is collapsible per group, and shows per-endpoint open-finding counts.
-11. Clicking an endpoint highlights / scrolls to its first finding in the right pane.
+8. Severity, category, and status filters narrow the list. Default status filter is `open`. **Filter state is persisted in the URL query string** (e.g. `?severity=critical,high&status=open&search=/orders`); reload preserves the filter; share-link with that URL applies the same filter for the recipient.
+9. Endpoint-path search narrows by substring match against any of the finding's `affectedEndpoints[].path`. The search term is also persisted in the URL query (`?search=`).
+10. Endpoint list (left pane) groups endpoints by `tags[0]` (or "untagged"), is collapsible per group, shows per-endpoint open-finding counts (badge coloured by max severity per `prd-decisions.md` §"Color Palette"), and renders `METHOD path` rows in monospace (JetBrains Mono).
+11. Clicking an endpoint scrolls the right pane to the first matching finding card and applies a temporary `ring-2 ring-violet-500` outline (~1.5 s) per the violet accent colour in `prd-decisions.md` §"Color Palette".
 12. Spec belonging to another workspace returns 404 (verified by server-side workspace check).
-13. `analysisStatus = failed` shows the `analysisError` and a "Retry analysis" button; clicking it triggers `reanalyzeSpecAction` from Epic 04.
+13. `analysisStatus = failed` renders an error card with the `analysisError` message and a primary "Retry analysis" button (violet per `prd-decisions.md` §"Components" Buttons); clicking it triggers `reanalyzeSpecAction` from Epic 04.
 14. Zero findings on a completed analysis shows the "No findings" empty state.
 15. Filters producing zero matches show the "No findings match" empty state.
 16. Vitest tests above pass.
@@ -91,8 +92,8 @@
 
 ## Open questions
 
-- Diff library final pick: `react-diff-viewer-continued` is the default recommendation. If shadcn / Next.js 16 introduce a built-in `monaco-diff-editor` integration, use that. Confirm at implementation time.
+- (resolved) Diff library: `react-diff-viewer-continued`, side-by-side, monospace, line numbers on, custom theme using the GitHub-style colour tokens (green-500/15 additions, red-500/15 deletions, thin coloured left border) per `prd-decisions.md` §"Components" Diff-Viewer and §"Color Palette" Diff-Viewer.
 - Endpoint-list grouping: by `tags[0]` is fine for most specs but some specs use multiple tags per endpoint or no tags at all. Recommendation: group by `tags[0]` when present, else "untagged"; do not duplicate endpoints into multiple groups.
-- Highlight / scroll behaviour on endpoint-click: scroll the right pane to the first matching finding card and apply a temporary outline. Confirm visual treatment in implementation.
-- Filter persistence: keep filters in the URL query string (so reload + share-link work) or in client state only? Recommendation: URL query — Engineer-UX expects deep-linkable filters.
+- (resolved) Highlight uses the violet accent colour from `prd-decisions.md` §"Color Palette" — temporary `ring-2 ring-violet-500` outline applied to the target finding card on scroll.
+- (resolved per `specs/ind-epic-review.md` Q5) Filter state lives in the URL query string for reload-safety and share-link support.
 - Polling vs SSE: polling is simpler in v0.1 (see Epic 04 brainstorming I2). If Vercel function logs show high cold-start latency, revisit in Epic 04.

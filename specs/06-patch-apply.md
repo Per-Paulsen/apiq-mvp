@@ -4,14 +4,22 @@
 
 ## Scope
 
+- **Shared analysis-library imports** — `applyFindingAction` and `undoApplyAction` consume helpers owned by Epic 04:
+  - `validatePatchOps` from `src/lib/analysis/validate-patches.ts` (the cycle-aware patch + hallucination validator).
+  - `cycleStripSpec` from `src/lib/analysis/stringify-spec.ts` (used to ensure `currentJson` is acyclic before `applyPatch`; Epic 03 already stores it that way, but a defensive call is cheap and means a future loader change can't silently break this epic).
+  Both are ports of the Epic 00 spike (`scripts/spike/validate-patches.ts`, `scripts/spike/stringify-spec.ts`) and are consumed verbatim — do not re-implement.
 - Server actions:
   - `applyFindingAction({ findingId })`:
     1. `getRequiredSession()` — workspace check.
     2. Apply rate-limit check (≤30 applies per hour per workspace; reuse `WorkspaceActionLog` from Epic 03).
     3. Load the Finding; require `status = 'open'` (else return `{ kind: 'invalid_status' }`).
     4. Load the Spec + currentVersion.
-    5. Validate `patchOps` against `Spec.currentJson` using `fast-json-patch.validate`. If validation fails (path doesn't exist, wrong op type, etc.) → set finding `status = 'stale'`, return `{ kind: 'patch_stale', message }`. **Do not** mutate the spec.
-    6. Apply: `const newJson = fast-json-patch.applyPatch(deepClone(currentJson), patchOps, /*validate*/ true).newDocument`.
+    5. Validate `patchOps` against `Spec.currentJson` using `validatePatchOps` from `src/lib/analysis/validate-patches.ts` (ported from `scripts/spike/validate-patches.ts` — Epic 00 reference implementation). The validator combines:
+       - `fast-json-patch.validate` against a `structuredClone` of the cycle-stripped `currentJson`,
+       - a hallucination check that resolves each op's source pointer (RFC 6901): for `add` the parent must exist; for `replace`/`remove`/`test` the `path` must exist; for `move`/`copy` the `from` must exist (the destination `path` is created by the op and must NOT be checked — this is bug-fix #1 from the spike), and
+       - a `structuredClone`-based `applyPatch` dry-run to confirm path resolution.
+       If validation fails (`!applyClean` OR `hallucinated`) → set finding `status = 'stale'`, return `{ kind: 'patch_stale', message }` (using the validator's `applyError` or `hallucinationCheck.details`). **Do not** mutate the spec. The validator MUST be called against the cycle-stripped `currentJson` (Epic 03 stores it that way; Epic 04 prompts the LLM with the same shape — all three observers agree).
+    6. Apply: `const newJson = fast-json-patch.applyPatch(structuredClone(currentJson), patchOps, /*validate*/ true).newDocument`. `structuredClone` is mandatory (Node 17+; available in Vercel runtime) — `JSON.parse(JSON.stringify(...))` will choke on any value that becomes non-JSON during prior in-memory transforms, and `currentJson` may carry cycle markers (`{"$ref":"#cyclic"}`) per Epic 03; the markers are themselves ordinary JSON and survive cloning intact.
     7. In a single transaction:
        - create `SpecVersion { specId, parentVersionId: currentVersionId, versionNumber: maxVersionNumber + 1, json: newJson, label: finding.title }`
        - update `Spec.currentJson = newJson`, `Spec.currentVersionId = newVersion.id`
@@ -31,6 +39,7 @@
   - `undoRejectAction({ findingId })`:
     - require `status = 'rejected'`; set `status = 'open'`, clear `rejectedAt`.
 - Wire these actions into the Spec Detail screen (Epic 05): enable the Apply / Reject buttons, add Undo Apply on `applied` cards, Undo Reject on `rejected` cards. `stale` and `outdated` cards show a read-only badge with a "Re-analyze to refresh" hint that calls `reanalyzeSpecAction` (Epic 04).
+- When `applyFindingAction` returns `{ kind: 'patch_stale' }`, the UI MUST NOT show a destructive / error toast. Instead it (a) silently re-renders the finding card in its new `stale` state (status badge changes from `open` to `stale`), and (b) shows a non-blocking inline hint on that single card: "This patch is no longer applicable to the current spec. Re-analyze to refresh." with a "Re-analyze" button calling `reanalyzeSpecAction` (Epic 04). Per Epic 00 results: hallucinated patches are an expected residual (≤6.7% in the spike), and the user should never see an apply-error toast for them.
 - Add a **Versions drawer** to Spec Detail: collapsible side drawer listing all SpecVersions for the spec (newest first), each row showing `versionNumber`, `label`, `createdAt`. Read-only — no rollback-to-version action in v0.1 (see Out of scope).
 - Diff preview on the finding card (already scaffolded in Epic 05) is now also computed live: when the user expands "Show diff", `fast-json-patch.applyPatch` is invoked client-side on a sub-tree slice to render before/after. (Server-side computation is also acceptable; pick whichever has lower complexity in implementation.)
 - Tests (Vitest):
@@ -46,13 +55,18 @@
 ## Acceptance criteria
 
 1. Apply on an `open` finding with valid `patchOps`: a new `SpecVersion` is created, `Spec.currentJson` and `Spec.currentVersionId` update, finding becomes `applied` with `appliedAt` and `appliedInVersionId` set. `versionNumber` is `previousMax + 1`.
-2. Apply on a finding whose `patchOps` reference a non-existent path: finding flips to `status = 'stale'`, the spec is **not** mutated, no SpecVersion is created. Server action returns `{ kind: 'patch_stale' }`.
+2. Apply on a finding whose `patchOps` fail validation flips the finding to `status = 'stale'`, does NOT mutate the spec, and creates no SpecVersion; the server action returns `{ kind: 'patch_stale' }`. The three hallucination shapes that must each be tested:
+   - 2a. `add` whose parent path does not exist (e.g. `add /paths/~1foo/get/parameters/-` when `/paths/~1foo/get` is missing). Stale.
+   - 2b. `replace` / `remove` / `test` whose `path` does not exist. Stale.
+   - 2c. `move` or `copy` whose `from` does not exist. Stale.
+   - 2d. `move` or `copy` whose `path` (destination) ALREADY exists is NOT stale — `path` is the destination, created by the op (per RFC 6902 / `validate-patches.ts`). This is the spike's bug-fix and must remain green.
 3. Reject on an `open` finding sets `status = 'rejected'` and `rejectedAt`. No SpecVersion changes.
 4. Undo Apply on the latest applied finding (whose `appliedInVersionId === Spec.currentVersionId`): creates a new SpecVersion containing the parent version's `json`, sets it as current, flips the finding back to `open`.
 5. Undo Apply on an applied finding that is NOT the latest apply (because another apply happened on top of it) returns `{ kind: 'not_latest_apply' }` and changes nothing.
 6. Undo Reject on a rejected finding flips it back to `open` and clears `rejectedAt`.
 7. Apply / Reject / Undo buttons are visible and functional on the Spec Detail screen for the appropriate finding statuses.
 8. `stale` and `outdated` finding cards render a read-only badge plus "Re-analyze to refresh" button that calls Epic 04's `reanalyzeSpecAction`.
+8a. When `applyFindingAction` returns `{ kind: 'patch_stale' }`, the UI does NOT show an error toast. The finding card transitions to `stale` and shows the inline "This patch is no longer applicable, re-analyze" hint with a working Re-analyze button. (Tested via Vitest + RTL: simulate the action returning `patch_stale`, assert no `aria-live=assertive` error toast is rendered.)
 9. The Versions drawer lists all SpecVersions (newest first) with `vN`, label, timestamp. The current version is visually marked.
 10. After an Apply, the UI re-renders without a full page reload (server-action revalidation): the finding card moves to `applied`, the quality score recomputes (server-side, in a follow-up cycle, or by re-reading the persisted `Spec.qualityScore` — see Open Questions).
 11. Cross-workspace apply / reject / undo returns 404 (workspace check via `getRequiredSession`).
@@ -77,7 +91,7 @@
 - **Reject** — mark a finding as `rejected` without changing the spec.
 - **Undo Apply** — only valid for the most recent `applied` finding. Creates a new SpecVersion that copies the parent version's JSON (the state before the apply), and flips the finding back to `open`. **Linear** — cannot undo applies that have other applies on top.
 - **Undo Reject** — flips a `rejected` finding back to `open`. Always valid.
-- **`stale` (status)** — set when an apply is attempted but the patch ops no longer validate against `Spec.currentJson` (path missing, wrong op kind, etc.). Read-only; user must re-analyze to get a fresh finding.
+- **`stale` (status)** — set when `validatePatchOps` (Epic 04 lib, ported from `scripts/spike/validate-patches.ts`) returns `!applyClean` OR `hallucinationCheck.hallucinated` against `Spec.currentJson` at apply time. Read-only; user must re-analyze. This gate is the production safety net that Epic 04's pass-criterion 2 (≤5% hallucination) relies on per research-spike.md §"Pass-criterion 2 relaxation rationale" — without this gate, Epic 04 cannot ship.
 - **`outdated` (status)** — set by Epic 03 re-pull on all previously open findings (the spec was replaced wholesale). Distinct from `stale`. Read-only.
 - **SpecVersion graph** — every SpecVersion has a `parentVersionId` (except the initial). Apply creates a child of `currentVersion`. Undo Apply creates a child whose `json` equals the *grandparent*'s `json` — keeping the graph linear, never re-pointing parents.
 - **Versions drawer** — read-only list of SpecVersions in the Spec Detail screen.

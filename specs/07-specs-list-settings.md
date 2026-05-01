@@ -8,9 +8,9 @@
 ### Specs List
 
 - `(app)/specs/page.tsx` — index of all specs in the user's workspace.
-- Layout: a table (shadcn `DataTable` or simple `Table`) with columns:
+- Layout: a shadcn `Table` (sticky header, row-hover `bg-accent/50`, no zebra stripes, compact density `py-2.5` per `prd-decisions.md` §"Components" Tables) with columns:
   - Name (link to `/specs/[specId]`)
-  - Quality score (badge, coloured per the C2 thresholds: ≥80 green, 60-79 yellow, <60 red; "—" if unanalysed)
+  - Quality score (badge, colours and thresholds per `prd-decisions.md` §"Color Palette" Quality-Score-Badges: ≥80 emerald, 60–79 amber, <60 red; "—" if unanalysed)
   - Status pill (`pending | analyzing | completed | failed`)
   - Open / applied / rejected finding counts (small triplet)
   - Source URL (truncated, with full URL on hover)
@@ -18,11 +18,11 @@
   - Row actions menu: "Re-analyze", "Re-pull from URL" (hidden for `sourceType=sample` and authed-pull specs), "Delete" (with confirm dialog)
 - Default sort: `lastAnalyzedAt desc`, with `pending` / `analyzing` specs floating to top.
 - Header bar: "Add Spec" CTA → `/specs/new` (Epic 03). Workspace name on the left.
-- Empty state (zero specs in workspace):
+- Empty state (zero specs in workspace) — engineer-tauglich, kein Illustration-Hero per `prd-decisions.md` §"Konkrete Konsequenzen pro Epic" / §"Was wir NICHT übernehmen":
   - large heading "Add your first spec to get started"
-  - primary button: "Add spec from URL" → `/specs/new`
+  - primary button (violet, per `prd-decisions.md` §"Components" Buttons): "Add spec from URL" → `/specs/new`
   - secondary link: "Try with a sample spec" → calls `loadSampleSpecAction({ sampleId: 'openweathermap' })` (Epic 03), then redirects to `/specs/[newSpecId]`
-- No tour banner, no modal — Engineer-UX is self-service.
+- No tour banner, no modal, no illustration — Engineer-UX is self-service.
 - Polling: while any spec in the list has `analysisStatus = 'pending' | 'analyzing'`, the list refetches every 5 s. Auto-stop when no spec is in those states.
 - Cross-workspace isolation: the query is scoped via `workspaceId = session.workspaceId`.
 
@@ -32,6 +32,7 @@
 - Sections:
   - **Workspace** — `name` (editable text input, `updateWorkspaceAction({ name })`)
   - **Profile** — `displayName` (editable text input, `updateUserAction({ displayName })`); `email` (read-only, shown for confirmation)
+  - **Appearance** — Theme toggle (Light / Dark) via `next-themes`, Dark default, persisted per `prd-decisions.md` §"Theme". (May alternately live in the Topbar user menu — implementation choice.)
   - **Session** — "Sign out" button (calls `signOutAction` from Epic 02)
 - All form interactions return `{success}|{error}` (per CLAUDE.md conventions); validation errors render inline.
 - No password change (out of scope — see brainstorming E2).
@@ -53,8 +54,8 @@
 
 1. `/specs` is the post-login landing page (login redirect target from Epic 02 and middleware).
 2. Specs list renders the columns above for every spec in the user's workspace, sorted by `lastAnalyzedAt desc` with pending/analyzing on top.
-3. Quality score badge follows the colour thresholds (≥80 green, 60-79 yellow, <60 red); unanalysed specs show "—".
-4. Status pill renders correctly for each of `pending | analyzing | completed | failed`.
+3. Quality score badge colours and thresholds match `prd-decisions.md` §"Color Palette" Quality-Score-Badges (≥80 emerald, 60–79 amber, <60 red); unanalysed specs show "—".
+4. Status pill renders for each of `pending | analyzing | completed | failed` with colours and spinner per `prd-decisions.md` §"Components" Status-Pills (pending/analyzing → blue + spinner-icon, completed → emerald, failed → red).
 5. While any visible spec has `analysisStatus = pending | analyzing`, the list refetches every 5 s and auto-stops when none remain.
 6. Row action menu offers "Re-analyze" (always), "Re-pull from URL" (only for `sourceType=url` non-authed pulls), "Delete" (always, with a "Delete spec?" confirm dialog).
 7. Empty state CTAs work: "Add spec from URL" navigates to `/specs/new`; "Try with a sample spec" creates an OpenWeatherMap-sample spec and redirects to its detail page.
@@ -79,12 +80,11 @@
 - Bulk actions on specs (delete-many, re-analyze-many) — v0.2.
 - Specs list pagination — v0.1 expects ≤20 specs.
 - Tour, onboarding modals, in-app changelog — v0.2+.
-- Theming / dark mode (use shadcn defaults; if shadcn `next-themes` is included by default in scaffold, dark-mode toggle is acceptable but not required).
 
 ## Domain terms
 
 - **Specs list** — the index page at `/specs`. The landing page after login.
-- **Status pill** — the small coloured badge on each row reflecting `Spec.analysisStatus`.
+- **Status pill** — the small coloured badge on each row reflecting `Spec.analysisStatus`. Visual tokens (size, shape, per-status colour, spinner-icon for analyzing) are defined in `prd-decisions.md` §"Components" Status-Pills.
 - **Quality-score badge** — coloured badge showing the deterministic quality score from Epic 04. "—" when unanalysed.
 - **Empty state CTA** — "Add spec from URL" + "Try with a sample spec". The sample CTA invokes a server-side path that copies a static file from `openapi-examples/` into a new Spec with `sourceType = 'sample'`.
 - **Sidebar footer** — small text at the bottom of the sidebar showing workspace name + user email; updates live when workspace name is edited.
@@ -92,8 +92,8 @@
 
 ## Open questions
 
-- Sample spec ID convention: `'openweathermap'` is the v0.1 only sample. Future samples (Stripe slice, PagerDuty) — would they also be available as "Try with a sample"? Recommendation: only one sample CTA in v0.1 to keep the empty state focused; additional samples are dev-fixtures only.
+- (resolved) Sample spec ID convention: `'openweathermap'` is the only sample exposed via the "Try with a sample" CTA in v0.1. Stripe (sliced) and dnd5eapi remain dev-fixtures only. PagerDuty is explicitly excluded from production-facing surfaces — Epic 00 results §"Cross-cutting" flag missing upstream LICENSE; "If apiq ever ships sample specs in production … avoid PagerDuty until license is clarified upstream."
 - Confirm dialog component: shadcn `AlertDialog` is the canonical pattern. Confirm during implementation.
 - "Re-analyze" from the list row uses the same `reanalyzeSpecAction` (Epic 04) as the Spec Detail button. Should it disable while `analysisStatus = analyzing`? Yes — the row action should be greyed out with a tooltip "Already analyzing".
-- Sidebar collapse / expand state: shadcn `SidebarProvider` handles this; persist state in cookie? Recommendation: yes, follow shadcn defaults.
+- (resolved) Sidebar collapse/expand persisted in cookie (shadcn default), collapsible Mini-Variante (Icon-only, ~64 px) per `prd-decisions.md` §"Layout".
 - Display-name uniqueness: not required (multiple users can share a display name). Confirm.

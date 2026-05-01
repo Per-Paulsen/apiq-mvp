@@ -7,7 +7,7 @@
 - React 19
 - TypeScript 5
 - Tailwind CSS v4 (CSS-first config in `globals.css`)
-- shadcn/ui + base-ui + lucide-react
+- shadcn/ui + lucide-react
 
 ## Backend
 - Next.js Route Handlers + Server Actions

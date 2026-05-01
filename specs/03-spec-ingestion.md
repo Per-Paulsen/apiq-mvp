@@ -20,8 +20,8 @@
   5. Parse to JSON (use `yaml` package for YAML).
   6. Reject Swagger 2.0 (`swagger: "2.0"` field present) with structured error `{ kind: 'unsupported_swagger_2', message: "Swagger 2.0 is not supported in v0.1. Convert with swagger2openapi." }`.
   7. Validate as OpenAPI 3.x (use `@apidevtools/swagger-parser` or `oas3-validator`). On failure, return structured error `{ kind: 'invalid_openapi', issues: Issue[] }` with up to 10 issues.
-  8. Reject specs with file size > 5 MB or `endpointCount` > 200 (counted across `paths.*.{get|post|put|patch|delete|options|head|trace}`). Soft-warn at >100 endpoints (return `{ success: true, warning: 'large_spec', spec }` — UI surfaces a banner but proceeds).
-  9. Dereference `$ref`s. Local refs only (`#/components/...`); external refs → `{ kind: 'external_refs_unsupported', issues }`. Cyclical refs are detected and left as `$ref`-markers (no stack overflow); spec is still valid.
+  8. Reject specs with file size > 5 MB or `endpointCount` > 200 (counted across `paths.*.{get|post|put|patch|delete|options|head|trace}`). Soft-warn at >100 endpoints OR ≥1 MB JSON size (return `{ success: true, warning: 'large_spec', warningReasons: ('many_endpoints'|'large_size')[], spec }` — UI surfaces a banner but proceeds). The size threshold is in addition to the endpoint threshold because spec complexity (not endpoint count) drives LLM hallucination risk per Epic 00 spike measurements (research-spike.md §"Endpoint-cap recommendations"). Suggested UI banner copy: "Large spec: analysis quality may degrade. Some findings may be marked stale on apply (production-safe — see Versions tab)."
+  9. Dereference `$ref`s. Local refs only (`#/components/...`); external refs → `{ kind: 'external_refs_unsupported', issues }`. Cyclical refs are replaced with the marker `{ "$ref": "#cyclic" }` before persistence to `currentJson` — so the stored JSON is acyclic and safe for `JSON.stringify` / `structuredClone` / `fast-json-patch`. Reference implementation: `scripts/spike/stringify-spec.ts` (`cycleStripSpec`). The same marker shape is consumed by Epic 04 (LLM prompt) and Epic 06 (patch validator), so DO NOT change the marker key/value without coordinating those epics.
   10. Persist `Spec` (`sourceType = 'url'`, `sourceUrl = url`, `sourceFormat`, `originalJson`, `currentJson` = dereferenced, `endpointCount`, `analysisStatus = 'pending'`, `name = info.title || URL pathname leaf`) and the initial `SpecVersion` (`versionNumber = 1`, `label = 'Initial pull from URL'`, `parentVersionId = null`). Set `Spec.currentVersionId` to the new version.
   11. **Auth-header is NOT persisted** — used only for this one fetch.
   12. Trigger analysis: `fetch('/api/internal/analyze', { method: 'POST', body: { specId } })` fire-and-forget (full implementation in Epic 04; this epic only defines the trigger interface).
@@ -49,7 +49,8 @@
 9. A spec with external `$ref`s returns `{ kind: 'external_refs_unsupported', issues: [...] }` listing the offending refs.
 10. A 6 MB spec is rejected with `{ kind: 'too_large', sizeMB: 6, limitMB: 5 }`.
 11. A 250-endpoint spec is rejected with `{ kind: 'too_many_endpoints', count: 250, limit: 200 }`.
-12. A 120-endpoint spec returns `{ success: true, warning: 'large_spec', spec }` and is persisted.
+12. A 120-endpoint spec returns `{ success: true, warning: 'large_spec', warningReasons: ['many_endpoints'], spec }` and is persisted.
+12a. A 1.5 MB / 50-endpoint spec returns `{ success: true, warning: 'large_spec', warningReasons: ['large_size'], spec }` and is persisted (size threshold trips before the endpoint threshold).
 13. URL-pull rate-limit: the 21st pull within an hour for a workspace returns `{ success: false, error: { kind: 'rate_limited', retryAt } }`.
 14. `repullSpecAction` on a URL-sourced public-pull spec creates a new SpecVersion with incremented `versionNumber`, sets it as current, sets old `open` Findings to `outdated`, triggers analysis. Applied/rejected Findings remain in their original state.
 15. `repullSpecAction` is rejected for `sourceType = 'sample'` and for specs originally pulled with an auth header.
@@ -82,7 +83,8 @@
 
 ## Open questions
 
-- Library choice for OpenAPI validation + dereferencing: `@apidevtools/swagger-parser` is mature but Node-only (fine, this server action runs in Node). Confirm it handles cyclical refs without crashing — verify in implementation, fall back to `@redocly/openapi-core` if needed.
+- Library choice for OpenAPI validation + dereferencing: `@apidevtools/swagger-parser` is the proven pick — Epic 00 spike uses it across all 4 sample specs. RESOLVED: `SwaggerParser.dereference()` produces real JS object cycles for recursive schemas; do NOT rely on the library's "internal" cycle handling. Apply `cycleStripSpec` from `scripts/spike/stringify-spec.ts` immediately after dereference, before any `JSON.stringify` / `structuredClone` / DB write. Fallback to `@redocly/openapi-core` is no longer warranted for v0.1.
+- **External `$ref` rejection path is unverified by the spike.** Epic 00 used only internal-ref specs; the rejection branch must be exercised explicitly during Epic 03 implementation, ideally with a hand-crafted fixture spec that contains an `https://...` ref. Add a Vitest case to AC #17 covering this path.
 - Library choice for YAML parsing: `yaml` package (eemeli) is the de-facto choice. Confirm during implementation.
 - Rate-limit storage: a dedicated `RateLimitBucket` table or count over `Spec.createdAt` per workspace? Recommendation: a generic `WorkspaceActionLog { workspaceId, action, createdAt }` table introduced here, reused by Epic 04 (LLM-call limits) and Epic 06 (apply rate-limit). Confirm during implementation.
 - "Re-pull only for non-authed URLs" is enforced via a `wasAuthedPull: boolean` flag on Spec (set on initial pull). Alternative: enforce by checking whether `sourceUrl` is reachable without auth at re-pull time — slower, less deterministic. Default to the flag.
