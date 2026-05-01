@@ -71,7 +71,7 @@
 - **Edge-safe auth config** — `src/lib/auth.config.ts` contains only middleware-relevant config (route matchers, callbacks that don't touch the DB). The full config in `src/lib/auth.ts` imports Prisma and bcrypt and is Node-runtime only.
 - **Credentials provider** — Auth.js Credentials provider with a custom `authorize()` that bcrypt-compares the password against `User.passwordHash`.
 - **Anti-enumeration defenses** — Signup is protected by Cloudflare Turnstile CAPTCHA + IP-rate-limit (5/h per IP) + honeypot field + 2s minimum submit time. These mitigate but do not fully prevent signup-enumeration; the residual risk is accepted for v0.1 per `specs/ind-epic-review.md` Q3.1. v0.2 + mailer can implement the "always show 'check your email'" pattern for full prevention.
-- **`IpActionLog`** — IP-scoped rate-limit storage (distinct from Workspace-scoped `WorkspaceActionLog` from Epic 03). Used by Epic 02 (signup) and reserved for any future unauthenticated-rate-limited actions.
+- **`IpActionLog`** — IP-scoped rate-limit storage. Sibling table to Epic 03's `WorkspaceActionLog`; the two tables share the same `{ id, scope_field, action, createdAt }` shape but `IpActionLog.ip` (string) is the scope key while `WorkspaceActionLog.workspaceId` (FK) is. Use `IpActionLog` for unauthenticated actions where no workspace context exists (signup); use `WorkspaceActionLog` for authenticated actions (URL pull, apply, …). They are intentionally NOT unified into one polymorphic table because Prisma doesn't model that cleanly and the two scoping concepts are conceptually different.
 
 ## Open questions
 

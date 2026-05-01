@@ -8,6 +8,7 @@
 - Define Prisma models (workspace-scoped via `workspaceId` FK on Spec):
   - `Spec { id, workspaceId, name, sourceType (url|sample), sourceUrl?, sourceFormat (json|yaml), originalJson, currentJson, currentVersionId, endpointCount, qualityScore?, lastAnalyzedAt?, analysisStatus (pending|analyzing|completed|failed), analysisError?, createdAt, updatedAt }`
   - `SpecVersion { id, specId, parentVersionId?, versionNumber, json, label, createdAt }`
+  - `WorkspaceActionLog { id, workspaceId, action, createdAt }` — workspace-scoped rate-limit storage. Sibling table to Epic 02's `IpActionLog` (which is IP-scoped for unauthenticated signup). `action` is a string column (not enum) — known values in v0.1: `'url_pull'`, `'re_pull'`, `'apply'`. Indexed on `(workspaceId, action, createdAt desc)` for efficient rolling-window counts. Used by this epic (URL-pull rate-limit) and Epic 06 (apply rate-limit). Epic 04 does NOT use this table — its dollar-budget gate sums `LLMCall.costUSD` directly.
 - `(app)/specs/new/page.tsx` — "Add Spec" screen with:
   - URL input (required, validated as a URL)
   - optional `Authorization` header free-text field (placeholder: `Bearer xyz` or `Basic <base64>`)
@@ -33,12 +34,12 @@
   - sets `Spec.currentJson` and `Spec.currentVersionId` to the new version
   - **invalidates all open Findings** (status `open` → `outdated`); applied/rejected Findings are untouched (history preserved)
   - sets `analysisStatus = 'pending'` and triggers analysis again
-- "Sample spec" loader: server-only helper `loadSampleSpecAction({ sampleId })` for the empty-state CTA (Epic 07). Behaves like `addSpecFromUrlAction` but reads from a static file in `openapi-examples/`. Sets `sourceType = 'sample'`, `sourceUrl = 'apiq:sample/<id>'`. No re-pull button for sample specs (UI hides it).
+- "Sample spec" loader: server-only helper `loadSampleSpecAction({ sampleId })` for the empty-state CTA (Epic 07). `sampleId` is restricted to a hard-coded **allow-list** (v0.1: only `'openweathermap'`); any other value → `{ kind: 'unknown_sample', sampleId }`. PagerDuty, Stripe-sliced, dnd5eapi remain dev-fixtures only and are NOT in the allow-list — per Epic 00 results §"Cross-cutting" (PagerDuty has no upstream LICENSE, exclude from production-facing surfaces). Behaves like `addSpecFromUrlAction` but reads from a static file in `openapi-examples/`. Sets `sourceType = 'sample'`, `sourceUrl = 'apiq:sample/<id>'`. No re-pull button for sample specs (UI hides it).
 - `Spec` deletion server action `deleteSpecAction({ specId })`. Cascades to `SpecVersion` and `Finding` (via Prisma `onDelete: Cascade`).
 
 ## Acceptance criteria
 
-1. Prisma migration `add_spec_models` creates `Spec` and `SpecVersion` tables with the fields above, indexed on `workspaceId` and `(specId, versionNumber)`.
+1. Prisma migration `add_spec_models` creates `Spec`, `SpecVersion`, and `WorkspaceActionLog` tables with the fields above, indexed on `workspaceId`, `(specId, versionNumber)`, and `(workspaceId, action, createdAt desc)` respectively.
 2. Authenticated POST to `addSpecFromUrlAction` with a valid public OpenAPI 3.x URL (e.g. one of the `openapi-examples/`-equivalent URLs) creates a Spec + SpecVersion and returns `{ success: true, specId }`.
 3. The created Spec has `analysisStatus = 'pending'`, `currentJson` is the dereferenced spec, `originalJson` is the parsed-but-not-dereferenced spec.
 4. A non-authed call to a URL returning 401 surfaces `{ success: false, error: { kind: 'http_error', status: 401 } }` and does **not** persist a Spec.
@@ -86,7 +87,7 @@
 - Library choice for OpenAPI validation + dereferencing: `@apidevtools/swagger-parser` is the proven pick — Epic 00 spike uses it across all 4 sample specs. RESOLVED: `SwaggerParser.dereference()` produces real JS object cycles for recursive schemas; do NOT rely on the library's "internal" cycle handling. Apply `cycleStripSpec` from `scripts/spike/stringify-spec.ts` immediately after dereference, before any `JSON.stringify` / `structuredClone` / DB write. Fallback to `@redocly/openapi-core` is no longer warranted for v0.1.
 - **External `$ref` rejection path is unverified by the spike.** Epic 00 used only internal-ref specs; the rejection branch must be exercised explicitly during Epic 03 implementation, ideally with a hand-crafted fixture spec that contains an `https://...` ref. Add a Vitest case to AC #17 covering this path.
 - Library choice for YAML parsing: `yaml` package (eemeli) is the de-facto choice. Confirm during implementation.
-- Rate-limit storage: a dedicated `RateLimitBucket` table or count over `Spec.createdAt` per workspace? Recommendation: a generic `WorkspaceActionLog { workspaceId, action, createdAt }` table introduced here, reused by Epic 04 (LLM-call limits) and Epic 06 (apply rate-limit). Confirm during implementation.
+- (resolved) Rate-limit storage: `WorkspaceActionLog { id, workspaceId, action, createdAt }` is committed in Scope above. Epic 06 reuses it; Epic 04 does NOT (dollar-budget on `LLMCall.costUSD`). Sibling to Epic 02's `IpActionLog`.
 - "Re-pull only for non-authed URLs" is enforced via a `wasAuthedPull: boolean` flag on Spec (set on initial pull). Alternative: enforce by checking whether `sourceUrl` is reachable without auth at re-pull time — slower, less deterministic. Default to the flag.
 - Endpoint counting: count unique `(path, method)` combinations across `paths.*`. Should the count include `OPTIONS` / `HEAD` / `TRACE`? Recommendation: yes (they are real endpoints), but record the per-method breakdown in `endpointCount` only as a single number for v0.1.
 - Should the analyze trigger fail silently or return an error if the `/api/internal/analyze` route is unreachable? Recommendation: log + set `analysisStatus = 'failed'`; the spec is still persisted and the user can retry from Spec Detail.

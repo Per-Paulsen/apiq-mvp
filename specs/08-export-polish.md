@@ -28,13 +28,45 @@
   - Settings: not applicable
   - Versions drawer (Epic 06): if only the initial version exists, show "No applies yet."
 - **Mobile fallback banner**: a top-of-page banner on screens narrower than 1024 px ("apiq is best on desktop — some features may not render correctly"). Dismissible per session (sessionStorage). The app still renders below the banner.
-- **Toast system**: shadcn `Toaster` mounted in `(app)/layout.tsx`, top-right, success / error / info variants per `prd-decisions.md` §"Components" Toasts. Epic 08 ships the toast infrastructure (`Toaster` mount + `showToast({kind, message})` helper); per-action toasts (Apply / Reject / Undo from Epic 06; Re-pull from Epic 03; Re-analyze from Epic 04) are emitted by their respective epics using this helper.
+- **Toast system**: shadcn `Toaster` mounted in `(app)/layout.tsx`, top-right, success / error / info variants per `prd-decisions.md` §"Components" Toasts. Epic 08 ships:
+  - `Toaster` mount in the layout
+  - `showToast({ kind, message })` helper
+  - **Canonical message catalog** at `src/lib/toasts.ts` exporting a `TOASTS` constant. Decision per `specs/cross-epic-review.md` Q1 (option a — single source of truth, easy to i18n later, consistent tone). v0.1 catalog (initial entries — emitting epics may add more):
+    ```ts
+    export const TOASTS = {
+      // Epic 03 — Spec ingestion
+      specDeleted: { kind: 'success', message: 'Spec deleted' },
+      rePullStarted: { kind: 'info', message: 'Re-pulling from URL…' },
+      rePullComplete: { kind: 'success', message: 'Re-pull complete' },
+      // Epic 04 — Analysis
+      reanalyzeStarted: { kind: 'info', message: 'Re-analyzing…' },
+      analysisComplete: { kind: 'success', message: 'Analysis complete' },
+      // Epic 06 — Patch apply
+      patchApplied: { kind: 'success', message: 'Patch applied' },
+      patchRejected: { kind: 'success', message: 'Finding rejected' },
+      applyUndone: { kind: 'success', message: 'Apply undone' },
+      rejectUndone: { kind: 'success', message: 'Finding restored' },
+      // Epic 07 — Settings
+      workspaceUpdated: { kind: 'success', message: 'Workspace updated' },
+      profileUpdated: { kind: 'success', message: 'Profile updated' },
+      // Epic 08 — Export
+      exportedJson: { kind: 'success', message: 'Exported as JSON' },
+      exportedYaml: { kind: 'success', message: 'Exported as YAML' },
+    } as const;
+    ```
+    Each emitting epic calls `showToast(TOASTS.patchApplied)` instead of hard-coding strings. Adding new messages requires updating this file in the new epic's PR.
 - **Favicon + meta**: a minimal SVG favicon, `<title>` and `<meta description>` set per route via Next.js metadata API.
 - **README pass**: update the project root `README.md` to include "Quick start" (env vars + first signup + first spec).
 
 ### Rate-limit polish
 
-- Standardise the rate-limit error response shape across all server actions to `{ kind: 'rate_limited', retryAt: ISO8601 }`. Add a top-level toast/banner in `(app)/layout.tsx` that detects this shape from the most recent server-action response and renders a single message ("Daily/hourly limit reached — try again at <time>"). Existing per-action messaging stays.
+- Standardise the **quota-exceeded** error shapes across all server actions:
+  - `{ kind: 'rate_limited', retryAt: ISO8601 }` — count-based limits (Epic 02 signup, Epic 03 URL pulls, Epic 06 applies).
+  - `{ kind: 'budget_exceeded', spent: number, limit: number, retryAt: ISO8601 }` — Epic 04's $10/24h LLM dollar-budget.
+  Both shapes share the `retryAt` field. Add a top-level toast/banner in `(app)/layout.tsx` that detects either shape from the most recent server-action response and renders a single message:
+  - `rate_limited` → "Limit reached — try again at &lt;time&gt;"
+  - `budget_exceeded` → "Daily LLM budget reached ($&lt;spent&gt; / $&lt;limit&gt;) — resets at &lt;time&gt;"
+  Existing per-action messaging stays.
 
 ### Tests
 
@@ -61,8 +93,8 @@
 9. Each route group has a `not-found.tsx` rendering a card per `prd-decisions.md` §"Components" Cards with no illustration (per §"Was wir NICHT übernehmen") and a link back to `/specs` (or `/login` if unauthenticated). Visiting `/specs/nonexistent-id` renders the 404 page.
 10. Versions drawer empty state ("No applies yet.") renders for a freshly pulled spec.
 11. Mobile fallback banner appears on viewports <1024 px, rendered as a muted (zinc) info bar per `prd-decisions.md` §"Color Palette" muted, with a lucide-react `X` close icon (per §"Icons"). Dismissible per session via sessionStorage; remains dismissed on reload within the session.
-12. Toast infrastructure is functional: a stub action wired into a smoke-test page emits a success toast that renders top-right with the emerald colour token (per `prd-decisions.md` §"Components" Toasts and §"Color Palette"). Per-action toasts (e.g. "Patch applied" from Epic 06) consume this infrastructure.
-13. Standardised rate-limit toast appears in any rate-limited action.
+12. Toast infrastructure is functional: `showToast(TOASTS.exportedJson)` from a smoke-test page renders top-right with the emerald colour token (per `prd-decisions.md` §"Components" Toasts and §"Color Palette"). The `TOASTS` catalog at `src/lib/toasts.ts` is exported and consumed by emitting epics (Epic 03/04/06/07/08). Vitest test asserts every `TOASTS.*` entry has both `kind` and non-empty `message` fields.
+13. Standardised quota-exceeded toast appears for both error kinds: `{ kind: 'rate_limited' }` (count-limit hit) and `{ kind: 'budget_exceeded' }` (Epic 04 dollar-budget hit). Each renders the appropriate message above with the `retryAt` timestamp formatted relative ("in 4 hours") in the user's locale.
 14. Favicon, `<title>`, `<meta description>` are set per route.
 15. README "Quick start" section exists and is accurate.
 16. Vitest export tests pass.
@@ -90,7 +122,9 @@
 - **Error boundary** — Next.js `error.tsx` per route group; surfaces uncaught server errors with a friendly retry UI.
 - **Mobile fallback banner** — a session-dismissible banner on small viewports. Does not block functionality; warns the user.
 - **Toast** — shadcn `Toast` for transient success/error confirmation. Used by Apply / Reject / Undo / Re-pull / Re-analyze / rate-limit feedback.
-- **Standardised rate-limit response** — `{ kind: 'rate_limited', retryAt: ISO8601 }`. Detected by the layout-level toast handler.
+- **Standardised quota-exceeded responses** — two shapes, both detected by the layout-level toast handler:
+  - `{ kind: 'rate_limited', retryAt: ISO8601 }` for count-based limits (signup IP, URL pulls, applies)
+  - `{ kind: 'budget_exceeded', spent: number, limit: number, retryAt: ISO8601 }` for Epic 04's $10/24h dollar-budget on LLM calls
 
 ## Open questions
 
@@ -100,3 +134,4 @@
 - (resolved) Mobile fallback breakpoint: <1024 px per `prd-decisions.md` §"Layout" ("Kein Mobile-Layout. Mobile fallback banner (Epic 08) bei Viewport <1024 px.").
 - (resolved) Toasts: shadcn `Toaster` top-right (default position), Success / Error / Info variants via colour tokens per `prd-decisions.md` §"Components" Toasts.
 - Should the README include a section on running the Phase 0 spike? Recommendation: yes, a short pointer to `specs/research-spike.md` and `scripts/spike/run-prompt.ts`.
+- (resolved per `specs/cross-epic-review.md` Q1) Per-action toast wording: option (a) — `src/lib/toasts.ts` canonical `TOASTS` catalog. See Scope §"Toast system" for the v0.1 entries.

@@ -24,9 +24,10 @@
        - create `SpecVersion { specId, parentVersionId: currentVersionId, versionNumber: maxVersionNumber + 1, json: newJson, label: finding.title }`
        - update `Spec.currentJson = newJson`, `Spec.currentVersionId = newVersion.id`
        - update Finding: `status = 'applied'`, `appliedAt = now`, `appliedInVersionId = newVersion.id`
+       - **recompute** `Spec.qualityScore = computeQualityScore(remainingOpenFindings)` using the deterministic formula from Epic 04 (`src/lib/analysis/quality-score.ts`); the apply removes one finding from the open-set so the score should usually rise. Pure function — no LLM call.
     8. Return `{ success: true, newVersionId }`. UI re-fetches the spec and the findings list updates.
   - `rejectFindingAction({ findingId })`:
-    - require `status = 'open'`; set `status = 'rejected'`, `rejectedAt = now`. No SpecVersion created.
+    - require `status = 'open'`; set `status = 'rejected'`, `rejectedAt = now`. Recompute `Spec.qualityScore` (rejected drops out of the open-set). No SpecVersion created.
   - `undoApplyAction({ findingId })`:
     - require `status = 'applied'`.
     - `appliedInVersionId` must equal `Spec.currentVersionId` (i.e. this was the most recent apply). Otherwise return `{ kind: 'not_latest_apply', message: "Only the most recent apply can be undone." }`. Linear undo only — no rebase.
@@ -35,9 +36,10 @@
       - create `SpecVersion { specId, parentVersionId: currentVersionId, versionNumber: maxVersionNumber + 1, json: parentVersion.json, label: 'Undo: ' + finding.title }`
       - set `Spec.currentJson = parentVersion.json`, `Spec.currentVersionId = newVersion.id`
       - set Finding `status = 'open'`, clear `appliedAt`, `appliedInVersionId`
+      - recompute `Spec.qualityScore` (the finding rejoins the open-set)
     - return `{ success: true }`.
   - `undoRejectAction({ findingId })`:
-    - require `status = 'rejected'`; set `status = 'open'`, clear `rejectedAt`.
+    - require `status = 'rejected'`; set `status = 'open'`, clear `rejectedAt`. Recompute `Spec.qualityScore` (the finding rejoins the open-set, lowering the score).
 - Wire these actions into the Spec Detail screen (Epic 05): enable the Apply / Reject buttons, add Undo Apply on `applied` cards, Undo Reject on `rejected` cards. `stale` and `outdated` cards show a read-only badge with a "Re-analyze to refresh" hint that calls `reanalyzeSpecAction` (Epic 04).
 - When `applyFindingAction` returns `{ kind: 'patch_stale' }`, the UI MUST NOT show a destructive / error toast. Instead it (a) silently re-renders the finding card in its new `stale` state (status badge changes from `open` to `stale`), and (b) shows a non-blocking inline hint on that single card: "This patch is no longer applicable to the current spec. Re-analyze to refresh." with a "Re-analyze" button calling `reanalyzeSpecAction` (Epic 04). Per Epic 00 results: hallucinated patches are an expected residual (≤6.7% in the spike), and the user should never see an apply-error toast for them.
 - Add a **Versions drawer** to Spec Detail: collapsible side drawer listing all SpecVersions for the spec (newest first), each row showing `versionNumber`, `label`, `createdAt`. Read-only — no rollback-to-version action in v0.1 (see Out of scope).
@@ -68,7 +70,7 @@
 8. `stale` and `outdated` finding cards render a read-only badge plus "Re-analyze to refresh" button that calls Epic 04's `reanalyzeSpecAction`.
 8a. When `applyFindingAction` returns `{ kind: 'patch_stale' }`, the UI does NOT show an error toast. The finding card transitions to `stale` and shows the inline "This patch is no longer applicable, re-analyze" hint with a working Re-analyze button. (Tested via Vitest + RTL: simulate the action returning `patch_stale`, assert no `aria-live=assertive` error toast is rendered.)
 9. The Versions drawer lists all SpecVersions (newest first) with `vN`, label, timestamp. The current version is visually marked.
-10. After an Apply, the UI re-renders without a full page reload (server-action revalidation): the finding card moves to `applied`, the quality score recomputes (server-side, in a follow-up cycle, or by re-reading the persisted `Spec.qualityScore` — see Open Questions).
+10. After an Apply, the UI re-renders without a full page reload (server-action revalidation): the finding card moves to `applied`, and the quality-score badge updates from the freshly-recomputed `Spec.qualityScore` (written by `applyFindingAction` in the same transaction — see Scope step 7).
 11. Cross-workspace apply / reject / undo returns 404 (workspace check via `getRequiredSession`).
 12. Apply rate-limit: 31st apply within an hour for a workspace returns `{ success: false, error: { kind: 'rate_limited', retryAt } }`.
 13. Vitest tests above pass.
@@ -98,11 +100,7 @@
 
 ## Open questions
 
-- **Quality-score recomputation on Apply / Undo Apply.** Three options:
-  - (a) Recompute on every Apply / Undo from current `open` findings — cheap (deterministic formula, no LLM call).
-  - (b) Don't recompute; only refresh on next `runAnalysis`.
-  - (c) Recompute as in (a) but only for the score field; treat findings as snapshot until re-analysis.
-  Recommendation: **(a)** — `computeQualityScore` is a pure function (Epic 04), and `applied` findings drop out of the open-set so the score should rise after applies. Confirm during implementation.
+- (resolved) **Quality-score recomputation on Apply / Undo Apply / Reject / Undo Reject:** option (a) — recompute via `computeQualityScore` (Epic 04 pure function) over the current `open` set inside the same transaction as the status change, write to `Spec.qualityScore`. Pure function, no LLM cost. **Subtle implication:** `reject` also raises the score (the rejected finding drops out of the open-set). This is consistent with the current `computeQualityScore` definition but semantically fragile ("user dismisses a warning" then "spec quality goes up"). v0.2 may revisit by extending the formula to weight `applied` and `rejected` differently. Out of scope for v0.1.
 - **Atomic SpecVersion `versionNumber` increments under concurrent applies.** Two simultaneous applies on the same spec could both compute `maxVersionNumber + 1` and conflict. Recommendation: a unique `(specId, versionNumber)` constraint with a serial transaction wrapper, or a `nextVersionNumber` counter on Spec. Confirm during implementation.
 - **Side-by-side diff sub-tree computation: client-side vs server-side.** Client-side keeps the server action small (the action returns only `success`); server-side avoids shipping `currentJson` to the client (could be ≤5 MB). Recommendation: client-side for v0.1, server-side if the spec's currentJson is large enough to make the client sluggish. Decide in implementation.
 - **Rate-limit on Undo Apply / Undo Reject** — currently no limit. Recommendation: don't limit (low-risk operations, low LLM cost).
