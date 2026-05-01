@@ -2,21 +2,26 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-> **Status:** Phase A — repo skeleton with skills and tech stack only. PRD pending. No code yet.
-> Architecture details below will be filled in as epics complete.
+> **Status:** Phase B — implementation in progress. Epic 00 (Research Spike) and Epic 01 (Project Setup) complete.
 
 ## Commands
 
 ```bash
-# To be filled in by Epic 01 (project setup)
-# Anticipated:
-# npm run dev          # Start dev server (Turbopack)
-# npm run build        # Production build
-# npm run lint         # ESLint (flat config)
-# npm run test         # Vitest (single run)
-# npm run test:watch   # Vitest (watch mode)
-# npx prisma migrate dev --name <name>  # Run database migration
-# npx prisma generate  # Regenerate Prisma client
+npm run dev                              # Start dev server (Turbopack, port 3000)
+npm run build                            # Production build
+npm run lint                             # ESLint (flat config)
+npm run test                             # Vitest (single run)
+npm run test:watch                       # Vitest (watch mode)
+npx prisma migrate dev --name <name>     # Create + apply a new migration
+npx prisma generate                      # Regenerate Prisma client (auto-runs after migrate)
+npx prisma studio                        # Open Prisma Studio (DB inspector)
+```
+
+For the standalone research-spike harness (Epic 00):
+
+```bash
+cd scripts/spike
+npx tsx run-prompt.ts <variant> <spec>   # Re-run any prompt iteration against a sample spec
 ```
 
 ## Intended Architecture
