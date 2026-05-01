@@ -1,0 +1,99 @@
+# Epic 07 — Specs List + Settings
+
+> The two "workspace overview" surfaces. Specs List is the landing page after login. Settings is small in v0.1 (workspace name, display name, sign-out).
+> Upstream design tokens: [`prd-decisions.md`](../prd-decisions.md) §"Components" (Tables, Status-Pills, Quality-Score-Badges), §"Color Palette" (status + severity colors), §"Layout" (Sidebar items, Topbar).
+
+## Scope
+
+### Specs List
+
+- `(app)/specs/page.tsx` — index of all specs in the user's workspace.
+- Layout: a table (shadcn `DataTable` or simple `Table`) with columns:
+  - Name (link to `/specs/[specId]`)
+  - Quality score (badge, coloured per the C2 thresholds: ≥80 green, 60-79 yellow, <60 red; "—" if unanalysed)
+  - Status pill (`pending | analyzing | completed | failed`)
+  - Open / applied / rejected finding counts (small triplet)
+  - Source URL (truncated, with full URL on hover)
+  - Last analyzed (relative time, e.g. "3 hours ago")
+  - Row actions menu: "Re-analyze", "Re-pull from URL" (hidden for `sourceType=sample` and authed-pull specs), "Delete" (with confirm dialog)
+- Default sort: `lastAnalyzedAt desc`, with `pending` / `analyzing` specs floating to top.
+- Header bar: "Add Spec" CTA → `/specs/new` (Epic 03). Workspace name on the left.
+- Empty state (zero specs in workspace):
+  - large heading "Add your first spec to get started"
+  - primary button: "Add spec from URL" → `/specs/new`
+  - secondary link: "Try with a sample spec" → calls `loadSampleSpecAction({ sampleId: 'openweathermap' })` (Epic 03), then redirects to `/specs/[newSpecId]`
+- No tour banner, no modal — Engineer-UX is self-service.
+- Polling: while any spec in the list has `analysisStatus = 'pending' | 'analyzing'`, the list refetches every 5 s. Auto-stop when no spec is in those states.
+- Cross-workspace isolation: the query is scoped via `workspaceId = session.workspaceId`.
+
+### Settings
+
+- `(app)/settings/page.tsx` — single-page settings.
+- Sections:
+  - **Workspace** — `name` (editable text input, `updateWorkspaceAction({ name })`)
+  - **Profile** — `displayName` (editable text input, `updateUserAction({ displayName })`); `email` (read-only, shown for confirmation)
+  - **Session** — "Sign out" button (calls `signOutAction` from Epic 02)
+- All form interactions return `{success}|{error}` (per CLAUDE.md conventions); validation errors render inline.
+- No password change (out of scope — see brainstorming E2).
+- No account deletion (out of scope — see brainstorming F1).
+- No BYOK / API key management (out of scope — see brainstorming B7).
+
+### Shared
+
+- Both screens use the `(app)/layout.tsx` sidebar (Epic 01) with two nav items: "Specs" → `/specs`, "Settings" → `/settings`.
+- Sidebar footer: workspace name + user email (small, muted).
+- Tests (Vitest + React Testing Library):
+  - Specs list renders rows correctly, sorts by `lastAnalyzedAt desc`
+  - Empty state renders both CTAs and "Try with a sample" creates a spec
+  - Polling refetches while any spec is `pending` / `analyzing`
+  - Cross-workspace query returns zero rows
+  - `updateWorkspaceAction` / `updateUserAction` validation (non-empty names)
+
+## Acceptance criteria
+
+1. `/specs` is the post-login landing page (login redirect target from Epic 02 and middleware).
+2. Specs list renders the columns above for every spec in the user's workspace, sorted by `lastAnalyzedAt desc` with pending/analyzing on top.
+3. Quality score badge follows the colour thresholds (≥80 green, 60-79 yellow, <60 red); unanalysed specs show "—".
+4. Status pill renders correctly for each of `pending | analyzing | completed | failed`.
+5. While any visible spec has `analysisStatus = pending | analyzing`, the list refetches every 5 s and auto-stops when none remain.
+6. Row action menu offers "Re-analyze" (always), "Re-pull from URL" (only for `sourceType=url` non-authed pulls), "Delete" (always, with a "Delete spec?" confirm dialog).
+7. Empty state CTAs work: "Add spec from URL" navigates to `/specs/new`; "Try with a sample spec" creates an OpenWeatherMap-sample spec and redirects to its detail page.
+8. Cross-workspace isolation: a spec from another workspace never appears (test by seeding two workspaces).
+9. `/settings` renders Workspace + Profile + Session sections.
+10. Editing workspace name persists via `updateWorkspaceAction` and reflects immediately in the sidebar footer.
+11. Editing display name persists via `updateUserAction`; email field is rendered as read-only.
+12. Sign-out clears session and redirects to `/login`.
+13. Validation: empty workspace name or empty display name returns inline `{error: 'name_required'}` and the row does not save.
+14. Vitest tests above pass.
+
+## Out of scope
+
+- Password change (no mail provider — Epic 02 / brainstorming E2).
+- Account deletion (manual via Lead — brainstorming F1).
+- E-mail change.
+- BYOK OpenRouter key management (brainstorming B7 — v0.2).
+- Workspace switcher / multi-workspace UI (Epic 02 — v0.2).
+- Workspace member invitations / roles (v0.2).
+- Per-spec sharing with other users (v0.2).
+- Specs list filters / search (v0.1 expects ≤20 specs per workspace; revisit if needed).
+- Bulk actions on specs (delete-many, re-analyze-many) — v0.2.
+- Specs list pagination — v0.1 expects ≤20 specs.
+- Tour, onboarding modals, in-app changelog — v0.2+.
+- Theming / dark mode (use shadcn defaults; if shadcn `next-themes` is included by default in scaffold, dark-mode toggle is acceptable but not required).
+
+## Domain terms
+
+- **Specs list** — the index page at `/specs`. The landing page after login.
+- **Status pill** — the small coloured badge on each row reflecting `Spec.analysisStatus`.
+- **Quality-score badge** — coloured badge showing the deterministic quality score from Epic 04. "—" when unanalysed.
+- **Empty state CTA** — "Add spec from URL" + "Try with a sample spec". The sample CTA invokes a server-side path that copies a static file from `openapi-examples/` into a new Spec with `sourceType = 'sample'`.
+- **Sidebar footer** — small text at the bottom of the sidebar showing workspace name + user email; updates live when workspace name is edited.
+- **Settings sections** — `Workspace`, `Profile`, `Session`. Each is a small card on the single Settings page.
+
+## Open questions
+
+- Sample spec ID convention: `'openweathermap'` is the v0.1 only sample. Future samples (Stripe slice, PagerDuty) — would they also be available as "Try with a sample"? Recommendation: only one sample CTA in v0.1 to keep the empty state focused; additional samples are dev-fixtures only.
+- Confirm dialog component: shadcn `AlertDialog` is the canonical pattern. Confirm during implementation.
+- "Re-analyze" from the list row uses the same `reanalyzeSpecAction` (Epic 04) as the Spec Detail button. Should it disable while `analysisStatus = analyzing`? Yes — the row action should be greyed out with a tooltip "Already analyzing".
+- Sidebar collapse / expand state: shadcn `SidebarProvider` handles this; persist state in cookie? Recommendation: yes, follow shadcn defaults.
+- Display-name uniqueness: not required (multiple users can share a display name). Confirm.

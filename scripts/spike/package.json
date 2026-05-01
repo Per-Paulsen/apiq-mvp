@@ -1,0 +1,23 @@
+{
+  "name": "apiq-research-spike",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Standalone TypeScript harness for the apiq research spike (Epic 00). Iterates on LLM analysis prompts against real OpenAPI specs.",
+  "scripts": {
+    "run": "tsx run-prompt.ts"
+  },
+  "dependencies": {
+    "@apidevtools/swagger-parser": "^10.1.0",
+    "dotenv": "^16.4.5",
+    "fast-json-patch": "^3.1.1",
+    "openai": "^4.73.0",
+    "yaml": "^2.6.1",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}
