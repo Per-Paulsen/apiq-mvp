@@ -13,6 +13,8 @@
   - URL input (required, validated as a URL)
   - optional `Authorization` header free-text field (placeholder: `Bearer xyz` or `Basic <base64>`)
   - submit button → server action `addSpecFromUrlAction({ url, authHeader? })`
+  - **Form pattern** (per Epic 02 results): plain `<form action={...}>` with shadcn `Input`/`Label`/`Button`/`Card`, wrapped in a `'use client'` component using React 19's `useActionState` (renamed from `useFormState`) for pending state + structured `{success}|{error}` rendering. shadcn 4.6.0 radix-nova preset does NOT ship a `form` component, so do not attempt `npx shadcn add form`. Field-level errors render inline (red, `text-xs`); top-level errors render as a banner via `role="alert"`.
+  - **Quota-toast emission** (per Epic 08 cross-epic handoff): when `addSpecFromUrlAction` returns `{ success: false, error: { kind: 'rate_limited', retryAt } }` (from the URL-pull rate-limit at step 2), the form's `useActionState` consumer calls `showToast(formatQuotaToast(error))` from `@/lib/toasts` (Epic 08) instead of (or in addition to) inline error rendering. `budget_exceeded` is not produced by this action (the analyze trigger is fire-and-forget; budget errors surface via Spec Detail's failed-card per Epic 04).
 - Server action `addSpecFromUrlAction`:
   1. `getRequiredSession()` for `workspaceId`.
   2. Rate-limit check (≤20 URL-pulls per hour per workspace via DB count, see Open Question on shared rate-limit infra).
@@ -25,7 +27,7 @@
   9. Dereference `$ref`s. Local refs only (`#/components/...`); external refs → `{ kind: 'external_refs_unsupported', issues }`. Cyclical refs are replaced with the marker `{ "$ref": "#cyclic" }` before persistence to `currentJson` — so the stored JSON is acyclic and safe for `JSON.stringify` / `structuredClone` / `fast-json-patch`. Reference implementation: `scripts/spike/stringify-spec.ts` (`cycleStripSpec`). The same marker shape is consumed by Epic 04 (LLM prompt) and Epic 06 (patch validator), so DO NOT change the marker key/value without coordinating those epics.
   10. Persist `Spec` (`sourceType = 'url'`, `sourceUrl = url`, `sourceFormat`, `originalJson`, `currentJson` = dereferenced, `endpointCount`, `analysisStatus = 'pending'`, `name = info.title || URL pathname leaf`) and the initial `SpecVersion` (`versionNumber = 1`, `label = 'Initial pull from URL'`, `parentVersionId = null`). Set `Spec.currentVersionId` to the new version.
   11. **Auth-header is NOT persisted** — used only for this one fetch.
-  12. Trigger analysis: `fetch('/api/internal/analyze', { method: 'POST', body: { specId } })` fire-and-forget (full implementation in Epic 04; this epic only defines the trigger interface).
+  12. Trigger analysis: `fetch('/api/internal/analyze', { method: 'POST', headers: { 'x-internal-secret': process.env.INTERNAL_API_SECRET! }, body: JSON.stringify({ specId }) })` fire-and-forget (full implementation in Epic 04; this epic only defines the trigger interface). The `x-internal-secret` header is required by Epic 04's route guard; without it the route returns 403.
   13. Return `{ success: true, specId }` and the UI redirects to `/specs/[specId]` (Spec Detail, owned by Epic 05).
 - "Re-pull from URL" server action `repullSpecAction({ specId })`:
   - only available if `spec.sourceType === 'url'` AND `spec.sourceUrl` is reachable without auth (auth-headers are not persisted, so authed pulls cannot be re-pulled — UI hides the button for these specs based on a per-spec flag `wasAuthedPull: boolean`)
@@ -39,7 +41,7 @@
 
 ## Acceptance criteria
 
-1. Prisma migration `add_spec_models` creates `Spec`, `SpecVersion`, and `WorkspaceActionLog` tables with the fields above, indexed on `workspaceId`, `(specId, versionNumber)`, and `(workspaceId, action, createdAt desc)` respectively.
+1. Prisma migration `add_spec_models` creates `Spec`, `SpecVersion`, and `WorkspaceActionLog` tables with the fields above, indexed on `workspaceId`, `(specId, versionNumber)`, and `(workspaceId, action, createdAt desc)` respectively. Implementation note (per Epic 02 results): `npx prisma migrate dev` in Prisma 7.x does NOT auto-run `npx prisma generate` — run it explicitly afterward so `@/generated/prisma/models` picks up the new model types (which are imported as `import type { Spec, SpecVersion, WorkspaceActionLog } from '@/generated/prisma/models'`).
 2. Authenticated POST to `addSpecFromUrlAction` with a valid public OpenAPI 3.x URL (e.g. one of the `openapi-examples/`-equivalent URLs) creates a Spec + SpecVersion and returns `{ success: true, specId }`.
 3. The created Spec has `analysisStatus = 'pending'`, `currentJson` is the dereferenced spec, `originalJson` is the parsed-but-not-dereferenced spec.
 4. A non-authed call to a URL returning 401 surfaces `{ success: false, error: { kind: 'http_error', status: 401 } }` and does **not** persist a Spec.

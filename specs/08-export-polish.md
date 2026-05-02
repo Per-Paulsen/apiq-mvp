@@ -29,7 +29,8 @@
   - Versions drawer (Epic 06): if only the initial version exists, show "No applies yet."
 - **Mobile fallback banner**: a top-of-page banner on screens narrower than 1024 px ("apiq is best on desktop — some features may not render correctly"). Dismissible per session (sessionStorage). The app still renders below the banner.
 - **Toast system**: shadcn `Toaster` mounted in `(app)/layout.tsx`, top-right, success / error / info variants per `prd-decisions.md` §"Components" Toasts. Epic 08 ships:
-  - `Toaster` mount in the layout
+  - **Library install**: `npx shadcn@latest add sonner` (shadcn 4.6.0 uses `sonner` as the toast primitive). Not currently installed (Epic 02 only added card + label).
+  - `Toaster` mount in `(app)/layout.tsx` — placed inside the existing `<TooltipProvider><SidebarProvider>...</SidebarProvider></TooltipProvider>` wrapper from Epic 01 + 02 (don't re-wrap the providers; just add `<Toaster position="top-right" />` as a sibling of `<SidebarInset>` or at the layout root).
   - `showToast({ kind, message })` helper
   - **Canonical message catalog** at `src/lib/toasts.ts` exporting a `TOASTS` constant. Decision per `specs/cross-epic-review.md` Q1 (option a — single source of truth, easy to i18n later, consistent tone). v0.1 catalog (initial entries — emitting epics may add more):
     ```ts
@@ -63,10 +64,17 @@
 - Standardise the **quota-exceeded** error shapes across all server actions:
   - `{ kind: 'rate_limited', retryAt: ISO8601 }` — count-based limits (Epic 02 signup, Epic 03 URL pulls, Epic 06 applies).
   - `{ kind: 'budget_exceeded', spent: number, limit: number, retryAt: ISO8601 }` — Epic 04's $10/24h LLM dollar-budget.
-  Both shapes share the `retryAt` field. Add a top-level toast/banner in `(app)/layout.tsx` that detects either shape from the most recent server-action response and renders a single message:
-  - `rate_limited` → "Limit reached — try again at &lt;time&gt;"
-  - `budget_exceeded` → "Daily LLM budget reached ($&lt;spent&gt; / $&lt;limit&gt;) — resets at &lt;time&gt;"
-  Existing per-action messaging stays.
+  Both shapes share the `retryAt` field. **Per-consumer pattern** (per Epic 02 results — there is no global "last action state" subscription in React/Next.js without custom infra; v0.1 keeps it simple): each consuming epic's UI surface (Add Spec form in Epic 03, Spec Detail re-analyze button in Epic 04, Apply / Reject buttons in Epic 06) detects these shapes from its own `useActionState` (or `useTransition`) result and calls `showToast(formatQuotaToast(error))`. Epic 08 ships the formatter helper at `src/lib/toasts.ts`:
+  ```ts
+  export function formatQuotaToast(error: { kind: 'rate_limited' | 'budget_exceeded', retryAt: string, spent?: number, limit?: number }): { kind: 'error', message: string } {
+    const when = new Date(error.retryAt).toLocaleTimeString();
+    if (error.kind === 'rate_limited') {
+      return { kind: 'error', message: `Limit reached — try again at ${when}` };
+    }
+    return { kind: 'error', message: `Daily LLM budget reached ($${error.spent?.toFixed(2)} / $${error.limit?.toFixed(2)}) — resets at ${when}` };
+  }
+  ```
+  Existing per-action success/info toasts (the `TOASTS.*` catalog entries) stay unchanged. v0.2 may centralize quota detection in a layout-level handler if the per-consumer duplication becomes painful.
 
 ### Tests
 
@@ -94,7 +102,7 @@
 10. Versions drawer empty state ("No applies yet.") renders for a freshly pulled spec.
 11. Mobile fallback banner appears on viewports <1024 px, rendered as a muted (zinc) info bar per `prd-decisions.md` §"Color Palette" muted, with a lucide-react `X` close icon (per §"Icons"). Dismissible per session via sessionStorage; remains dismissed on reload within the session.
 12. Toast infrastructure is functional: `showToast(TOASTS.exportedJson)` from a smoke-test page renders top-right with the emerald colour token (per `prd-decisions.md` §"Components" Toasts and §"Color Palette"). The `TOASTS` catalog at `src/lib/toasts.ts` is exported and consumed by emitting epics (Epic 03/04/06/07/08). Vitest test asserts every `TOASTS.*` entry has both `kind` and non-empty `message` fields.
-13. Standardised quota-exceeded toast appears for both error kinds: `{ kind: 'rate_limited' }` (count-limit hit) and `{ kind: 'budget_exceeded' }` (Epic 04 dollar-budget hit). Each renders the appropriate message above with the `retryAt` timestamp formatted relative ("in 4 hours") in the user's locale.
+13. `formatQuotaToast(error)` from `src/lib/toasts.ts` returns the documented message shape for both `kind: 'rate_limited'` and `kind: 'budget_exceeded'` inputs. Vitest unit test asserts both branches: `formatQuotaToast({ kind: 'rate_limited', retryAt: <ISO> })` produces a "Limit reached — try again at <time>" message; `formatQuotaToast({ kind: 'budget_exceeded', spent, limit, retryAt })` produces a "Daily LLM budget reached ($spent / $limit) — resets at <time>" message. Consuming epics (03 / 04 / 06) call `showToast(formatQuotaToast(error))` from their own `useActionState` consumers — no global subscription in v0.1.
 14. Favicon, `<title>`, `<meta description>` are set per route.
 15. README "Quick start" section exists and is accurate.
 16. Vitest export tests pass.

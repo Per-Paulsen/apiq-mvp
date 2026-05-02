@@ -5,7 +5,8 @@
 
 ## Scope
 
-- `(app)/specs/[specId]/page.tsx` — Spec Detail screen with `getRequiredSession()` workspace-scoping.
+- **Library install**: `npm install react-diff-viewer-continued` — used by the "Show diff" expansion (per resolved Open Question §1). Add to project dependencies; not currently installed (Epic 01 + 02 don't pull it in).
+- `(app)/specs/[specId]/page.tsx` — Spec Detail screen with `getRequiredSession()` workspace-scoping. **Note (per Epic 02 results)**: `(app)/layout.tsx` is already wrapped in `<TooltipProvider>` from Epic 02, so the "disabled with tooltip" Apply/Reject buttons (and any other Tooltip primitives in this screen) work without further wrapper setup.
   - Header: spec name, source URL (with re-pull button — wired in Epic 03 / 06), quality-score badge, analysis status pill, last-analyzed timestamp, "Re-analyze" button (wired in Epic 04).
   - Two-column layout: left pane = endpoint list (collapsible by tag), right pane = findings list.
   - **Loading states** for `analysisStatus`:

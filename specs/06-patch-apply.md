@@ -27,8 +27,10 @@
        - **recompute** `Spec.qualityScore = computeQualityScore(remainingOpenFindings)` using the deterministic formula from Epic 04 (`src/lib/analysis/quality-score.ts`); the apply removes one finding from the open-set so the score should usually rise. Pure function — no LLM call.
     8. Return `{ success: true, newVersionId }`. UI re-fetches the spec and the findings list updates.
   - `rejectFindingAction({ findingId })`:
+    - **Workspace check**: `getRequiredSession()` first; load Finding's Spec and verify `Spec.workspaceId === session.workspaceId` (return 404 on mismatch — required by AC #11).
     - require `status = 'open'`; set `status = 'rejected'`, `rejectedAt = now`. Recompute `Spec.qualityScore` (rejected drops out of the open-set). No SpecVersion created.
   - `undoApplyAction({ findingId })`:
+    - **Workspace check**: `getRequiredSession()` first; load Finding's Spec and verify `Spec.workspaceId === session.workspaceId` (return 404 on mismatch — required by AC #11).
     - require `status = 'applied'`.
     - `appliedInVersionId` must equal `Spec.currentVersionId` (i.e. this was the most recent apply). Otherwise return `{ kind: 'not_latest_apply', message: "Only the most recent apply can be undone." }`. Linear undo only — no rebase.
     - In a transaction:
@@ -39,9 +41,11 @@
       - recompute `Spec.qualityScore` (the finding rejoins the open-set)
     - return `{ success: true }`.
   - `undoRejectAction({ findingId })`:
+    - **Workspace check**: `getRequiredSession()` first; load Finding's Spec and verify `Spec.workspaceId === session.workspaceId` (return 404 on mismatch — required by AC #11).
     - require `status = 'rejected'`; set `status = 'open'`, clear `rejectedAt`. Recompute `Spec.qualityScore` (the finding rejoins the open-set, lowering the score).
 - Wire these actions into the Spec Detail screen (Epic 05): enable the Apply / Reject buttons, add Undo Apply on `applied` cards, Undo Reject on `rejected` cards. `stale` and `outdated` cards show a read-only badge with a "Re-analyze to refresh" hint that calls `reanalyzeSpecAction` (Epic 04).
 - When `applyFindingAction` returns `{ kind: 'patch_stale' }`, the UI MUST NOT show a destructive / error toast. Instead it (a) silently re-renders the finding card in its new `stale` state (status badge changes from `open` to `stale`), and (b) shows a non-blocking inline hint on that single card: "This patch is no longer applicable to the current spec. Re-analyze to refresh." with a "Re-analyze" button calling `reanalyzeSpecAction` (Epic 04). Per Epic 00 results: hallucinated patches are an expected residual (≤6.7% in the spike), and the user should never see an apply-error toast for them.
+- **Quota-toast emission** (per Epic 08 cross-epic handoff): when `applyFindingAction` returns `{ success: false, error: { kind: 'rate_limited', retryAt } }` (from the apply rate-limit at step 2), the Apply button's `useTransition` / `useActionState` consumer calls `showToast(formatQuotaToast(error))` from `@/lib/toasts` (Epic 08). The same applies to any future rate-limit on Reject / Undo (currently none — see Open Questions). `budget_exceeded` is not produced by Epic 06 actions.
 - Add a **Versions drawer** to Spec Detail: collapsible side drawer listing all SpecVersions for the spec (newest first), each row showing `versionNumber`, `label`, `createdAt`. Read-only — no rollback-to-version action in v0.1 (see Out of scope).
 - Diff preview on the finding card (already scaffolded in Epic 05) is now also computed live: when the user expands "Show diff", `fast-json-patch.applyPatch` is invoked client-side on a sub-tree slice to render before/after. (Server-side computation is also acceptable; pick whichever has lower complexity in implementation.)
 - Tests (Vitest):

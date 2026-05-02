@@ -103,3 +103,76 @@ Q1 resolved by user 2026-05-01: option (a) — Epic 08 owns canonical toast text
 ---
 
 **Phase 3 status:** complete. All 1 NEEDS CONFIRMATION resolved. The cross-epic spec set is implementation-ready.
+
+---
+
+# Cross-Epic Review — 2026-05-02
+
+## Summary
+
+- **Total specs reviewed:** 9 (00–08)
+- **Read-only (completed epics):** 00, 01, 02
+- **Specs reviewed for edits:** 03, 04, 05, 06, 07, 08 (6)
+- **Specs modified:** 03, 04, 06, 08
+- **Specs clean:** 05, 07
+- **Total cross-epic findings:** 4 (4 structural applied, 0 NEEDS CONFIRMATION)
+- **Triggering inputs:** the 6 specs as just edited by the 2026-05-02 `/refine_all_ind` pass — particularly Epic 08's quota-toast handling (which contradicted itself) and Epic 04/06's handoff for the new `computeQualityScore` and quota-error flows.
+
+## Changes by Epic
+
+### 04 — LLM Pipeline
+
+- **Issue:** `computeQualityScore` referenced by Epic 06 at `src/lib/analysis/quality-score.ts`, but Epic 04's spike-to-runtime file mapping does not list this file → Epic 06's import path is ungrounded. (Forward dependency gap)
+  - **Involved epics:** 04 (owner), 06 (consumer)
+  - **Change:** New entry added to Epic 04's spike-to-runtime mapping: `No spike source → src/lib/analysis/quality-score.ts (new file owned by Epic 04). Exports computeQualityScore(findings: Finding[]): number per the formula below. Imported by both runAnalysis (this epic) and Epic 06's apply / reject / undo actions for transactional score recomputation.`
+  - **Cascade:** Epic 06's existing reference to `src/lib/analysis/quality-score.ts` is now grounded (no edit needed).
+
+- **Issue:** When `runAnalysis` budget-check rejects with `{ kind: 'budget_exceeded' }`, `Spec.analysisStatus` is never updated. The auto-trigger from Epic 03 is fire-and-forget — without a status update, the spec stays in `'pending'` indefinitely, and Epic 05's failed-card never surfaces the error. (Missing handoff between Epic 04 → Epic 05)
+  - **Involved epics:** 04 (producer), 05 (consumer of `analysisStatus` + `analysisError`)
+  - **Change:** Epic 04 dollar-budget bullet rewritten — when budget is exceeded, FIRST set `Spec.analysisStatus = 'failed'` + `Spec.analysisError = 'Daily LLM budget reached ($<spent> / $10.00) — resets at <retryAt>'`, THEN return the error shape. Explicit reasoning added: fire-and-forget trigger from Epic 03 cannot surface the error otherwise.
+  - **Cascade:** Epic 05's failed-card now correctly renders for the budget case (no edit needed — Epic 05's failed-state handler already reads `analysisStatus + analysisError`).
+
+- **Issue:** `reanalyzeSpecAction` does not produce `budget_exceeded` synchronously (fire-and-forget trigger). Earlier /refine_all_ind edit recommended emitting quota toasts from `useActionState` consumers — that pattern doesn't fit a fire-and-forget action. (Missing handoff between Epic 04 → Epic 08)
+  - **Involved epics:** 04, 08
+  - **Change:** Note added to Epic 04's `reanalyzeSpecAction` bullet explaining that `budget_exceeded` surfaces via Spec status (per the prior change), not via a synchronous toast. v0.2 may switch to await + sync toast.
+
+### 03 — Spec Ingestion (URL-only)
+
+- **Issue:** Epic 08 ships the quota-error toast handler but no consuming epic (03/04/06) explicitly says they emit the toast on `rate_limited` / `budget_exceeded` returns. Without this handoff, the user hits a rate-limit and sees only the inline form error — no top-right toast. (Missing handoff Epic 08 → Epic 03)
+  - **Involved epics:** 03 (producer of `rate_limited` from URL-pull rate-limit), 08 (handler)
+  - **Change:** New "Quota-toast emission" bullet added to the Add Spec scope: when `addSpecFromUrlAction` returns `rate_limited`, the form's `useActionState` consumer calls `showToast(formatQuotaToast(error))` from `@/lib/toasts`. Also clarifies that `budget_exceeded` is not produced by this action (covered by Epic 04's status-failed mechanism).
+
+### 06 — Patch Apply
+
+- **Issue:** Same as above — Epic 06's `applyFindingAction` returns `rate_limited` (apply rate-limit, AC #12) but no spec text says the Apply button emits the corresponding toast. (Missing handoff Epic 08 → Epic 06)
+  - **Involved epics:** 06 (producer), 08 (handler)
+  - **Change:** New "Quota-toast emission" bullet added: Apply button's `useTransition` / `useActionState` consumer calls `showToast(formatQuotaToast(error))` from `@/lib/toasts` when `rate_limited` is returned. Reject / Undo currently have no rate-limit (per Open Questions).
+
+### 08 — Export + Polish
+
+- **Issue:** Internal contradiction introduced by the 2026-05-02 `/refine_all_ind` pass — the same scope bullet says both "top-level toast/banner in `(app)/layout.tsx` that detects either shape" AND "per-form `useActionState` consumers ... no global subscription". One says centralized, one says decentralized. (Inconsistent domain language — within Epic 08, but with cross-epic ripple to 03/04/06)
+  - **Involved epics:** 08 (owner), 03/04/06 (downstream)
+  - **Change:** Bullet rewritten to commit cleanly to **per-consumer pattern** (no global subscription in v0.1). Epic 08 ships a `formatQuotaToast(error)` helper (TypeScript snippet inlined) at `src/lib/toasts.ts` that the consuming UI surfaces import and call alongside `showToast`. v0.2 may centralize.
+  - **Cascade:** Epic 03 + 06 add explicit "Quota-toast emission" bullets pointing at this helper. Epic 04 documents that `reanalyzeSpecAction` does NOT produce a synchronous quota toast (fire-and-forget) — handled via Spec status instead.
+
+- **Issue:** AC #13 referenced "the appropriate message above" but the messages were just prose in the scope bullet — no concrete shape to test against. (Untestable AC)
+  - **Change:** AC #13 rewritten to assert behavior of the new `formatQuotaToast(error)` helper (Vitest unit test for both `rate_limited` and `budget_exceeded` branches). Pattern reference to consumers (03/04/06) added.
+
+## Cascading Changes
+
+| Trigger | Cascade |
+|---|---|
+| Epic 04 commits `quality-score.ts` to file mapping | Epic 06's existing reference is grounded — no edit needed |
+| Epic 04 sets `analysisStatus = 'failed'` on budget reject | Epic 05's failed-card UX path covers the budget case automatically — no edit needed |
+| Epic 08 commits to per-consumer pattern + `formatQuotaToast` helper | Epic 03 + Epic 06 add explicit quota-toast emission bullets pointing at the helper |
+| Epic 04 documents fire-and-forget can't surface synchronous quota | Notes that v0.2 may switch to await + sync toast — captured as future work |
+
+## NEEDS CONFIRMATION items
+
+None. All 4 findings were structural fixes anchoring to existing decisions (Q4 dollar-budget, Q1 toast catalog) or surfacing implicit handoffs.
+
+---
+
+**Status:** Phase 1 complete. Phase 2 (brainstorming) skipped — no NEEDS CONFIRMATION items. Phase 3 not needed.
+
+The cross-epic spec set is implementation-ready. Recommended next: `/dev specs/03-spec-ingestion.md` to start Epic 03.

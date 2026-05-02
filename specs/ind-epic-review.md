@@ -417,3 +417,155 @@ All 5 NEEDS CONFIRMATION items resolved by user 2026-05-01. Phase 3 changes:
 ---
 
 **Phase 3 status:** complete. All 5 NEEDS CONFIRMATION items resolved; specs updated; brainstorming markers already set in Phase 1. Recommended next: `/refine_all` for cross-epic consistency check, or proceed to `/dev specs/01-project-setup.md`.
+
+---
+
+# Individual Epic Review — 2026-05-02
+
+## Summary
+
+- **Mode:** in-dev (Epic 00 + 01 + 02 results exist)
+- **Specs reviewed:** 03, 04, 05, 06, 07, 08 (6 of 9)
+- **Specs skipped (completed epics):** 00, 01, 02
+- **Specs skipped (already refined):** none — all 6 reviewed specs were stale (their brainstorming markers referenced only `00-research-spike-results.md`; the new triggers are `01-project-setup-results.md` and `02-auth-workspace-results.md`)
+- **Specs modified:** all 6
+- **Specs clean:** none
+- **Total findings:** 16 (16 structural applied, 0 NEEDS CONFIRMATION → no Phase 2)
+- **Triggering inputs:**
+  - `specs/01-project-setup-results.md` (now incorporated — primary trigger for tooling/Prisma quirks)
+  - `specs/02-auth-workspace-results.md` (now incorporated — primary trigger for shadcn-no-form pattern, `useActionState`, TooltipProvider, server-action conventions)
+
+---
+
+## 03 — Spec Ingestion (URL-only)
+
+### Findings
+
+- **Form pattern reference missing for the Add Spec screen** (Hidden scope creep / Epic 02 results impact)
+  - **Change:** Scope bullet for `(app)/specs/new/page.tsx` extended with: plain `<form action={...}>` + shadcn `Input`/`Label`/`Button`/`Card` + React 19 `useActionState`. Explicit "shadcn 4.6.0 radix-nova preset does NOT ship a `form` component, do not run `npx shadcn add form`" note.
+
+- **Prisma migrate→generate quirk missing from migration step** (Epic 02 results impact)
+  - **Change:** AC #1 extended with implementation note: `npx prisma migrate dev` in 7.x does NOT auto-run `npx prisma generate`. Added explicit model-types import path: `import type { Spec, SpecVersion, WorkspaceActionLog } from '@/generated/prisma/models'`.
+
+- **`x-internal-secret` header missing on the trigger fetch** (Inconsistent domain language with Epic 04)
+  - **Change:** Scope step 12 rewritten: `fetch('/api/internal/analyze', { method: 'POST', headers: { 'x-internal-secret': process.env.INTERNAL_API_SECRET! }, body: JSON.stringify({ specId }) })`. Note added that Epic 04's route guard returns 403 without the header.
+
+### Changes applied
+
+- Scope bullet (Add Spec screen): form-pattern note added
+- Scope step 12: explicit secret header + content-type
+- AC #1: migrate→generate quirk + model-types import path
+
+---
+
+## 04 — LLM Pipeline
+
+### Findings
+
+- **`reanalyzeSpecAction` missing explicit `getRequiredSession()` workspace check** (Hidden scope creep / Inconsistent domain language with Epic 03's `addSpecFromUrlAction`)
+  - **Change:** Scope bullet rewritten: explicit workspace check with 404 on cross-workspace access (per Epic 02 convention) + fire-and-forget POST with `x-internal-secret` header (mirroring Epic 03 step 12 shape).
+
+- **Prisma migrate→generate quirk missing from migration step** (Epic 02 results impact)
+  - **Change:** AC #1 extended with implementation note + explicit model-types import: `import type { Finding, LLMCall } from '@/generated/prisma/models'`.
+
+- **`INTERNAL_API_SECRET` placeholder warning missing** (Epic 02 results impact / pre-launch checklist)
+  - **Change:** Open Question on Internal-API-secret rotation extended with explicit pre-launch note — current `.env` value is a dev placeholder; route returns 403 for missing/wrong header so a placeholder secret in prod silently breaks analysis triggers.
+
+### Changes applied
+
+- `reanalyzeSpecAction` scope bullet: workspace check + 404 + secret-header trigger details
+- AC #1: migrate→generate note + model-types import
+- Open Question (Internal-API-secret): pre-launch warning expanded
+
+---
+
+## 05 — Spec Detail Screen
+
+### Findings
+
+- **`react-diff-viewer-continued` install step missing from Scope** (Hidden scope creep — only mentioned in resolved Open Question §1, not in Scope)
+  - **Change:** New Scope bullet added: `npm install react-diff-viewer-continued`; note that Epic 01 + 02 do not pull it in.
+
+- **TooltipProvider inheritance not noted** (Epic 02 results impact / Inconsistent domain language)
+  - **Change:** Scope bullet for `(app)/specs/[specId]/page.tsx` extended: `(app)/layout.tsx` is already wrapped in `<TooltipProvider>` from Epic 02 — disabled Apply/Reject buttons (and any other Tooltip primitives in this screen) work without further wrapper setup.
+
+### Changes applied
+
+- New Scope bullet: react-diff-viewer-continued install
+- Scope bullet (Spec Detail page): TooltipProvider inheritance note
+
+---
+
+## 06 — Patch Apply
+
+### Findings
+
+- **`rejectFindingAction`, `undoApplyAction`, `undoRejectAction` missing explicit `getRequiredSession()` workspace check** (Hidden scope creep — only `applyFindingAction` had the explicit step; AC #11 implies it for all four)
+  - **Change:** Each of the three missing server actions got an explicit "Workspace check" bullet at step 1 of its action body, with reference to AC #11.
+
+### Changes applied
+
+- `rejectFindingAction`: prepended workspace-check step
+- `undoApplyAction`: prepended workspace-check step
+- `undoRejectAction`: prepended workspace-check step
+
+---
+
+## 07 — Specs List + Settings
+
+### Findings
+
+- **Form pattern reference missing for Settings** (Hidden scope creep / Epic 02 results impact) — `updateWorkspaceAction`, `updateUserAction` are forms; spec was silent on the pattern.
+  - **Change:** Settings scope extended with form-pattern note (plain `<form>` + Input/Label/Button/Card + `useActionState`; shadcn `form` component absent).
+
+- **Sidebar footer hardcoded values** (Hidden scope creep — required by AC #10 "reflects immediately in the sidebar footer", but layout-edit not in scope)
+  - **Change:** New "Layout update" bullet in Shared section: convert `(app)/layout.tsx` to async server component, call `getRequiredSession()`, fetch workspace name via Prisma, render `{workspace.name} • {session.email}` in the sidebar footer (replacing Epic 01's hardcoded `"Workspace name • user@example.com"`).
+
+- **`signOutAction` import path clarified** (Inconsistent domain language)
+  - **Change:** Inline note added: `signOutAction` already exists at `@/lib/session` per Epic 02 results.
+
+- **shadcn `alert-dialog` install step missing** (Hidden scope creep — referenced as confirm dialog but no install step)
+  - **Change:** New "Library install" bullet added to Shared section: `npx shadcn@latest add alert-dialog`.
+
+- **TooltipProvider inheritance noted** (cosmetic / Epic 02 results impact)
+  - **Change:** Inline note in Shared layout bullet: layout already wrapped in `<TooltipProvider>` (Epic 02) — Specs List row-action menus + AlertDialog tooltips work without further wrapper.
+
+### Changes applied
+
+- Settings scope: form-pattern note
+- Shared section: new "Layout update" bullet for sidebar footer replacement
+- Shared section: TooltipProvider inheritance note
+- Shared section: `alert-dialog` install bullet
+- Settings → Session bullet: `@/lib/session` import path note
+
+---
+
+## 08 — Export + Polish
+
+### Findings
+
+- **`sonner` (Toaster) library install missing** (Hidden scope creep — Epic 02 only installed card+label; shadcn 4.6.0 uses `sonner` as the toast primitive)
+  - **Change:** Toast system bullet extended with `npx shadcn@latest add sonner`.
+
+- **Toaster mount placement unclear with existing layout providers** (Epic 02 results impact)
+  - **Change:** Toast system bullet clarified: `<Toaster position="top-right" />` goes inside the existing `<TooltipProvider><SidebarProvider>...</SidebarProvider></TooltipProvider>` wrapper from Epic 01 + 02 — don't re-wrap the providers.
+
+- **Quota-exceeded toast handler implementation pattern unclear** (Epic 02 results impact)
+  - **Change:** Implementation note added below quota-exceeded bullet: `useActionState` is per-form; each emitting epic's form consumes its own action state and calls `showToast` directly. No global "last-action-state" subscription in v0.1; per-form duplication accepted (centralize in v0.2 if it grows painful).
+
+### Changes applied
+
+- Toast system scope: `sonner` install + Toaster placement clarification
+- Quota-exceeded scope: per-form `useActionState` implementation note
+
+---
+
+## NEEDS CONFIRMATION items
+
+None. All 16 findings were structural fixes (anchoring to existing Epic 01 + 02 conventions, surfacing implicit scope, library installs that were referenced but not committed). No design decisions deferred.
+
+---
+
+**Status:** Phase 1 complete. Phase 2 (brainstorming) skipped — no NEEDS CONFIRMATION items. Phase 3 not needed.
+
+Recommended next: `/refine_all` for cross-epic consistency check (the new edits touch shared conventions — TooltipProvider, server-action error shapes, layout updates — which may have cross-epic implications worth verifying). Then `/dev specs/03-spec-ingestion.md` to start the next epic.

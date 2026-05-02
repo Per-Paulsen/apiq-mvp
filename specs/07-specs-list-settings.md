@@ -33,16 +33,19 @@
   - **Workspace** — `name` (editable text input, `updateWorkspaceAction({ name })`)
   - **Profile** — `displayName` (editable text input, `updateUserAction({ displayName })`); `email` (read-only, shown for confirmation)
   - **Appearance** — Theme toggle (Light / Dark) via `next-themes`, Dark default, persisted per `prd-decisions.md` §"Theme". (May alternately live in the Topbar user menu — implementation choice.)
-  - **Session** — "Sign out" button (calls `signOutAction` from Epic 02)
+  - **Session** — "Sign out" button (calls `signOutAction` from Epic 02 — already implemented at `@/lib/session` per Epic 02 results)
 - All form interactions return `{success}|{error}` (per CLAUDE.md conventions); validation errors render inline.
+- **Form pattern** (per Epic 02 results): each section's form is a plain `<form action={...}>` with shadcn `Input`/`Label`/`Button`/`Card`, wrapped in a `'use client'` component using React 19's `useActionState` for pending state + structured error rendering. shadcn 4.6.0 radix-nova preset does NOT ship a `form` component — do not attempt `npx shadcn add form`.
 - No password change (out of scope — see brainstorming E2).
 - No account deletion (out of scope — see brainstorming F1).
 - No BYOK / API key management (out of scope — see brainstorming B7).
 
 ### Shared
 
-- Both screens use the `(app)/layout.tsx` sidebar (Epic 01) with two nav items: "Specs" → `/specs`, "Settings" → `/settings`.
+- Both screens use the `(app)/layout.tsx` sidebar (Epic 01) with two nav items: "Specs" → `/specs`, "Settings" → `/settings`. The layout is already wrapped in `<TooltipProvider>` (Epic 02) — Specs List row-action menus + AlertDialog tooltips work without further wrapper setup.
+- **Layout update**: `(app)/layout.tsx` currently hardcodes the sidebar footer to `"Workspace name • user@example.com"` (Epic 01 placeholder, left as-is by Epic 02). Epic 07 must replace this with real values: convert the layout to an async server component, call `getRequiredSession()`, fetch the workspace name (`prisma.workspace.findUnique`), and render `{workspace.name} • {session.email}`. AC #10 ("reflects immediately in the sidebar footer") requires this layout edit.
 - Sidebar footer: workspace name + user email (small, muted).
+- **Library install**: `npx shadcn@latest add alert-dialog` for the "Delete spec?" confirm dialog (per Open Question §2 / row action menu). Not currently installed.
 - Tests (Vitest + React Testing Library):
   - Specs list renders rows correctly, sorts by `lastAnalyzedAt desc`
   - Empty state renders both CTAs and "Try with a sample" creates a spec

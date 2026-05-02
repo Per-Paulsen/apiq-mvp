@@ -8,3 +8,5 @@ Batch-refined via `/refine_all_ind` (in-dev mode). See `specs/ind-epic-review.md
 
 Results incorporated:
 - 00-research-spike-results.md
+- 01-project-setup-results.md
+- 02-auth-workspace-results.md
