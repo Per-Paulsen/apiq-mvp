@@ -14,3 +14,4 @@ Results incorporated:
 - 04-llm-pipeline-results.md
 - 05-spec-detail-results.md
 - 06-patch-apply-results.md
+- 07-specs-list-settings-results.md

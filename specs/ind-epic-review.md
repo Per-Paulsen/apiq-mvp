@@ -897,6 +897,64 @@ Recommendation: skip Phase 2 (brainstorming-in-file) and proceed to `/refine_all
 
 ---
 
+# Individual Epic Review — 2026-05-02 (Pass 7, post-Epic-07)
+
+## Summary
+
+- **Mode:** in-dev (results 00–07 exist)
+- **Specs reviewed:** 08 (1)
+- **Specs skipped (completed epics):** 00–07 — results files exist; never re-refined.
+- **Specs skipped (already refined for current results set):** none — Epic 08 marker was missing `07-specs-list-settings-results.md`.
+- **Specs modified:** none — Epic 08 is clean against current state.
+- **Specs clean:** 08
+- **Triggering input:** `07-specs-list-settings-results.md` (just shipped; Epic 07 results §"Follow-up after user review" includes Q1/Q2/Q5 fixes: Radix tooltip on disabled Re-analyze, three coloured finding-count pills, workspace-name cache with `updateTag`).
+
+## Method
+
+One read-only Explore agent (`spec08`) traced every assumption in Epic 08 spec against (a) the Epic 07 results file (implementation changes, new patterns established) and (b) current source: `src/lib/toasts.ts`, `src/app/(app)/layout.tsx`, `src/lib/format-analysis-error.ts`, `src/lib/workspace-cache.ts`, Spec Detail header/view/finding-card components, versions-drawer, specs-list-view, settings actions/forms, and `prd-decisions.md`. Findings reported back, lead synthesized.
+
+## 08 — Export + Polish
+
+### Findings
+
+**Stale assumptions / drift:** none. All code locations and signatures Epic 08 references remain stable against Epic 07's landed work:
+
+- Toast catalog (`TOASTS.*` entries) + `showToast` stub + `formatQuotaToast` continue unchanged at `src/lib/toasts.ts` — Epic 07 added 4 new catalog entries (`rePullComplete`, `specDeleted`, `workspaceUpdated`, `profileUpdated`) which Epic 08 correctly verifies exist.
+- `spec-detail-header.tsx` `onRepull` / `onReanalyze` handlers still lack toast wiring (correctly assigned to Epic 08 Scope §"Toast wiring on existing surfaces" AC #21).
+- `spec-detail-view.tsx` `FailedPanel.onRetry` still lacks `TOASTS.reanalyzeStarted` wiring (correctly assigned to Epic 08 AC #21).
+- Epic 06's `finding-card.tsx` `StaleOrOutdatedActions.onReanalyze` already calls `showToast(TOASTS.reanalyzeStarted)` — verified (no double-wiring).
+- Epic 06's `finding-card.tsx` `OpenActions.onApply` already calls `showToast(formatQuotaToast(error))` on rate-limit — verified.
+- `formatAnalysisError` helper remains at `src/lib/format-analysis-error.ts` with all 3 parsing rules intact (12 tests pass).
+- `(app)/layout.tsx` is async server component (line 35); loads `getWorkspaceNameCached` (line 41) — compatible with all 3 sidebar-hydration fix candidates (a/b/c per AC #18).
+- `versions-drawer.tsx` controls `open` state via `useState` — Epic 08's pulse-on-delta hook (AC #23) is implementable without refactoring.
+- `workspace-cache.ts` new in Epic 07 with `unstable_cache` + `WORKSPACE_NAME_CACHE_TAG`; `updateWorkspaceAction` calls `updateTag(WORKSPACE_NAME_CACHE_TAG)` — confirms Epic 08 should NOT use `revalidateTag` (Next.js 16 pattern).
+- `rePullStarted` removed from Toast catalog per cross-epic Q1 Pass 6 — no stale entry exists. ✓
+
+**Hidden scope / oversized slices:** none. Epic 08 spec correctly recognizes that `updateTag` (Next.js 16) supersedes `revalidateTag` — recommend documentation note if Epic 08 adds caching to new features.
+
+**Missing / untestable ACs:** none. AC #18 (hydration fix) / AC #19 (pre-launch checklist) require implementation-time investigation + manual verification, but requirements are specific.
+
+**Inconsistent terminology:** none.
+
+**Cross-epic items breaking implementation:** none. Epic 07 shipped row-action menu wiring (Re-analyze / Re-pull / Delete) in specs-list-view. Epic 07 results §"Toast catalog entries shipped here, not Epic 08" states: "Epic 07's row-action menu… calls `showToast(TOASTS.rePullComplete)`", implying toasts are ALREADY wired. **Verification point:** confirm specs-list-view row actions call `showToast()` on success before closing Epic 08 AC #21.
+
+**NEEDS CONFIRMATION items raised by investigator (resolved at synthesis time):**
+
+1. *Sidebar Hydration-Fix candidate (a/b/c)* — Epic 08 spec line 30 explicitly says "commit to ONE of (a)/(b)/(c) and pick whichever has the lowest blast radius." This is an implementation-time choice, not a refinement question. **No new NEEDS CONFIRMATION needed.**
+2. *Specs-list row-action toast wiring status* — investigator flagged uncertain wiring, but Epic 07 results §"Toast catalog entries shipped here, not Epic 08" explicitly commits "Epic 07's row-action menu… calls `showToast(TOASTS.rePullComplete)`". **Recommendation:** Trust Epic 07 results; if toasts are missing on landing, it's an Epic 07 gap to fix before Epic 08 verification.
+
+### Changes applied
+
+- Updated `specs/08-export-polish-brainstorming.md` marker to add `07-specs-list-settings-results.md` to the `Results incorporated:` list. No spec edits.
+
+## Outcome
+
+Epic 08 is clean against the codebase + current results set. **Phase 2 skipped — 0 `NEEDS CONFIRMATION` items raised by this pass.** The 1 verification point (specs-list row-action toast wiring) is an Epic 07 landing check, not an Epic 08 blocker — can proceed with confidence.
+
+**Status:** Phase 1 complete. 0 `NEEDS CONFIRMATION` items from Pass 7.
+
+---
+
 # Individual Epic Review — 2026-05-02 (Pass 5, post-Epic-05)
 
 ## Summary
@@ -1141,3 +1199,57 @@ Two read-only Explore agents (`spec07`, `spec08`) traced every assumption in the
 Both 07 and 08 are clean against the codebase + current results set. **Phase 2 skipped — no `NEEDS CONFIRMATION` items.** Recommended next: `/refine_all` for the post-Epic-06 cross-epic consistency pass.
 
 **Status:** Phase 1 complete. 0 `NEEDS CONFIRMATION` items.
+
+---
+
+# Individual Epic Review — 2026-05-02 (Pass 7, post-Epic-07)
+
+## Summary
+
+- **Mode:** in-dev (results 00–07 exist)
+- **Specs reviewed:** 08 (1)
+- **Specs skipped (completed epics):** 00, 01, 02, 03, 04, 05, 06, 07 — results files exist; never re-refined.
+- **Specs skipped (already refined for current results set):** none — Epic 08 marker was missing `07-specs-list-settings-results.md`.
+- **Specs modified:** none — clean against current state.
+- **Specs clean:** 08
+- **Triggering input:** `07-specs-list-settings-results.md` (just shipped, including the "Follow-up after user review" section that captured Q1/Q2/Q5 fixes — Radix tooltip on disabled DropdownMenuItem, three coloured pills for Findings, `unstable_cache` for the layout's workspace-name lookup with `updateTag` invalidation).
+
+## Method
+
+Read-only Explore agent (`spec08`) traced every assumption in Epic 08 against (a) the Epic 07 results "Follow-up after user review" section and (b) current source — `src/lib/toasts.ts`, `src/lib/workspace-cache.ts`, `src/app/(app)/layout.tsx`, `src/app/(app)/settings/actions.ts`, `src/app/(app)/specs/[specId]/spec-detail-header.tsx`, `spec-detail-view.tsx`, `finding-card.tsx`, `versions-drawer.tsx`, `specs-list-view.tsx`. Findings reported back; lead synthesized + verified the one outstanding question.
+
+## 08 — Export + Polish (Pass 7)
+
+### Findings
+
+**Stale assumptions / drift:** none. Every surface Epic 08 references holds in current code:
+
+- `TOASTS.rePullStarted` correctly removed from both spec catalog (line ~60) and `src/lib/toasts.ts` (per Pass-6 Phase-3 confirmation).
+- `formatQuotaToast` import path + signature in `src/lib/toasts.ts` matches the spec.
+- `formatAnalysisError` shipped at `src/lib/format-analysis-error.ts` (Epic 05); 12 unit tests pass; Epic 08 spec correctly notes the helper is already in place and only adds the budget-toast hook as a new consumer.
+- `(app)/layout.tsx` is async (Epic 07) — all three sidebar-hydration-fix candidate paths (a/b/c) remain compatible with the async-server-component parent.
+- Versions drawer at `src/app/(app)/specs/[specId]/versions-drawer.tsx` owns its own `open` state via `useState` (Epic 06's controlled-Sheet pattern); the trigger button currently does NOT pulse — Epic 08 adds that per AC #23.
+- Epic 06's stale-card Re-analyze emits `TOASTS.reanalyzeStarted` already; rate_limited Apply emits `formatQuotaToast(error)` already (`finding-card.tsx`).
+- Specs-list row actions (Epic 07) wire all four toasts in `src/app/(app)/specs/specs-list-view.tsx`: Re-analyze → `TOASTS.reanalyzeStarted` (line 210); Re-pull → `TOASTS.rePullComplete` on success (line 222) + `formatQuotaToast(error)` on rate_limited (line 228); Delete → `TOASTS.specDeleted` (line 240). Epic 08's AC #21 "seven wiring points total" enumeration matches reality. Spec-Detail header + FailedPanel are the remaining 3 sites Epic 08 owns.
+
+**Hidden scope / oversized slices:** none. `updateTag` (Next.js 16) is now in use at `src/app/(app)/settings/actions.ts:84` for the workspace-name cache invalidation — Epic 08 spec doesn't reference this primitive, but Epic 08 doesn't introduce any new tagged caches, so there's nothing to update. Documented precedent if any Epic 08 polish work later wants to add caching elsewhere.
+
+**Missing / untestable ACs:** none.
+
+**Inconsistent terminology:** none.
+
+**Cross-epic items breaking implementation:** none. Every dependency chain holds. Toast catalog state today: `reanalyzeStarted` (Epic 06) + `rePullComplete` / `specDeleted` / `workspaceUpdated` / `profileUpdated` (Epic 07) shipped; Epic 08 still owns `analysisComplete` / `patchApplied` / `patchRejected` / `applyUndone` / `rejectUndone` / `exportedJson` / `exportedYaml` plus replacing the no-op `showToast` body with a real Sonner dispatch.
+
+**NEEDS CONFIRMATION items raised by investigator (resolved at synthesis time):**
+
+1. *Specs-list row-action toast wiring status* — investigator flagged this as a verification point; lead grepped `specs-list-view.tsx` directly and confirmed all four `showToast(...)` calls are present (lines 210, 222, 228, 240) per Epic 07's commit `ba721e0`. Resolves to verified-clean. **No new NEEDS CONFIRMATION needed.**
+
+### Changes applied
+
+- Updated `specs/08-export-polish-brainstorming.md` marker to add `07-specs-list-settings-results.md` to the `Results incorporated:` list. No spec edits.
+
+## Outcome (Pass 7)
+
+Epic 08 is clean against the codebase + current results set. **Phase 2 skipped — no `NEEDS CONFIRMATION` items.** Recommended next: `/refine_all` for the post-Epic-07 cross-epic consistency pass.
+
+**Status:** Pass 7 Phase 1 complete. 0 `NEEDS CONFIRMATION` items.
