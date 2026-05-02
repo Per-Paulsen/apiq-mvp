@@ -137,8 +137,55 @@ The stale-card UX (validator hallucination → `status='stale'` + `staleReason` 
 3. **Should the Versions drawer trigger button show a "+1" badge when a new version was just created?** v0.1: it just updates the count in `Versions (N)`. A user who applied a finding may not notice the count incremented.
    **Recommendation:** No badge in v0.1. The applied-card UI (green `Applied · {timestamp}` + Undo) is the primary signal; the Versions drawer is auxiliary. Epic 08 polish could add a brief `bg-violet-500/15` pulse on the trigger if user feedback wants it.
 
+   then let epic 08 know this
+
 4. **Should `staleReason` be cleared when a finding flips back to `open` via `undoApply`?** `undoApply` only operates on `applied` findings, so this can't happen today (an `applied` finding has `staleReason: null` because `applyFindingAction` cleared it on the way to `applied`). But if a future epic introduces a "manual mark-as-stale" flow or a re-validate-on-pull, the field could accumulate.
    **Recommendation:** Defer. v0.1's data flow doesn't produce stale `staleReason` on non-stale findings. v0.2 should null `staleReason` whenever `status` transitions away from `stale`, in the same DB call.
 
+   lets do this now
+
 5. **Is the `apply` rate-limit bucket separate from `url_pull` / `re_pull`?** Yes — they're three distinct `action` strings on the same `WorkspaceActionLog` table. So 20 URL pulls + 30 applies + 20 re-pulls = 70 ops/hour are independently allowed. No shared budget.
    **Recommendation:** Keep the buckets separate as committed. v0.2 may want a unified "workspace mutation budget" but the current shape is simpler and the limits are calibrated to typical usage.
+
+please let us not defer everything to v0.2! only if its really reasonable to do so. nut just simply as a default behavior.
+
+---
+
+## Follow-up after user review (2026-05-02)
+
+User comments on the open-question recommendations resolved as follows:
+
+### Q3 — Versions-drawer "+1" badge → forwarded to Epic 08
+
+Added a new bullet to `specs/08-export-polish.md` Scope, right after "Toast wiring on existing surfaces":
+
+> **Versions-drawer trigger pulse on Apply / Undo Apply** (per Epic 06 results Q3, 2026-05-02): Epic 06 ships the `<Sheet>`-based Versions drawer with a `Versions ({count})` trigger button in the Spec Detail header. After a successful `applyFindingAction` or `undoApplyAction` the count increments but the change is easy to miss. Epic 08 adds a brief `bg-violet-500/15` flash on the trigger when the count delta is non-zero between renders. […]
+
+Epic 08 now owns the polish. No code change in Epic 06.
+
+### Q4 — Defensive `staleReason: null` on status transitions away from `stale` → done now (not deferred)
+
+Added `staleReason: null` to all four finding-status updates in `src/app/(app)/specs/actions.ts`:
+
+- `applyFindingAction` happy path → `data: { status: 'applied', appliedAt, appliedInVersionId, staleReason: null }`
+- `rejectFindingAction` → `data: { status: 'rejected', rejectedAt, staleReason: null }`
+- `undoApplyAction` → `data: { status: 'open', appliedAt: null, appliedInVersionId: null, staleReason: null }`
+- `undoRejectAction` → `data: { status: 'open', rejectedAt: null, staleReason: null }`
+
+In v0.1's flow these are no-ops (the source statuses can't carry a non-null `staleReason` today), but they future-proof the field against any v0.2 path that introduces a "manual mark-as-stale" or "re-validate-on-pull" flow that could leave residual values. `applyFindingAction`'s STALE branch (`status='stale', staleReason: <diagnostic>`) is unchanged — that path correctly sets the diagnostic.
+
+Test updates in `src/__tests__/patch-apply/actions.test.ts`:
+- Apply happy path now asserts `findingUpdate.data.staleReason === null`
+- Reject happy path now asserts `rejectUpdate.data.staleReason === null`
+- Undo Apply happy path's `findingUpdate.data` includes `staleReason: null`
+- Undo Reject happy path's `undoUpdate.data` includes `staleReason: null`
+
+Net diff: +5 lines source, +5 lines tests. All 9 patch-apply tests pass.
+
+### Meta — feedback recorded
+
+User pointed out the pattern of defaulting recommendations to "defer to v0.2". Saved as a feedback memory (`feedback_no_default_v02_defer.md`): future recommendations must do a cheap-vs-expensive check before recommending deferral; small defensive work ships with the epic that introduces the surface.
+
+### Q5 — kept as-is
+
+Q5's recommendation ("Keep the buckets separate as committed") is not a deferral — it confirms the v0.1 design. The "v0.2 may want a unified budget" sentence is forward-looking context, not a parked task. No change.

@@ -799,6 +799,7 @@ export async function applyFindingAction(input: {
           status: 'applied',
           appliedAt: new Date(),
           appliedInVersionId: newVersion.id,
+          staleReason: null,
         },
       });
 
@@ -847,7 +848,7 @@ export async function rejectFindingAction(input: {
     await prisma.$transaction(async (tx) => {
       await tx.finding.update({
         where: { id: findingId },
-        data: { status: 'rejected', rejectedAt: new Date() },
+        data: { status: 'rejected', rejectedAt: new Date(), staleReason: null },
       });
       const allFindings = await tx.finding.findMany({
         where: { specId: finding.specId },
@@ -945,6 +946,7 @@ export async function undoApplyAction(input: {
           status: 'open',
           appliedAt: null,
           appliedInVersionId: null,
+          staleReason: null,
         },
       });
 
@@ -990,7 +992,7 @@ export async function undoRejectAction(input: {
     await prisma.$transaction(async (tx) => {
       await tx.finding.update({
         where: { id: findingId },
-        data: { status: 'open', rejectedAt: null },
+        data: { status: 'open', rejectedAt: null, staleReason: null },
       });
       const allFindings = await tx.finding.findMany({
         where: { specId: finding.specId },

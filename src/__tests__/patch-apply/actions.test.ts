@@ -273,6 +273,8 @@ describe('applyFindingAction', () => {
     expect(findingUpdate.data.status).toBe('applied');
     expect(findingUpdate.data.appliedInVersionId).toBe('version-2');
     expect(findingUpdate.data.appliedAt).toBeInstanceOf(Date);
+    // Defensive null on transitions away from `stale` (Epic 06 results Q4).
+    expect(findingUpdate.data.staleReason).toBeNull();
   });
 
   it('stale-patch — single Finding.update with status+staleReason, no transaction, returns patch_stale', async () => {
@@ -398,6 +400,7 @@ describe('rejectFindingAction + undoRejectAction round-trip', () => {
     };
     expect(rejectUpdate.data.status).toBe('rejected');
     expect(rejectUpdate.data.rejectedAt).toBeInstanceOf(Date);
+    expect(rejectUpdate.data.staleReason).toBeNull();
 
     // qualityScore was recomputed.
     expect(rejectTx.spec.update).toHaveBeenCalledTimes(1);
@@ -420,7 +423,11 @@ describe('rejectFindingAction + undoRejectAction round-trip', () => {
     const undoUpdate = undoTx.finding.update.mock.calls[0][0] as {
       data: Record<string, unknown>;
     };
-    expect(undoUpdate.data).toEqual({ status: 'open', rejectedAt: null });
+    expect(undoUpdate.data).toEqual({
+      status: 'open',
+      rejectedAt: null,
+      staleReason: null,
+    });
   });
 
   it('rejectFindingAction on non-open finding → invalid_status', async () => {
@@ -506,6 +513,7 @@ describe('undoApplyAction', () => {
       status: 'open',
       appliedAt: null,
       appliedInVersionId: null,
+      staleReason: null,
     });
   });
 
