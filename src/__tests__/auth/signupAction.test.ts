@@ -184,6 +184,16 @@ describe('signupAction', () => {
       },
     });
 
+    // v0.1 invariant: signup creates EXACTLY ONE UserWorkspace row per user.
+    // The DB has no unique constraint on userId (deferred to v0.2 to avoid a
+    // destructive migration when team-features land), so this test is the
+    // tripwire for accidental dual-creation in the transaction.
+    // getRequiredSession() uses findFirst() and would silently pick one row
+    // if this invariant were violated.
+    expect(tx.user.create).toHaveBeenCalledTimes(1);
+    expect(tx.workspace.create).toHaveBeenCalledTimes(1);
+    expect(tx.userWorkspace.create).toHaveBeenCalledTimes(1);
+
     // signIn was called.
     expect(signIn).toHaveBeenCalledWith('credentials', {
       email: 'alice@example.com',
