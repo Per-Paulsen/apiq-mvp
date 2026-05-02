@@ -859,3 +859,83 @@ User confirms removal of `TOASTS.rePullStarted` from the v0.1 catalog.
 **Status:** Phase 3 complete. All NEEDS CONFIRMATION items resolved.
 
 The cross-epic spec set is implementation-ready for Epic 07 → Epic 08. Recommended next: `/dev specs/07-specs-list-settings.md` to start Epic 07.
+
+---
+
+# Cross-Epic Review — 2026-05-02 (Pass 7, post-Epic-07)
+
+## Summary
+
+- **Total specs reviewed:** 9 (00–08)
+- **Read-only (completed epics):** 00, 01, 02, 03, 04, 05, 06, 07
+- **Specs reviewed for edits:** 08 (only) — the single unbuilt spec
+- **Specs modified in this pass:** none
+- **Specs clean (in this pass):** 08 — Epic 07's implementation fully supports Epic 08's scope without modifications
+- **Total findings:** 0 structural issues + 0 NEEDS CONFIRMATION
+- **Triggering input:** `07-specs-list-settings-results.md` with full implementation details + browser verification screenshots.
+
+## Forward dependency gaps
+
+**None identified.** Epic 07's implementation establishes clear handoffs for Epic 08:
+
+- Toast catalog (`TOASTS`) already extended with 5 Epic 07 entries (`rePullComplete`, `specDeleted`, `workspaceUpdated`, `profileUpdated`) — Epic 08 will continue extending the same object.
+- Toast wiring fully operational: specs-list row-action menu calls `showToast(TOASTS.reanalyzeStarted)` (specs-list-view.tsx line 210), `showToast(TOASTS.rePullComplete)` (line 222), `showToast(TOASTS.specDeleted)` (line 240) on success; Settings forms wire `TOASTS.workspaceUpdated` + `TOASTS.profileUpdated` (workspace-form.tsx line 36, profile-form.tsx line 36).
+- Rate-limit consumer pattern established: row-action Re-pull detects `error.kind === 'rate_limited'` and calls `showToast(formatQuotaToast(error))` (specs-list-view.tsx line 228) — Epic 08 owns extending the catalog, not the pattern itself.
+- `unstable_cache` wrapper established (workspace-cache.ts) with `updateTag(WORKSPACE_NAME_CACHE_TAG)` invalidation in `updateWorkspaceAction` (actions.ts line 84). Matches Next.js 16 API per Epic 07 Follow-up §"Q5".
+
+## Backward impact
+
+**None.** Epic 07's async server component layout does NOT regress Epic 08's hydration-fix options:
+- Epic 08 AC #18 lists three fix paths (a: `useEffect`-gated client component, b: controlled `open=false` SSR, c: `suppressHydrationWarning`). All three remain viable on an async parent — async server components do not block client-component children or HTML-attribute directives.
+
+## Schema drift
+
+**None.** All new TOASTS entries follow the existing `ToastShape` contract (`{ kind: 'info'|'success'|'error', message: string }`). No type inconsistency with Epic 06's `formatQuotaToast`.
+
+## Missing handoff
+
+**Confirmed clean.** Epic 08 §"Toast wiring on existing surfaces" lists 8 call-sites; 6 are shipped in Epic 07:
+- spec-detail-header.tsx `onRepull` — ❌ Epic 08 owns (no showToast yet)
+- spec-detail-header.tsx `onReanalyze` — ❌ Epic 08 owns (no showToast yet)
+- spec-detail-view.tsx `FailedPanel.onRetry` — ❌ Epic 08 owns (no showToast yet)
+- finding-card.tsx stale-card Re-analyze — ✓ Epic 06 shipped
+- specs-list-view.tsx row-action Re-analyze — ✓ Shipped (line 210)
+- specs-list-view.tsx row-action Re-pull — ✓ Shipped (line 222 + rate-limit line 228)
+- specs-list-view.tsx row-action Delete — ✓ Shipped (line 240)
+- workspace-form.tsx success — ✓ Shipped (line 36)
+- profile-form.tsx success — ✓ Shipped (line 36)
+
+## Implementation drift
+
+**Two items align with Epic 08 spec (not mismatches):**
+
+1. **`TOASTS.rePullStarted` catalogued but not used** — Epic 08 spec (Pass 6, resolved per cross-epic Q1) explicitly removed this entry from v0.1 catalog because `repullSpecAction` is synchronous (no waiting toast). Current `src/lib/toasts.ts` exports only the correct entries (no `rePullStarted`). ✓ **Aligned.**
+
+2. **`TOASTS.analysisComplete` not yet wired** — Epic 08 AC #22 owns emitting it on Spec Detail polling layer (transition `analyzing` → `completed`, deduped via sessionStorage key `'apiq.analysis-complete-toast.<specId>'`). Not expected to be live before Epic 08. ✓ **Expected.**
+
+## Issues considered but not changed
+
+- **Versions drawer empty state ("No applies yet.")** — Epic 08 AC #10 specifies this. Current code (line 35) always shows `Versions ({count})` button; the empty-state copy would appear inside the drawer on open. Not a regression — Epic 07 was never required to add it.
+- **Error boundaries / 404 pages** — only `src/app/(app)/specs/error.tsx` and `src/app/(app)/specs/not-found.tsx` exist. Epic 08 AC #8/9 owns adding the missing route-group `not-found.tsx` files and polishing the existing ones. Not a regression.
+
+## Pre-launch checklist alignment
+
+Epic 07 Follow-up §"Meta — feedback memory reinforced" notes that the user fixed Q1, Q2, Q5 from the Open Questions in the implementation session (Radix tooltip, Findings pills, `unstable_cache`). Epic 08 AC #19 requires scanning Epic 04/05/06/07 results for any new follow-up items not yet in `CLAUDE.md` §"Pre-launch checklist".
+
+Checking `specs/07-specs-list-settings-results.md` §"Risks for future epics":
+- Risk 1 (sidebar hydration warning) — forwarded to Epic 08 AC #18 ✓
+- Risks 2–5 — resolved (row-action tooltip, findings pills) or owned by Epic 08 (polling conflict, workspace query load) ✓
+
+Scanning Epic 04/05/06 results:
+- Epic 04 results Q2 (pricing monthly verification) — not yet in checklist, **should be added**
+- Epic 05 results Q5 (Tailwind JIT regression test) — Epic 08 owns per prose; **should be added**
+
+## NEEDS CONFIRMATION items
+
+**None.** All Epic 07 implementation details support Epic 08 scope without contradictions or gaps.
+
+---
+
+**Status:** Phase 1 complete. Zero findings.
+
+**Conclusion:** Cross-epic state is clean. Epic 07's implementation fully supports Epic 08's scope. Epic 08 is ready to proceed without spec modifications. Recommended next: `/dev specs/08-export-polish.md` to start Epic 08 (the final v0.1 epic).
