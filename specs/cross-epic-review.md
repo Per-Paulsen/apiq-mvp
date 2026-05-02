@@ -784,3 +784,78 @@ After the initial Pass 6 section above (drafted by the `cross` Explore investiga
 **Status:** Phase 1 (with addendum) complete. 1 NEEDS CONFIRMATION item.
 
 Recommendation: resolve the single low-stakes item via direct user reply ("remove" / "wire" / "keep") — Phase 2 brainstorming-in-file is overkill for one orphan-catalog cleanup. The recommendation is unambiguous; user can override.
+
+---
+
+## Pass 6 — Brainstorming (Phase 2)
+
+> Append-only. Bitte unter die Frage antworten — "ack [empfehlung]" / Variante / Freitext.
+
+### Q1 — Epic 08: `TOASTS.rePullStarted` orphan in v0.1 catalog
+
+The v0.1 toast catalog at `src/lib/toasts.ts` (Epic 08 §"Canonical message catalog", line 60 of the spec) currently includes:
+
+```ts
+rePullStarted: { kind: 'info', message: 'Re-pulling from URL…' },
+rePullComplete: { kind: 'success', message: 'Re-pull complete' },
+```
+
+But every Re-pull wiring point — Spec Detail header `onRepull` (Epic 08 §"Toast wiring on existing surfaces" line 32) and Specs-list row-action Re-pull (Epic 07 line 18 / Epic 08 wiring extension line 37) — only emits `TOASTS.rePullComplete` on success. No surface fires `rePullStarted`.
+
+The action `repullSpecAction` is **synchronous**: it blocks the click handler until the network fetch + DB writes finish (typically a few hundred ms; longer for slow upstream specs), then returns `{ success, newVersionId }`. The success branch fires `TOASTS.rePullComplete`. There's no async waiting period during which a "started" toast would help orient the user.
+
+Catalog parallels:
+
+| Action surface | `*Started` toast? | `*Complete` toast? |
+|---|---|---|
+| Apply | ✗ | (none — `patchApplied`, but no `applyStarted`) |
+| Reject | ✗ | `patchRejected` |
+| Undo Apply | ✗ | `applyUndone` |
+| Undo Reject | ✗ | `rejectUndone` |
+| Delete | ✗ | `specDeleted` |
+| Re-analyze | ✓ `reanalyzeStarted` | (none synchronously — `analysisComplete` fires from the polling layer) |
+| **Re-pull** | **✓ `rePullStarted` (orphan)** | **✓ `rePullComplete`** |
+| Workspace update | ✗ | `workspaceUpdated` |
+| Profile update | ✗ | `profileUpdated` |
+| Export JSON | ✗ | `exportedJson` |
+| Export YAML | ✗ | `exportedYaml` |
+
+`reanalyzeStarted` is the only `*Started` entry that earns its keep — the analysis takes ~60 s after the click, so the toast tells the user "your trigger landed; analysis is running in the background". `rePullStarted` doesn't have the same justification.
+
+#### Optionen:
+
+**(a) Remove `rePullStarted` from the catalog** (recommended). One-line catalog edit + nothing else. The catalog stays tight and consistent with the `*Started`-only-when-async pattern that `reanalyzeStarted` exemplifies. Future epics can re-add if a use case emerges.
+
+**(b) Wire `rePullStarted` on click** (defensive). Both Re-pull surfaces (Spec Detail header + Specs-list row-action) fire `TOASTS.rePullStarted` immediately at click — BEFORE the action call — and `TOASTS.rePullComplete` on success. Two toasts per Re-pull. The user gets parallel feedback to Re-analyze (started → complete via polling). Cost: more toast noise; benefit: symmetry with re-analyze + immediate feedback for slow upstream pulls.
+
+**(c) Keep in catalog as documentation, do not wire.** Status-quo plus a one-line comment: `rePullStarted: ... // not currently emitted; reserved for v0.2 if re-pull becomes async`. Slight code smell (orphan code) but signals intent.
+
+→ **Empfehlung:** (a) — remove. The recommendation is unambiguous; reply "ack a" or pick a variant.
+
+---
+
+**Status:** Phase 2 questions ready. Awaiting user reply.
+
+#### Antwort (2026-05-02)
+
+> ack a
+
+User confirms removal of `TOASTS.rePullStarted` from the v0.1 catalog.
+
+---
+
+## Pass 6 — Confirmations Applied (Phase 3)
+
+### Q1 — `TOASTS.rePullStarted` removal
+
+**Resolution:** Option (a) — remove the entry from the v0.1 catalog.
+
+- Edit to `specs/08-export-polish.md` Scope §"Canonical message catalog" (line 60): the line `rePullStarted: { kind: 'info', message: 'Re-pulling from URL…' },` was deleted from the `TOASTS` const. The remaining Re-pull catalog entry is `rePullComplete` only.
+- Edit to `specs/08-export-polish.md` Open questions: the `NEEDS CONFIRMATION` line was replaced with a `(resolved per cross-epic Q1 Pass 6, 2026-05-02)` ack documenting the rationale.
+- No code change required — the `TOASTS` catalog is part of the Epic 08 implementation surface and hasn't been built yet (`src/lib/toasts.ts` only carries `reanalyzeStarted` from Epic 06 today).
+
+---
+
+**Status:** Phase 3 complete. All NEEDS CONFIRMATION items resolved.
+
+The cross-epic spec set is implementation-ready for Epic 07 → Epic 08. Recommended next: `/dev specs/07-specs-list-settings.md` to start Epic 07.

@@ -57,7 +57,6 @@
     export const TOASTS = {
       // Epic 03 — Spec ingestion
       specDeleted: { kind: 'success', message: 'Spec deleted' },
-      rePullStarted: { kind: 'info', message: 'Re-pulling from URL…' },
       rePullComplete: { kind: 'success', message: 'Re-pull complete' },
       // Epic 04 — Analysis
       reanalyzeStarted: { kind: 'info', message: 'Re-analyzing…' },
@@ -180,4 +179,4 @@
 - (resolved per cross-epic Q5, 2026-05-02) Sidebar hydration warning is owned by Epic 08 polish — see Scope §"Polish" + AC #18 for the fix-path investigation.
 - (resolved per `specs/cross-epic-review.md` Q1) Per-action toast wording: option (a) — `src/lib/toasts.ts` canonical `TOASTS` catalog. See Scope §"Toast system" for the v0.1 entries.
 - (resolved per cross-epic Q5, 2026-05-02) `TOASTS.analysisComplete` emission point: option (a) — Epic 08 wires it on the Spec Detail polling layer (transition `analyzing` → `completed`, sessionStorage dedupe key `'apiq.analysis-complete-toast.<specId>'`). Symmetric to the budget-toast hook. Documented in Scope §"`TOASTS.analysisComplete` polling-layer hook" + AC #22.
-- **NEEDS CONFIRMATION** — `TOASTS.rePullStarted` is in the v0.1 catalog (`message: 'Re-pulling from URL…'`) but no surface fires it. The Re-pull wiring spec (Spec Detail header + Specs-list row-action) only emits `TOASTS.rePullComplete` after success. Options: (a) remove `rePullStarted` from the catalog as orphan code (consistent with Apply / Reject / Delete which have no `*Started` entries); (b) wire it on click before the action call (every Re-pull surface fires 2 toasts: "Re-pulling…" then "Re-pull complete"); (c) keep it in the catalog as documentation for future use without wiring it now. Recommendation: (a) — `repullSpecAction` is synchronous (blocks until DB writes complete), so a "Re-pulling…" toast adds noise without giving the user new information. Removing the entry keeps the catalog tight and avoids an orphan code smell.
+- (resolved per cross-epic Q1 Pass 6, 2026-05-02) `TOASTS.rePullStarted` removed from the v0.1 catalog. Rationale: `repullSpecAction` is synchronous, so no waiting toast is needed; only `TOASTS.rePullComplete` fires on success. Catalog stays consistent with Apply / Reject / Delete (no `*Started` entries either).
