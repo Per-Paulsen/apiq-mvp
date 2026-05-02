@@ -152,3 +152,17 @@ Screenshots: `docs/screenshots/epic-03-{add-spec-form,spec-placeholder}.png`.
 ---
 
 > **Status:** Awaiting user review. After your review, this file becomes append-only and the epic is final.
+
+---
+
+## User review — 2026-05-02
+
+User accepted all 5 recommendations as-is. No spec corrections required. Deferred actions inherited by future epics:
+
+- **#1** (direct `runAnalysis` call instead of self-fetch) → tracked for Epic 04 implementation; Epic 04's `/dev` will encounter Epic 03's `triggerAnalyzeFireAndForget` stub and replace.
+- **#2** (`'Initial sample load'` label) → tracked for Epic 06; Versions drawer renders the label, fix-in-place there.
+- **#3** (keep separate `'url_pull'` / `'re_pull'` buckets) → no action, recommendation stands.
+- **#4** (keep explicit "Continue to spec" acknowledgment on soft-warn) → no action, recommendation stands.
+- **#5** (close spec's external-ref open question) → tracked for next `/refine_all_ind` pass before Epic 04.
+
+**Status:** Epic 03 is final. File is append-only from this point.
