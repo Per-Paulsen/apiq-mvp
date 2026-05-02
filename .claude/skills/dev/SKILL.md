@@ -147,7 +147,7 @@ After committing, conduct a structured retrospective before writing the results 
 - **Deviations from spec** — anything implemented differently than specified, and why
 - **Risks for future epics** — compatibility concerns, spec freshness issues, or assumptions in upcoming specs that may no longer hold given what was built
 - **Patterns established** — conventions or approaches introduced that future epics should follow
-- **Open questions** — unresolved items, known limitations, or things that need revisiting
+- **Open questions** — unresolved items, known limitations, or things that need revisiting. **For each open question, draft a recommendation** (1–2 sentences with the trade-off you'd flag if the user asked "what should we do?"). Recommendations go inline with each question in the results file — saves a round-trip.
 
 **Step 2 — Write draft results file** at `specs/{epic-number}-{epic-name}-results.md` containing:
 - What was built
@@ -155,7 +155,11 @@ After committing, conduct a structured retrospective before writing the results 
 - Decisions and deviations from spec
 - Verification results
 - Risks for future epics
-- Open questions
+- Open questions, **each immediately followed by a `**Recommendation:**` line** with the proposed answer + reasoning. Format:
+  ```
+  N. **Question text.** Full context...
+     **Recommendation:** 1–2 sentence answer with the trade-off / reasoning. The user can override; the goal is to short-circuit the obvious cases.
+  ```
 
 **Step 3 — User review.** Tell the user the results file is ready for review. The user may add observations, corrections, or additional risks. Wait for the user to confirm before marking the epic as done.
 
