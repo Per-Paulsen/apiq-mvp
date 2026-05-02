@@ -13,3 +13,4 @@ Results incorporated:
 - 03-spec-ingestion-results.md
 - 04-llm-pipeline-results.md
 - 05-spec-detail-results.md
+- 06-patch-apply-results.md

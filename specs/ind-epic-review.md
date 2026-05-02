@@ -1052,3 +1052,92 @@ Recommendation: skip Phase 2 (brainstorming-in-file) and proceed to `/refine_all
 **Status:** Phase 1 complete. 4 `NEEDS CONFIRMATION` items.
 
 Recommendation: skip Phase 2 (brainstorming-in-file) and proceed to `/refine_all` — the 4 items are low-stakes and easy to inline-confirm during the cross-epic pass. Alternative: run Phase 2 first if user prefers explicit confirmation before cross-epic checks.
+
+---
+
+# Individual Epic Review — 2026-05-02 (Pass 6, post-Epic-06)
+
+## Summary
+
+- **Mode:** in-dev (results 00–06 exist)
+- **Specs reviewed:** 07, 08 (2)
+- **Specs skipped (completed epics):** 00, 01, 02, 03, 04, 05, 06 — results files exist; never re-refined.
+- **Specs skipped (already refined for current results set):** none — both 07 and 08 markers were missing `06-patch-apply-results.md`.
+- **Specs modified:** none — both clean against current state.
+- **Specs clean:** 07, 08
+- **Triggering input:** `06-patch-apply-results.md` (just shipped, includes a "Follow-up after user review" section that already forwarded the Versions-drawer pulse polish to Epic 08 spec).
+
+## Method
+
+Two read-only Explore agents (`spec07`, `spec08`) traced every assumption in their respective spec against (a) the Epic 06 results file (patterns established, surfaces shipped, follow-up actions taken) and (b) current source: `prisma/schema.prisma`, `src/app/(app)/specs/actions.ts`, `src/lib/toasts.ts`, the Spec Detail components, `src/lib/session.ts`, `src/lib/format-analysis-error.ts`, and `src/components/ui/`. Findings reported back, lead synthesized.
+
+## 07 — Specs List + Settings
+
+### Findings
+
+**Stale assumptions / drift:** none. All action signatures, schema fields, and existing-component locations referenced by Epic 07 hold against current code:
+
+- `repullSpecAction` / `deleteSpecAction` / `reanalyzeSpecAction` signatures match (`src/app/(app)/specs/actions.ts`)
+- `Spec` model fields all present in `prisma/schema.prisma`; `Finding.staleReason` is now in the schema (Epic 06 addition)
+- `getRequiredSession()` shape unchanged; `signOutAction` still at `@/lib/session`
+- `Workspace.name` field present
+- Sidebar footer still hardcoded in `src/app/(app)/layout.tsx` — Epic 07 owns the replacement (correctly scoped)
+- `loadSampleSpecAction` allow-list still hard-coded to `'openweathermap'` — matches Epic 07's empty-state CTA
+
+**Hidden scope / oversized slices:** none.
+
+**Missing / untestable ACs:** none. The two mechanical dependencies investigator flagged (`npx shadcn add alert-dialog` for AC #6; badge extraction for AC #3, #4) are already explicitly listed in Epic 07 Scope (lines 48-49). Not findings.
+
+**Inconsistent terminology:** none.
+
+**Cross-epic items breaking implementation:** none. Epic 06 → 07 handoff is clean: the four new server actions exist but Epic 07 is read-only at the list level and does not call them; `Finding.staleReason` exists; Epic 07's row-level finding counts deliberately exclude `stale`/`outdated` per cross-epic Q4 (already documented in spec line 15).
+
+**NEEDS CONFIRMATION items raised by investigator (resolved at synthesis time):**
+
+1. *Combined vs separate badge files* — already addressed in Epic 07 Scope line 49: "Move them to `src/components/quality-score-badge.tsx` and `src/components/status-pill.tsx` (or a single `src/components/spec-badges.tsx` if preferred)". Both options are explicitly permitted. **No new NEEDS CONFIRMATION needed.**
+2. *Sidebar footer dropdown vs static text* — already addressed in spec lines 47, 94 ("small, muted text") and AC #10 ("reflects immediately in the sidebar footer" — implies static). Spec is committed to static. **No new NEEDS CONFIRMATION needed.**
+3. *Settings sections — Cards vs tabs* — already implicit in spec line 38 which lists `shadcn Input/Label/Button/Card` as the form primitives. Cards-per-section is consistent with the rest of the project. **No new NEEDS CONFIRMATION needed.**
+
+### Changes applied
+
+- Updated `specs/07-specs-list-settings-brainstorming.md` marker to add `06-patch-apply-results.md` to the `Results incorporated:` list. No spec edits.
+
+## 08 — Export + Polish
+
+### Findings
+
+**Stale assumptions / drift:** none. Every surface Epic 08 references holds in current code:
+
+- `src/lib/toasts.ts` ships `showToast` (no-op stub), `TOASTS.reanalyzeStarted`, `formatQuotaToast`, and the `ToastShape` type — all from Epic 06. Epic 08's job is to replace the no-op body with a real Toaster dispatch and extend the catalog.
+- `formatAnalysisError` shipped in Epic 05 at `src/lib/format-analysis-error.ts`.
+- `spec-detail-header.tsx` `onRepull` / `onReanalyze` and `spec-detail-view.tsx` `FailedPanel.onRetry` exist as the spec describes.
+- The Versions drawer trigger lives in `spec-detail-header.tsx`; the `versions` prop flow from `page.tsx` → `spec-detail-view.tsx` → `spec-detail-header.tsx` → `versions-drawer.tsx` is in place. The "Versions-drawer trigger pulse" Scope bullet (per Epic 06 results Q3) is implementable as written.
+- Stale-card Re-analyze with `showToast(TOASTS.reanalyzeStarted)` is already wired in `finding-card.tsx`.
+- `(app)/specs/error.tsx` and `not-found.tsx` exist (Epic 03 baseline). `(auth)/not-found.tsx` and root `not-found.tsx` do not — Epic 08 correctly claims to add them.
+- Sidebar hydration warning still occurs on `(app)` routes (re-confirmed during Epic 06 Playwright run).
+- Quota-toast emitters: `addSpecFromUrlAction`, `repullSpecAction`, and `applyFindingAction` (Epic 06's addition) all return `{ success: false, error: { kind: 'rate_limited', retryAt } }`.
+- No export action exists yet — Epic 08 introduces from scratch (correctly scoped).
+
+**Hidden scope / oversized slices:** none.
+
+**Missing / untestable ACs:** none. AC #18 / #19 require manual / browser verification but the requirements are specific.
+
+**Inconsistent terminology:** none.
+
+**Cross-epic items breaking implementation:** none. Sidebar hydration fix depends on Epic 07's async-layout conversion; Epic 08 spec already cross-references this. The `applyFindingAction` rate-limit + `patch_stale` branching pattern is correctly captured in Epic 08's toast-wiring conventions.
+
+**NEEDS CONFIRMATION items raised by investigator (resolved at synthesis time):**
+
+1. *Sidebar Hydration-Fix candidate (a/b/c)* — Epic 08 spec line 30 explicitly says "Investigate the root cause first, then commit to ONE of (a)/(b)/(c) and pick whichever has the lowest blast radius." This is an explicit implementation-time choice, not a refinement-time question. **No new NEEDS CONFIRMATION needed.**
+2. *Versions-Pulse timing (~1.2 s)* — the new bullet committed to ~1.2 s as a default. Sub-second tuning is implementation-time polish. **No new NEEDS CONFIRMATION needed.**
+3. *`TOASTS.analysisComplete` dedupe scope (per-specId vs global)* — Epic 08 spec already commits to per-specId sessionStorage with key `'apiq.analysis-complete-toast.<specId>'` (resolved per cross-epic Q5, 2026-05-02). **No new NEEDS CONFIRMATION needed.**
+
+### Changes applied
+
+- Updated `specs/08-export-polish-brainstorming.md` marker to add `06-patch-apply-results.md` to the `Results incorporated:` list. No spec edits.
+
+## Outcome
+
+Both 07 and 08 are clean against the codebase + current results set. **Phase 2 skipped — no `NEEDS CONFIRMATION` items.** Recommended next: `/refine_all` for the post-Epic-06 cross-epic consistency pass.
+
+**Status:** Phase 1 complete. 0 `NEEDS CONFIRMATION` items.
