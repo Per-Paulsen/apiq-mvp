@@ -103,3 +103,63 @@ model IpActionLog {
 
   @@index([ip, action, createdAt(sort: Desc)])
 }
+
+// =====================================================================
+// Spec ingestion (Epic 03)
+// =====================================================================
+
+model Spec {
+  id               String    @id @default(cuid())
+  workspaceId      String
+  name             String
+  sourceType       String    // 'url' | 'sample'
+  sourceUrl        String?
+  sourceFormat     String    // 'json' | 'yaml'
+  wasAuthedPull    Boolean   @default(false)
+  originalJson     Json
+  currentJson      Json
+  currentVersionId String?   @unique
+  endpointCount    Int
+  qualityScore     Int?
+  lastAnalyzedAt   DateTime?
+  analysisStatus   String    @default("pending") // 'pending' | 'analyzing' | 'completed' | 'failed'
+  analysisError    String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  versions       SpecVersion[]  @relation("SpecVersions")
+  currentVersion SpecVersion?   @relation("SpecCurrentVersion", fields: [currentVersionId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId])
+}
+
+model SpecVersion {
+  id              String   @id @default(cuid())
+  specId          String
+  parentVersionId String?
+  versionNumber   Int
+  json            Json
+  label           String
+  createdAt       DateTime @default(now())
+
+  spec        Spec         @relation("SpecVersions", fields: [specId], references: [id], onDelete: Cascade)
+  currentFor  Spec?        @relation("SpecCurrentVersion")
+
+  @@unique([specId, versionNumber])
+  @@index([specId, versionNumber])
+}
+
+// =====================================================================
+// WorkspaceActionLog — workspace-scoped rate-limit storage (authenticated actions).
+// Sibling to IpActionLog (IP-scoped, unauthenticated). v0.1 known actions:
+// 'url_pull' (Epic 03), 're_pull' (Epic 03), 'apply' (Epic 06).
+// =====================================================================
+
+model WorkspaceActionLog {
+  id          String   @id @default(cuid())
+  workspaceId String
+  action      String
+  createdAt   DateTime @default(now())
+
+  @@index([workspaceId, action, createdAt(sort: Desc)])
+}

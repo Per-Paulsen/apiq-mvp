@@ -1,0 +1,24 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "External Ref Test Fixture",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/things": {
+      "get": {
+        "summary": "List things",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "https://example.com/schemas/Thing.json#/Thing" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
