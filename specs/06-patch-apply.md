@@ -6,12 +6,13 @@
 
 - **Shared analysis-library imports** — `applyFindingAction` and `undoApplyAction` consume helpers owned by Epic 04:
   - `validatePatchOps` from `src/lib/analysis/validate-patches.ts` (the cycle-aware patch + hallucination validator).
-  - `cycleStripSpec` from `src/lib/analysis/stringify-spec.ts` (used to ensure `currentJson` is acyclic before `applyPatch`; Epic 03 already stores it that way, but a defensive call is cheap and means a future loader change can't silently break this epic).
+  - `cycleStripSpec` from `src/lib/analysis/stringify-spec.ts` (used to ensure `currentJson` is acyclic before `applyPatch`; Epic 03 already stores it that way, but a defensive call is cheap and means a future loader change can't silently break this epic). **Already ported by Epic 03** — file exists at the documented path; Epic 06 just imports.
   Both are ports of the Epic 00 spike (`scripts/spike/validate-patches.ts`, `scripts/spike/stringify-spec.ts`) and are consumed verbatim — do not re-implement.
+- **Hitchhiker fix from Epic 03 results recommendation #2**: Epic 03's `loadSampleSpecAction` writes SpecVersion `label = 'Initial pull from URL'` for sample-sourced specs (cosmetic mismatch — should read "Initial sample load"). Versions drawer (this epic, see scope below) is the user-visible surface for SpecVersion labels — fix in the same PR by editing the one-line literal in `src/app/(app)/specs/actions.ts` `loadSampleSpecAction`. Single source of truth (don't translate at render time).
 - Server actions:
   - `applyFindingAction({ findingId })`:
     1. `getRequiredSession()` — workspace check.
-    2. Apply rate-limit check (≤30 applies per hour per workspace; reuse `WorkspaceActionLog` from Epic 03).
+    2. Apply rate-limit check (≤30 applies per hour per workspace; reuse `WorkspaceActionLog` from Epic 03 via `checkWorkspaceRateLimit(workspaceId, 'apply', APPLY_LIMIT_PER_HOUR, ONE_HOUR_MS)` from `@/lib/rate-limit-workspace`). Add `APPLY_LIMIT_PER_HOUR = 30` constant export to that file. Always call `recordWorkspaceAction(workspaceId, 'apply')` after the check (Epic 02/03 convention: every attempt records, even rejected ones, so the rolling-window sweep is monotonic).
     3. Load the Finding; require `status = 'open'` (else return `{ kind: 'invalid_status' }`).
     4. Load the Spec + currentVersion.
     5. Validate `patchOps` against `Spec.currentJson` using `validatePatchOps` from `src/lib/analysis/validate-patches.ts` (ported from `scripts/spike/validate-patches.ts` — Epic 00 reference implementation). The validator combines:

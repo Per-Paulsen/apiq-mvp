@@ -569,3 +569,135 @@ None. All 16 findings were structural fixes (anchoring to existing Epic 01 + 02 
 **Status:** Phase 1 complete. Phase 2 (brainstorming) skipped — no NEEDS CONFIRMATION items. Phase 3 not needed.
 
 Recommended next: `/refine_all` for cross-epic consistency check (the new edits touch shared conventions — TooltipProvider, server-action error shapes, layout updates — which may have cross-epic implications worth verifying). Then `/dev specs/03-spec-ingestion.md` to start the next epic.
+
+---
+
+# Individual Epic Review — 2026-05-02 (Pass 3, post-Epic-03)
+
+## Summary
+
+- **Mode:** in-dev (Epic 00 + 01 + 02 + 03 results exist)
+- **Specs reviewed:** 04, 05, 06, 07, 08 (5 of 9)
+- **Specs skipped (completed epics):** 00, 01, 02, 03
+- **Specs skipped (already refined):** none — all 5 reviewed specs were stale (their brainstorming markers referenced only `00+01+02-results.md`; the new trigger is `03-spec-ingestion-results.md`)
+- **Specs modified:** all 5
+- **Specs clean:** none
+- **Total findings:** 12 (12 structural applied, 0 NEEDS CONFIRMATION → no Phase 2)
+- **Triggering input:** `specs/03-spec-ingestion-results.md` (newly added — accepted recommendations on direct `runAnalysis` call, sample-label fix, separate rate-limit buckets, explicit soft-warn ack, external-ref question close).
+
+---
+
+## 04 — LLM Pipeline
+
+### Findings
+
+- **Auto-trigger should be a direct `runAnalysis(specId)` call, not a self-fetch** (Epic 03 results recommendation #1, accepted by user). Self-fetch carries the localhost-hardcode + secret-header roundtrip for zero benefit. (Implementation drift / Hidden scope creep — Epic 04 already owns `runAnalysis` so the direct-call path is server-internal by definition.)
+  - **Change:** Replaced the auto-trigger bullet to commit to direct call. Documented that Epic 04's first job is to swap Epic 03's `triggerAnalyzeFireAndForget` self-fetch in `src/app/(app)/specs/actions.ts` to `void runAnalysis(specId).catch((err) => console.error(...))`. The `/api/internal/analyze` route stays for manual debug/curl access.
+
+- **Wire deferred Finding-invalidation in Epic 03's `repullSpecAction`** (Epic 03 results §"Risks for future epics" — `// TODO Epic 04` left because the Finding model didn't exist yet). (Hidden scope creep — Epic 04 owns the model; the wiring is Epic 04's job.)
+  - **Change:** New scope bullet committing Epic 04 to add `tx.finding.updateMany({ where: { specId, status: 'open' }, data: { status: 'outdated', updatedAt: new Date() } })` inside Epic 03's existing re-pull transaction, plus extending Epic 03's `actions.test.ts` with a Finding-invalidation test (Epic 03's AC #14 becomes assertable).
+
+- **`reanalyzeSpecAction` is button-triggered, not form-triggered** (Hidden assumption — earlier wording implied form-style; Epic 03 results clarify the convention).
+  - **Change:** Action bullet rewritten to specify direct call from a `useTransition` / async click handler, no `useActionState` / FormData adapter. Notes that buttons can call object-args actions directly (the form-action.ts adapter pattern is forms-only).
+
+- **`stringify-spec.ts` already ported by Epic 03** (Implementation drift — file mapping listed it as a TODO for this epic).
+  - **Change:** Spike-to-runtime mapping line updated to note "Already ported by Epic 03; Epic 04 just imports."
+
+### Changes applied
+
+- Auto-trigger bullet: rewritten as direct `runAnalysis(specId)` call
+- New scope bullet: wire deferred Finding-invalidation in Epic 03's repull transaction
+- `reanalyzeSpecAction` bullet: button-triggered semantics + direct call
+- Spike-to-runtime mapping: stringify-spec.ts noted as already-ported
+
+---
+
+## 05 — Spec Detail Screen
+
+### Findings
+
+- **Placeholder `/specs/[specId]/page.tsx` already exists from Epic 03** — Epic 05 replaces, not creates. (Implementation drift — earlier wording implied creating from scratch.)
+  - **Change:** `(app)/specs/[specId]/page.tsx` scope bullet extended: "Replaces Epic 03's placeholder at the same path. The placeholder's auth/workspace check pattern (`getRequiredSession()` → `prisma.spec.findFirst({ where: { id, workspaceId } })` → `notFound()`) is the established convention — keep it, expand the rendered content."
+
+- **`error.tsx` and `not-found.tsx` already exist from Epic 03** — Epic 05 inherits, doesn't need to create. (Implementation drift / Hidden scope creep avoided.)
+  - **Change:** New scope bullet: "`(app)/specs/error.tsx` and `not-found.tsx` already exist (Epic 03 shipped minimal versions). Epic 05 inherits — Epic 08 polishes per `prd-decisions.md` Cards conventions."
+
+- **Re-pull button visibility logic missing** — Epic 05 renders the re-pull button but the spec doesn't say when to hide it. Epic 03 added `Spec.wasAuthedPull` boolean specifically for this. (Hidden scope creep — without this, AC tests would surface authed-pull buttons that 404 on click.)
+  - **Change:** New scope bullet: "render the 'Re-pull from URL' button only when `Spec.sourceType === 'url' AND Spec.wasAuthedPull === false`. Sample-sourced specs and authed pulls hide the button (parity with Epic 03's `repullSpecAction` rejection)."
+
+- **Pre-existing Sidebar hydration warning surfaces during tooltip-heavy UI** — Epic 03 results flagged this; Epic 05's screen has heavy Tooltip use (disabled Apply/Reject buttons + endpoint-list rows + truncated URLs). (Implementation drift — risk note for the impl team.)
+  - **Change:** Scope bullet extended with hydration-warning note + suggested fix paths (defer Tooltip mount via `useEffect`-gated client component, or pin controlled `open` to `false` on SSR).
+
+### Changes applied
+
+- `(app)/specs/[specId]/page.tsx` scope: "replaces Epic 03's placeholder" + auth pattern reuse
+- New scope bullet: error.tsx / not-found.tsx inherited from Epic 03
+- New scope bullet: re-pull button visibility logic on `wasAuthedPull` flag
+- Hydration-warning note added to scope
+
+---
+
+## 06 — Patch Apply
+
+### Findings
+
+- **`APPLY_LIMIT_PER_HOUR` constant + `@/lib/rate-limit-workspace` reference missing** (Hidden scope creep — Epic 03 ships the helper at `@/lib/rate-limit-workspace` with `URL_PULL_LIMIT_PER_HOUR = 20` and the `checkWorkspaceRateLimit` API; Epic 06 needs `APPLY_LIMIT_PER_HOUR = 30` added to the same file).
+  - **Change:** Step 2 (rate-limit) extended to spell out the import + constant addition + `recordWorkspaceAction` call after the check (Epic 02/03 convention: every attempt records).
+
+- **`cycleStripSpec` already at the documented path** (Implementation drift — spec said "ported by Epic 04" but Epic 03 ported it).
+  - **Change:** Shared-imports bullet annotated "Already ported by Epic 03 — file exists at the documented path; Epic 06 just imports."
+
+- **Hitchhiker fix: rename Epic 03's sample SpecVersion label** (Epic 03 results recommendation #2, accepted — fix lands in Epic 06's PR because the Versions drawer is where users see the label). (Cross-epic file edit; out-of-scope-flavored but pragmatic.)
+  - **Change:** New top-level scope bullet documenting the one-line fix to `src/app/(app)/specs/actions.ts` `loadSampleSpecAction` label literal. Note that single source of truth (don't translate at render time).
+
+### Changes applied
+
+- Step 2 (apply rate-limit): explicit `checkWorkspaceRateLimit` call shape + `APPLY_LIMIT_PER_HOUR = 30` + `recordWorkspaceAction` after check
+- Shared-imports bullet: cycleStripSpec already-ported note
+- New scope bullet: hitchhiker fix for sample SpecVersion label
+
+---
+
+## 07 — Specs List + Settings
+
+### Findings
+
+- **Form pattern should follow Epic 03's object-args + form-action adapter convention**, not Epic 02's direct-FormData pattern (Implementation drift — Epic 03 refined the convention; Epic 07 inherits).
+  - **Change:** Settings form-pattern bullet extended with the action signature convention: underlying actions take typed object args (`updateWorkspaceAction({ name })`); a thin `'use server'` adapter at e.g. `(app)/settings/workspace-form-action.ts` exposes the `(prevState, FormData)` signature for `useActionState`. Reference to Epic 03's `src/app/(app)/specs/new/form-action.ts` as the canonical example.
+
+- **Pre-existing Sidebar hydration warning relevant for Specs List row actions** (Inconsistent domain language — the warning was flagged in Epic 03 results but not yet propagated to Epic 07).
+  - **Change:** Shared layout bullet extended with the hydration-warning note + cross-reference to Epic 05 (which has the same note + suggested fixes).
+
+### Changes applied
+
+- Settings Form-pattern bullet: object-args + form-action.ts adapter convention
+- Shared layout bullet: hydration-warning note
+
+---
+
+## 08 — Export + Polish
+
+### Findings
+
+- **`(app)/specs/error.tsx` and `not-found.tsx` already exist from Epic 03** — Epic 08 polishes, doesn't create. (Implementation drift — earlier wording implied creating from scratch in this epic.)
+  - **Change:** Error-boundaries bullet extended: "`src/app/(app)/specs/error.tsx` already exists (minimal Card + Try-again). Epic 08 polishes per `prd-decisions.md` Cards conventions — does NOT create from scratch." Same note for `not-found.tsx`. Clarification: Epic 08 still creates the missing route-group `not-found.tsx` files (`(app)`, `(auth)`, root) where Epic 03 didn't ship.
+
+- **Pre-existing TODO from Epic 03 to wire up** in `add-spec-form.tsx` (Hidden scope creep — Epic 03 left a `// TODO (Epic 08)` for the rate_limited toast emission).
+  - **Change:** Toast-system bullet extended: "When Epic 08 ships `showToast`, swap Epic 03's form's rate-limited handler to also emit the toast: `showToast(formatQuotaToast(error))` alongside the inline banner. Remove the TODO comment in `src/app/(app)/specs/new/add-spec-form.tsx`."
+
+### Changes applied
+
+- Error boundaries bullet: error.tsx/not-found.tsx inherited from Epic 03
+- Toast-system bullet: wire showToast in Epic 03's add-spec-form.tsx (TODO removal)
+
+---
+
+## NEEDS CONFIRMATION items
+
+None. All 12 findings were structural fixes anchoring to Epic 03's accepted recommendations + surfaced implementation drift between unbuilt specs and Epic 03's actual ship.
+
+---
+
+**Status:** Phase 1 complete. Phase 2 (brainstorming) skipped — no NEEDS CONFIRMATION items. Phase 3 not needed.
+
+Recommended next: `/refine_all` for cross-epic consistency check — the new edits cross multiple epics (Epic 04 modifies Epic 03's source as part of its scope; Epic 06 hitchhikes a fix into Epic 03's loadSampleSpecAction). Worth a cross-epic sweep before `/dev specs/04-llm-pipeline.md`.

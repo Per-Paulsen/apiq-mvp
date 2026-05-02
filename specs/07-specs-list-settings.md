@@ -15,7 +15,7 @@
   - Open / applied / rejected finding counts (small triplet)
   - Source URL (truncated, with full URL on hover)
   - Last analyzed (relative time, e.g. "3 hours ago")
-  - Row actions menu: "Re-analyze", "Re-pull from URL" (hidden for `sourceType=sample` and authed-pull specs), "Delete" (with confirm dialog)
+  - Row actions menu: "Re-analyze", "Re-pull from URL" (hidden when `Spec.sourceType !== 'url'` OR `Spec.wasAuthedPull === true` — the `wasAuthedPull` boolean is set by Epic 03's `addSpecFromUrlAction` based on whether an Authorization header was supplied; Epic 03's `repullSpecAction` rejects mismatches at the action level, this UI hides for parity), "Delete" (with confirm dialog)
 - Default sort: `lastAnalyzedAt desc`, with `pending` / `analyzing` specs floating to top.
 - Header bar: "Add Spec" CTA → `/specs/new` (Epic 03). Workspace name on the left.
 - Empty state (zero specs in workspace) — engineer-tauglich, kein Illustration-Hero per `prd-decisions.md` §"Konkrete Konsequenzen pro Epic" / §"Was wir NICHT übernehmen":
@@ -30,19 +30,19 @@
 
 - `(app)/settings/page.tsx` — single-page settings.
 - Sections:
-  - **Workspace** — `name` (editable text input, `updateWorkspaceAction({ name })`)
-  - **Profile** — `displayName` (editable text input, `updateUserAction({ displayName })`); `email` (read-only, shown for confirmation)
+  - **Workspace** — `name` (editable text input, `updateWorkspaceAction({ name })`). After successful update, the action MUST call `revalidatePath('/', 'layout')` from `next/cache` so the sidebar footer (rendered in `(app)/layout.tsx` per the Layout-update bullet below) re-renders with the new name on next navigation — required by AC #10 ("reflects immediately in the sidebar footer").
+  - **Profile** — `displayName` (editable text input, `updateUserAction({ displayName })`); `email` (read-only, shown for confirmation). Currently the sidebar footer renders `session.email` (immutable in v0.1, no `displayName` field there), so no `revalidatePath` is required here; future epics that surface `displayName` in shared layouts should add the call.
   - **Appearance** — Theme toggle (Light / Dark) via `next-themes`, Dark default, persisted per `prd-decisions.md` §"Theme". (May alternately live in the Topbar user menu — implementation choice.)
   - **Session** — "Sign out" button (calls `signOutAction` from Epic 02 — already implemented at `@/lib/session` per Epic 02 results)
 - All form interactions return `{success}|{error}` (per CLAUDE.md conventions); validation errors render inline.
-- **Form pattern** (per Epic 02 results): each section's form is a plain `<form action={...}>` with shadcn `Input`/`Label`/`Button`/`Card`, wrapped in a `'use client'` component using React 19's `useActionState` for pending state + structured error rendering. shadcn 4.6.0 radix-nova preset does NOT ship a `form` component — do not attempt `npx shadcn add form`.
+- **Form pattern** (per Epic 02 + 03 results): each section's form is a plain `<form action={...}>` with shadcn `Input`/`Label`/`Button`/`Card`, wrapped in a `'use client'` component using React 19's `useActionState` for pending state + structured error rendering. shadcn 4.6.0 radix-nova preset does NOT ship a `form` component — do not attempt `npx shadcn add form`. **Action signature convention (per Epic 03)**: the underlying server actions take typed object args (e.g. `updateWorkspaceAction({ name }: { name: string })`, `updateUserAction({ displayName })`) for testability + programmatic reuse. A thin `'use server'` adapter file colocated with each form (e.g. `(app)/settings/workspace-form-action.ts` exporting `updateWorkspaceFormAction(prevState, formData)`) converts `useActionState`'s `(prevState, FormData)` signature into the typed object call. The form imports the adapter; the underlying action stays object-typed. Tests assert against the object-typed action directly (cleaner than constructing FormData per case). Reference: Epic 03's `src/app/(app)/specs/new/form-action.ts`.
 - No password change (out of scope — see brainstorming E2).
 - No account deletion (out of scope — see brainstorming F1).
 - No BYOK / API key management (out of scope — see brainstorming B7).
 
 ### Shared
 
-- Both screens use the `(app)/layout.tsx` sidebar (Epic 01) with two nav items: "Specs" → `/specs`, "Settings" → `/settings`. The layout is already wrapped in `<TooltipProvider>` (Epic 02) — Specs List row-action menus + AlertDialog tooltips work without further wrapper setup.
+- Both screens use the `(app)/layout.tsx` sidebar (Epic 01) with two nav items: "Specs" → `/specs`, "Settings" → `/settings`. The layout is already wrapped in `<TooltipProvider>` (Epic 02) — Specs List row-action menus + AlertDialog tooltips work without further wrapper setup. **Pre-existing Sidebar hydration warning** (surfaced during Epic 03 browser verification, see Epic 03 results §"Cross-cutting / pre-launch"): `SidebarMenuButton` with the `tooltip` prop emits a `data-state` attribute that mismatches between SSR and client. Specs List adds tooltip-heavy row-action menus + truncated-URL tooltips; consider investigating the root cause as part of this epic's work (see Epic 05 for the same note + suggested fix paths).
 - **Layout update**: `(app)/layout.tsx` currently hardcodes the sidebar footer to `"Workspace name • user@example.com"` (Epic 01 placeholder, left as-is by Epic 02). Epic 07 must replace this with real values: convert the layout to an async server component, call `getRequiredSession()`, fetch the workspace name (`prisma.workspace.findUnique`), and render `{workspace.name} • {session.email}`. AC #10 ("reflects immediately in the sidebar footer") requires this layout edit.
 - Sidebar footer: workspace name + user email (small, muted).
 - **Library install**: `npx shadcn@latest add alert-dialog` for the "Delete spec?" confirm dialog (per Open Question §2 / row action menu). Not currently installed.
@@ -60,7 +60,7 @@
 3. Quality score badge colours and thresholds match `prd-decisions.md` §"Color Palette" Quality-Score-Badges (≥80 emerald, 60–79 amber, <60 red); unanalysed specs show "—".
 4. Status pill renders for each of `pending | analyzing | completed | failed` with colours and spinner per `prd-decisions.md` §"Components" Status-Pills (pending/analyzing → blue + spinner-icon, completed → emerald, failed → red).
 5. While any visible spec has `analysisStatus = pending | analyzing`, the list refetches every 5 s and auto-stops when none remain.
-6. Row action menu offers "Re-analyze" (always), "Re-pull from URL" (only for `sourceType=url` non-authed pulls), "Delete" (always, with a "Delete spec?" confirm dialog).
+6. Row action menu offers "Re-analyze" (always), "Re-pull from URL" (only when `Spec.sourceType === 'url' AND Spec.wasAuthedPull === false`), "Delete" (always, with a "Delete spec?" confirm dialog).
 7. Empty state CTAs work: "Add spec from URL" navigates to `/specs/new`; "Try with a sample spec" creates an OpenWeatherMap-sample spec and redirects to its detail page.
 8. Cross-workspace isolation: a spec from another workspace never appears (test by seeding two workspaces).
 9. `/settings` renders Workspace + Profile + Session sections.

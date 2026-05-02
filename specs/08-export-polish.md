@@ -20,8 +20,8 @@
 ### Polish
 
 - **Loading states across all screens**: every screen using server data renders a skeleton (shadcn `Skeleton`) during the initial fetch instead of a flash of empty layout. Affected: Specs list, Spec Detail, Settings.
-- **Error boundaries**: each route group (`(app)`, `(auth)`) has an `error.tsx` that renders a friendly error card with "Try again" + "Go home" buttons. Server-side errors caught by Next.js are surfaced via these boundaries.
-- **`not-found.tsx`** at the root and per-route-group: friendly 404 with a link back to `/specs` (or `/login` if unauthenticated).
+- **Error boundaries**: each route group (`(app)`, `(auth)`) has an `error.tsx` that renders a friendly error card with "Try again" + "Go home" buttons. Server-side errors caught by Next.js are surfaced via these boundaries. **Note (per Epic 03 results)**: `src/app/(app)/specs/error.tsx` already exists (minimal Card + Try-again button). Epic 08 polishes per `prd-decisions.md` Cards conventions (border, rounded-lg, "Go home" secondary button) — does NOT create from scratch. Same for `(app)/specs/not-found.tsx` (already exists, polish only).
+- **`not-found.tsx`** at the root and per-route-group: friendly 404 with a link back to `/specs` (or `/login` if unauthenticated). Epic 03 shipped `src/app/(app)/specs/not-found.tsx` (Spec Detail 404). Epic 08 adds the missing route-group `not-found.tsx` files (`(app)/not-found.tsx`, `(auth)/not-found.tsx`, root `not-found.tsx`).
 - **Empty states** (already partially covered by Epic 05 / 07; this epic ensures consistency):
   - Specs list: covered by Epic 07
   - Spec Detail: zero findings / filter mismatch covered by Epic 05
@@ -56,6 +56,7 @@
     } as const;
     ```
     Each emitting epic calls `showToast(TOASTS.patchApplied)` instead of hard-coding strings. Adding new messages requires updating this file in the new epic's PR.
+  - **Pre-existing TODO from Epic 03 to wire up**: `src/app/(app)/specs/new/add-spec-form.tsx` has a `// TODO (Epic 08): also call showToast(formatQuotaToast(error)) here` comment at the `rate_limited` error case. Epic 03 only renders the inline banner because `showToast` didn't exist yet. When Epic 08 ships `showToast`, swap the form's rate-limited handler to also emit the toast: `showToast(formatQuotaToast(error))` alongside the inline banner. Remove the TODO.
 - **Favicon + meta**: a minimal SVG favicon, `<title>` and `<meta description>` set per route via Next.js metadata API.
 - **README pass**: update the project root `README.md` to include "Quick start" (env vars + first signup + first spec).
 

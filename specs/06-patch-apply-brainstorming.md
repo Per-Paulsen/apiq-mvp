@@ -10,3 +10,4 @@ Results incorporated:
 - 00-research-spike-results.md
 - 01-project-setup-results.md
 - 02-auth-workspace-results.md
+- 03-spec-ingestion-results.md

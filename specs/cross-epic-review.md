@@ -176,3 +176,65 @@ None. All 4 findings were structural fixes anchoring to existing decisions (Q4 d
 **Status:** Phase 1 complete. Phase 2 (brainstorming) skipped — no NEEDS CONFIRMATION items. Phase 3 not needed.
 
 The cross-epic spec set is implementation-ready. Recommended next: `/dev specs/03-spec-ingestion.md` to start Epic 03.
+
+---
+
+# Cross-Epic Review — 2026-05-02 (Pass 3, post-Epic-03)
+
+## Summary
+
+- **Total specs reviewed:** 9 (00–08)
+- **Read-only (completed epics):** 00, 01, 02, 03
+- **Specs reviewed for edits:** 04, 05, 06, 07, 08 (5)
+- **Specs modified:** 04, 07
+- **Specs clean (in this pass):** 05, 06, 08 (the prior `/refine_all_ind` Pass 3 already pulled the cross-epic-relevant Epic 03 conventions into them; no further cross-epic gaps surfaced)
+- **Total cross-epic findings:** 4 (4 structural applied, 0 NEEDS CONFIRMATION)
+- **Triggering inputs:** the 5 specs as just edited by the 2026-05-02 `/refine_all_ind` Pass 3 — particularly Epic 04's new "modify Epic 03's source" scope items (direct-call swap + Finding wiring) and Epic 07's now-required `revalidatePath` for live sidebar-footer updates.
+
+## Changes by Epic
+
+### 04 — LLM Pipeline
+
+- **Issue:** `reanalyzeSpecAction` file location not specified — Epic 05 imports it but the spec doesn't say where it lives. (Forward dependency gap)
+  - **Involved epics:** 04 (owner), 05 (consumer)
+  - **Change:** `reanalyzeSpecAction` bullet extended to pin the location: `src/app/(app)/specs/actions.ts` (alongside Epic 03's existing actions). Epic 05 imports from `@/app/(app)/specs/actions`. Same workspace-scoped server-action conventions as Epic 03.
+  - **Cascade:** Epic 05 doesn't need an edit — its existing reference to "`reanalyzeSpecAction` from Epic 04" is now grounded.
+
+- **Issue:** Finding-invalidation snippet sets `updatedAt: new Date()` manually — redundant with Prisma's `@updatedAt` auto-handling. (Implementation drift)
+  - **Involved epics:** 04 (only)
+  - **Change:** Removed the manual `updatedAt: new Date()` from the `tx.finding.updateMany(...)` call in the new "Wire deferred Finding-invalidation" scope bullet. Added a one-line note that Prisma's `@updatedAt` auto-handles the bump for `updateMany`.
+
+### 07 — Specs List + Settings
+
+- **Issue:** AC #10 ("editing workspace name reflects immediately in the sidebar footer") is untestable without the `revalidatePath` mechanism — server-component layouts don't auto-refresh after a server action mutates their data. (Untestable AC / Missing handoff between `updateWorkspaceAction` and the layout's workspace-name fetch)
+  - **Involved epics:** 07 (only — owns both the action and the layout edit)
+  - **Change:** `updateWorkspaceAction` Workspace bullet extended to require `revalidatePath('/', 'layout')` from `next/cache` after a successful update. Profile bullet annotated to clarify no `revalidatePath` is needed (sidebar footer doesn't surface displayName in v0.1).
+
+- **Issue:** Re-pull row-action visibility says "non-authed pulls" — vague and disconnects from Epic 03's actual `wasAuthedPull` boolean field. (Inconsistent domain language with Epic 03 schema)
+  - **Involved epics:** 07 (consumer), 03 (schema)
+  - **Change:** Specs List row-action bullet rewritten to spell out the field check: `Spec.sourceType !== 'url' OR Spec.wasAuthedPull === true` hides the button. AC #6 updated with the same explicit field references. Same field name Epic 05 already uses (Epic 05's spec was updated in `/refine_all_ind` Pass 3 to reference `wasAuthedPull` explicitly).
+
+## Cascading Changes
+
+| Trigger | Cascade |
+|---|---|
+| Epic 04 pins `reanalyzeSpecAction` to `(app)/specs/actions.ts` | Epic 05's existing reference is grounded — no edit needed |
+| Epic 04 removes redundant `updatedAt: new Date()` | No cross-epic effect — Prisma handles it |
+| Epic 07 commits to `revalidatePath('/', 'layout')` | AC #10 becomes testable; future epics that mutate layout-rendered data follow the same pattern |
+| Epic 07 spells out `wasAuthedPull` field check | Domain-language symmetric with Epic 05's `wasAuthedPull` reference (added in `/refine_all_ind` Pass 3) |
+
+## Issues considered but not changed
+
+- **Sidebar hydration warning ownership.** Epic 05 + 07 both have notes about the pre-existing warning (added in `/refine_all_ind` Pass 3). No epic is formally assigned the fix. Pragmatic for v0.1 — leave soft. Likely Epic 05 fixes during impl when the warning's noise crosses a threshold.
+- **Budget-exceeded retry loop.** When `Spec.analysisError` is budget-related and the user clicks "Retry analysis" (Epic 05 AC #13), they re-hit the budget cap and see the same error. Could add a disabled-state with `retryAt` parsing — overkill for v0.1, accepted residual.
+- **Multiple form-action.ts files in Epic 07 Settings.** Two adapter files (workspace-form-action.ts, profile-form-action.ts) for two server actions. Implementation detail — Epic 07 will figure out; spec already establishes the convention.
+
+## NEEDS CONFIRMATION items
+
+None. All 4 findings were structural fixes (forward-dep grounding + AC testability + domain-language pinning + redundant-field cleanup).
+
+---
+
+**Status:** Phase 1 complete. Phase 2 (brainstorming) skipped — no NEEDS CONFIRMATION items. Phase 3 not needed.
+
+The cross-epic spec set is implementation-ready. Recommended next: `/dev specs/04-llm-pipeline.md` to start Epic 04.
