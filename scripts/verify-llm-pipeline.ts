@@ -41,7 +41,6 @@ function log(level: 'info' | 'pass' | 'fail' | 'skip', message: string): void {
         : level === 'fail'
           ? '[FAIL]'
           : '[SKIP]';
-  // eslint-disable-next-line no-console
   console.log(`${tag} ${message}`);
 }
 
@@ -460,7 +459,6 @@ async function main(): Promise<number> {
 main()
   .then((code) => process.exit(code))
   .catch((err) => {
-    // eslint-disable-next-line no-console
     console.error('verify-llm-pipeline crashed:', err);
     process.exit(2);
   });

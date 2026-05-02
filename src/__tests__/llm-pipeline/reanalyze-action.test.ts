@@ -11,7 +11,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@/lib/prisma', () => ({
   prisma: {
-    spec: { findUnique: vi.fn() },
+    spec: { findUnique: vi.fn(), update: vi.fn() },
     // The other surfaces are only needed for the OTHER actions exported
     // from the same module — declared here so the module loads cleanly.
     specVersion: { create: vi.fn(), aggregate: vi.fn() },
@@ -49,20 +49,31 @@ beforeEach(() => {
 // ---- Tests -----------------------------------------------------------------
 
 describe('reanalyzeSpecAction (AC #13)', () => {
-  it('AC #13 — happy path → calls runAnalysis(specId), returns success', async () => {
+  it('AC #13 — happy path → flips Spec to analyzing synchronously, calls runAnalysis(specId), returns success', async () => {
     vi.mocked(prisma.spec.findUnique).mockResolvedValue({
       workspaceId: 'workspace-id-1',
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any);
+    vi.mocked(prisma.spec.update).mockResolvedValue(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      {} as any,
+    );
 
     const result = await reanalyzeSpecAction({ specId: 'spec-id-1' });
 
     expect(result).toEqual({ success: true });
+    // Synchronous status flip BEFORE runAnalysis is dispatched (fixes the
+    // ~100ms stale-state window observed during user review 2026-05-02).
+    expect(prisma.spec.update).toHaveBeenCalledTimes(1);
+    expect(prisma.spec.update).toHaveBeenCalledWith({
+      where: { id: 'spec-id-1' },
+      data: { analysisStatus: 'analyzing', analysisError: null },
+    });
     expect(runAnalysis).toHaveBeenCalledTimes(1);
     expect(runAnalysis).toHaveBeenCalledWith('spec-id-1');
   });
 
-  it('cross-workspace → not_found, runAnalysis NOT called', async () => {
+  it('cross-workspace → not_found, runAnalysis NOT called, no status flip', async () => {
     vi.mocked(prisma.spec.findUnique).mockResolvedValue({
       workspaceId: 'other-workspace',
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -75,9 +86,10 @@ describe('reanalyzeSpecAction (AC #13)', () => {
       error: { kind: 'not_found' },
     });
     expect(runAnalysis).not.toHaveBeenCalled();
+    expect(prisma.spec.update).not.toHaveBeenCalled();
   });
 
-  it('spec does not exist → not_found, runAnalysis NOT called', async () => {
+  it('spec does not exist → not_found, runAnalysis NOT called, no status flip', async () => {
     vi.mocked(prisma.spec.findUnique).mockResolvedValue(null);
 
     const result = await reanalyzeSpecAction({ specId: 'nonexistent' });
@@ -87,6 +99,7 @@ describe('reanalyzeSpecAction (AC #13)', () => {
       error: { kind: 'not_found' },
     });
     expect(runAnalysis).not.toHaveBeenCalled();
+    expect(prisma.spec.update).not.toHaveBeenCalled();
   });
 
   it('fire-and-forget — never-resolving runAnalysis does not block the response', async () => {
@@ -94,6 +107,10 @@ describe('reanalyzeSpecAction (AC #13)', () => {
       workspaceId: 'workspace-id-1',
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any);
+    vi.mocked(prisma.spec.update).mockResolvedValue(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      {} as any,
+    );
     // Never resolves. If the action awaited runAnalysis, this test would hang.
     vi.mocked(runAnalysis).mockImplementation(() => new Promise(() => {}));
 
@@ -101,5 +118,7 @@ describe('reanalyzeSpecAction (AC #13)', () => {
 
     expect(result).toEqual({ success: true });
     expect(runAnalysis).toHaveBeenCalledTimes(1);
+    // Status flip happened synchronously even though runAnalysis hangs.
+    expect(prisma.spec.update).toHaveBeenCalledTimes(1);
   }, 5000);
 });

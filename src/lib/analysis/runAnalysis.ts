@@ -27,7 +27,7 @@ import { Prisma } from '@/generated/prisma/client';
 import { prisma } from '@/lib/prisma';
 import { callLLM } from '@/lib/openrouter';
 import { SYSTEM_PROMPT, buildUserPrompt } from '@/lib/analysis/prompt';
-import { OutputSchema } from '@/lib/analysis/schema';
+import { FindingSchema, OutputSchema } from '@/lib/analysis/schema';
 import { computeQualityScore } from '@/lib/analysis/quality-score';
 
 // =====================================================================
@@ -181,9 +181,21 @@ export async function runAnalysis(specId: string): Promise<RunAnalysisResult> {
 
   // 6. Call the LLM, with one schema-validation retry on top of the
   //    JSON-parse retry that callLLM does internally.
+  //
+  // Validation strategy: filter findings at the per-item level rather than
+  // reject the whole batch. Real-world observation (2026-05-02 Petstore run):
+  // the LLM occasionally drops a field (e.g. `rationale`) on one finding out
+  // of ten. With per-batch rejection, all ten findings would be discarded
+  // and the user would see "failed" despite paying for nine valid findings.
+  // We instead:
+  //   - Drop only the malformed findings, keep the rest.
+  //   - Retry with the same prompt only when the response shape itself is
+  //     wrong (no `findings` array) OR every emitted finding fails validation.
+  //   - On retry exhaustion: persist the schema-validation failure as before.
   let result: Awaited<ReturnType<typeof callLLM>>;
   let parsedOutput: ReturnType<typeof OutputSchema.parse> | null = null;
   let lastSchemaError: string | null = null;
+  let droppedCount = 0;
 
   for (let schemaAttempt = 0; schemaAttempt < 2; schemaAttempt++) {
     try {
@@ -218,14 +230,41 @@ export async function runAnalysis(specId: string): Promise<RunAnalysisResult> {
       return { success: false, error: { kind: 'llm_error', message } };
     }
 
-    const validation = OutputSchema.safeParse(result.parsed);
-    if (validation.success) {
-      parsedOutput = validation.data;
-      break;
+    const parsed = result.parsed;
+    const findingsArr =
+      parsed !== null &&
+      typeof parsed === 'object' &&
+      Array.isArray((parsed as { findings?: unknown }).findings)
+        ? ((parsed as { findings: unknown[] }).findings)
+        : null;
+
+    if (findingsArr === null) {
+      lastSchemaError = `Response shape invalid — missing 'findings' array`;
+      continue; // Retry the call.
     }
-    lastSchemaError = validation.error.message;
-    // Retry once on schema-validation failure (separate from callLLM's
-    // internal JSON.parse retry).
+
+    const valid: ReturnType<typeof FindingSchema.parse>[] = [];
+    const errors: string[] = [];
+    for (let i = 0; i < findingsArr.length; i++) {
+      const v = FindingSchema.safeParse(findingsArr[i]);
+      if (v.success) valid.push(v.data);
+      else errors.push(`findings[${i}]: ${v.error.issues[0]?.message ?? 'invalid'}`);
+    }
+
+    if (valid.length === 0 && findingsArr.length > 0) {
+      // All findings malformed — retry once with the same prompt.
+      lastSchemaError = `All ${findingsArr.length} findings failed schema validation. First: ${errors[0] ?? 'unknown'}`;
+      continue;
+    }
+
+    parsedOutput = { findings: valid };
+    droppedCount = errors.length;
+    if (droppedCount > 0) {
+      console.warn(
+        `runAnalysis: dropped ${droppedCount}/${findingsArr.length} invalid findings on spec ${specId}: ${errors.slice(0, 3).join('; ')}${errors.length > 3 ? `; +${errors.length - 3} more` : ''}`,
+      );
+    }
+    break;
   }
 
   if (!parsedOutput) {
@@ -328,7 +367,13 @@ export async function runAnalysis(specId: string): Promise<RunAnalysisResult> {
           costUSD: callCost,
           durationMs: callResult.durationMs,
           status: 'success',
-          errorMessage: null,
+          // If we filtered out invalid findings, surface the count so the
+          // LLMCall audit table reflects partial-output runs (the success
+          // status still applies — we got valid findings).
+          errorMessage:
+            droppedCount > 0
+              ? `Partial output: dropped ${droppedCount} invalid finding(s) from response`
+              : null,
         },
       });
     });

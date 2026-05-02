@@ -595,10 +595,19 @@ export type ReanalyzeResult =
 /**
  * Trigger a fresh LLM analysis pass on an existing spec without re-pulling.
  *
+ * Sets `Spec.analysisStatus = 'analyzing'` synchronously before returning,
+ * so a UI refresh immediately after the click reflects the new state — not
+ * the prior `completed` / `failed` value. `runAnalysis` is then dispatched
+ * fire-and-forget; it sets the same status itself (idempotent), then
+ * transitions to `completed` or `failed`. Polling on the Spec Detail screen
+ * (Epic 05) sees the lifecycle correctly without a UI-side optimistic flash.
+ *
  * Budget rejection surfaces via `Spec.analysisStatus = 'failed'` (set inside
- * runAnalysis); Epic 05 renders the failed-card. We deliberately don't
- * await — the LLM call takes ~60s and would block the server-action
- * response.
+ * runAnalysis when budget check fires); Epic 05 renders the failed-card.
+ *
+ * We deliberately don't await runAnalysis — the LLM call takes ~60s and
+ * would block the server-action response well past the page's network
+ * timeout.
  */
 export async function reanalyzeSpecAction(input: {
   specId: string;
@@ -613,6 +622,18 @@ export async function reanalyzeSpecAction(input: {
   });
   if (!spec || spec.workspaceId !== workspaceId) {
     return { success: false, error: { kind: 'not_found' } };
+  }
+
+  // Synchronous status flip so the UI doesn't briefly show stale state on
+  // refresh between the click and runAnalysis's own status update.
+  try {
+    await prisma.spec.update({
+      where: { id: specId },
+      data: { analysisStatus: 'analyzing', analysisError: null },
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return { success: false, error: { kind: 'unexpected', message } };
   }
 
   // Fire-and-forget — direct call, no self-fetch.

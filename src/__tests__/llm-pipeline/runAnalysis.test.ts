@@ -402,9 +402,9 @@ describe('runAnalysis on a spec with cycle markers (AC #7a)', () => {
 // =====================================================================
 
 describe('runAnalysis schema validation (AC #8)', () => {
-  it('schema fails twice → calls LLM twice, marks failed, writes failed LLMCall, returns schema_validation', async () => {
+  it('all findings invalid twice → calls LLM twice, marks failed, writes failed LLMCall, returns schema_validation', async () => {
     vi.mocked(prisma.spec.findUnique).mockResolvedValue(defaultSpecRow());
-    // Two responses that don't match OutputSchema (no findings array).
+    // Two responses where every finding is malformed (1 finding, missing required fields).
     const badResult = {
       ...defaultLLMResult(),
       parsed: { findings: [{ title: 'too short' }] },
@@ -444,7 +444,7 @@ describe('runAnalysis schema validation (AC #8)', () => {
     });
   });
 
-  it('schema fails once then succeeds → returns success', async () => {
+  it('all findings invalid once then valid → returns success after retry', async () => {
     vi.mocked(prisma.spec.findUnique).mockResolvedValue(defaultSpecRow());
     setupTransactionMock();
 
@@ -462,6 +462,103 @@ describe('runAnalysis schema validation (AC #8)', () => {
     expect(callLLM).toHaveBeenCalledTimes(2);
     // Successful transaction was entered.
     expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+  });
+
+  it('response shape invalid (no findings array) → retries once', async () => {
+    vi.mocked(prisma.spec.findUnique).mockResolvedValue(defaultSpecRow());
+    setupTransactionMock();
+
+    // Response missing the `findings` array entirely → must retry.
+    const noFindingsArray = {
+      ...defaultLLMResult(),
+      parsed: { wrong_key: [] },
+    };
+    vi.mocked(callLLM)
+      .mockResolvedValueOnce(noFindingsArray)
+      .mockResolvedValueOnce(defaultLLMResult());
+
+    const result = await runAnalysis(SPEC_ID);
+
+    expect(result).toEqual({ success: true });
+    expect(callLLM).toHaveBeenCalledTimes(2);
+  });
+});
+
+// =====================================================================
+// Partial output: filter invalid findings, keep valid ones
+// (post-draft fix per user review 2026-05-02 — addresses live observation
+// of "9 of 10 findings valid; one missing rationale" wasting an OpenRouter
+// call by rejecting the whole batch.)
+// =====================================================================
+
+describe('runAnalysis partial-output filter', () => {
+  it('mixed valid + invalid findings: keeps valid, drops invalid, no retry, returns success', async () => {
+    vi.mocked(prisma.spec.findUnique).mockResolvedValue(defaultSpecRow());
+    setupTransactionMock();
+
+    const partialResult = {
+      ...defaultLLMResult(),
+      parsed: {
+        findings: [
+          SAMPLE_FINDING,
+          { title: 'malformed — no rationale', narration: NARRATION },
+          SECOND_FINDING,
+        ],
+      },
+    };
+    vi.mocked(callLLM).mockResolvedValueOnce(partialResult);
+
+    const result = await runAnalysis(SPEC_ID);
+
+    expect(result).toEqual({ success: true });
+    // No retry — partial output is acceptable.
+    expect(callLLM).toHaveBeenCalledTimes(1);
+
+    const tx = getLastTx();
+    const createArgs = tx.finding.createMany.mock.calls[0][0] as {
+      data: Array<Record<string, unknown>>;
+    };
+    // Only the 2 valid findings persisted (the malformed one is dropped).
+    expect(createArgs.data).toHaveLength(2);
+    expect(createArgs.data.map((f) => f.title)).toEqual([
+      'Sample finding 1',
+      'Sample finding 2',
+    ]);
+
+    // LLMCall row records the partial-output marker on the success row so
+    // operators can see when filtering kicked in.
+    const llmCallArgs = tx.lLMCall.create.mock.calls[0][0] as {
+      data: Record<string, unknown>;
+    };
+    expect(llmCallArgs.data.status).toBe('success');
+    expect(llmCallArgs.data.errorMessage).toMatch(
+      /Partial output: dropped 1 invalid finding/,
+    );
+  });
+
+  it('empty findings array (LLM emitted zero) is valid, returns success with no findings', async () => {
+    vi.mocked(prisma.spec.findUnique).mockResolvedValue(defaultSpecRow());
+    setupTransactionMock();
+
+    vi.mocked(callLLM).mockResolvedValueOnce({
+      ...defaultLLMResult(),
+      parsed: { findings: [] },
+    });
+
+    const result = await runAnalysis(SPEC_ID);
+
+    expect(result).toEqual({ success: true });
+    expect(callLLM).toHaveBeenCalledTimes(1);
+
+    const tx = getLastTx();
+    // createMany NOT called when zero findings (per existing implementation).
+    expect(tx.finding.createMany).not.toHaveBeenCalled();
+    // Spec still gets the completion marker; quality score is 100 (no findings).
+    const specUpdate = tx.spec.update.mock.calls[0][0] as {
+      data: Record<string, unknown>;
+    };
+    expect(specUpdate.data.qualityScore).toBe(100);
+    expect(specUpdate.data.analysisStatus).toBe('completed');
   });
 });
 

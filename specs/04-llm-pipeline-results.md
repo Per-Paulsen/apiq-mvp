@@ -177,14 +177,20 @@ Two pre-existing Next.js Dev Tools console errors observed in the badge ("2 Issu
 1. **The LLM occasionally emits findings with missing required fields (observed: missing `rationale` on `findings[9]` of a Petstore run).** runAnalysis retries once; if the retry also has a malformed item, the entire batch is rejected — even though 9 of 10 findings were valid. UX impact: Spec.analysisStatus = 'failed', user must click "Retry analysis" (Epic 05).
    **Recommendation:** in v0.2, change runAnalysis to filter out invalid findings rather than reject the batch — `OutputSchema.safeParse({ findings: parsed.findings.filter(f => FindingSchema.safeParse(f).success) })`. Trade-off: silent partial output (user gets 9 findings instead of an error) vs. all-or-nothing semantics. Out of scope for v0.1 — the verbatim port mandate applies; v0.2 can revisit. Document this in the v0.2 backlog.
 
+   are you sure thats out of scope for v0.1?
+
 2. **`runAnalysis` retries the schema-validation failure with the SAME prompt.** This rarely helps if the LLM had a deterministic gap (e.g. forgot a field). Could add a "your previous response was missing field X" repair prompt, but this is v0.2 territory.
    **Recommendation:** keep current behavior (1 retry, same prompt) — matches the spike's `callLLM` pattern. Repair-prompt path would need its own spike-style calibration. v0.2 backlog.
+
+again, your are just pushing things into v0.2
 
 3. **Cost-tracking is best-effort.** OpenRouter doesn't return per-call cost; we compute from token counts × hard-coded pricing. If pricing changes silently, the daily-budget cap drifts.
    **Recommendation:** add a monthly task to verify `MODEL_PRICING_PER_1M['anthropic/claude-sonnet-4']` against OpenRouter's pricing page. v0.2 could query OpenRouter's `/api/v1/models` endpoint, but that's an extra request per `runAnalysis` for marginal accuracy. Keep current; flag the file with a "// Last verified DATE" comment (already done).
 
 4. **`reanalyzeSpecAction` is fire-and-forget; the user can't tell if the trigger succeeded vs the analysis is still running.** Epic 05's polling will catch the eventual state, but there's a brief ~100ms window where the UI shows the action returned successfully but Spec.analysisStatus hasn't transitioned to `analyzing` yet (because runAnalysis itself runs async after the action returns).
    **Recommendation:** Epic 05 should call `reanalyzeSpecAction` then immediately set local state to "analyzing" (optimistic UI), then start polling. v0.2 could await runAnalysis (turning Vercel function timeout into the bottleneck), but fire-and-forget is the right v0.1 pattern.
+
+   are you sure? shouldnt there at least be some form of info about reanalysis?
 
 5. **The `[verify-llm-pipeline]`-prefix convention** for the verification script's test specs is an ad-hoc namespace. If other epic verification scripts also need short-lived specs, we'd want a shared namespace prefix or a `verificationRun` boolean on `Spec`.
    **Recommendation:** keep current (per-script prefix) — only Epic 04's verify creates specs; Epic 03's verify uses pure pipeline checks without persistence. Revisit if a third script needs the pattern.
@@ -193,4 +199,37 @@ Two pre-existing Next.js Dev Tools console errors observed in the badge ("2 Issu
 
 ---
 
-> **Status:** Awaiting user review. After your review, this file becomes append-only and the epic is final.
+## Post-draft user review — 2026-05-02
+
+User pushed back on three of the open questions, calling out a pattern of deferring real work to v0.2 without analysis. Two of the three were addressed in v0.1; the third stays v0.2 with a tighter justification.
+
+### Resolved Q1 — partial-output filtering (v0.1, this commit)
+
+Original recommendation said "out of scope for v0.1 — verbatim port mandate". User: "are you sure?" — and they were right. The verbatim mandate covers `prompt.ts` and `schema.ts`; `runAnalysis`'s validation logic was always mine to design. The original implementation rejected a 10-finding response if any single finding was malformed — wasting the OpenRouter call (~$0.08) and showing the user "failed" despite nine valid findings being available.
+
+**Change applied to `src/lib/analysis/runAnalysis.ts`:** validate at the per-finding level. Drop malformed findings, keep the valid ones. Retry the LLM call only when (a) the response shape itself is wrong (no `findings` array) or (b) every emitted finding fails validation. The `LLMCall` audit row gets `errorMessage = 'Partial output: dropped N invalid finding(s) from response'` on partial-success runs so operators can see when filtering kicked in.
+
+Three new Vitest tests cover this:
+- mixed valid + invalid findings → keeps valid, no retry, returns success;
+- empty `findings` array (LLM emitted zero) → returns success with score 100;
+- response shape invalid (no `findings` array) → retries once.
+
+The two existing AC #8 tests (all-invalid-twice → schema_validation; all-invalid-once-then-valid → success) still pass — the all-invalid path is now the only one that triggers retry.
+
+### Resolved Q3 — synchronous status flip on reanalyze (v0.1, this commit)
+
+Original recommendation was "Epic 05 should optimistically set local state". User: "shouldnt there at least be some form of info about reanalysis?" — and they were right. The real problem isn't the ~100ms async window; it's that a page refresh between the click and `runAnalysis`'s status update shows the stale `completed` / `failed` state.
+
+**Change applied to `reanalyzeSpecAction` in `src/app/(app)/specs/actions.ts`:** before dispatching `runAnalysis` fire-and-forget, the action now writes `Spec.analysisStatus = 'analyzing'` + clears `analysisError` synchronously. The action returns only after that DB update lands, so any UI refresh from that point sees `analyzing`. The fire-and-forget direct call to `runAnalysis` then sets the same status idempotently before transitioning to `completed` / `failed`. Tests updated to assert the synchronous flip + non-flip on cross-workspace / not-found paths.
+
+### Q2 stays v0.2 — but with sharper justification
+
+Original recommendation was "v0.2 territory" without explaining why. The honest justification: with Q1 in place, the common failure mode (one of N findings malformed) no longer triggers a retry at all — Q1 covers it. Q2's repair-prompt path would only help in the rare all-of-N-invalid case, AND it would require Spike-style calibration (does the LLM actually produce a valid corrected response when told what was missing?) which is the kind of work that goes into a v0.2 prompt-tuning spike, not a one-line v0.1 patch. So Q2 stays v0.2 because the calibration cost > the rare-case payoff, not because deferring is convenient.
+
+### Verification re-run
+
+`scripts/verify-llm-pipeline.ts` re-run after the changes: 12 findings (severity 3/3/4/2), quality score 20, $0.0727, 41.6s, all 11 field-shape checks pass, all 6 prompt-audit checks pass. `npm run lint` 0 errors / 10 pre-existing spike warnings. `npm run build` succeeds. `npm run test` 17 files / 139 tests passing (3 new).
+
+---
+
+> **Status:** Awaiting user re-review of the corrections above.
