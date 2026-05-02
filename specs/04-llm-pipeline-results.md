@@ -232,4 +232,13 @@ Original recommendation was "v0.2 territory" without explaining why. The honest 
 
 ---
 
-> **Status:** Awaiting user re-review of the corrections above.
+## Final user confirmation — 2026-05-02
+
+User confirmed:
+- The Q1 + Q3 code fixes in commit `50b4b1c` (per-finding filter; synchronous reanalyze status flip).
+- Q2's sharper justification for staying v0.2 (calibration cost > rare-case payoff).
+- Q3 open question (cost-tracking pricing): keep manual monthly verification — recommendation accepted.
+- Q5 open question (verify-script naming convention): keep current per-script `[verify-llm-pipeline]` prefix — recommendation accepted.
+- Q6 (Petstore left in `failed` state): leave as-is, useful for Epic 05's failed-card UX testing — recommendation accepted.
+
+**Status:** Epic 04 is final. File is append-only from this point.
