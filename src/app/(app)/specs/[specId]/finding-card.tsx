@@ -132,6 +132,29 @@ function parentPointer(pointer: string): string {
   return pointer.slice(0, idx);
 }
 
+/**
+ * Deepest common ancestor (RFC 6901 pointer) of a set of patch-op paths. Per
+ * the Epic 05 domain term: the smallest JSON sub-tree that contains all
+ * `patchOps[].path` ancestors. For a single op we show the parent so the
+ * leaf-level change renders in context; for multiple ops we take the longest
+ * common prefix of path segments. Falls back to root (`''`) when the ops
+ * touch disjoint sub-trees.
+ */
+function diffSubtreePath(paths: string[]): string {
+  if (paths.length === 0) return '';
+  if (paths.length === 1) return parentPointer(paths[0]);
+  const splits = paths.map((p) => p.split('/').slice(1));
+  const minLen = Math.min(...splits.map((s) => s.length));
+  let k = 0;
+  while (k < minLen) {
+    const seg = splits[0][k];
+    if (!splits.every((s) => s[k] === seg)) break;
+    k++;
+  }
+  if (k === 0) return '';
+  return '/' + splits[0].slice(0, k).join('/');
+}
+
 function safeStringify(value: unknown): string {
   try {
     return JSON.stringify(value, null, 2);
@@ -153,8 +176,7 @@ function computeDiff(
   patchOps: PatchOp[],
 ): DiffStrings {
   if (patchOps.length === 0) return { ok: false, reason: 'empty' };
-  const firstPath = patchOps[0].path;
-  const subtreePath = parentPointer(firstPath);
+  const subtreePath = diffSubtreePath(patchOps.map((op) => op.path));
 
   // Defensive deep-clone: structuredClone is available in modern browsers and
   // Node 17+ (Next.js 16 / Node 22 on this project).

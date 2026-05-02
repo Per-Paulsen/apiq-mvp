@@ -153,18 +153,6 @@ function buildGroups(
   });
 }
 
-const METHOD_COLOR_CLASS: Record<HttpMethod, string> = {
-  // Subtle method colouring — engineer-tool aesthetic; method label only.
-  get: 'text-emerald-600 dark:text-emerald-400',
-  post: 'text-blue-600 dark:text-blue-400',
-  put: 'text-amber-600 dark:text-amber-400',
-  patch: 'text-amber-600 dark:text-amber-400',
-  delete: 'text-red-600 dark:text-red-400',
-  options: 'text-zinc-500 dark:text-zinc-400',
-  head: 'text-zinc-500 dark:text-zinc-400',
-  trace: 'text-zinc-500 dark:text-zinc-400',
-};
-
 export function EndpointList({
   spec,
   findings,
@@ -245,9 +233,7 @@ export function EndpointList({
                       onClick={() => onEndpointClick(ep.path, ep.method)}
                       className="flex w-full items-center gap-2 rounded px-2 py-1 text-left font-mono text-xs hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
                     >
-                      <span
-                        className={`shrink-0 font-semibold uppercase ${METHOD_COLOR_CLASS[ep.method]}`}
-                      >
+                      <span className="shrink-0 font-semibold uppercase text-muted-foreground">
                         {ep.method}
                       </span>
                       <span className="truncate text-foreground">
