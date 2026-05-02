@@ -677,3 +677,72 @@ All 5 NEEDS CONFIRMATION items resolved by user 2026-05-02. Q2 was reformulated 
 **Status:** Phase 3 complete. All 5 NEEDS CONFIRMATION items resolved.
 
 The cross-epic spec set is implementation-ready for Epic 06 → Epic 08. Recommended next: `/dev specs/06-patch-apply.md`.
+
+---
+
+# Cross-Epic Review — 2026-05-02 (Pass 6, post-Epic-06)
+
+## Summary
+
+- **Total specs reviewed:** 9 (00–08)
+- **Read-only (completed epics):** 00, 01, 02, 03, 04, 05, 06
+- **Specs reviewed for edits:** 07, 08 (2)
+- **Specs modified in this pass:** 07, 08 (2)
+- **Specs clean (in this pass):** none — every unbuilt spec had forward-dependency or handoff gaps stemming from Epic 06's final implementation + forwarded work items.
+- **Total findings:** 6 (2 structural applied, 4 clarifications applied) + 0 NEEDS CONFIRMATION
+- **Triggering input:** the 2 specs as written, plus `06-patch-apply-results.md` (including the "Follow-up after user review" section documenting Q3 forwarded to Epic 08 + Q4 implemented).
+
+## Changes by Epic
+
+### 07 — Specs List + Settings
+
+- **Issue:** Row-action Re-analyze menu item calls `reanalyzeSpecAction({ specId })` (Scope §"Row actions menu" line 18) but Epic 07 spec is silent on whether this call-site emits `showToast(TOASTS.reanalyzeStarted)`. Epic 08 spec (Scope §"Toast wiring on existing surfaces" line 36) assumes the wiring happens, creating an implicit handoff. (Missing handoff — forward dependency gap)
+  - **Involved epics:** 07 (producer of the action call), 08 (consumer of the toast expectation).
+  - **Change:** Scope §"Row actions menu" (line 18) extended with explicit toast-wiring: "Re-analyze action calls `reanalyzeSpecAction({ specId })` then calls `showToast(TOASTS.reanalyzeStarted)` BEFORE `router.refresh()` — same pattern as Epic 05 / Epic 06 / Epic 08 §"Toast wiring on existing surfaces". Toast wiring is owned by Epic 08 infrastructure; Epic 07 row-action menu imports `TOASTS` from `@/lib/toasts`."
+  - **Cascade:** Epic 08's toast-wiring scope already lists 5 wiring points (header onRepull/onReanalyze, FailedPanel.onRetry, stale-card Re-analyze, row-action Re-analyze); no change needed there.
+
+### 08 — Export + Polish
+
+- **Issue:** Scope §"Toast wiring on existing surfaces" lists this as one of 5 wiring call-sites, but line 36 ("Specs-list (Epic 07) row-action Re-analyze") refers to the feature as "already known" without explicit grounding in Epic 07's spec. Epic 07 spec didn't document the toast-wiring commitment. (Bidirectional handoff gap — resolved by fixing Epic 07)
+  - **Involved epics:** 07, 08
+  - **Change:** No change to Epic 08 — the existing scope text is correct; fixing Epic 07's silence resolves this.
+
+- **Issue:** Scope §"Versions-drawer trigger pulse on Apply / Undo Apply" (line 38) is an implementation sketch forwarded from Epic 06 results Q3 (2026-05-02), but no acceptance criterion is attached. The feature lives in the Polish scope but has no AC. (Acceptance criteria gap)
+  - **Involved epics:** 08 (owns polish + feature).
+  - **Change:** Added new AC #23 after AC #22: "**Versions-drawer trigger pulse on Apply / Undo Apply** (per Epic 06 results Q3, 2026-05-02): after a successful `applyFindingAction` or `undoApplyAction`, the Versions drawer trigger button (showing `Versions ({count})`) displays a brief `bg-violet-500/15` flash when the count increases between renders. Flash animation lasts ~1.2 s via `setTimeout`. Vitest test: mock versions count delta, render trigger, advance fake timers, assert the class lands on the button element for the expected duration."
+
+- **Issue (clarity):** Scope §"Toast system" line 52 states "Epic 08 ships: ... `showToast({ kind, message })` helper", but this no-op helper is already in `src/lib/toasts.ts` from Epic 06 (per Epic 06 results line 28). Epic 08 will REPLACE the body, not create it. The wording is ambiguous. (Implementation drift — spec clarity)
+  - **Involved epics:** 08 (spec clarity only).
+  - **Change:** Scope §"Toast system" first bullet rewritten to clarify: "`showToast({ kind, message })` is a no-op stub shipped by Epic 06; Epic 08 replaces the function body with a real Toaster dispatch from `@/components/ui/sonner`. The signature and import path remain unchanged."
+
+- **Issue (clarity):** Scope §"Toast wiring on existing surfaces" begins with "Epic 05 left several click-handlers calling `router.refresh()` silently; Epic 06's stale-card Re-analyze button shares the same call-site pattern. Epic 08 wires the `TOASTS` catalog into all of them..." The wording ("Epic 08 wires") could be misleading — Epic 06 actually ships the `showToast` calls at the stale-card site; Epic 08 completes the infrastructure (catalog + `Toaster` mount). (Implementation drift — spec clarity)
+  - **Involved epics:** 08 (spec clarity only).
+  - **Change:** Scope §"Toast wiring on existing surfaces" opening sentence extended: "Epic 05 and Epic 06 already ship the `showToast` calls at these sites; Epic 08 completes the infrastructure (canonical `TOASTS` catalog + `Toaster` mount + runtime body). The wiring points are:" Then the bulleted list continues unchanged.
+
+- **Issue (clarity):** Scope §"Toast system" catalog (lines 55–75) is described as "v0.1 catalog (initial entries — emitting epics may add more)" but only `reanalyzeStarted` is in the current `src/lib/toasts.ts` stub. `rePullComplete` and `analysisComplete` are documented in AC / scope but not yet in the code. The spec's intent is that Epic 08 EXTENDS the stub, not that it documents entries already there. (Implementation drift — spec clarity)
+  - **Involved epics:** 08 (spec clarity only).
+  - **Change:** Scope §"Canonical message catalog" first line clarified: "extends `src/lib/toasts.ts` (which currently exports the `reanalyzeStarted` entry from Epic 06; Epic 08 adds the remaining v0.1 entries below)". The code snippet is unchanged; the intent is now clear.
+
+## Cascading Changes
+
+| Trigger | Cascade |
+|---|---|
+| Epic 07 commits row-action Re-analyze toast wiring | Epic 08's existing 5-wiring-point scope is now fully grounded (no edit needed) |
+| Epic 08 adds AC #23 for Versions-drawer pulse | The forwarded Epic 06 feature now has a testable acceptance criterion |
+| Epic 08 clarifies Epic 06 ships the no-op `showToast` | Future readers understand the handoff correctly |
+| Epic 08 clarifies Epic 05/06 ship the `showToast` calls | Implementation responsibility is transparent (Epic 08 = infrastructure only) |
+
+## Issues considered but not changed
+
+- **Cross-reference in Epic 06 stale-card UI.** The stale-card toast-wiring is correctly documented in both Epic 06 results (§"What was built" line 18) and Epic 08 scope (line 35). No explicit cross-reference ("see Epic 08") is needed — the Epic 06 → Epic 08 handoff is implicit in the brainstorming file. Optional polish only.
+- **Finding-counts triplet and `staleReason` field visibility.** Epic 07 spec correctly documents that `stale`/`outdated` are not surfaced in row-level counts (Scope §"Specs List" columns line 15); Epic 08 export scope correctly specifies `Spec.currentJson` only (no Finding data, so no `staleReason` exported). Both are correctly implemented. No edits needed.
+
+## NEEDS CONFIRMATION items
+
+None. All 6 findings were structural fixes (handoff grounding, forwarded-feature AC, spec clarity) or clarifications to prevent reader confusion.
+
+---
+
+**Status:** Phase 1 complete. Phase 2 (brainstorming) skipped — no NEEDS CONFIRMATION items. Phase 3 not needed.
+
+The cross-epic spec set is implementation-ready for Epic 07 → Epic 08. Recommended next: `/dev specs/07-specs-list-settings.md` to start Epic 07.
