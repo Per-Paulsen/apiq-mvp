@@ -129,6 +129,7 @@ model Spec {
 
   versions       SpecVersion[]  @relation("SpecVersions")
   currentVersion SpecVersion?   @relation("SpecCurrentVersion", fields: [currentVersionId], references: [id], onDelete: SetNull)
+  findings       Finding[]
 
   @@index([workspaceId])
 }
@@ -144,6 +145,7 @@ model SpecVersion {
 
   spec        Spec         @relation("SpecVersions", fields: [specId], references: [id], onDelete: Cascade)
   currentFor  Spec?        @relation("SpecCurrentVersion")
+  findings    Finding[]
 
   @@unique([specId, versionNumber])
   @@index([specId, versionNumber])
@@ -162,4 +164,53 @@ model WorkspaceActionLog {
   createdAt   DateTime @default(now())
 
   @@index([workspaceId, action, createdAt(sort: Desc)])
+}
+
+// =====================================================================
+// Finding + LLMCall (Epic 04 — LLM Pipeline)
+// =====================================================================
+
+model Finding {
+  id                  String    @id @default(cuid())
+  specId              String
+  specVersionId       String
+  scope               String    // 'spec' | 'endpoint'
+  affectedEndpoints   Json      // array of { path, method }
+  category            String    // 'clarity' | 'design' | 'risk'
+  severity            String    // 'critical' | 'high' | 'medium' | 'low'
+  title               String
+  narration           String
+  rationale           String
+  patchSummary        String
+  patchOps            Json      // RFC 6902 op array
+  status              String    @default("open") // 'open' | 'applied' | 'rejected' | 'stale' | 'outdated'
+  appliedAt           DateTime?
+  appliedInVersionId  String?
+  rejectedAt          DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  spec        Spec        @relation(fields: [specId], references: [id], onDelete: Cascade)
+  specVersion SpecVersion @relation(fields: [specVersionId], references: [id], onDelete: Cascade)
+
+  @@index([specId, status])
+}
+
+model LLMCall {
+  id              String   @id @default(cuid())
+  workspaceId     String
+  specId          String?
+  specVersionId   String?
+  model           String
+  prompt          Json     // { systemPromptHash, systemPromptVersion, userPromptPreamble, specName, specSizeBytes, specEndpointCount }
+  responseRaw     String   @db.Text
+  tokensIn        Int
+  tokensOut       Int
+  costUSD         Float
+  durationMs      Int
+  status          String   // 'success' | 'retry' | 'failed'
+  errorMessage    String?
+  createdAt       DateTime @default(now())
+
+  @@index([workspaceId, createdAt(sort: Desc)])
 }

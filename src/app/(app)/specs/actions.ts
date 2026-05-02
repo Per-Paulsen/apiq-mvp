@@ -21,6 +21,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 
 import { Prisma } from '@/generated/prisma/client';
+import { runAnalysis } from '@/lib/analysis/runAnalysis';
 import { prisma } from '@/lib/prisma';
 import {
   checkSpecSize,
@@ -245,22 +246,14 @@ function deriveSpecName(parsedJson: unknown, fallbackUrl: string): string {
 }
 
 function triggerAnalyzeFireAndForget(specId: string): void {
-  // Epic 04 owns `/api/internal/analyze`. The route doesn't exist yet — the
-  // fetch will 404, that's expected. We deliberately don't await this.
-  void (async () => {
-    try {
-      await fetch('http://localhost:3000/api/internal/analyze', {
-        method: 'POST',
-        headers: {
-          'x-internal-secret': process.env.INTERNAL_API_SECRET ?? '',
-          'content-type': 'application/json',
-        },
-        body: JSON.stringify({ specId }),
-      });
-    } catch {
-      // Swallow — Epic 04 wires real failure handling on the receiver side.
-    }
-  })();
+  // Direct in-process call — both Epic 03 actions and Epic 04 runAnalysis
+  // run server-side in the same Node process; the previous self-fetch was
+  // unnecessary and introduced a localhost-hardcode (per Epic 03 results
+  // recommendation #1, accepted by user 2026-05-02).
+  // Keep `/api/internal/analyze` for manual debug / external triggers.
+  void runAnalysis(specId).catch((err) => {
+    console.error('runAnalysis failed:', err);
+  });
 }
 
 // =====================================================================
@@ -449,14 +442,13 @@ export async function repullSpecAction(input: {
         },
       });
 
-      // TODO Epic 04: invalidate open findings to outdated.
-      // The `Finding` model is owned by Epic 04 and not yet generated; this
-      // step is deliberately deferred until that table exists. Once Epic 04
-      // lands, add:
-      //   await tx.finding.updateMany({
-      //     where: { specId: spec.id, status: 'open' },
-      //     data: { status: 'outdated' },
-      //   });
+      // Invalidate open findings — they belong to a prior SpecVersion and
+      // are no longer guaranteed to apply cleanly against the new pull.
+      // Prisma's `@updatedAt` auto-bumps the timestamp on updateMany.
+      await tx.finding.updateMany({
+        where: { specId: spec.id, status: 'open' },
+        data: { status: 'outdated' },
+      });
 
       return version.id;
     });
@@ -585,5 +577,47 @@ export async function deleteSpecAction(input: {
     const message = err instanceof Error ? err.message : String(err);
     return { success: false, error: { kind: 'unexpected', message } };
   }
+  return { success: true };
+}
+
+// =====================================================================
+// Action: reanalyzeSpecAction (Epic 04)
+// =====================================================================
+
+export type ReanalyzeError =
+  | { kind: 'not_found' }
+  | { kind: 'unexpected'; message: string };
+
+export type ReanalyzeResult =
+  | { success: true }
+  | { success: false; error: ReanalyzeError };
+
+/**
+ * Trigger a fresh LLM analysis pass on an existing spec without re-pulling.
+ *
+ * Budget rejection surfaces via `Spec.analysisStatus = 'failed'` (set inside
+ * runAnalysis); Epic 05 renders the failed-card. We deliberately don't
+ * await — the LLM call takes ~60s and would block the server-action
+ * response.
+ */
+export async function reanalyzeSpecAction(input: {
+  specId: string;
+}): Promise<ReanalyzeResult> {
+  const { specId } = input;
+  const session = await getRequiredSession();
+  const { workspaceId } = session;
+
+  const spec = await prisma.spec.findUnique({
+    where: { id: specId },
+    select: { workspaceId: true },
+  });
+  if (!spec || spec.workspaceId !== workspaceId) {
+    return { success: false, error: { kind: 'not_found' } };
+  }
+
+  // Fire-and-forget — direct call, no self-fetch.
+  void runAnalysis(specId).catch((err) => {
+    console.error('runAnalysis failed:', err);
+  });
   return { success: true };
 }

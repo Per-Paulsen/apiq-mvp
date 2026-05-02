@@ -145,6 +145,9 @@ function setupTransactionMock(opts?: {
           _max: { versionNumber: versionMaxNumber ?? null },
         })),
       },
+      finding: {
+        updateMany: vi.fn(async () => ({ count: 0 })),
+      },
     };
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (prisma.$transaction as any).__lastTx = tx;
@@ -162,6 +165,9 @@ function getLastTx() {
     specVersion: {
       create: ReturnType<typeof vi.fn>;
       aggregate: ReturnType<typeof vi.fn>;
+    };
+    finding: {
+      updateMany: ReturnType<typeof vi.fn>;
     };
   };
 }
