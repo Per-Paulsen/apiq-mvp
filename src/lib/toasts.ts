@@ -34,6 +34,16 @@ export function showToast(toast: ToastShape): void {
   void toast;
 }
 
-export const TOASTS: { reanalyzeStarted: ToastShape } = {
+export const TOASTS: {
+  reanalyzeStarted: ToastShape;
+  rePullComplete: ToastShape;
+  specDeleted: ToastShape;
+  workspaceUpdated: ToastShape;
+  profileUpdated: ToastShape;
+} = {
   reanalyzeStarted: { kind: 'info', message: 'Re-analyzing spec…' },
+  rePullComplete: { kind: 'success', message: 'Re-pull complete' },
+  specDeleted: { kind: 'success', message: 'Spec deleted' },
+  workspaceUpdated: { kind: 'success', message: 'Workspace updated.' },
+  profileUpdated: { kind: 'success', message: 'Profile updated.' },
 };

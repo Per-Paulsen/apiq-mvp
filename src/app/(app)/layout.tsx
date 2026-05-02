@@ -14,6 +14,8 @@ import {
   SidebarProvider,
 } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { prisma } from "@/lib/prisma";
+import { getRequiredSession } from "@/lib/session";
 
 // Note: This shadcn version exposes the older `asChild` API (not the newer
 // `render` prop). Per CLAUDE.md the project prefers `render`, but we use
@@ -21,11 +23,25 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 //
 // `SidebarMenuButton` with the `tooltip` prop renders Tooltip primitives
 // inline, which require a TooltipProvider ancestor — wrapping here.
-export default function AppLayout({
+//
+// Async server component (Epic 07): loads the session + workspace name so the
+// sidebar footer renders the real `{workspace.name} • {email}` instead of the
+// Epic 01 placeholder. AC #10 — workspace-name edits in `/settings` reflect
+// here on next navigation, because `updateWorkspaceAction` calls
+// `revalidatePath('/', 'layout')`.
+export default async function AppLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const session = await getRequiredSession();
+  const workspace = await prisma.workspace.findUnique({
+    where: { id: session.workspaceId },
+    select: { name: true },
+  });
+
+  const workspaceName = workspace?.name ?? "Workspace";
+
   return (
     <TooltipProvider>
       <SidebarProvider>
@@ -61,7 +77,7 @@ export default function AppLayout({
           </SidebarContent>
           <SidebarFooter>
             <div className="px-2 py-1 text-xs text-muted-foreground">
-              Workspace name • user@example.com
+              {workspaceName} • {session.email}
             </div>
           </SidebarFooter>
         </Sidebar>
