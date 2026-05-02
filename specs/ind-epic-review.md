@@ -894,3 +894,161 @@ Recommended next: `/refine_all` for cross-epic consistency check — the new edi
 **Status:** Phase 1 complete. 7 NEEDS CONFIRMATION items.
 
 Recommendation: skip Phase 2 (brainstorming-in-file) and proceed to `/refine_all` — the items are low-stakes and can be resolved inline during cross-epic review. Alternative: run `/refine_all_ind` Phase 2 first if user wants to confirm before cross-epic checks.
+
+---
+
+# Individual Epic Review — 2026-05-02 (Pass 5, post-Epic-05)
+
+## Summary
+
+- **Mode:** in-dev (results 00–05 exist)
+- **Specs reviewed:** 06, 07, 08 (3)
+- **Specs skipped (completed epics):** 00, 01, 02, 03, 04, 05
+- **Specs skipped (already refined for current results set):** none
+- **Specs modified:** 06, 07, 08 (3)
+- **Specs clean:** none
+- **Total findings:** 11 (7 structural applied, 4 NEEDS CONFIRMATION → Phase 2 candidates)
+- **Triggering input:** `specs/05-spec-detail-results.md` (newly added — Epic 05 shipped `formatAnalysisError` early because of the failed-card hard dependency, which causes structural drift in Epic 08; Epic 05 also flagged risks for Epics 06/07).
+
+---
+
+## 06 — Patch Apply
+
+### Findings
+
+- **Versions drawer open/closed state — controlled vs uncontrolled** (Hidden scope creep / Epic 05 Q6 carry-over)
+  - Spec Detail polls every 3 s while `analysisStatus` is `pending`/`analyzing` (`spec-detail-view.tsx`); each poll calls `router.refresh()` which re-renders the tree. Per Epic 05 Q6, uncontrolled `<details>`/`<dialog>` collapsibles lose their open/closed state across re-renders. Spec doesn't say which pattern to use for the Versions drawer.
+  - **NEEDS CONFIRMATION** — added as open question with 2 options + recommendation toward controlled.
+
+- **Diff preview behaviour for `stale` finding cards** (Untestable AC)
+  - Spec scope §"Diff preview" (line 52) says diff is "scaffolded in Epic 05" (correct) and computed live via `applyPatch`. For `stale` findings, `validatePatchOps` already failed against `currentJson` so `applyPatch` likely throws; Epic 05's `computeDiff` already catches throws → "Diff unavailable". Spec doesn't say whether to leave the Show-diff toggle visible or hide it for stale cards.
+  - **NEEDS CONFIRMATION** — added as open question with 3 options + recommendation toward leaving as-is.
+
+### Verified clean (no changes needed)
+
+- Apply/Reject button disabled surface in `finding-card.tsx` is exactly the pattern Epic 06 needs to activate (`<Tooltip><TooltipTrigger asChild><span tabIndex={0}><Button disabled>...`). Verified inline.
+- `registerCardRef` callback API is wired through `findings-list.tsx` and used by `spec-detail-view.tsx`. Epic 06 inherits.
+- `asAffectedEndpoints` and `asPatchOps` are exported from `finding-card.tsx`. Epic 06 imports unchanged.
+- `validatePatchOps` exists at `src/lib/analysis/validate-patches.ts` (Epic 04) with the documented `{ applyClean, hallucinationCheck: { hallucinated, details }, applyError? }` return shape — the four hallucination shapes 2a-2d are all checked correctly (incl. the move/copy bug-fix #1 — destination `path` is NOT checked).
+- `computeQualityScore` from `src/lib/analysis/quality-score.ts` filters `status === 'open'` internally — caller does NOT pre-filter (matches spec scope step 7).
+- `cycleStripSpec` from `src/lib/analysis/stringify-spec.ts` exists (Epic 03 ported).
+- `checkWorkspaceRateLimit` + `recordWorkspaceAction` + `URL_PULL_LIMIT_PER_HOUR` exported from `@/lib/rate-limit-workspace.ts`; Epic 06 adds `APPLY_LIMIT_PER_HOUR = 30` per spec scope step 2.
+- Hitchhiker fix (`'Initial pull from URL'` → `'Initial sample load'` literal in `loadSampleSpecAction` line 537) — spec already mandates this in scope line 12; the fix lands during Epic 06 implementation, no spec change needed.
+- `formatAnalysisError` shipped by Epic 05 — Epic 06's stale-card hint is independent of this helper.
+
+### Changes applied
+
+- 2 new `NEEDS CONFIRMATION` items appended to Open questions (Versions drawer state + stale-card diff behaviour).
+
+---
+
+## 07 — Specs List + Settings
+
+### Findings
+
+- **AC #3 quality-score badge zinc colour for null** (Inconsistent domain language with Epic 05 implementation)
+  - Spec said "unanalysed specs show '—'" but didn't name the colour. Epic 05's `spec-detail-header.tsx` `qualityScoreClasses` 4th band uses zinc. Specs-list table must mirror.
+  - **Change:** AC #3 extended — "unanalysed specs (`qualityScore IS NULL`) show '—' in zinc, mirroring Epic 05's null-score placeholder (`border-zinc-500/40 bg-zinc-500/15 text-zinc-700 dark:text-zinc-300`)".
+
+- **`QualityScoreBadge` and `StatusPill` extraction missing from spec** (Hidden scope creep / Epic 05 risk carry-over)
+  - Both are private functions inside `spec-detail-header.tsx` (Epic 05). Specs-list table needs the same badges per row (AC #3, #4); without explicit extraction, both get duplicated.
+  - **Change:** new bullet added to Scope §"Shared" mandating extraction to `src/components/quality-score-badge.tsx` and `src/components/status-pill.tsx`, with re-import in both Spec Detail and Specs List. All 4 quality-score colour bands + spinner-icon for `pending`/`analyzing` preserved verbatim.
+
+- **`User.displayName` schema field is a prerequisite, not present** (Ungrounded assumption)
+  - Profile section + AC #11 mandate editable `displayName`; Prisma User model only has `name` (Auth.js standard). Three resolution paths.
+  - **NEEDS CONFIRMATION** — added as open question with 3 options + recommendation: reuse `User.name` (no migration, "Name" is a fine label).
+
+- **Finding-counts triplet semantics** (Missing AC / Untestable AC)
+  - Scope says "Open / applied / rejected finding counts (small triplet)" but `Finding.status` has 5 values. Spec doesn't say what happens to `stale` and `outdated`.
+  - **NEEDS CONFIRMATION** — added as open question with 3 options + recommendation: show 3 only (stale/outdated are transient, resolved by re-analyze).
+
+### Verified clean (no changes needed)
+
+- `addSpecFromUrlAction`, `repullSpecAction`, `loadSampleSpecAction`, `deleteSpecAction`, `reanalyzeSpecAction` signatures all match what Epic 07's row-action menu calls.
+- `signOutAction` and `getRequiredSession()` available from `@/lib/session`.
+- Form-action adapter pattern (`addSpecFromUrlFormAction` in `(app)/specs/new/form-action.ts`) is the canonical reference Epic 07 mirrors for `updateWorkspaceFormAction` etc.
+- `(app)/layout.tsx` already wraps in `<TooltipProvider>` (Epic 02) — Specs List row-action menus + AlertDialog tooltips work without further setup.
+- `(app)/specs/error.tsx` and `not-found.tsx` already exist — Epic 07 inherits, Epic 08 polishes.
+- Re-pull button visibility condition (`sourceType === 'url' && wasAuthedPull === false`) matches Epic 05's `spec-detail-header.tsx` impl exactly.
+- Polling cadence 5 s remains correct (cross-epic Q4 resolved).
+- Sidebar hydration warning is owned by Epic 08 polish (cross-epic Q5).
+- `npx shadcn@latest add alert-dialog` install bullet present and necessary.
+
+### Changes applied
+
+- AC #3: extended with the explicit zinc colour token for null `qualityScore`.
+- Scope §"Shared": new bullet for `QualityScoreBadge` + `StatusPill` extraction.
+- 2 new `NEEDS CONFIRMATION` items appended to Open questions (`User.displayName` schema + Finding-counts triplet semantics).
+
+---
+
+## 08 — Export + Polish
+
+### Findings
+
+- **`formatAnalysisError` ownership wording contradicts shipped reality** (Inconsistent domain language)
+  - Spec text said "Epic 08 ships" / "owned by Epic 08". Epic 05 already shipped the helper at `src/lib/format-analysis-error.ts` with all 3 parsing rules + 12 unit tests. Spec language misled.
+  - **Change:** Scope §"Polish" first bullet rewritten — "already shipped by Epic 05; Epic 08's remaining scope is verification + new-consumer wiring only". The 3 parsing rules retained as the spec contract (regression-check shape). Explicit "do NOT duplicate Epic 05's 12 existing tests."
+
+- **AC #17 vague against shipped implementation** (Untestable AC)
+  - AC #17 read as if Epic 08 implements the helper from scratch.
+  - **Change:** AC #17 rewritten to verification-focused — confirm 3 parsing rules, confirm both consumers import the same helper, confirm Epic 05's existing tests still pass, no inline parsing duplication.
+
+- **AC #18 hydration warning fix lacks decision gate** (Untestable AC)
+  - Spec listed 3 candidate fixes but didn't commit Epic 08 to picking one. Cross-epic Q5 user direction was "every issue needs to be fixed" — investigate-and-defer is not acceptable.
+  - **Change:** AC #18 rewritten — "Epic 08 picks ONE of three candidate fix paths and ships it — investigate-and-defer is NOT acceptable". Fix verification via Playwright + chosen path documented in results.
+
+- **AC #19 currently unsatisfiable** (Missing handoff Epic 04 → Epic 08)
+  - CLAUDE.md "Pre-launch checklist" has 4 items; cross-epic-review.md Pass 4 Q7 documented Epic 04 results add 3 more (`INTERNAL_API_SECRET` rotation reaffirmed, OpenRouter pricing monthly verification, Petstore-failed-state cleanup) that are NOT yet in the CLAUDE.md checklist.
+  - **Change:** AC #19 rewritten — Epic 08 first scans Epic 04/05/06/07 results files for follow-up items, updates the CLAUDE.md checklist to include them, then reconciles all items.
+
+- **Spec-Detail budget-toast hook implicit, not implemented** (Hidden scope creep)
+  - Spec prose said "Epic 05 detects the budget-shape on its poll-tick" — but Epic 05 results §"Risks for Epic 08" explicitly hands this off; `spec-detail-view.tsx` polls but emits no budget toast. The hook must be Epic 08's responsibility.
+  - **Change:** Scope §"Rate-limit polish" rewritten to commit Epic 08 to implementing the hook in `spec-detail-view.tsx` (`useEffect` keyed on `[analysisStatus, analysisError, specId]`, sessionStorage dedupe). New AC #20 asserts the hook + dedupe.
+
+- **TOASTS catalog wired in catalog but not in code** (Hidden scope creep)
+  - Catalog has `rePullComplete` and `reanalyzeStarted`, but `spec-detail-header.tsx`'s `onRepull` / `onReanalyze` and `spec-detail-view.tsx`'s `FailedPanel.onRetry` call `router.refresh()` silently — no toast. Epic 05 results explicitly hands this off.
+  - **Change:** Scope §"Polish" — new top bullet "Toast wiring on existing surfaces" detailing the 3 wiring points. New AC #21 asserts each.
+
+- **Tailwind JIT regression test for `ring-2 ring-violet-500`** (Missing AC / Epic 05 Q5 carry-over)
+  - Epic 05 results §"Open question Q5" explicitly recommended adding a regression test against future Tailwind config glob narrowing.
+  - **Change:** Tests §"Vitest" — new sub-bullet for the regression test (assert `ring-2` + `ring-violet-500` CSS rules exist in the document's stylesheets).
+
+### Verified clean (no changes needed)
+
+- `react-diff-viewer-continued@^4.2.2` is installed (Epic 05).
+- `ResizeObserver` polyfill is in `src/__tests__/setup.ts` (Epic 05) — Epic 08 keeps.
+- TOASTS catalog 13 entries are correct (cross-epic Q1 resolved → option (a) catalog).
+- `(app)/specs/error.tsx` + `not-found.tsx` already exist — Epic 08 polishes only (spec language correct).
+- `npx shadcn@latest add sonner` install bullet present.
+- Mobile fallback banner spec details (placement, sessionStorage key, matchMedia) are complete.
+
+### Changes applied
+
+- Scope §"Polish" first bullet rewritten — `formatAnalysisError` ownership wording corrected to "shipped by Epic 05".
+- Scope §"Polish" — new "Sidebar hydration warning fix" wording with explicit "MUST pick one fix path".
+- Scope §"Polish" — new "Toast wiring on existing surfaces" bullet detailing 3 click-handler wirings.
+- Scope §"Rate-limit polish" — rewritten to commit Epic 08 to implementing the budget-toast hook in `spec-detail-view.tsx`.
+- Tests §"Vitest" — added Tailwind JIT regression test + budget-toast hook test + toast-wiring tests for 3 surfaces.
+- AC #17, #18, #19 — rewritten.
+- AC #20 (Spec-Detail budget-toast hook) — added.
+- AC #21 (toast wiring on Spec Detail header) — added.
+
+---
+
+## NEEDS CONFIRMATION items
+
+4 items across Epics 06/07:
+
+| Spec | Item | Recommendation |
+|------|------|----------------|
+| 06 | Versions drawer open/closed state: controlled vs uncontrolled | Controlled (preserves state across 3 s polls) |
+| 06 | `stale`-card diff preview behaviour | Leave as-is (existing "Diff unavailable" catch is informative) |
+| 07 | `User.displayName` schema field path | Reuse `User.name` (no migration; "Name" is a fine label) |
+| 07 | Finding-counts triplet semantics (3 vs 5 statuses) | Show 3 (open/applied/rejected); stale + outdated are transient |
+
+---
+
+**Status:** Phase 1 complete. 4 `NEEDS CONFIRMATION` items.
+
+Recommendation: skip Phase 2 (brainstorming-in-file) and proceed to `/refine_all` — the 4 items are low-stakes and easy to inline-confirm during the cross-epic pass. Alternative: run Phase 2 first if user prefers explicit confirmation before cross-epic checks.

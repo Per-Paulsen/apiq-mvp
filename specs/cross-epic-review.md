@@ -437,3 +437,243 @@ Epic 05's failed-card needs to render (1) (2) (3) user-friendly. Epic 08's Spec-
 **Status:** Phase 3 complete. All 7 NEEDS CONFIRMATION items resolved.
 
 The cross-epic spec set is implementation-ready. Recommended next: `/dev specs/05-spec-detail.md` to start Epic 05.
+
+---
+
+# Cross-Epic Review — 2026-05-02 (Pass 5, post-Epic-05)
+
+## Summary
+
+- **Total specs reviewed:** 9 (00–08)
+- **Read-only (completed epics):** 00, 01, 02, 03, 04, 05
+- **Specs reviewed for edits:** 06, 07, 08 (3)
+- **Specs modified in this pass:** 06, 08 (2)
+- **Specs clean (in this pass):** 07 — `/refine_all_ind` Pass 5 already pulled the cross-epic-relevant Epic 05 conventions into it (badge extraction, zinc null-band, `displayName` schema NEEDS CONFIRMATION, finding-counts NEEDS CONFIRMATION). No further cross-epic gaps surfaced for Epic 07.
+- **Total findings:** 4 (3 structural applied, 1 NEEDS CONFIRMATION → Phase 2 candidate)
+- **Triggering input:** the 3 specs as just edited by today's `/refine_all_ind` Pass 5, plus `05-spec-detail-results.md`.
+
+## Changes by Epic
+
+### 06 — Patch Apply
+
+- **Issue:** Stale-card Re-analyze button is a fourth `reanalyzeSpecAction` call-site that Epic 08's §"Toast wiring on existing surfaces" originally listed only 3 places. Without a cross-reference, Epic 06's stale-card Re-analyze ships without `TOASTS.reanalyzeStarted` toast and the user gets inconsistent feedback (3 surfaces toast, 1 doesn't). (Missing handoff Epic 06 → Epic 08)
+  - **Involved epics:** 06 (producer of the stale-card Re-analyze button), 08 (owns toast wiring + catalog).
+  - **Change:** Epic 06 §"stale-flow UI" (line 49) extended with explicit cross-reference: the stale-card Re-analyze button calls `showToast(TOASTS.reanalyzeStarted)` after the action call, before `router.refresh()` — same pattern as Epic 05's header Re-analyze and FailedPanel.onRetry. Epic 08 owns the wiring location.
+  - **Cascade:** Epic 08 §"Toast wiring on existing surfaces" extended to include the stale-card Re-analyze button as a fourth wiring point (5th if you count Epic 07's specs-list row-action menu).
+
+### 08 — Export + Polish
+
+- **Issue:** Epic 07 converts `(app)/layout.tsx` from sync function to async server component (per Epic 07 Scope §"Layout update"); Epic 08's hydration-warning fix targets the same file. The 3 candidate fix paths interact differently with an async parent — without an ordering note, Epic 08's implementation might pick a fix path that conflicts with Epic 07's conversion (or worse, undo it). (Implementation drift Epic 07 → Epic 08)
+  - **Involved epics:** 07 (file conversion), 08 (hydration fix).
+  - **Change:** Epic 08 §"Sidebar hydration warning fix" extended with explicit "Important — Epic 07 layout-conversion ordering" note. Confirms each of the 3 fix paths is compatible with an async server-component parent: (a) `useEffect`-gated child OK, (b) controlled `open=false` SSR OK, (c) `suppressHydrationWarning` OK. Implementation reminder.
+
+- **Issue:** Toast-wiring scope was incomplete. Epic 06's stale-card Re-analyze button + Epic 07's specs-list row-action Re-analyze button are additional `reanalyzeSpecAction` call-sites that Epic 08's §"Toast wiring on existing surfaces" should also wire. (Missing handoff)
+  - **Involved epics:** 06, 07 (call-sites), 08 (wiring + catalog).
+  - **Change:** Epic 08 §"Toast wiring on existing surfaces" expanded from 3 to 5 wiring points: header `onRepull`, header `onReanalyze`, `FailedPanel.onRetry`, **stale-card Re-analyze button** (Epic 06), **specs-list row-action Re-analyze** (Epic 07). Each gets a unit test asserting the toast invocation.
+
+- **Issue:** `TOASTS.analysisComplete` catalog entry has no consumer in any spec. Epic 04 is fire-and-forget (no UI), Epic 05 polling is silent on transitions, Epic 06/07/08 don't reference it. The catalog entry was placed in cross-epic-review.md Pass 1 Q1 (toast catalog brainstorming) but never wired. (Acceptance criteria gap — orphaned catalog entry)
+  - **Involved epics:** 08 (owns catalog + Spec Detail polling-side toast wiring per Epic 05 results).
+  - **Change:** Epic 08 Open Questions: new `NEEDS CONFIRMATION` item with 3 options + recommendation: (a) Epic 08 wires it on the Spec Detail polling layer (analyzing→completed transition, sessionStorage dedupe — same pattern as the budget-toast hook); (b) drop the entry from the catalog (the visual cue of findings rendering + emerald status pill is sufficient feedback); (c) emit only from the specs-list polling layer (Epic 07).
+
+## Cascading Changes
+
+| Trigger | Cascade |
+|---|---|
+| Epic 06 commits stale-card Re-analyze button to `showToast(TOASTS.reanalyzeStarted)` | Epic 08's §"Toast wiring on existing surfaces" expanded to 5 wiring points |
+| Epic 07 converts `(app)/layout.tsx` to async server component | Epic 08's hydration fix gets an ordering note + compatibility check for each fix path |
+
+## Issues considered but not changed
+
+- **`User.displayName` schema field** — surfaced as Epic 07 NEEDS CONFIRMATION in `/refine_all_ind` Pass 5 (option (b) reuse `User.name` recommended). No cross-epic ripple — Epic 02's User model is already the authoritative source; Epic 07 just adapts. No edit needed.
+- **Finding-counts triplet semantics** — surfaced as Epic 07 NEEDS CONFIRMATION (option (a) show 3 of 5 statuses recommended). No cross-epic ripple — counts are cosmetic, all 5 statuses remain visible in Spec Detail.
+- **`QualityScoreBadge` + `StatusPill` extraction touches Epic 05 source** — Epic 07's spec correctly mandates the import-update in `spec-detail-header.tsx`. Cross-epic-OK because Epic 07 is allowed to modify earlier-epic source when the spec mandates it. No edit needed.
+- **Versions drawer collapsible state** + **stale-card diff behaviour** — Epic 06 NEEDS CONFIRMATION items from `/refine_all_ind` Pass 5. Internal to Epic 06; no cross-epic ripple.
+- **Pre-launch checklist reconciliation (AC #19)** — Epic 08 already mandates scanning Epic 04/05/06/07 results files for follow-up items. Epic 05 results don't add new pre-launch items beyond what Epic 08 already covers. No edit needed.
+- **`react-diff-viewer-continued` theme polish** — Epic 05 results §"Open Q1" flagged that only 4 tokens are overridden. Epic 08 §"Polish" already covers theme polish; no separate AC needed.
+- **Tailwind JIT regression test for `ring-2 ring-violet-500`** — already added to Epic 08 Tests in `/refine_all_ind` Pass 5. No additional cross-epic concern.
+
+## NEEDS CONFIRMATION items
+
+1 item:
+
+| Spec | Item | Recommendation |
+|------|------|----------------|
+| 08 | `TOASTS.analysisComplete` emission point (orphaned catalog entry) | (a) Wire on Spec Detail polling layer with sessionStorage dedupe — same pattern as budget-toast hook |
+
+---
+
+**Status:** Phase 1 complete. 1 cross-epic `NEEDS CONFIRMATION` item, plus 4 carried over from `/refine_all_ind` Pass 5 (Epic 06 ×2 + Epic 07 ×2).
+
+Recommendation: proceed to Phase 2 (brainstorming-in-file) for the 5 outstanding NEEDS CONFIRMATION items. They're spread across 06/07/08 and benefit from being resolved together before any of them ship to `/dev`. After Phase 2 + Phase 3, the cross-epic spec set will be implementation-ready for Epic 06 onward.
+
+---
+
+## Brainstorming
+
+> Append-only. Bitte unter jede Frage antworten — `ack [empfehlung]` / Variante / Freitext. Phase 3 wendet die Entscheidungen anschließend auf die Specs an.
+
+### Q1 — Epic 06: Versions drawer open/closed state
+
+**Context:** Spec Detail polls every 3 s while `analysisStatus` is `pending`/`analyzing` (Epic 05's `spec-detail-view.tsx`). Each poll calls `router.refresh()`, which re-renders the tree. Per Epic 05 results §"Open Q6", uncontrolled `<details>`/`<dialog>` collapsibles lose their open/closed state across re-renders. Epic 06 adds a Versions drawer to Spec Detail (Scope line 51).
+
+**Failure mode of uncontrolled:** user opens the Versions drawer mid-analysis to inspect prior versions while the poll is running → 3 s later the drawer slams shut. Repeats every 3 s until analysis finishes.
+
+**Optionen:**
+
+- **(a) Controlled `useState<boolean>(drawerOpen)`** — explicit state preserved across re-renders. ~3 LOC overhead.
+- **(b) Uncontrolled native `<details>` / shadcn `Drawer`** — simpler markup, but the drawer collapses every 3 s while a spec is analyzing.
+- **(c) Don't ship the drawer collapsible — render the versions list always-expanded, or in a modal** — modal blocks the findings list; always-expanded eats vertical space.
+
+**Empfehlung:** **(a) controlled.** The user opening the drawer mid-analysis is a real flow (inspect v3 while v4 is being analyzed); losing state every 3 s is annoying enough to be a v0.1 bug. Cost is ~3 LOC.
+
+**Antwort:** ___a__ (a / b / c / Freitext)
+
+---
+
+### Q2 — Epic 06: Diff preview behaviour for `stale`-status finding cards
+
+**Context:** Epic 05's `finding-card.tsx` `computeDiff` already handles `applyPatch` throws by rendering "Diff unavailable — patch may not apply cleanly". For `stale` findings, `validatePatchOps` already failed against `Spec.currentJson` so calling `applyPatch` on the same JSON usually throws — meaning stale cards already get the informative fallback for free.
+
+**Optionen:**
+
+- **(a) Leave as-is** — Epic 05's catch handles it; the message is informative; a curious user can still click "Show diff" and see the helper text.
+- **(b) Hide the Show-diff toggle entirely on stale cards** — the user can't request a diff that won't render anyway.
+- **(c) Show a special hint** — "patch became stale because <validatePatchOps reason>" via `applyError` / `hallucinationCheck.details`.
+
+**Empfehlung:** **(a) leave as-is.** The existing catch is the right UX — clicking Show diff and seeing "Diff unavailable" is informative. (b) hides functionality without saving complexity. (c) requires plumbing the validator's reason from server action through the finding row to the card — non-trivial for marginal value (the inline stale-card hint already says "This patch is no longer applicable").
+
+**Antwort:** ___but is this really enough?__ (a / b / c / Freitext)
+
+---
+
+### Q3 — Epic 07: `User.displayName` schema field
+
+**Context:** Epic 07's Profile section (Scope §"Settings") + AC #11 mandate an editable `displayName` text input wired to `updateUserAction({ displayName })`. Current Prisma User model (`prisma/schema.prisma`) has `name: String?` (Auth.js standard) but no `displayName` field. Sidebar footer renders `session.email`, not the name. Single user per workspace in v0.1.
+
+**Optionen:**
+
+- **(a) Add `displayName: String?` via migration** — new column owned by Epic 07. Cost: schema migration + adapter update.
+- **(b) Reuse `User.name`** — rename Profile field label to "Name", keep the existing Auth.js field. No migration.
+- **(c) Defer to v0.2** — remove `displayName` from Profile section. v0.1 Profile only shows read-only email. Cost: spec edit, no implementation.
+
+**Empfehlung:** **(b) reuse `User.name`.** The Auth.js field is nullable, already in the schema, and "Name" is a fine label. Avoids a migration for a single-user-per-workspace v0.1 where the field is barely surfaced. Future migration to `displayName` is non-destructive (add column + copy data).
+
+**Antwort:** __b___ (a / b / c / Freitext)
+
+---
+
+### Q4 — Epic 07: Finding-counts triplet semantics
+
+**Context:** Epic 07 specs-list row shows "Open / applied / rejected finding counts (small triplet)". `Finding.status` has 5 values (`open | applied | rejected | stale | outdated`).
+
+**Optionen:**
+
+- **(a) Show 3 (open/applied/rejected)** — `stale`/`outdated` hidden in the row but visible in Spec Detail. Spec text already commits to 3.
+- **(b) Show all 5** — 5-pill row, more density, more visual noise.
+- **(c) Show 3 + a single "expired" combined count for `stale`+`outdated`** — 4 numbers total, a bit more honest about the spec's full state.
+
+**Empfehlung:** **(a) show 3.** `stale`/`outdated` are transient states resolved by re-analyze, not actionable counts for the user — they don't merit a row column. The Spec Detail screen surfaces them via the status filter when the user wants to see them. Keep the row tight.
+
+**Antwort:** ___if you think so__ (a / b / c / Freitext)
+
+---
+
+### Q5 — Epic 08: `TOASTS.analysisComplete` emission point
+
+**Context:** Catalog has `analysisComplete: { kind: 'success', message: 'Analysis complete' }` originally placed under "Epic 04 — Analysis", but Epic 04 is fire-and-forget (no UI), Epic 05 polling is currently silent on transitions, and Epic 06/07/08 don't reference it. Orphaned catalog entry.
+
+**Optionen:**
+
+- **(a) Epic 08 wires it on the Spec Detail polling layer** — when the poll-tick observes `analysisStatus` flipping `analyzing` → `completed`, fire `TOASTS.analysisComplete` once per session per specId (sessionStorage dedupe key `'apiq.analysis-complete-toast.<specId>'`, same pattern as the budget-toast hook). Symmetric: budget-toast for failure, analysisComplete for success.
+- **(b) Drop the entry from the catalog** — the user already sees findings appear, status pill flip emerald, failed-card disappear. Toast adds no information. v0.2 can re-add if user feedback warrants.
+- **(c) Emit only from the specs-list (Epic 07) polling layer** — the user might be on the specs list when their spec finishes analyzing on a different tab; toast catches the cross-screen case.
+
+**Trade-off summary:**
+- (a) consistent feedback (budget-toast for fail + analysisComplete for success), cheap (~10 LOC mirroring the budget hook), one extra useEffect per spec render.
+- (b) zero implementation, cleaner catalog, defers decision. Risk: user finishes analysis on a 60-second wait, looks away from the screen, and gets no signal when it finishes.
+- (c) covers cross-screen case only. Inconsistent with Spec Detail.
+
+**Empfehlung:** **(a)** — symmetric with the budget-toast hook (same code path, same dedupe pattern), gives the user a clear "done" signal without requiring them to watch the page. The 60-second analysis is exactly the case where a toast helps.
+
+**Antwort:** __a___ (a / b / c / Freitext)
+
+---
+
+**How to respond:** edit this file inline (mark each `Antwort:` line) or reply in chat with a list like `Q1=a, Q2=a, Q3=b, Q4=a, Q5=a`. After your decisions land, Phase 3 will apply them to the spec files and remove the `NEEDS CONFIRMATION` tags.
+
+---
+
+### Q2.1 — Stale-card diagnostic: how much detail does the user need? (follow-up)
+
+You pushed back on the "leave as-is" recommendation with "is this really enough?" — fair. Let me re-evaluate against the engineer-tool target audience.
+
+**What the user sees TODAY under (a):**
+1. Status badge flips from `open` to `stale` (visual signal: something changed).
+2. Inline hint: "This patch is no longer applicable to the current spec. Re-analyze to refresh." (action signal: what to do next).
+3. Show diff toggle still works — clicking it shows "Diff unavailable — patch may not apply cleanly" (defensive fallback).
+
+**What's missing:** the user has no way to know WHY the patch became stale. Was it a hallucinated path the LLM invented? Was it a path that shifted because the user applied another patch on top? Was the spec re-pulled and the schema changed underneath?
+
+For an engineer audience, that diagnostic matters: it tells them whether to trust the LLM ("this happens sometimes, just re-analyze") or treat it as a data-quality issue worth investigating.
+
+**Concrete proposal — option (c) with full cost analysis:**
+
+1. **Schema** (`prisma/schema.prisma`): add `staleReason: String?` to `Finding`. One line, one migration. ~5 min.
+2. **Server** (Epic 06's `applyFindingAction` step 5): when `validatePatchOps` returns `!applyClean` OR `hallucinationCheck.hallucinated`, write the validator's existing `applyError` or `hallucinationCheck.details` string to `Finding.staleReason` alongside `status='stale'` in the same transaction. Validator already produces these strings (per Epic 04 / `src/lib/analysis/validate-patches.ts`). ~3 LOC in the server action.
+3. **Client** (Epic 06's stale-card UI): if `finding.staleReason` is non-empty, render it as a small `<details><summary>Why?</summary><pre className="font-mono text-xs">{finding.staleReason}</pre></details>` below the inline hint. ~5 LOC in `finding-card.tsx`.
+
+**Cost:** ~15 LOC + one migration + one Vitest assertion (`applyFindingAction` writes `staleReason`).
+
+**Output for the user (sample):** `"add /paths/~1pets/post/responses/200/content/application~1json/example fails — parent path /paths/~1pets/post/responses/200/content/application~1json missing"`. Cryptic to a non-engineer; useful to the target audience.
+
+**Counter-argument for staying at (a):** stale findings should be rare (Epic 00 spike: ≤6.7% residual). For a rare event, the marginal information about WHY may not earn its weight against the schema/migration cost.
+
+**My revised recommendation:** **(c)** — engineer-tool target makes the diagnostic worth ~15 LOC. The 6.7% rate isn't zero, and users debugging a stale apply will appreciate the validator's verbatim message instead of the generic "no longer applicable".
+
+**Antwort Q2.1:** ___c__ (a / b / c / Freitext)
+
+---
+
+## Confirmations Applied (Pass 5)
+
+All 5 NEEDS CONFIRMATION items resolved by user 2026-05-02. Q2 was reformulated as Q2.1 after user pushback ("is this really enough?"); the revised recommendation (option c — persist `staleReason`) was accepted. Decisions: Q1=a, Q2.1=c, Q3=b, Q4=a, Q5=a.
+
+### Q1 — Epic 06: Versions drawer controlled state
+
+- `specs/06-patch-apply.md` Scope §"Versions drawer" (line 51): extended with explicit "Open/closed state must be controlled via `useState<boolean>(drawerOpen)`" + 3 s polling rationale.
+- `specs/06-patch-apply.md` Open Questions: NEEDS CONFIRMATION line replaced with `(resolved per cross-epic Q1, 2026-05-02)` ack.
+
+### Q2.1 — Epic 06: stale-card diagnostic via `Finding.staleReason`
+
+- `specs/06-patch-apply.md` Scope: new top-level bullet "**Schema addition: `Finding.staleReason: String?`**" with full rationale, server-side write rule, client-side render rule, ~15 LOC + migration cost noted.
+- `specs/06-patch-apply.md` Scope step 5 of `applyFindingAction`: extended to also write `staleReason` in the same Prisma update as `status='stale'`.
+- `specs/06-patch-apply.md` Scope stale-card UI bullet: extended to render `<details><summary>Why?</summary><pre>{staleReason}</pre></details>` below the inline "Re-analyze to refresh" hint when `staleReason` is non-empty.
+- `specs/06-patch-apply.md` AC #2: extended to assert the `staleReason` write + the collapsible diagnostic UI.
+- `specs/06-patch-apply.md` Open Questions: NEEDS CONFIRMATION line replaced with `(resolved per cross-epic Q2.1, 2026-05-02)` ack.
+
+### Q3 — Epic 07: reuse `User.name` instead of adding `displayName`
+
+- `specs/07-specs-list-settings.md` Scope §"Settings" Profile bullet: rewritten to use `name` (label "Name") + `updateUserAction({ name })` writing to `User.name`. Rationale ack to cross-epic Q3 inline.
+- `specs/07-specs-list-settings.md` Scope §"Form pattern": action signature example updated from `updateUserAction({ displayName })` to `updateUserAction({ name }: { name: string })`.
+- `specs/07-specs-list-settings.md` AC #11: rewritten — "Editing the user's name persists via `updateUserAction({ name })` (writes `User.name`)".
+- `specs/07-specs-list-settings.md` AC #13: validation error wording aligned ("empty user name").
+- `specs/07-specs-list-settings.md` Open Questions: NEEDS CONFIRMATION line replaced with `(resolved per cross-epic Q3, 2026-05-02)` ack.
+
+### Q4 — Epic 07: Finding-counts triplet shows 3 statuses
+
+- `specs/07-specs-list-settings.md` Scope §"Specs List" columns (line 15): extended with explicit "(small triplet — these 3 statuses only; `stale` and `outdated` are transient states resolved by re-analyze and aren't surfaced as actionable counts at the row level. The Spec Detail screen (Epic 05) surfaces them via the status filter when the user wants to see them. Per cross-epic Q4, 2026-05-02.)".
+- `specs/07-specs-list-settings.md` Open Questions: NEEDS CONFIRMATION line replaced with `(resolved per cross-epic Q4, 2026-05-02)` ack.
+
+### Q5 — Epic 08: `TOASTS.analysisComplete` polling-layer hook
+
+- `specs/08-export-polish.md` Scope §"Rate-limit polish": new top-level bullet "**`TOASTS.analysisComplete` polling-layer hook**" detailing the symmetric implementation (transition `analyzing` → `completed`, sessionStorage dedupe key `'apiq.analysis-complete-toast.<specId>'`, useRef tracking of previous status, Vitest test assertions).
+- `specs/08-export-polish.md` Tests §"Vitest": new sub-bullet for the analysisComplete hook test (transition fires once, dedupe across re-renders, no fire on cold-load of already-completed spec).
+- `specs/08-export-polish.md` AC #22 (new): asserts the hook + dedupe + transition-only semantics.
+- `specs/08-export-polish.md` AC #21: extended to mention 5 toast-wiring points (header onRepull/onReanalyze, FailedPanel.onRetry, stale-card Re-analyze, specs-list row-action Re-analyze).
+- `specs/08-export-polish.md` Open Questions: NEEDS CONFIRMATION line replaced with `(resolved per cross-epic Q5, 2026-05-02)` ack.
+
+---
+
+**Status:** Phase 3 complete. All 5 NEEDS CONFIRMATION items resolved.
+
+The cross-epic spec set is implementation-ready for Epic 06 → Epic 08. Recommended next: `/dev specs/06-patch-apply.md`.

@@ -12,3 +12,4 @@ Results incorporated:
 - 02-auth-workspace-results.md
 - 03-spec-ingestion-results.md
 - 04-llm-pipeline-results.md
+- 05-spec-detail-results.md
