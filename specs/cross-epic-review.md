@@ -743,6 +743,44 @@ None. All 6 findings were structural fixes (handoff grounding, forwarded-feature
 
 ---
 
-**Status:** Phase 1 complete. Phase 2 (brainstorming) skipped — no NEEDS CONFIRMATION items. Phase 3 not needed.
+## Pass 6 — Lead synthesis addendum
 
-The cross-epic spec set is implementation-ready for Epic 07 → Epic 08. Recommended next: `/dev specs/07-specs-list-settings.md` to start Epic 07.
+After the initial Pass 6 section above (drafted by the `cross` Explore investigator + a user pre-emptive edit to Epic 08 line 31), the lead's own walkthrough surfaced four additional findings that the investigator missed. These are applied here.
+
+### 07 — Specs List + Settings
+
+- **Issue:** Row-action menu (line 18) specifies toast wiring for Re-analyze only. Re-pull and Delete have catalog entries (`TOASTS.rePullComplete`, `TOASTS.specDeleted`) but no surface wiring was specified. Re-pull additionally lacks rate-limit handling — `repullSpecAction` rate-limits via the URL-pull bucket and can return `rate_limited`. (Forward dependency gap)
+  - **Involved epics:** 07 (consumer), 08 (catalog owner)
+  - **Change:** Extended Epic 07 line 18: Re-pull now specifies `showToast(TOASTS.rePullComplete)` on success, `showToast(formatQuotaToast(error))` on `rate_limited`, `router.refresh()` either way. Delete now specifies `showToast(TOASTS.specDeleted)` on success then `router.refresh()`. Imports include `formatQuotaToast`.
+  - **Cascade:** Epic 08 §"Toast wiring on existing surfaces" extended with the two new row-action wiring bullets; AC #21 updated to "Seven wiring points total" with the new ones enumerated.
+
+### 08 — Export + Polish
+
+- **Issue:** §"Rate-limit polish" line 86 listed the rate-limited consumers as "Add Spec form in Epic 03, Spec Detail re-analyze button in Epic 04, Apply / Reject buttons in Epic 06". But `reanalyzeSpecAction` doesn't rate-limit (verified in `src/app/(app)/specs/actions.ts:612-644`), and Reject doesn't rate-limit either — only Apply does. (Implementation drift)
+  - **Involved epics:** 08 (the spec where the drift lives)
+  - **Change:** Corrected the consumer list to: Add Spec form (Epic 03 — `addSpecFromUrlAction` rate-limits); Spec Detail Re-pull (Epic 05 — `repullSpecAction` rate-limits); Apply button (Epic 06 — `applyFindingAction` rate-limits, already wired in `finding-card.tsx`); Specs-list row-action Re-pull (Epic 07 — `repullSpecAction` again). Added an explicit list of actions that do NOT rate-limit (`reanalyzeSpecAction`, `rejectFindingAction`, `undoApplyAction`, `undoRejectAction`, `deleteSpecAction`).
+
+- **Issue:** §"Toast wiring on existing surfaces" only mentioned Specs-list Re-analyze — Re-pull and Delete from the same row-action menu were not enumerated, even though their catalog entries are in scope. (Missing handoff)
+  - **Involved epics:** 07 (consumer), 08 (documentation owner)
+  - **Change:** Added two new wiring-list bullets for row-action Re-pull and Delete. AC #21 updated to "Seven wiring points total".
+
+- **Issue:** `TOASTS.rePullStarted` (`message: 'Re-pulling from URL…'`) is in the v0.1 catalog but no Re-pull surface fires it — every wiring point only emits `TOASTS.rePullComplete` after success. The catalog entry is orphaned. (Duplicated scope — orphan)
+  - **Involved epics:** 08
+  - **Change:** Added as a `NEEDS CONFIRMATION` open question in Epic 08. Three options: (a) remove from catalog as orphan; (b) wire on click (every Re-pull surface fires 2 toasts); (c) keep documented but unused. Inline recommendation: (a) — `repullSpecAction` is synchronous, so a "started" toast adds noise without new information. Removing the entry keeps the catalog tight.
+
+## Cascading Changes (addendum)
+
+| Trigger | Cascade |
+|---|---|
+| Epic 07 row-action menu adds Re-pull + Delete toast wiring | Epic 08 §"Toast wiring on existing surfaces" gains two bullets; AC #21 enumerates seven wiring points |
+| Epic 08 §"Rate-limit polish" consumer-list correction | Implementation contract now matches `actions.ts` reality (only `addSpecFromUrlAction`, `repullSpecAction`, `applyFindingAction` rate-limit) |
+
+## NEEDS CONFIRMATION items (1)
+
+1. **Epic 08 — `TOASTS.rePullStarted` orphan handling.** Three options: remove (a) / wire-on-click (b) / keep-as-documentation (c). **Recommendation:** (a) — consistent with Apply/Reject/Delete which have no `*Started` entries.
+
+---
+
+**Status:** Phase 1 (with addendum) complete. 1 NEEDS CONFIRMATION item.
+
+Recommendation: resolve the single low-stakes item via direct user reply ("remove" / "wire" / "keep") — Phase 2 brainstorming-in-file is overkill for one orphan-catalog cleanup. The recommendation is unambiguous; user can override.
