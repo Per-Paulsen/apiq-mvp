@@ -221,4 +221,11 @@ The Q2 + Q3 fixes land in a separate commit (clean diff against `5519cdd`) so th
 
 ---
 
-> **Status:** Awaiting user confirmation. Once user confirms, this file becomes append-only and Epic 05 is final.
+## Final user confirmation — 2026-05-02
+
+User confirmed:
+- The Q2 + Q3 code fixes in commit `de0273d` (DCA-based `diffSubtreePath`; muted method labels).
+- Q1 + Q5 + Q6 staying as informational handoffs in the "Risks for future epics" sections — `/refine_all_ind` Pass 5 will surface them into Epic 06 / Epic 08 specs.
+- Q4 closed as informational only (React 19 ref-as-prop fact, not a decision).
+
+**Status:** Epic 05 is final. File is append-only from this point.
