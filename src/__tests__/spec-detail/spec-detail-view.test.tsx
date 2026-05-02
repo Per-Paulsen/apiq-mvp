@@ -11,7 +11,7 @@ import { render, screen, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { Finding, Spec } from '@/generated/prisma/client';
+import type { Finding, Spec, SpecVersion } from '@/generated/prisma/client';
 
 // ---- Mocks (declared before the component is imported) -------------------
 
@@ -81,10 +81,24 @@ function makeSpec(overrides: Partial<Spec> = {}): Spec {
   } as Spec;
 }
 
-function renderView(spec: Spec, findings: Finding[] = []) {
+function renderView(
+  spec: Spec,
+  findings: Finding[] = [],
+  versions: SpecVersion[] = [
+    {
+      id: 'sv-1',
+      specId: spec.id,
+      parentVersionId: null,
+      versionNumber: 1,
+      json: {},
+      label: 'Initial pull from URL',
+      createdAt: new Date('2026-05-01T00:00:00Z'),
+    } as SpecVersion,
+  ],
+) {
   return render(
     <TooltipProvider>
-      <SpecDetailView spec={spec} findings={findings} />
+      <SpecDetailView spec={spec} findings={findings} versions={versions} />
     </TooltipProvider>,
   );
 }

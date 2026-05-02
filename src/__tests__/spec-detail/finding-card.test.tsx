@@ -2,9 +2,11 @@
  * FindingCard tests (Epic 05).
  *
  * Covers per-card rendering: title, severity/category badges, narration,
- * rationale, patch summary, "N endpoints affected" toggle, disabled
- * Apply/Reject buttons with the "Implemented in Epic 06" tooltip text,
+ * rationale, patch summary, "N endpoints affected" toggle,
  * "Show diff" / "Show JSON Patch ops" expansion toggles.
+ *
+ * Epic 06 takes over Apply/Reject behaviour — see
+ * `finding-card-stale.test.tsx` for the patch-stale / re-analyze surface.
  */
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -15,6 +17,20 @@ import type { Finding } from '@/generated/prisma/client';
 // Stub the diff viewer — its internals are not our concern here.
 vi.mock('react-diff-viewer-continued', () => ({
   default: () => <div data-testid="diff-viewer" />,
+}));
+
+// Epic 06: FindingCard imports server actions. Stub the module so the test
+// suite doesn't transitively pull in next-auth's runtime (jsdom can't resolve
+// next/server from next-auth/lib/env).
+vi.mock('@/app/(app)/specs/actions', () => ({
+  applyFindingAction: vi.fn(),
+  rejectFindingAction: vi.fn(),
+  undoApplyAction: vi.fn(),
+  undoRejectAction: vi.fn(),
+  reanalyzeSpecAction: vi.fn().mockResolvedValue({ success: true }),
+}));
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ refresh: vi.fn(), replace: vi.fn() }),
 }));
 
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -128,38 +144,6 @@ describe('FindingCard — rendering', () => {
     expect(
       screen.queryByRole('button', { name: /endpoint(s)? affected/i }),
     ).not.toBeInTheDocument();
-  });
-});
-
-describe('FindingCard — Apply/Reject (Epic 06 placeholder)', () => {
-  it('Apply and Reject buttons exist, both disabled', () => {
-    renderCard(makeFinding());
-
-    const apply = screen.getByRole('button', { name: 'Apply' });
-    const reject = screen.getByRole('button', { name: 'Reject' });
-
-    expect(apply).toBeInTheDocument();
-    expect(apply).toBeDisabled();
-    expect(reject).toBeInTheDocument();
-    expect(reject).toBeDisabled();
-  });
-
-  it('exposes the "Implemented in Epic 06" tooltip text via TooltipContent on hover', async () => {
-    const user = userEvent.setup();
-    renderCard(makeFinding());
-
-    // Radix renders TooltipContent lazily on hover. Hover the trigger wrapper.
-    // The disabled button is wrapped in a span tabIndex=0; hovering the span
-    // triggers the tooltip.
-    const apply = screen.getByRole('button', { name: 'Apply' });
-    // Hover the parent span — that's the actual TooltipTrigger.
-    const triggerSpan = apply.parentElement as HTMLElement;
-    await user.hover(triggerSpan);
-
-    // Radix renders content into a portal; getAllByText handles the case
-    // where both Apply + Reject share the same content text.
-    const tooltips = await screen.findAllByText('Implemented in Epic 06');
-    expect(tooltips.length).toBeGreaterThan(0);
   });
 });
 

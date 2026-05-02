@@ -19,6 +19,7 @@ import 'server-only';
 import { prisma } from '@/lib/prisma';
 
 export const URL_PULL_LIMIT_PER_HOUR = 20;
+export const APPLY_LIMIT_PER_HOUR = 30;
 export const ONE_HOUR_MS = 60 * 60 * 1000;
 
 export type WorkspaceRateLimitResult =

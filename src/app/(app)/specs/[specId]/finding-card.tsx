@@ -1,38 +1,37 @@
 'use client';
 
 /**
- * Single finding card for the Spec Detail right pane (Epic 05).
+ * Single finding card for the Spec Detail right pane (Epic 05 + Epic 06).
  *
  * Renders title, severity + category badges, affected-endpoints expansion,
- * narration, rationale, patch summary, "Show diff" (side-by-side via
- * react-diff-viewer-continued), "Show JSON Patch ops" table, and disabled
- * Apply / Reject buttons with "Implemented in Epic 06" tooltip.
+ * narration, rationale, patch summary, "Show diff", "Show JSON Patch ops"
+ * table, and status-dependent action controls (Apply/Reject for `open`,
+ * Undo for `applied`/`rejected`, Re-analyze hint for `stale`/`outdated`).
  *
  * The outer element is registered via `registerRef(finding.id, el)` so the
  * parent integration can scroll-to and apply a temporary
  * `ring-2 ring-violet-500` outline when the user clicks an endpoint in the
- * left pane (per AC #11).
- *
- * Diff sub-tree heuristic: take the first `patchOps[0].path`, walk to its
- * parent (everything before the last `/` segment), JSON-stringify that node
- * on `specCurrentJson` (before) and on the patched clone (after). Renders
- * "Diff unavailable — patch may not apply cleanly" if `applyPatch` throws
- * (hallucinated paths) or "No diff available" if `patchOps` is empty.
+ * left pane (per Epic 05 AC #11).
  */
 import { applyPatch } from 'fast-json-patch';
 import type { Operation } from 'fast-json-patch';
-import { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import ReactDiffViewer from 'react-diff-viewer-continued';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
 import type { Finding } from '@/generated/prisma/client';
+import { formatQuotaToast, showToast, TOASTS } from '@/lib/toasts';
 import { cn } from '@/lib/utils';
+
+import {
+  applyFindingAction,
+  reanalyzeSpecAction,
+  rejectFindingAction,
+  undoApplyAction,
+  undoRejectAction,
+} from '../actions';
 
 type AffectedEndpoint = { path: string; method: string };
 type PatchOp = {
@@ -325,31 +324,211 @@ export function FindingCard({
           {opsOpen ? <PatchOpsTable patchOps={patchOps} /> : null}
         </div>
 
-        {/* Apply / Reject (Epic 06) */}
-        <div className="flex justify-end gap-2 pt-1">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span tabIndex={0} className="inline-flex">
-                <Button variant="default" size="sm" disabled>
-                  Apply
-                </Button>
-              </span>
-            </TooltipTrigger>
-            <TooltipContent>Implemented in Epic 06</TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span tabIndex={0} className="inline-flex">
-                <Button variant="outline" size="sm" disabled>
-                  Reject
-                </Button>
-              </span>
-            </TooltipTrigger>
-            <TooltipContent>Implemented in Epic 06</TooltipContent>
-          </Tooltip>
-        </div>
+        {/* Action row — depends on status (Epic 06) */}
+        <FindingActionBar finding={finding} />
       </CardContent>
     </Card>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Action bar — Epic 06 status-based rendering
+// ---------------------------------------------------------------------------
+
+function FindingActionBar({ finding }: { finding: Finding }): React.JSX.Element {
+  switch (finding.status) {
+    case 'open':
+      return <OpenActions finding={finding} />;
+    case 'applied':
+      return <AppliedActions finding={finding} />;
+    case 'rejected':
+      return <RejectedActions finding={finding} />;
+    case 'stale':
+    case 'outdated':
+      return <StaleOrOutdatedActions finding={finding} />;
+    default:
+      return <></>;
+  }
+}
+
+function OpenActions({ finding }: { finding: Finding }): React.JSX.Element {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+
+  function onApply() {
+    startTransition(async () => {
+      const result = await applyFindingAction({ findingId: finding.id });
+      if (result.success) {
+        router.refresh();
+        return;
+      }
+      const { error } = result;
+      if (error.kind === 'rate_limited') {
+        showToast(formatQuotaToast(error));
+        return;
+      }
+      if (error.kind === 'patch_stale') {
+        // No error toast — server has flipped to 'stale', next render shows the
+        // stale-card UI (per AC #8a).
+        router.refresh();
+        return;
+      }
+      console.error('applyFindingAction failed:', error);
+    });
+  }
+
+  function onReject() {
+    startTransition(async () => {
+      const result = await rejectFindingAction({ findingId: finding.id });
+      if (result.success) {
+        router.refresh();
+        return;
+      }
+      console.error('rejectFindingAction failed:', result.error);
+    });
+  }
+
+  return (
+    <div className="flex justify-end gap-2 pt-1">
+      <Button variant="default" size="sm" onClick={onApply} disabled={pending}>
+        {pending ? 'Working…' : 'Apply'}
+      </Button>
+      <Button variant="outline" size="sm" onClick={onReject} disabled={pending}>
+        Reject
+      </Button>
+    </div>
+  );
+}
+
+function AppliedActions({ finding }: { finding: Finding }): React.JSX.Element {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const [hint, setHint] = useState<string | null>(null);
+
+  function onUndo() {
+    setHint(null);
+    startTransition(async () => {
+      const result = await undoApplyAction({ findingId: finding.id });
+      if (result.success) {
+        router.refresh();
+        return;
+      }
+      const { error } = result;
+      if (error.kind === 'not_latest_apply') {
+        setHint(error.message);
+        return;
+      }
+      console.error('undoApplyAction failed:', error);
+    });
+  }
+
+  return (
+    <div className="flex flex-col items-end gap-1.5 pt-1">
+      <div className="flex items-center gap-2">
+        <span className="inline-flex items-center rounded-full border border-emerald-500/40 bg-emerald-500/15 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-300">
+          Applied
+          {finding.appliedAt
+            ? ` · ${finding.appliedAt.toLocaleString()}`
+            : ''}
+        </span>
+        <Button variant="outline" size="sm" onClick={onUndo} disabled={pending}>
+          {pending ? 'Undoing…' : 'Undo Apply'}
+        </Button>
+      </div>
+      {hint ? (
+        <p className="text-xs text-muted-foreground">{hint}</p>
+      ) : null}
+    </div>
+  );
+}
+
+function RejectedActions({ finding }: { finding: Finding }): React.JSX.Element {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+
+  function onUndo() {
+    startTransition(async () => {
+      const result = await undoRejectAction({ findingId: finding.id });
+      if (result.success) {
+        router.refresh();
+        return;
+      }
+      console.error('undoRejectAction failed:', result.error);
+    });
+  }
+
+  return (
+    <div className="flex items-center justify-end gap-2 pt-1">
+      <span className="inline-flex items-center rounded-full border border-zinc-500/40 bg-zinc-500/15 px-2 py-0.5 text-xs font-medium text-zinc-700 dark:text-zinc-300">
+        Rejected
+        {finding.rejectedAt
+          ? ` · ${finding.rejectedAt.toLocaleString()}`
+          : ''}
+      </span>
+      <Button variant="outline" size="sm" onClick={onUndo} disabled={pending}>
+        {pending ? 'Undoing…' : 'Undo Reject'}
+      </Button>
+    </div>
+  );
+}
+
+function StaleOrOutdatedActions({
+  finding,
+}: {
+  finding: Finding;
+}): React.JSX.Element {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const isStale = finding.status === 'stale';
+  const showStaleReason = isStale && !!finding.staleReason;
+
+  function onReanalyze() {
+    startTransition(async () => {
+      const result = await reanalyzeSpecAction({ specId: finding.specId });
+      if (result.success) {
+        showToast(TOASTS.reanalyzeStarted);
+        router.refresh();
+        return;
+      }
+      console.error('reanalyzeSpecAction failed:', result.error);
+    });
+  }
+
+  return (
+    <div className="flex flex-col items-end gap-2 pt-1">
+      <div className="flex items-center gap-2">
+        <span
+          className={cn(
+            'inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium',
+            'border-zinc-500/40 bg-zinc-500/15 text-zinc-700 dark:text-zinc-300',
+          )}
+        >
+          {isStale ? 'Stale' : 'Outdated'}
+        </span>
+      </div>
+      <p className="self-stretch text-xs text-muted-foreground">
+        This patch is no longer applicable to the current spec. Re-analyze to
+        refresh.
+      </p>
+      {showStaleReason ? (
+        <details className="self-stretch text-xs">
+          <summary className="cursor-pointer text-muted-foreground underline-offset-2 hover:underline">
+            Why?
+          </summary>
+          <pre className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap break-all rounded-md border border-border bg-muted/50 p-3 font-mono">
+            {finding.staleReason}
+          </pre>
+        </details>
+      ) : null}
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={onReanalyze}
+        disabled={pending}
+      >
+        {pending ? 'Triggering…' : 'Re-analyze'}
+      </Button>
+    </div>
   );
 }
 

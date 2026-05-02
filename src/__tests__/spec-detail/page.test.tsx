@@ -16,6 +16,7 @@ vi.mock('@/lib/prisma', () => ({
   prisma: {
     spec: { findFirst: vi.fn() },
     finding: { findMany: vi.fn() },
+    specVersion: { findMany: vi.fn() },
   },
 }));
 
@@ -105,6 +106,7 @@ describe('SpecDetailPage — workspace scoping', () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any);
     vi.mocked(prisma.finding.findMany).mockResolvedValue([]);
+    vi.mocked(prisma.specVersion.findMany).mockResolvedValue([]);
 
     // No throw expected.
     await SpecDetailPage({ params: Promise.resolve({ specId: 'spec-1' }) });
@@ -114,6 +116,11 @@ describe('SpecDetailPage — workspace scoping', () => {
     expect(prisma.finding.findMany).toHaveBeenCalledWith({
       where: { specId: 'spec-1' },
       orderBy: { createdAt: 'asc' },
+    });
+    expect(prisma.specVersion.findMany).toHaveBeenCalledTimes(1);
+    expect(prisma.specVersion.findMany).toHaveBeenCalledWith({
+      where: { specId: 'spec-1' },
+      orderBy: { versionNumber: 'desc' },
     });
   });
 });

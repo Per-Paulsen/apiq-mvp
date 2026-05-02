@@ -37,10 +37,16 @@ export default async function SpecDetailPage({
 
   if (!spec) notFound();
 
-  const findings = await prisma.finding.findMany({
-    where: { specId: spec.id },
-    orderBy: { createdAt: 'asc' },
-  });
+  const [findings, versions] = await Promise.all([
+    prisma.finding.findMany({
+      where: { specId: spec.id },
+      orderBy: { createdAt: 'asc' },
+    }),
+    prisma.specVersion.findMany({
+      where: { specId: spec.id },
+      orderBy: { versionNumber: 'desc' },
+    }),
+  ]);
 
-  return <SpecDetailView spec={spec} findings={findings} />;
+  return <SpecDetailView spec={spec} findings={findings} versions={versions} />;
 }

@@ -48,6 +48,16 @@ vi.mock('react-diff-viewer-continued', () => ({
   default: () => <div data-testid="diff-viewer" />,
 }));
 
+// Epic 06: FindingCard (rendered by FindingsList) imports server actions.
+// Stub the module so this test suite doesn't transitively pull in next-auth.
+vi.mock('@/app/(app)/specs/actions', () => ({
+  applyFindingAction: vi.fn(),
+  rejectFindingAction: vi.fn(),
+  undoApplyAction: vi.fn(),
+  undoRejectAction: vi.fn(),
+  reanalyzeSpecAction: vi.fn().mockResolvedValue({ success: true }),
+}));
+
 // ---- Imports (after mocks) -----------------------------------------------
 
 import { TooltipProvider } from '@/components/ui/tooltip';

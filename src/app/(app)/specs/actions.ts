@@ -20,8 +20,12 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
+import { applyPatch, type Operation } from 'fast-json-patch';
+
 import { Prisma } from '@/generated/prisma/client';
+import { computeQualityScore } from '@/lib/analysis/quality-score';
 import { runAnalysis } from '@/lib/analysis/runAnalysis';
+import { validatePatchOps } from '@/lib/analysis/validate-patches';
 import { prisma } from '@/lib/prisma';
 import {
   checkSpecSize,
@@ -36,6 +40,7 @@ import {
   validateAndDereference,
 } from '@/lib/spec-ingestion/validate-spec';
 import {
+  APPLY_LIMIT_PER_HOUR,
   checkWorkspaceRateLimit,
   ONE_HOUR_MS,
   recordWorkspaceAction,
@@ -92,6 +97,47 @@ export type LoadSampleResult =
 export type DeleteSpecResult =
   | { success: true }
   | { success: false; error: { kind: 'not_found' } | { kind: 'unexpected'; message: string } };
+
+export type ApplyFindingError =
+  | { kind: 'not_found' }
+  | { kind: 'invalid_status' }
+  | { kind: 'rate_limited'; retryAt: string }
+  | { kind: 'patch_stale'; message: string }
+  | { kind: 'unexpected'; message: string };
+
+export type ApplyFindingResult =
+  | { success: true; newVersionId: string }
+  | { success: false; error: ApplyFindingError };
+
+export type RejectFindingResult =
+  | { success: true }
+  | {
+      success: false;
+      error:
+        | { kind: 'not_found' }
+        | { kind: 'invalid_status' }
+        | { kind: 'unexpected'; message: string };
+    };
+
+export type UndoApplyError =
+  | { kind: 'not_found' }
+  | { kind: 'invalid_status' }
+  | { kind: 'not_latest_apply'; message: string }
+  | { kind: 'unexpected'; message: string };
+
+export type UndoApplyResult =
+  | { success: true }
+  | { success: false; error: UndoApplyError };
+
+export type UndoRejectResult =
+  | { success: true }
+  | {
+      success: false;
+      error:
+        | { kind: 'not_found' }
+        | { kind: 'invalid_status' }
+        | { kind: 'unexpected'; message: string };
+    };
 
 // =====================================================================
 // Constants
@@ -534,7 +580,7 @@ export async function loadSampleSpecAction(input: {
           versionNumber: 1,
           parentVersionId: null,
           json: dereferenced as Prisma.InputJsonValue,
-          label: 'Initial pull from URL',
+          label: 'Initial sample load',
         },
       });
       await tx.spec.update({
@@ -640,5 +686,324 @@ export async function reanalyzeSpecAction(input: {
   void runAnalysis(specId).catch((err) => {
     console.error('runAnalysis failed:', err);
   });
+  return { success: true };
+}
+
+// =====================================================================
+// Action: applyFindingAction (Epic 06)
+// =====================================================================
+
+export async function applyFindingAction(input: {
+  findingId: string;
+}): Promise<ApplyFindingResult> {
+  const { findingId } = input;
+  const session = await getRequiredSession();
+  const { workspaceId } = session;
+
+  // 1. Load Finding + its Spec; verify workspace ownership.
+  const finding = await prisma.finding.findUnique({
+    where: { id: findingId },
+    include: { spec: true },
+  });
+  if (!finding || finding.spec.workspaceId !== workspaceId) {
+    return { success: false, error: { kind: 'not_found' } };
+  }
+
+  // 2. Rate-limit: check, ALWAYS record, then enforce.
+  const rateCheck = await checkWorkspaceRateLimit(
+    workspaceId,
+    'apply',
+    APPLY_LIMIT_PER_HOUR,
+    ONE_HOUR_MS,
+  );
+  await recordWorkspaceAction(workspaceId, 'apply');
+  if (!rateCheck.allowed) {
+    return {
+      success: false,
+      error: { kind: 'rate_limited', retryAt: rateCheck.retryAt.toISOString() },
+    };
+  }
+
+  // 3. Status gate.
+  if (finding.status !== 'open') {
+    return { success: false, error: { kind: 'invalid_status' } };
+  }
+
+  // 4. Validate patchOps against current spec JSON.
+  const patchOps = finding.patchOps as unknown as Operation[];
+  const validation = validatePatchOps(finding.spec.currentJson, patchOps);
+  if (!validation.applyClean || validation.hallucinationCheck.hallucinated) {
+    const diagnostic =
+      (validation.hallucinationCheck.hallucinated
+        ? validation.hallucinationCheck.details
+        : validation.applyError) ?? 'Patch failed to apply.';
+    try {
+      await prisma.finding.update({
+        where: { id: findingId },
+        data: { status: 'stale', staleReason: diagnostic },
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      return { success: false, error: { kind: 'unexpected', message } };
+    }
+    return {
+      success: false,
+      error: { kind: 'patch_stale', message: diagnostic },
+    };
+  }
+
+  // 5. Apply patch — produces newJson.
+  let newJson: unknown;
+  try {
+    newJson = applyPatch(
+      structuredClone(finding.spec.currentJson),
+      patchOps,
+      true,
+    ).newDocument;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return { success: false, error: { kind: 'unexpected', message } };
+  }
+
+  // 6. Transactional persistence.
+  let newVersionId: string;
+  try {
+    newVersionId = await prisma.$transaction(async (tx) => {
+      const previousMax = await tx.specVersion.aggregate({
+        where: { specId: finding.specId },
+        _max: { versionNumber: true },
+      });
+      const nextNumber = (previousMax._max.versionNumber ?? 0) + 1;
+
+      const newVersion = await tx.specVersion.create({
+        data: {
+          specId: finding.specId,
+          parentVersionId: finding.spec.currentVersionId,
+          versionNumber: nextNumber,
+          json: newJson as Prisma.InputJsonValue,
+          label: finding.title,
+        },
+      });
+
+      await tx.spec.update({
+        where: { id: finding.specId },
+        data: {
+          currentJson: newJson as Prisma.InputJsonValue,
+          currentVersionId: newVersion.id,
+        },
+      });
+
+      await tx.finding.update({
+        where: { id: findingId },
+        data: {
+          status: 'applied',
+          appliedAt: new Date(),
+          appliedInVersionId: newVersion.id,
+        },
+      });
+
+      const allFindings = await tx.finding.findMany({
+        where: { specId: finding.specId },
+      });
+      const qualityScore = computeQualityScore(allFindings);
+      await tx.spec.update({
+        where: { id: finding.specId },
+        data: { qualityScore },
+      });
+
+      return newVersion.id;
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return { success: false, error: { kind: 'unexpected', message } };
+  }
+
+  return { success: true, newVersionId };
+}
+
+// =====================================================================
+// Action: rejectFindingAction (Epic 06)
+// =====================================================================
+
+export async function rejectFindingAction(input: {
+  findingId: string;
+}): Promise<RejectFindingResult> {
+  const { findingId } = input;
+  const session = await getRequiredSession();
+  const { workspaceId } = session;
+
+  const finding = await prisma.finding.findUnique({
+    where: { id: findingId },
+    include: { spec: true },
+  });
+  if (!finding || finding.spec.workspaceId !== workspaceId) {
+    return { success: false, error: { kind: 'not_found' } };
+  }
+  if (finding.status !== 'open') {
+    return { success: false, error: { kind: 'invalid_status' } };
+  }
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      await tx.finding.update({
+        where: { id: findingId },
+        data: { status: 'rejected', rejectedAt: new Date() },
+      });
+      const allFindings = await tx.finding.findMany({
+        where: { specId: finding.specId },
+      });
+      const qualityScore = computeQualityScore(allFindings);
+      await tx.spec.update({
+        where: { id: finding.specId },
+        data: { qualityScore },
+      });
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return { success: false, error: { kind: 'unexpected', message } };
+  }
+  return { success: true };
+}
+
+// =====================================================================
+// Action: undoApplyAction (Epic 06)
+// =====================================================================
+
+export async function undoApplyAction(input: {
+  findingId: string;
+}): Promise<UndoApplyResult> {
+  const { findingId } = input;
+  const session = await getRequiredSession();
+  const { workspaceId } = session;
+
+  const finding = await prisma.finding.findUnique({
+    where: { id: findingId },
+    include: { spec: true },
+  });
+  if (!finding || finding.spec.workspaceId !== workspaceId) {
+    return { success: false, error: { kind: 'not_found' } };
+  }
+  if (finding.status !== 'applied') {
+    return { success: false, error: { kind: 'invalid_status' } };
+  }
+  if (finding.appliedInVersionId !== finding.spec.currentVersionId) {
+    return {
+      success: false,
+      error: {
+        kind: 'not_latest_apply',
+        message: 'Only the most recent apply can be undone.',
+      },
+    };
+  }
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      const currentVersionId = finding.spec.currentVersionId;
+      if (!currentVersionId) {
+        throw new Error('Spec has no currentVersionId — cannot undo apply.');
+      }
+      const currentVersion = await tx.specVersion.findUnique({
+        where: { id: currentVersionId },
+      });
+      if (!currentVersion || !currentVersion.parentVersionId) {
+        throw new Error('Cannot undo: no parent version.');
+      }
+      const parentVersion = await tx.specVersion.findUnique({
+        where: { id: currentVersion.parentVersionId },
+      });
+      if (!parentVersion) {
+        throw new Error('Cannot undo: parent version row missing.');
+      }
+
+      const previousMax = await tx.specVersion.aggregate({
+        where: { specId: finding.specId },
+        _max: { versionNumber: true },
+      });
+      const nextNumber = (previousMax._max.versionNumber ?? 0) + 1;
+
+      const newVersion = await tx.specVersion.create({
+        data: {
+          specId: finding.specId,
+          parentVersionId: currentVersionId,
+          versionNumber: nextNumber,
+          json: parentVersion.json as Prisma.InputJsonValue,
+          label: 'Undo: ' + finding.title,
+        },
+      });
+
+      await tx.spec.update({
+        where: { id: finding.specId },
+        data: {
+          currentJson: parentVersion.json as Prisma.InputJsonValue,
+          currentVersionId: newVersion.id,
+        },
+      });
+
+      await tx.finding.update({
+        where: { id: findingId },
+        data: {
+          status: 'open',
+          appliedAt: null,
+          appliedInVersionId: null,
+        },
+      });
+
+      const allFindings = await tx.finding.findMany({
+        where: { specId: finding.specId },
+      });
+      const qualityScore = computeQualityScore(allFindings);
+      await tx.spec.update({
+        where: { id: finding.specId },
+        data: { qualityScore },
+      });
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return { success: false, error: { kind: 'unexpected', message } };
+  }
+  return { success: true };
+}
+
+// =====================================================================
+// Action: undoRejectAction (Epic 06)
+// =====================================================================
+
+export async function undoRejectAction(input: {
+  findingId: string;
+}): Promise<UndoRejectResult> {
+  const { findingId } = input;
+  const session = await getRequiredSession();
+  const { workspaceId } = session;
+
+  const finding = await prisma.finding.findUnique({
+    where: { id: findingId },
+    include: { spec: true },
+  });
+  if (!finding || finding.spec.workspaceId !== workspaceId) {
+    return { success: false, error: { kind: 'not_found' } };
+  }
+  if (finding.status !== 'rejected') {
+    return { success: false, error: { kind: 'invalid_status' } };
+  }
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      await tx.finding.update({
+        where: { id: findingId },
+        data: { status: 'open', rejectedAt: null },
+      });
+      const allFindings = await tx.finding.findMany({
+        where: { specId: finding.specId },
+      });
+      const qualityScore = computeQualityScore(allFindings);
+      await tx.spec.update({
+        where: { id: finding.specId },
+        data: { qualityScore },
+      });
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return { success: false, error: { kind: 'unexpected', message } };
+  }
   return { success: true };
 }

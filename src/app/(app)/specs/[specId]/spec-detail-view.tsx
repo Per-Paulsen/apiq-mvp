@@ -30,7 +30,7 @@ import { useCallback, useEffect, useRef, useTransition } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import type { Finding, Spec } from '@/generated/prisma/client';
+import type { Finding, Spec, SpecVersion } from '@/generated/prisma/client';
 import { formatAnalysisError } from '@/lib/format-analysis-error';
 
 import { reanalyzeSpecAction } from '../actions';
@@ -48,9 +48,11 @@ function isObject(v: unknown): v is Record<string, unknown> {
 export function SpecDetailView({
   spec,
   findings,
+  versions,
 }: {
   spec: Spec;
   findings: Finding[];
+  versions: SpecVersion[];
 }): React.JSX.Element {
   const router = useRouter();
   const cardRefs = useRef<Map<string, HTMLElement>>(new Map());
@@ -108,7 +110,7 @@ export function SpecDetailView({
 
   return (
     <main className="mx-auto w-full max-w-7xl space-y-6 px-6 py-6">
-      <SpecDetailHeader spec={spec} />
+      <SpecDetailHeader spec={spec} versions={versions} />
       <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
         <aside className="lg:sticky lg:top-6 lg:self-start lg:max-h-[calc(100vh-3rem)]">
           <EndpointList

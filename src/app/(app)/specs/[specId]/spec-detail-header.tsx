@@ -31,10 +31,11 @@ import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useTransition } from 'react';
 
-import type { Spec } from '@/generated/prisma/client';
+import type { Spec, SpecVersion } from '@/generated/prisma/client';
 import { Button } from '@/components/ui/button';
 
 import { reanalyzeSpecAction, repullSpecAction } from '../actions';
+import { VersionsDrawer } from './versions-drawer';
 
 type AnalysisStatus = Spec['analysisStatus'];
 
@@ -104,7 +105,13 @@ function StatusPill({ status }: { status: AnalysisStatus }) {
 // Header
 // ---------------------------------------------------------------------------
 
-export function SpecDetailHeader({ spec }: { spec: Spec }): React.JSX.Element {
+export function SpecDetailHeader({
+  spec,
+  versions,
+}: {
+  spec: Spec;
+  versions: SpecVersion[];
+}): React.JSX.Element {
   const router = useRouter();
   const [repullPending, startRepull] = useTransition();
   const [reanalyzePending, startReanalyze] = useTransition();
@@ -152,6 +159,10 @@ export function SpecDetailHeader({ spec }: { spec: Spec }): React.JSX.Element {
         ) : null}
       </div>
       <div className="flex items-center gap-2">
+        <VersionsDrawer
+          versions={versions}
+          currentVersionId={spec.currentVersionId}
+        />
         {repullVisible ? (
           <Button
             type="button"
