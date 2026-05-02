@@ -6,3 +6,100 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+// =====================================================================
+// Auth.js v5 standard models (User / Account / Session / VerificationToken)
+// See: https://authjs.dev/getting-started/adapters/prisma
+// =====================================================================
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  passwordHash  String
+
+  accounts       Account[]
+  sessions       Session[]
+  userWorkspaces UserWorkspace[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// =====================================================================
+// Workspace + UserWorkspace (multi-tenancy)
+// =====================================================================
+
+model Workspace {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users UserWorkspace[]
+}
+
+/// v0.1 invariant: each User has at most ONE UserWorkspace row (enforced in app logic, not via DB constraint, so v0.2 can lift the limit without a destructive migration).
+model UserWorkspace {
+  userId      String
+  workspaceId String
+  role        String   @default("owner")
+  createdAt   DateTime @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@id([userId, workspaceId])
+}
+
+// =====================================================================
+// IpActionLog — IP-scoped rate-limit storage (unauthenticated actions, e.g. signup)
+// Sibling to Epic 03's WorkspaceActionLog (workspace-scoped, authenticated).
+// =====================================================================
+
+model IpActionLog {
+  id        String   @id @default(cuid())
+  ip        String
+  action    String
+  createdAt DateTime @default(now())
+
+  @@index([ip, action, createdAt(sort: Desc)])
+}

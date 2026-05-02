@@ -7,6 +7,12 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      // server-only is a Next.js-bundled module that throws if imported from a
+      // client component. In tests we just need it to resolve to a no-op.
+      "server-only": path.resolve(
+        __dirname,
+        "node_modules/next/dist/compiled/server-only/empty.js"
+      ),
     },
   },
   test: {
