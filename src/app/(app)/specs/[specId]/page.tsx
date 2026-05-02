@@ -1,18 +1,29 @@
 /**
- * Spec Detail placeholder. Epic 03 redirects here from the Add Spec form;
- * Epic 05 replaces this page with the full Spec Detail screen (findings list,
- * diff viewer, apply/reject buttons, versions drawer).
+ * Spec Detail screen (Epic 05).
  *
- * This placeholder still scopes the lookup to the current workspace and 404s
- * if the id is unknown (or belongs to a different workspace) so we don't leak
+ * Server component — loads the Spec (workspace-scoped, 404 on miss) plus the
+ * full Finding list, and hands off to <SpecDetailView/> which renders the
+ * header + endpoint list + findings list (or analyzing/failed states).
+ *
+ * Workspace-scoping pattern (per Epic 03 results): `findFirst` with both
+ * `id` and `workspaceId` matched, then `notFound()` so we never leak
  * cross-workspace existence.
+ *
+ * Findings are loaded for ALL statuses (not just `completed`) — a `failed`
+ * re-analysis on a previously-completed spec retains the prior findings, and
+ * `pending` / `analyzing` runs may also have older findings (Epic 03's re-pull
+ * marks open findings `outdated` instead of deleting them). The Spec status
+ * controls what the right pane renders; the findings always feed the endpoint
+ * list's per-row counts.
  */
 import { notFound } from 'next/navigation';
 
 import { prisma } from '@/lib/prisma';
 import { getRequiredSession } from '@/lib/session';
 
-export default async function SpecPlaceholderPage({
+import { SpecDetailView } from './spec-detail-view';
+
+export default async function SpecDetailPage({
   params,
 }: {
   params: Promise<{ specId: string }>;
@@ -22,36 +33,14 @@ export default async function SpecPlaceholderPage({
 
   const spec = await prisma.spec.findFirst({
     where: { id: specId, workspaceId: session.workspaceId },
-    select: {
-      id: true,
-      name: true,
-      analysisStatus: true,
-      sourceType: true,
-      sourceUrl: true,
-      endpointCount: true,
-      createdAt: true,
-    },
   });
 
   if (!spec) notFound();
 
-  return (
-    <main className="mx-auto max-w-3xl space-y-3 p-6">
-      <h1 className="text-xl font-semibold">{spec.name}</h1>
-      <p className="text-sm text-muted-foreground">
-        Source:{' '}
-        <code className="font-mono text-xs">
-          {spec.sourceUrl ?? spec.sourceType}
-        </code>
-      </p>
-      <p className="text-sm">
-        Status: <span className="font-mono">{spec.analysisStatus}</span> ·{' '}
-        {spec.endpointCount} endpoint{spec.endpointCount === 1 ? '' : 's'}
-      </p>
-      <p className="text-xs text-muted-foreground">
-        Placeholder — Epic 05 replaces this with the full Spec Detail screen
-        (findings list, diff viewer, apply/reject buttons).
-      </p>
-    </main>
-  );
+  const findings = await prisma.finding.findMany({
+    where: { specId: spec.id },
+    orderBy: { createdAt: 'asc' },
+  });
+
+  return <SpecDetailView spec={spec} findings={findings} />;
 }
