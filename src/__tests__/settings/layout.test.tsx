@@ -1,21 +1,21 @@
 /**
  * App layout server-component tests (Epic 07).
  *
- * Asserts the layout calls `getRequiredSession()`, fetches the workspace
- * name with the session's workspaceId, and renders `{name} • {email}` in
- * the sidebar footer (replacing the Epic 01 placeholder).
+ * Asserts the layout calls `getRequiredSession()` + `getWorkspaceNameCached`
+ * (the `unstable_cache` wrapper around `prisma.workspace.findUnique` — see
+ * `src/lib/workspace-cache.ts`) and renders `{name} • {email}` in the
+ * sidebar footer (replacing the Epic 01 placeholder).
  */
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('@/lib/prisma', () => ({
-  prisma: {
-    workspace: { findUnique: vi.fn() },
-  },
-}));
-
 vi.mock('@/lib/session', () => ({
   getRequiredSession: vi.fn(),
+}));
+
+vi.mock('@/lib/workspace-cache', () => ({
+  getWorkspaceNameCached: vi.fn(),
+  WORKSPACE_NAME_CACHE_TAG: 'workspace-name',
 }));
 
 // next/link doesn't render in jsdom without a router; the simple stub keeps
@@ -31,8 +31,8 @@ vi.mock('next/link', () => ({
 }));
 
 import AppLayout from '@/app/(app)/layout';
-import { prisma } from '@/lib/prisma';
 import { getRequiredSession } from '@/lib/session';
+import { getWorkspaceNameCached } from '@/lib/workspace-cache';
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -44,18 +44,13 @@ beforeEach(() => {
 });
 
 describe('AppLayout (async)', () => {
-  it('renders the sidebar footer with the real workspace name + email', async () => {
-    vi.mocked(prisma.workspace.findUnique).mockResolvedValue({
-      name: 'Acme Workspace',
-    } as Awaited<ReturnType<typeof prisma.workspace.findUnique>>);
+  it('renders the sidebar footer with the real workspace name + email (via the cached lookup)', async () => {
+    vi.mocked(getWorkspaceNameCached).mockResolvedValue('Acme Workspace');
 
     const ui = await AppLayout({ children: <div>child content</div> });
     render(ui);
 
-    expect(prisma.workspace.findUnique).toHaveBeenCalledWith({
-      where: { id: 'workspace-1' },
-      select: { name: true },
-    });
+    expect(getWorkspaceNameCached).toHaveBeenCalledWith('workspace-1');
 
     expect(
       screen.getByText('Acme Workspace • alice@example.com'),
@@ -64,8 +59,8 @@ describe('AppLayout (async)', () => {
     expect(screen.getByText('child content')).toBeInTheDocument();
   });
 
-  it('falls back to "Workspace" when prisma returns null', async () => {
-    vi.mocked(prisma.workspace.findUnique).mockResolvedValue(null);
+  it('renders the cache helper\'s "Workspace" fallback string verbatim (the helper handles null internally)', async () => {
+    vi.mocked(getWorkspaceNameCached).mockResolvedValue('Workspace');
 
     const ui = await AppLayout({ children: <div /> });
     render(ui);

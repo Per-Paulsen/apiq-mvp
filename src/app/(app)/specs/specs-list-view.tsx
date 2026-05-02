@@ -47,6 +47,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import type { Spec } from '@/generated/prisma/client';
 import { formatQuotaToast, showToast, TOASTS } from '@/lib/toasts';
 import { cn } from '@/lib/utils';
@@ -146,8 +151,6 @@ function SpecRow({
 }): React.JSX.Element {
   const sourceLabel = spec.sourceUrl ?? spec.sourceType;
   const truncatedSource = truncateMiddle(sourceLabel, SOURCE_TRUNCATE_AT);
-  const allZero =
-    counts.open === 0 && counts.applied === 0 && counts.rejected === 0;
 
   return (
     <TableRow className="hover:bg-accent/50">
@@ -166,13 +169,10 @@ function SpecRow({
         <StatusPill status={spec.analysisStatus} />
       </TableCell>
       <TableCell
-        className={cn(
-          'py-2.5 font-mono text-xs',
-          allZero && 'text-muted-foreground',
-        )}
+        className="py-2.5"
         aria-label={`Findings: ${counts.open} open, ${counts.applied} applied, ${counts.rejected} rejected`}
       >
-        {counts.open} / {counts.applied} / {counts.rejected}
+        <FindingCountsBadges counts={counts} />
       </TableCell>
       <TableCell className="py-2.5">
         <code
@@ -201,7 +201,6 @@ function RowActions({ spec }: { spec: Spec }): React.JSX.Element {
   const [pending, startTransition] = useTransition();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
-  const reanalyzeDisabled = spec.analysisStatus === 'analyzing' || pending;
   const showRepull = spec.sourceType === 'url' && spec.wasAuthedPull === false;
 
   function onReanalyze() {
@@ -261,20 +260,36 @@ function RowActions({ spec }: { spec: Spec }): React.JSX.Element {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem
-            disabled={reanalyzeDisabled}
-            onSelect={(e) => {
-              e.preventDefault();
-              if (!reanalyzeDisabled) onReanalyze();
-            }}
-            title={
-              spec.analysisStatus === 'analyzing'
-                ? 'Already analyzing'
-                : undefined
-            }
-          >
-            Re-analyze
-          </DropdownMenuItem>
+          {spec.analysisStatus === 'analyzing' ? (
+            // Disabled-with-tooltip: wrap in TooltipTrigger asChild + a span
+            // tabIndex=0. A disabled DropdownMenuItem is a div with
+            // pointer-events:none, so the tooltip listens on the wrapper span
+            // instead. The Radix `disabled` prop still applies the muted
+            // styling and blocks the onSelect handler.
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span tabIndex={0} className="block">
+                  <DropdownMenuItem
+                    disabled
+                    onSelect={(e) => e.preventDefault()}
+                  >
+                    Re-analyze
+                  </DropdownMenuItem>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="left">Already analyzing</TooltipContent>
+            </Tooltip>
+          ) : (
+            <DropdownMenuItem
+              disabled={pending}
+              onSelect={(e) => {
+                e.preventDefault();
+                if (!pending) onReanalyze();
+              }}
+            >
+              Re-analyze
+            </DropdownMenuItem>
+          )}
           {showRepull ? (
             <DropdownMenuItem
               disabled={pending}
@@ -328,6 +343,69 @@ function RowActions({ spec }: { spec: Spec }): React.JSX.Element {
       </AlertDialog>
     </>
   );
+}
+
+// ---------------------------------------------------------------------------
+// Finding counts triplet — three small coloured pills (open/applied/rejected)
+// ---------------------------------------------------------------------------
+//
+// Uses the same pill shape as the severity / status pills elsewhere in the
+// app. Per cross-epic Q4 the row only surfaces these three statuses; `stale`
+// and `outdated` are transient and resolved by re-analyze.
+
+function FindingCountsBadges({
+  counts,
+}: {
+  counts: FindingCounts;
+}): React.JSX.Element {
+  return (
+    <div className="flex items-center gap-1">
+      <CountPill label="open" count={counts.open} variant="open" />
+      <CountPill label="applied" count={counts.applied} variant="applied" />
+      <CountPill label="rejected" count={counts.rejected} variant="rejected" />
+    </div>
+  );
+}
+
+function CountPill({
+  label,
+  count,
+  variant,
+}: {
+  label: string;
+  count: number;
+  variant: 'open' | 'applied' | 'rejected';
+}): React.JSX.Element {
+  const isZero = count === 0;
+  return (
+    <span
+      className={cn(
+        'inline-flex min-w-[1.5rem] items-center justify-center rounded-full border px-1.5 py-0.5 font-mono text-xs',
+        countPillClasses(variant, isZero),
+      )}
+      aria-label={`${count} ${label}`}
+      title={`${count} ${label}`}
+    >
+      {count}
+    </span>
+  );
+}
+
+function countPillClasses(
+  variant: 'open' | 'applied' | 'rejected',
+  isZero: boolean,
+): string {
+  if (isZero) {
+    return 'border-border bg-transparent text-muted-foreground';
+  }
+  switch (variant) {
+    case 'open':
+      return 'border-violet-500/40 bg-violet-500/15 text-violet-700 dark:text-violet-300';
+    case 'applied':
+      return 'border-emerald-500/40 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300';
+    case 'rejected':
+      return 'border-zinc-500/40 bg-zinc-500/15 text-zinc-700 dark:text-zinc-300';
+  }
 }
 
 // ---------------------------------------------------------------------------

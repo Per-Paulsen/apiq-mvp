@@ -18,10 +18,11 @@
  *     `useActionState` adapters.
  */
 
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, updateTag } from 'next/cache';
 
 import { prisma } from '@/lib/prisma';
 import { getRequiredSession } from '@/lib/session';
+import { WORKSPACE_NAME_CACHE_TAG } from '@/lib/workspace-cache';
 
 // =====================================================================
 // Result types
@@ -74,8 +75,13 @@ export async function updateWorkspaceAction({
     };
   }
 
-  // Sidebar footer (rendered in (app)/layout.tsx) shows the workspace name —
-  // re-render it so the change is visible immediately on next navigation.
+  // Invalidate the cached workspace name (used by (app)/layout.tsx sidebar
+  // footer via `unstable_cache`) AND force the layout to re-render so the
+  // new name shows up immediately, not only on next navigation. Inside a
+  // Server Action `updateTag` is the right primitive (read-your-own-writes
+  // semantics for the rest of THIS request); `revalidatePath` covers the
+  // subsequent navigation.
+  updateTag(WORKSPACE_NAME_CACHE_TAG);
   revalidatePath('/', 'layout');
 
   return { success: true };

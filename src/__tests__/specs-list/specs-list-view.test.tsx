@@ -14,6 +14,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Spec } from '@/generated/prisma/client';
+import { TooltipProvider } from '@/components/ui/tooltip';
 
 // ---- Hoisted mocks --------------------------------------------------------
 
@@ -112,7 +113,11 @@ describe('SpecsListView — rendering', () => {
     expect(screen.getByText('Alpha API')).toBeInTheDocument();
     expect(screen.getByText('87')).toBeInTheDocument();
     expect(screen.getByText('completed')).toBeInTheDocument();
-    expect(screen.getByText('3 / 1 / 0')).toBeInTheDocument();
+    // Findings triplet renders as 3 small coloured pills (open / applied /
+    // rejected); each carries an aria-label like "3 open" for accessibility.
+    expect(screen.getByLabelText('3 open')).toHaveTextContent('3');
+    expect(screen.getByLabelText('1 applied')).toHaveTextContent('1');
+    expect(screen.getByLabelText('0 rejected')).toHaveTextContent('0');
     expect(
       screen.getByTitle('https://example.com/openapi.json'),
     ).toBeInTheDocument();
@@ -227,14 +232,19 @@ describe('SpecsListView — 5s polling', () => {
 // ---- Row actions ----------------------------------------------------------
 
 describe('SpecsListView — row actions menu', () => {
-  it('Re-analyze item is disabled when analysisStatus="analyzing"', async () => {
+  it('Re-analyze item is disabled when analysisStatus="analyzing" and the disabled-state tooltip says "Already analyzing"', async () => {
     const user = userEvent.setup();
+    // Disabled Re-analyze is wrapped in a Radix Tooltip so the disabled
+    // state surfaces a proper "Already analyzing" hint — needs a
+    // TooltipProvider ancestor (production gets one from (app)/layout).
     render(
-      <SpecsListView
-        workspaceName="WS"
-        specs={[makeSpec({ id: 's-1', analysisStatus: 'analyzing' })]}
-        findingCounts={{ 's-1': emptyCounts() }}
-      />,
+      <TooltipProvider>
+        <SpecsListView
+          workspaceName="WS"
+          specs={[makeSpec({ id: 's-1', analysisStatus: 'analyzing' })]}
+          findingCounts={{ 's-1': emptyCounts() }}
+        />
+      </TooltipProvider>,
     );
 
     await user.click(screen.getByRole('button', { name: /Row actions/i }));

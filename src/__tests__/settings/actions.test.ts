@@ -31,11 +31,16 @@ vi.mock('@/lib/session', () => ({
 
 vi.mock('next/cache', () => ({
   revalidatePath: vi.fn(),
+  updateTag: vi.fn(),
+  // `actions.ts` transitively imports `@/lib/workspace-cache`, which calls
+  // `unstable_cache(fn)`. Stub it as a passthrough so the import chain
+  // resolves cleanly under vitest.
+  unstable_cache: <Args extends unknown[], R>(fn: (...args: Args) => Promise<R>) => fn,
 }));
 
 // ---- Imports (after mocks) -------------------------------------------------
 
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, updateTag } from 'next/cache';
 
 import {
   updateUserAction,
@@ -73,6 +78,7 @@ describe('updateWorkspaceAction', () => {
       where: { id: 'workspace-id-1' },
       data: { name: 'New Name' },
     });
+    expect(updateTag).toHaveBeenCalledWith('workspace-name');
     expect(revalidatePath).toHaveBeenCalledWith('/', 'layout');
   });
 
@@ -85,6 +91,7 @@ describe('updateWorkspaceAction', () => {
     });
     expect(prisma.workspace.update).not.toHaveBeenCalled();
     expect(revalidatePath).not.toHaveBeenCalled();
+    expect(updateTag).not.toHaveBeenCalled();
   });
 
   it('whitespace-only name — returns name_required', async () => {
@@ -96,6 +103,7 @@ describe('updateWorkspaceAction', () => {
     });
     expect(prisma.workspace.update).not.toHaveBeenCalled();
     expect(revalidatePath).not.toHaveBeenCalled();
+    expect(updateTag).not.toHaveBeenCalled();
   });
 
   it('DB throws — returns unexpected with message, no revalidate', async () => {
@@ -110,6 +118,7 @@ describe('updateWorkspaceAction', () => {
       error: { kind: 'unexpected', message: 'connection refused' },
     });
     expect(revalidatePath).not.toHaveBeenCalled();
+    expect(updateTag).not.toHaveBeenCalled();
   });
 });
 

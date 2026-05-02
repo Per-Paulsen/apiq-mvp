@@ -14,8 +14,8 @@ import {
   SidebarProvider,
 } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { prisma } from "@/lib/prisma";
 import { getRequiredSession } from "@/lib/session";
+import { getWorkspaceNameCached } from "@/lib/workspace-cache";
 
 // Note: This shadcn version exposes the older `asChild` API (not the newer
 // `render` prop). Per CLAUDE.md the project prefers `render`, but we use
@@ -26,21 +26,19 @@ import { getRequiredSession } from "@/lib/session";
 //
 // Async server component (Epic 07): loads the session + workspace name so the
 // sidebar footer renders the real `{workspace.name} • {email}` instead of the
-// Epic 01 placeholder. AC #10 — workspace-name edits in `/settings` reflect
-// here on next navigation, because `updateWorkspaceAction` calls
-// `revalidatePath('/', 'layout')`.
+// Epic 01 placeholder. The workspace lookup is wrapped in `unstable_cache`
+// keyed by workspaceId so navigation between (app) routes doesn't refetch
+// the same row from Postgres on every page load. `updateWorkspaceAction`
+// invalidates the cache via `revalidateTag('workspace-name')` AND calls
+// `revalidatePath('/', 'layout')` to force the layout to re-render with the
+// fresh name (AC #10).
 export default async function AppLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   const session = await getRequiredSession();
-  const workspace = await prisma.workspace.findUnique({
-    where: { id: session.workspaceId },
-    select: { name: true },
-  });
-
-  const workspaceName = workspace?.name ?? "Workspace";
+  const workspaceName = await getWorkspaceNameCached(session.workspaceId);
 
   return (
     <TooltipProvider>

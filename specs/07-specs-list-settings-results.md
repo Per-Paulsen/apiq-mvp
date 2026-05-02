@@ -137,8 +137,12 @@ Browser-verified end-to-end against the e2e-test workspace's two Petstore specs:
 1. **Should the row-action "Re-analyze" disabled state use a real Radix tooltip instead of native `title=`?** Today: native `title="Already analyzing"`. Cleaner long-term: Radix Tooltip, but the wrap-disabled-DropdownMenuItem dance flickered.
    **Recommendation:** Defer to Epic 08 polish if user feedback says the native title is too subtle. Today's behaviour matches the spec ("disabled with tooltip"); the spec didn't mandate Radix specifically.
 
+   no defer all the time! you are always just refering! we have to fix now!
+
 2. **Should the Findings triplet render as 3 small coloured pills instead of mono text `N / N / N`?** Plain text reads cleanly at the current row density; pills would add visual weight.
    **Recommendation:** Keep mono text in v0.1. Epic 08 polish can iterate if user feedback wants more visual distinction.
+
+   no, now!
 
 3. **Should `loadSampleSpecAction` from the Empty state push to `/specs/[newSpecId]` directly or revalidate `/specs` and let the user see the new row?** Today: pushes to detail. The detail page polls and shows the analysis spinner — feels like immediate progress.
    **Recommendation:** Keep the push-to-detail behaviour. Matches the spec ("redirects to its detail page") and gives the user instant feedback that something happened.
@@ -148,3 +152,96 @@ Browser-verified end-to-end against the e2e-test workspace's two Petstore specs:
 
 5. **`workspace.findUnique` in the layout runs on every `(app)` page navigation.** For v0.1's expected scale (1 workspace, ~30 specs) this is negligible (<5 ms per query). At larger scale Epic 08 could add a short cache.
    **Recommendation:** No v0.1 change. Re-evaluate during Epic 08 polish if profiling shows it as a hotspot.
+
+   no, do now!
+
+---
+
+## Follow-up after user review (2026-05-02)
+
+User comments on the open-question recommendations resolved as follows. **Q1, Q2, Q5 fixed in this session — no deferral.** Q3 and Q4 received no comment and stay as drafted.
+
+### Q1 — Radix tooltip on the disabled "Re-analyze" DropdownMenuItem (was: native `title=`)
+
+The disabled-Re-analyze item is now wrapped in a real Radix `<Tooltip>` rendering `"Already analyzing"` on hover/focus. Pattern:
+
+```tsx
+<Tooltip>
+  <TooltipTrigger asChild>
+    <span tabIndex={0} className="block">
+      <DropdownMenuItem disabled onSelect={(e) => e.preventDefault()}>
+        Re-analyze
+      </DropdownMenuItem>
+    </span>
+  </TooltipTrigger>
+  <TooltipContent side="left">Already analyzing</TooltipContent>
+</Tooltip>
+```
+
+The disabled DropdownMenuItem renders as a div with `pointer-events:none`, so the wrapping `<span tabIndex={0}>` is what receives the tooltip's pointer-and-focus events — same workaround Epic 05 used for disabled buttons in tooltip triggers. The non-disabled branch is rendered as a plain `<DropdownMenuItem>` (no Tooltip) so there's no flicker overhead in the hot path. Native `title=` removed.
+
+Edits:
+- `src/app/(app)/specs/specs-list-view.tsx` — added Tooltip imports, conditional render of the Re-analyze item, removed the `reanalyzeDisabled` const that's no longer needed.
+- `src/__tests__/specs-list/specs-list-view.test.tsx` — wrapped the "Re-analyze disabled when analyzing" test in `<TooltipProvider>` (production gets one from `(app)/layout.tsx`); test renamed to also document the tooltip text expectation.
+
+### Q2 — Findings triplet renders as 3 small coloured pills (was: `N / N / N` mono text)
+
+The Findings column in `specs-list-view.tsx` is now a `<FindingCountsBadges>` component rendering three pills:
+
+| Status | Colour | Token |
+|---|---|---|
+| open | violet | `border-violet-500/40 bg-violet-500/15 text-violet-700 dark:text-violet-300` |
+| applied | emerald | `border-emerald-500/40 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300` |
+| rejected | zinc | `border-zinc-500/40 bg-zinc-500/15 text-zinc-700 dark:text-zinc-300` |
+
+When a count is zero, the corresponding pill renders muted (`border-border bg-transparent text-muted-foreground`) so visual weight scales with actionable findings. Each pill carries `aria-label` + `title` (`"3 open"` etc.) so screen readers and hover-tooltips get the full status word. Browser-verified: the Petstore-completed row shows a violet `14` next to two muted `0` pills. Screenshot: `docs/screenshots/epic-07-pills.png`.
+
+Edits:
+- `src/app/(app)/specs/specs-list-view.tsx` — replaced the mono-text triplet with `<FindingCountsBadges>` + `<CountPill>` helpers + `countPillClasses`.
+- `src/__tests__/specs-list/specs-list-view.test.tsx` — replaced `screen.getByText('3 / 1 / 0')` with three `getByLabelText` assertions on the per-pill aria-labels.
+
+### Q5 — Layout's `workspace.findUnique` is now wrapped in `unstable_cache` (was: per-navigation prisma query)
+
+New helper at `src/lib/workspace-cache.ts`:
+
+```ts
+export const WORKSPACE_NAME_CACHE_TAG = 'workspace-name';
+
+export const getWorkspaceNameCached = unstable_cache(
+  async (workspaceId: string): Promise<string> => {
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: { name: true },
+    });
+    return workspace?.name ?? 'Workspace';
+  },
+  ['workspace-name-by-id'],
+  { tags: [WORKSPACE_NAME_CACHE_TAG] },
+);
+```
+
+`(app)/layout.tsx` calls `getWorkspaceNameCached(session.workspaceId)` instead of hitting prisma directly. Navigation between `(app)` routes for the same workspace now hits the data cache instead of Postgres.
+
+`updateWorkspaceAction` invalidates the cache via `updateTag(WORKSPACE_NAME_CACHE_TAG)` (Next.js 16's read-your-own-writes server-action primitive — replaces the older `revalidateTag` which now requires a profile arg) AND keeps the `revalidatePath('/', 'layout')` call so the layout re-renders with the fresh name. Browser-verified: editing the workspace name to "apiq-cached" in `/settings` immediately re-renders the sidebar footer, confirming the invalidation chain works end-to-end. Screenshot: `docs/screenshots/epic-07-cache-invalidate.png`.
+
+Edits:
+- `src/lib/workspace-cache.ts` (NEW)
+- `src/app/(app)/layout.tsx` — imports + uses `getWorkspaceNameCached`; comment updated to describe the cache + invalidation chain.
+- `src/app/(app)/settings/actions.ts` — `revalidatePath` retained, `updateTag(WORKSPACE_NAME_CACHE_TAG)` added.
+- `src/__tests__/settings/workspace-cache.test.ts` (NEW) — 3 tests: prisma `where`-clause shape, null fallback, cache-tag constant export. `unstable_cache` is mocked as a passthrough (Next.js's `incrementalCache` context isn't available under jsdom).
+- `src/__tests__/settings/layout.test.tsx` — switched from mocking prisma directly to mocking `@/lib/workspace-cache` (the boundary the layout actually consumes).
+- `src/__tests__/settings/actions.test.ts` — `next/cache` mock now includes `updateTag` + `unstable_cache` (transitively imported via `@/lib/workspace-cache`); assertions updated.
+
+### Meta — feedback memory reinforced
+
+This is the second results-file in a row where I defaulted to "defer to v0.2" / "Epic 08 polish" recommendations on cheap fixes. Updated the existing `feedback_no_default_v02_defer.md` memory entry to capture the recurring pattern — the rule is now explicit that any results file with two or more "defer" recommendations is a flag to re-check whether at least one is actually cheap to fix now.
+
+### Verification (Q1/Q2/Q5)
+
+| Step | Result |
+|---|---|
+| `npm run test` | 259 pass / 0 fail (was 256 + 3 new workspace-cache tests) |
+| `npm run lint` | 0 errors. Same 10 pre-existing `scripts/spike` warnings only. |
+| `npm run build` | Clean — Next.js 16 `updateTag` + `unstable_cache` types resolve. |
+| Browser: Findings pills | ✓ violet/emerald/zinc pill colours, muted when zero. Screenshot `epic-07-pills.png`. |
+| Browser: Cache invalidation | ✓ "apiq-cached" appeared in sidebar footer immediately on form submit; reset to "e2e-test" via DB script. Screenshot `epic-07-cache-invalidate.png`. |
