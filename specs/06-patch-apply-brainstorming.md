@@ -11,3 +11,4 @@ Results incorporated:
 - 01-project-setup-results.md
 - 02-auth-workspace-results.md
 - 03-spec-ingestion-results.md
+- 04-llm-pipeline-results.md

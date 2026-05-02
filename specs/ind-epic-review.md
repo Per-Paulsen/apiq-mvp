@@ -701,3 +701,196 @@ None. All 12 findings were structural fixes anchoring to Epic 03's accepted reco
 **Status:** Phase 1 complete. Phase 2 (brainstorming) skipped — no NEEDS CONFIRMATION items. Phase 3 not needed.
 
 Recommended next: `/refine_all` for cross-epic consistency check — the new edits cross multiple epics (Epic 04 modifies Epic 03's source as part of its scope; Epic 06 hitchhikes a fix into Epic 03's loadSampleSpecAction). Worth a cross-epic sweep before `/dev specs/04-llm-pipeline.md`.
+
+---
+
+# Individual Epic Review — 2026-05-02 (post-Epic-04)
+
+## Summary
+
+- **Mode:** in-dev (results 00-04 exist)
+- **Specs reviewed:** 05, 06, 07, 08 (4)
+- **Specs skipped (completed epics):** 00, 01, 02, 03, 04
+- **Specs skipped (already refined for current results set):** none
+- **Specs modified:** 05, 06, 07, 08 (4)
+- **Specs clean:** none
+- **Total findings:** 22 (15 structural applied, 7 NEEDS CONFIRMATION → Phase 2)
+- **Triggering input:** `specs/04-llm-pipeline-results.md`
+
+---
+
+## 05 — Spec Detail Screen
+
+### Findings
+
+- **Placeholder description outdated** (Inconsistent domain language)
+  - Spec said placeholder "currently renders just spec name + status + endpoint count"; actual placeholder also renders source URL.
+  - **Change:** Updated scope bullet 1 to read "spec name + source URL + status + endpoint count".
+
+- **Prisma type-import path quirk not surfaced** (Ungrounded assumption)
+  - Epic 04 results §6 documented `Finding`/`Spec`/`SpecVersion` aliases live at `@/generated/prisma/client`, not `@/generated/prisma/models`. CLAUDE.md is stale.
+  - **Change:** Added a scope bullet pinning `@/generated/prisma/client` as the import path.
+
+- **Sidebar hydration warning investigation pulled into Epic 05** (Hidden scope creep)
+  - Spec line 12 directed Epic 05 to "consider investigating the root cause" — no AC, no scope cap, not Epic 05's responsibility (pre-existing per Epic 03 / Epic 04).
+  - **Change:** Replaced the directive with a one-line acknowledgement that the warning is pre-existing and not Epic 05's responsibility; deferred to a separate `/patch` or Epic 08 polish.
+
+- **AC #1 silent on `qualityScore IS NULL`** (Missing AC)
+  - The field is `Int?`; before first analysis there's no score. Spec didn't say what to render.
+  - **Change:** AC #1 extended — render neutral placeholder badge `—` in zinc when `qualityScore IS NULL`.
+
+- **AC #2 polling lifecycle covers `analyzing` only, not `pending`** (Inconsistent domain language)
+  - Domain term "Polling" already says "while it is `pending` or `analyzing`". AC #2 said `analyzing` only — internal contradiction.
+  - **Change:** AC #2 extended to "`pending` or `analyzing`"; auto-stop on `completed` or `failed` made explicit.
+
+- **AC #13 silent on `analysisError` formatting and synchronous flip** (Missing AC)
+  - Epic 04 results documented that `analysisError` may be a stringified zod-error JSON for the `schema_validation` path. AC #13 didn't say how to render it. Also missed that `reanalyzeSpecAction` writes `analysisStatus = 'analyzing'` synchronously per Epic 04 commit `50b4b1c`.
+  - **Change:** AC #13 extended — parse JSON if possible (render first issue's `.message` headline + collapsible JSON `<details>`); explicit "no client-side optimistic state needed" note with `router.refresh()` as optional skip-poll-wait.
+
+- **Diff sub-tree handling of cycle markers** (Ungrounded assumption)
+  - `Spec.currentJson` carries `{"$ref":"#cyclic"}` markers from Epic 03's `cycleStripSpec`. AC #5 and the "Diff sub-tree" domain term didn't acknowledge this.
+  - **Change:** Diff sub-tree domain term extended — markers render as opaque JSON nodes; Epic 06's `validatePatchOps` is the apply-time gate.
+
+- **`analysisError` extraction policy** — `NEEDS CONFIRMATION` added as open question (recommendation: include `.path.join('.')` next to `.message` in the headline so the user knows WHICH finding failed).
+
+### Changes applied
+- Scope bullet 1: placeholder description updated.
+- Scope: added Prisma type-import-path note.
+- Scope §"Re-pull button visibility logic": Sidebar hydration sentence rewritten as no-op for Epic 05.
+- AC #1: appended null-rendering rule.
+- AC #2: extended polling lifecycle.
+- AC #13: extended with `analysisError` parsing rule + synchronous-flip note.
+- Domain terms §"Diff sub-tree": extended with cycle-marker note.
+- Open questions: 1 new `NEEDS CONFIRMATION` item.
+
+---
+
+## 06 — Patch Apply
+
+### Findings
+
+- **`computeQualityScore` argument-name wording misleading** (Inconsistent domain language)
+  - Step 7 said `computeQualityScore(remainingOpenFindings)` — implies caller pre-filters. The function takes ALL findings and filters internally.
+  - **Change:** Renamed to `allFindingsForSpec` with a parenthetical clarification.
+
+- **Prisma type-import path quirk not surfaced** (Ungrounded assumption)
+  - Same as Epic 05's finding. Epic 06 actions need `Finding` and `SpecVersion` types.
+  - **Change:** Added bullet under "Shared analysis-library imports" pinning `@/generated/prisma/client`.
+
+- **Synchronous-flip on Re-analyze button not noted** (Inconsistent domain language)
+  - Epic 06 wires Re-analyze on stale/outdated cards. Without this note, an implementer might add redundant optimistic UI.
+  - **Change:** Re-analyze wiring sentence extended with synchronous-flip note + optional `router.refresh()` hint.
+
+- **`validatePatchOps` test ownership** — `NEEDS CONFIRMATION` (recommendation: keep AC #2 as integration tests AND add a separate pure-function test file `src/__tests__/llm-pipeline/validate-patches.test.ts` for shapes 2a-2d, fits Epic 04's testing style).
+
+### Verified clean (no changes)
+- `validatePatchOps` signature matches spec wording exactly.
+- Defensive `cycleStripSpec` call still warranted.
+- `'outdated'` status string matches re-pull writer.
+- `'apply'` action key reserved cleanly in `rate-limit-workspace.ts`.
+- Hitchhiker fix (`'Initial pull from URL'` → `'Initial sample load'`) confirmed still needed; literal still in source.
+- `prisma.lLMCall` camelCase quirk — irrelevant to Epic 06 (no LLMCall writes).
+
+### Changes applied
+- Scope: added Prisma type-import-path note.
+- Scope step 7 (apply transaction): renamed `remainingOpenFindings` → `allFindingsForSpec`.
+- Scope §"Wire these actions": Re-analyze line extended with synchronous-flip + `router.refresh()` note.
+- Open questions: 1 new `NEEDS CONFIRMATION` item.
+
+---
+
+## 07 — Specs List + Settings
+
+### Findings
+
+- **AC #6 missing "disable Re-analyze when analyzing" rule** (Missing AC)
+  - Open Question line 100 already resolves this ("greyed out with tooltip"), but the resolution never made it into AC #6.
+  - **Change:** AC #6 extended with the disable rule.
+
+- **`qualityScore` rendering after failed re-analysis** — `NEEDS CONFIRMATION` (recommendation: render the prior numeric score, since it accurately reflects the last completed analysis; the `failed` status pill signals retry).
+
+- **Polling cadence (5 s) inconsistent with Epic 05 (3 s)** — `NEEDS CONFIRMATION` (recommendation: keep 5 s with rationale that list view tolerates more lag and polling cost scales with row count).
+
+- **Sidebar hydration warning investigation in Epic 07 scope** — `NEEDS CONFIRMATION` (recommendation: drop the directive — same reasoning as Epic 05).
+
+### Verified clean (no changes)
+- `analysisStatus` enum correctly listed; no `stale`/`outdated` leak.
+- Sample-spec allow-list (`'openweathermap'`) correctly scoped.
+- `loadSampleSpecAction` + `addSpecFromUrlAction` named correctly.
+- `signOutAction` import path (`@/lib/session`) correct.
+- Workspace-name extra-query (`prisma.workspace.findUnique`) correctly called out.
+- `next-themes` wiring — already installed by Epic 01.
+- Sidebar footer source-of-truth + `revalidatePath` correctly specified.
+
+### Changes applied
+- AC #6: extended with disable rule.
+- Open questions: 3 new `NEEDS CONFIRMATION` items.
+
+---
+
+## 08 — Export + Polish
+
+### Findings
+
+- **Spec wording suggests creating `src/lib/toasts.ts` from scratch** (Inconsistent domain language)
+  - File already exists from Epic 03 with `formatQuotaToast`. Spec's "Canonical message catalog at `src/lib/toasts.ts`" reads as create-from-scratch.
+  - **Change:** Reworded to "extends `src/lib/toasts.ts` (the Epic 03 stub)".
+
+- **`add-spec-form.tsx` import path under-specified** (Missing AC)
+  - **Change:** Appended import path: `import { showToast, formatQuotaToast, TOASTS } from '@/lib/toasts'`.
+
+- **Mobile fallback banner placement / sessionStorage key vague** (Missing AC)
+  - **Change:** Added: "above `<SidebarInset>`, below topbar, full-width"; sessionStorage key `apiq.mobile-banner-dismissed`; `'use client'` with `window.matchMedia('(max-width: 1023px)')`.
+
+- **No empty-state styling rule cross-reference** (Inconsistent domain language)
+  - **Change:** Empty-state bullets extended with reference to `prd-decisions.md` §"Was wir NICHT übernehmen" (no illustrations, no hero).
+
+- **AC #12 references a "smoke-test page" never specified** (Untestable AC)
+  - **Change:** Reworded to a Vitest test that renders a component calling `showToast(TOASTS.exportedJson)` + asserts Sonner container receives the message. Visual styling moved to manual browser smoke-check.
+
+- **AC #13 silent on canonical-string ownership** (Inconsistent domain language)
+  - **Change:** AC #13 extended with "No other module re-implements these strings" — pins `formatQuotaToast` as the single source.
+
+- **Spec Detail asynchronous budget-rejection toast not specified** (Missing AC)
+  - Epic 04 results explicitly handed off: budget rejection arrives via `Spec.analysisError`, not a synchronous return. Epic 08's spec didn't mention surfacing this on Spec Detail.
+  - **Change:** "Per-consumer pattern" paragraph extended with: Spec Detail polls → if budget pattern detected in `Spec.analysisError`, call `showToast(formatQuotaToast(...))` once per session per specId (sessionStorage dedupe key `apiq.budget-toast.<specId>`).
+
+- **`formatAnalysisError` helper ownership** — `NEEDS CONFIRMATION` (recommendation: ship at `src/lib/format-analysis-error.ts`, Epic 08 owned, both Epic 05's failed-card and the budget-toast hook import it).
+
+- **Pre-launch checklist reconciliation as Epic 08 AC** — `NEEDS CONFIRMATION` (recommendation: own reconciliation in Epic 08; it IS the final v0.1 epic).
+
+### Verified clean (no changes)
+- `react-diff-viewer-continued` not duplicated in Epic 08 (Epic 05 owns the install).
+- `yaml` library handoff from Epic 03 correctly noted.
+
+### Changes applied
+- Scope §"Toast system": canonical-message-catalog wording reworded.
+- Scope §"Toast system": `add-spec-form.tsx` import path appended.
+- Scope §"Polish" mobile-banner bullet: placement + storage key + matchMedia hint.
+- Scope §"Polish" empty-states bullet: styling rule cross-reference.
+- Scope §"Rate-limit polish": Spec Detail asynchronous budget-rejection paragraph added.
+- AC #12: reworded to Vitest assertion + manual browser smoke-check.
+- AC #13: canonical-source ownership pinned.
+- Open questions: 2 new `NEEDS CONFIRMATION` items.
+
+---
+
+## NEEDS CONFIRMATION items
+
+7 items across Epics 05/06/07/08:
+
+| Spec | Item | Recommendation |
+|------|------|----------------|
+| 05 | `analysisError` extraction policy on failed card (path + message vs message-only) | Include `.path.join('.')` next to `.message` in headline |
+| 06 | `validatePatchOps` test ownership (integration only vs +pure-function tests) | Both: keep AC #2 integration AND add `validate-patches.test.ts` |
+| 07 | `qualityScore` rendering after failed re-analysis (prior score vs `—`) | Render prior numeric score; `failed` pill signals retry |
+| 07 | Specs-list polling cadence (5 s vs align to Epic 05's 3 s) | Keep 5 s with rationale (list tolerates more lag) |
+| 07 | Sidebar hydration warning investigation in Epic 07 scope | Drop directive (same as Epic 05) |
+| 08 | `formatAnalysisError` helper ownership (Epic 08 vs Epic 05 inline) | Epic 08 owns at `src/lib/format-analysis-error.ts` |
+| 08 | Pre-launch checklist reconciliation as Epic 08 AC | Yes — Epic 08 IS the final v0.1 epic |
+
+---
+
+**Status:** Phase 1 complete. 7 NEEDS CONFIRMATION items.
+
+Recommendation: skip Phase 2 (brainstorming-in-file) and proceed to `/refine_all` — the items are low-stakes and can be resolved inline during cross-epic review. Alternative: run `/refine_all_ind` Phase 2 first if user wants to confirm before cross-epic checks.

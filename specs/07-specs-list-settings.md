@@ -10,7 +10,7 @@
 - `(app)/specs/page.tsx` — index of all specs in the user's workspace.
 - Layout: a shadcn `Table` (sticky header, row-hover `bg-accent/50`, no zebra stripes, compact density `py-2.5` per `prd-decisions.md` §"Components" Tables) with columns:
   - Name (link to `/specs/[specId]`)
-  - Quality score (badge, colours and thresholds per `prd-decisions.md` §"Color Palette" Quality-Score-Badges: ≥80 emerald, 60–79 amber, <60 red; "—" if unanalysed)
+  - Quality score (badge, colours and thresholds per `prd-decisions.md` §"Color Palette" Quality-Score-Badges: ≥80 emerald, 60–79 amber, <60 red; `—` if `qualityScore IS NULL`. After a `failed` re-analysis on a previously-completed spec, the prior numeric score is shown — `runAnalysis` only writes `qualityScore` inside its success transaction, so the field accurately reflects the last completed analysis; the `failed` status pill alongside is the truth-signal for "current state". Per cross-epic Q3.)
   - Status pill (`pending | analyzing | completed | failed`)
   - Open / applied / rejected finding counts (small triplet)
   - Source URL (truncated, with full URL on hover)
@@ -23,7 +23,7 @@
   - primary button (violet, per `prd-decisions.md` §"Components" Buttons): "Add spec from URL" → `/specs/new`
   - secondary link: "Try with a sample spec" → calls `loadSampleSpecAction({ sampleId: 'openweathermap' })` (Epic 03), then redirects to `/specs/[newSpecId]`
 - No tour banner, no modal, no illustration — Engineer-UX is self-service.
-- Polling: while any spec in the list has `analysisStatus = 'pending' | 'analyzing'`, the list refetches every 5 s. Auto-stop when no spec is in those states.
+- Polling: while any spec in the list has `analysisStatus = 'pending' | 'analyzing'`, the list refetches every 5 s. Auto-stop when no spec is in those states. (Cadence is intentionally slower than Epic 05's per-spec 3 s polling — list-view tolerates more lag and polling cost scales linearly with row count. Per cross-epic Q4.)
 - Cross-workspace isolation: the query is scoped via `workspaceId = session.workspaceId`.
 
 ### Settings
@@ -42,7 +42,7 @@
 
 ### Shared
 
-- Both screens use the `(app)/layout.tsx` sidebar (Epic 01) with two nav items: "Specs" → `/specs`, "Settings" → `/settings`. The layout is already wrapped in `<TooltipProvider>` (Epic 02) — Specs List row-action menus + AlertDialog tooltips work without further wrapper setup. **Pre-existing Sidebar hydration warning** (surfaced during Epic 03 browser verification, see Epic 03 results §"Cross-cutting / pre-launch"): `SidebarMenuButton` with the `tooltip` prop emits a `data-state` attribute that mismatches between SSR and client. Specs List adds tooltip-heavy row-action menus + truncated-URL tooltips; consider investigating the root cause as part of this epic's work (see Epic 05 for the same note + suggested fix paths).
+- Both screens use the `(app)/layout.tsx` sidebar (Epic 01) with two nav items: "Specs" → `/specs`, "Settings" → `/settings`. The layout is already wrapped in `<TooltipProvider>` (Epic 02) — Specs List row-action menus + AlertDialog tooltips work without further wrapper setup. The pre-existing Sidebar hydration warning (Epic 03 / Epic 04 browser verification) is owned by Epic 08 polish (per cross-epic Q5) — Epic 07 doesn't investigate it; if a regression surfaces during Epic 07 implementation, fix inline.
 - **Layout update**: `(app)/layout.tsx` currently hardcodes the sidebar footer to `"Workspace name • user@example.com"` (Epic 01 placeholder, left as-is by Epic 02). Epic 07 must replace this with real values: convert the layout to an async server component, call `getRequiredSession()`, fetch the workspace name (`prisma.workspace.findUnique`), and render `{workspace.name} • {session.email}`. AC #10 ("reflects immediately in the sidebar footer") requires this layout edit.
 - Sidebar footer: workspace name + user email (small, muted).
 - **Library install**: `npx shadcn@latest add alert-dialog` for the "Delete spec?" confirm dialog (per Open Question §2 / row action menu). Not currently installed.
@@ -60,7 +60,7 @@
 3. Quality score badge colours and thresholds match `prd-decisions.md` §"Color Palette" Quality-Score-Badges (≥80 emerald, 60–79 amber, <60 red); unanalysed specs show "—".
 4. Status pill renders for each of `pending | analyzing | completed | failed` with colours and spinner per `prd-decisions.md` §"Components" Status-Pills (pending/analyzing → blue + spinner-icon, completed → emerald, failed → red).
 5. While any visible spec has `analysisStatus = pending | analyzing`, the list refetches every 5 s and auto-stops when none remain.
-6. Row action menu offers "Re-analyze" (always), "Re-pull from URL" (only when `Spec.sourceType === 'url' AND Spec.wasAuthedPull === false`), "Delete" (always, with a "Delete spec?" confirm dialog).
+6. Row action menu offers "Re-analyze" (always), "Re-pull from URL" (only when `Spec.sourceType === 'url' AND Spec.wasAuthedPull === false`), "Delete" (always, with a "Delete spec?" confirm dialog). The "Re-analyze" item is disabled with tooltip "Already analyzing" when `Spec.analysisStatus === 'analyzing'` (per resolved Open Question §3).
 7. Empty state CTAs work: "Add spec from URL" navigates to `/specs/new`; "Try with a sample spec" creates an OpenWeatherMap-sample spec and redirects to its detail page.
 8. Cross-workspace isolation: a spec from another workspace never appears (test by seeding two workspaces).
 9. `/settings` renders Workspace + Profile + Session sections.
@@ -100,3 +100,6 @@
 - "Re-analyze" from the list row uses the same `reanalyzeSpecAction` (Epic 04) as the Spec Detail button. Should it disable while `analysisStatus = analyzing`? Yes — the row action should be greyed out with a tooltip "Already analyzing".
 - (resolved) Sidebar collapse/expand persisted in cookie (shadcn default), collapsible Mini-Variante (Icon-only, ~64 px) per `prd-decisions.md` §"Layout".
 - Display-name uniqueness: not required (multiple users can share a display name). Confirm.
+- (resolved per cross-epic Q3, 2026-05-02) `qualityScore` rendering after a `failed` re-analysis on a previously-completed spec: render the prior numeric score; the `failed` status pill alongside signals retry. Documented in scope + AC #3.
+- (resolved per cross-epic Q4, 2026-05-02) Specs-list polling cadence stays 5 s (intentionally slower than Epic 05's per-spec 3 s). Inline rationale added to Scope §"Polling" + AC #5.
+- (resolved per cross-epic Q5, 2026-05-02) Sidebar hydration warning investigation is owned by Epic 08 polish (it's a real fix, not a defer-by-default). Epic 07's "consider investigating" directive removed.
