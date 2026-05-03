@@ -270,3 +270,110 @@ Ehrliche Bewertung in vier Szenarien:
 Sag mir welches Szenario du eigentlich willst — die ganze Launch-PRD hängt davon ab.
 
 (More questions to be added once user adds more concerns.)
+
+---
+
+## Workflow-Frage: was macht der User mit dem geänderten Spec? (2026-05-03)
+
+User: *"also der user gibt seine openapi spec ein? via url? dann reviewev apiq diese und liefert ergebnisse? dann kann der user von apiq noch eine angepasste spec bekommen? aber was macht er dann damit? die spec beschreibt ja seine api oder? geht es hier nur um verbesserte api doku oder um verbesserte api? sollten wir villeicht sogar doch einen spec import button haben?"*
+
+Das ist die zentrale produktstrategische Frage, die der ursprüngliche PRD nicht sauber beantwortet hat. Die Antwort entscheidet, *wer* überhaupt apiq sinnvoll nutzen kann.
+
+### Die zwei API-Welten — und warum apiq heute beide implizit gleich behandelt
+
+Es gibt zwei grundlegend verschiedene Workflows, wie ein OpenAPI-Spec im Engineering-Lifecycle existiert:
+
+**(A) Spec-First / Design-First.**
+- Der Spec **ist** die Source-of-Truth.
+- Code wird aus dem Spec generiert: Server-Stubs, Client-SDKs, Mocks, Tests, API-Gateways.
+- Tools im Stack: Stoplight Studio, Prism, OpenAPI Generator, Swagger Codegen, Connexion (Python), Microsoft TypeSpec.
+- Beispiel-Workflow: Engineer ändert Spec → CI regeneriert Server-Stubs + Client-SDKs → deployed.
+- Eine "verbesserte Spec" → eine **verbesserte API**, weil der Code nachzieht.
+- Marktanteil global: ~20-30% der Engineering-Teams (typischerweise große Enterprises, API-Platform-Teams, B2B-Plattform-APIs).
+
+**(B) Code-First.**
+- Der **Code** ist die Source-of-Truth (Route-Handler, Decorators, Annotationen).
+- Spec wird automatisch aus dem Code generiert: FastAPI's `/openapi.json`, Spring Doc, NestJS Swagger, ASP.NET Core OpenAPI.
+- Wenn man den Spec ändert, ändert sich nichts — der Code regeneriert ihn beim nächsten Deploy.
+- Eine "verbesserte Spec" ist dann eine **To-do-Liste manueller Code-Änderungen** für den User.
+- Marktanteil global: ~70%+ der Engineering-Teams (typische Backend-Stacks: FastAPI, Spring Boot, NestJS, ASP.NET, Express + decorators).
+
+### Was bedeutet das für apiq heute?
+
+**Aktueller Zustand:** apiq mutiert den Spec via JSON Patch + bietet Export. Implizit nimmt apiq Workflow (A) Spec-First an. Aber die Mehrheit der Zielgruppe ist (B) Code-First.
+
+Konkret: ein FastAPI-Engineer importiert seinen Spec in apiq → bekommt 14 Findings → applied 5 Patches → exportiert die geänderte Spec als JSON. Was er damit macht?
+
+- *Nicht* deployen — beim nächsten Deploy regeneriert FastAPI den Spec aus den Code-Annotationen → apiq's Änderungen sind weg.
+- *Nicht* committen — würde den nächsten Deploy nur frustrieren.
+- *Vielleicht* als Diff anschauen + manuell die Code-Änderungen machen — also hat der User effektiv einen "Review-Report" bekommen, aber die Apply-Buttons waren irreführend (er kann nichts wirklich applizieren).
+
+**Das ist der Kern des Problems.** Apiq vermarktet "one-click patches that mutate the spec" — aber für 70%+ der User mutiert das nichts Echtes. Die Apply-Mechanik ist Theater für sie.
+
+### Was die User in beiden Welten *wirklich* brauchen
+
+| Workflow | Was der User braucht | Was apiq heute liefert | Lücke |
+|---|---|---|---|
+| **(A) Spec-First** | Geänderter Spec, fertig zum Code-Regenerate-Pipeline | ✓ Genau das | Keine. Aktueller Apply-Flow ist korrekt. |
+| **(B) Code-First** | Strukturierte Vorschläge, die er manuell in seinen Code einarbeitet | Geänderter Spec + Diff-Preview | Großer Gap. Die "Apply"-Buttons sind irreführend; der User braucht eher *Code-Patches für FastAPI / Spring / NestJS*, nicht JSON Patches für die Spec. |
+
+### Drei mögliche Reaktionen auf diesen Gap
+
+**(I) Apiq als Spec-First-Tool positionieren — kommunikativ ehrlich sein.**
+
+- Alles bleibt wie es ist.
+- Marketing + Onboarding + Empty-State sagen klar: "apiq is for spec-first / design-first API teams. If you generate your spec from code (FastAPI, Spring, NestJS), you'll still get useful narrated findings, but the patches are a *to-do list*, not a deploy artifact."
+- Audience schrumpft auf die ~20-30% Spec-First-Teams.
+- Aufwand: ~null Code, ein paar Texte ändern.
+- Konsequenz: TAM ist deutlich kleiner. Aber das aktuelle Produkt ist für *diese* Audience genau richtig gebaut.
+
+**(II) Apiq für Code-First erweitern — Output-Modus pro Stack.**
+
+- User markiert seinen Stack (FastAPI / Spring / NestJS / ASP.NET / etc.) im Onboarding oder pro Spec.
+- LLM-Pipeline produziert *zusätzlich* zur JSON-Patch-Spec-Mutation auch **Code-Patches** für den jeweiligen Stack.
+- Z. B. statt `"add /paths/~1users/get/parameters" mit cursor-Schema` → `"in your FastAPI route, add: cursor: Optional[str] = Query(None, description='Pagination cursor')"`.
+- Aufwand: signifikant. Das ist *eigene Spike-Arbeit* (kann der LLM zuverlässig Stack-spezifische Code-Patches generieren?), plus ~2-4 Wochen Engineering pro Stack.
+- Risiko: Stack-spezifische Code-Patches sind mindestens 5× komplexer als JSON Patches; Hallucination-Risiko hoch; Validierung viel schwerer.
+- Konsequenz: ein deutlich besseres Produkt für die größere Audience. Aber Plattform statt MVP.
+
+**(III) Apiq als Read-Only-Audit-Tool reframen — keine Apply-Mechanik mehr.**
+
+- Apiq liefert nur den Findings-Report mit Narration + Rationale.
+- Apply / Reject / Versions / Export entfallen.
+- Output: PDF-Report / Markdown-Report / GitHub-PR-Comment, je nach Distribution.
+- Aufwand: viel Code wird obsolet (~30% von v0.1), aber kein neues Big-Spec-Spike, kein Patch-Validator-Maintenance.
+- Konsequenz: schmaleres Produkt, aber funktioniert für *beide* Welten. Verliert den "one-click design partner"-Differentiator zugunsten von "best-narrated linter".
+
+### Sollten wir einen Spec-Import-Button (File Upload / Paste) haben?
+
+**Ja, wahrscheinlich.** URL-only ist heute eine echte Hürde:
+
+- Viele Engineers haben Specs in ihrem Repo (`./openapi.json`), nie public deployed.
+- Internal / private APIs haben oft keinen public-zugänglichen URL → User müsste den Spec erst irgendwo hochladen, bevor er apiq nutzt.
+- Engineers mit lokal-CI-generierten Specs müssten den Spec zuerst exposen.
+- Paste-as-Text wäre die niedrigste Friction überhaupt — Textarea mit "paste your OpenAPI spec here", auto-detect JSON/YAML, fertig.
+
+**Aufwand:** Paste-Mode ~2-3 h, File-Upload-Mode ~half day. Beide sind technisch fast identisch zur aktuellen URL-Pull-Pipeline (parse → validate → dereference → persist).
+
+**Empfehlung:** ja, beide einbauen. Paste-Mode primär, File-Upload als Convenience. URL bleibt für "Pull from public URL" mit Re-Pull-Capability.
+
+Per `prd.md` v0.1 war URL-only eine bewusste Scope-Limitation, aber rückblickend wirkt das wie ein Premature-Constraint. Für jeden ernst gemeinten Launch sollte File/Paste rein.
+
+### Zusammengefasst: was ist der eigentliche Wert?
+
+Wenn du ehrlich beantwortest "wer ist apiq's Audience und was passiert mit dem Output?", dann:
+
+- **Wenn Spec-First-Teams (Pfad I):** apiq ist ein "design partner" — Apply-Mechanik macht Sinn — aber die Audience ist 20-30% des Marktes, also schon eng.
+- **Wenn Code-First-Teams (Pfad II):** apiq müsste deutlich erweitert werden, um echten Wert zu liefern (Code-Patches statt nur JSON-Patches).
+- **Wenn beide (Pfad III):** apiq ist ein "audit tool" — Apply entfällt — und konkurriert dann *direkter* mit Spectral et al.
+
+Das ist der Trade-off. Bisher hat apiq implizit Pfad I + ein bisschen Pfad III gemacht — ohne klar zu kommunizieren *welcher* der beiden es ist. Das verwirrt User in der Audience.
+
+### Konkrete Frage zurück
+
+1. Welche Audience hast du im Kopf — Spec-First (Minderheit, aber für sie ist das aktuelle Produkt richtig) oder Code-First (Mehrheit, aber braucht ein anderes Produkt)?
+2. Wenn Spec-First: bleiben wir bei Apply-Mechanik, fokussieren das Marketing engerer.
+3. Wenn Code-First: wir brauchen eine Spike-Phase ("kann der LLM zuverlässig Stack-spezifische Code-Patches generieren?") *vor* dem Big-Spec-Spike. Höchstwahrscheinlich Pivot zu (III) Audit-Tool statt (II) Code-Patcher.
+4. Spec-Import-Button: paste + file-upload als Default? URL bleibt nur als optionale "pull from public URL" für Public-API-Owner?
+
+Diese Antworten beeinflussen *jede* andere Entscheidung in der Launch-PRD — Audience-Sprache, Naming, UI-Redesign, sogar das Pricing-Modell. Lass uns die nicht überspringen.
