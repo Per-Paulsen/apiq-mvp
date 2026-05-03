@@ -1507,3 +1507,240 @@ Das ist ~1 Tag Naming-Workshop, eigene Übung — sollte parallel zur PRD-Arbeit
 2. **Bestätigst du die Triage-Tabelle?** Insbesondere: MCP-Server + CLI + Score-Badges Pre-Launch reinnehmen (5-6 Tage extra)?
 3. **Naming**: Kommt als Workshop nach PRD-Draft? Oder willst du jetzt eine engere Shortlist (3-5 Namen mit Domain/Trademark-Status)?
 4. **Bereit für PRD-Draft**, oder noch ein Punkt offen, den ich missed habe?
+
+---
+
+## Final Flow Design: das coolste apiq-Erlebnis (2026-05-03)
+
+User-Entscheidung:
+1. ✅ Tagline `"apiq — The quality gate for your OpenAPI specs."`
+2. ✅ Triage-Tabelle bestätigt — MCP + CLI + Score-Badges + viral loop alles Pre-Launch
+3. → Naming nach PRD
+4. → Final Flow zusammenbauen, dann PRD
+
+OK. Jetzt die ganze User-Experience als kohärente Geschichte. Mehrere Entry-Points, ein Core-Loop, viele Exit-Options. Distribution + Magic + Retention zusammen gedacht.
+
+### Entry-Points (4 Wege ins Produkt)
+
+```
+              ┌──────────────────────────────────────────────────────┐
+              │                                                      │
+              │  (1) Web Landing — HN/Twitter/Reddit traffic        │
+              │  (2) CLI — `npx apiq check` aus dem Terminal        │
+              │  (3) MCP — Cursor / Claude Code ruft apiq direkt    │
+              │  (4) Public Share — Freund hat einen Link geteilt   │
+              │                                                      │
+              │            ALLE → gleicher Core-Loop                 │
+              └──────────────────────────────────────────────────────┘
+```
+
+Jeder Entry-Point hat sein eigenes Onboarding-Erlebnis, aber alle münden im selben Wert-Loop. Kein Feature ist hinter einem bestimmten Entry-Point eingesperrt.
+
+### Der Core-Loop
+
+```
+   [INPUT]                      [VALUE]                    [OUTPUT]
+
+   Paste/Upload                 Quality-Score              Export YAML/JSON
+   URL pull         →   Apply  All Critical    →    Markdown Findings
+   File from CLI                Live Preview               Public Share Link
+   AI tool call (MCP)                                      Score Badge
+                                                          Roundtrip-to-AI
+```
+
+3 Phasen, jede mit einem **Magic Moment**. Die Magic Moments sind, was den User zu Engagement bringt.
+
+### Magic Moments im Detail
+
+#### Magic Moment #1: Score-Reveal (15-60s nach Submit)
+
+Nach Submit, während Analysis läuft, sieht User einen smarten Loading-State (kein generic Spinner):
+- *"Reviewing your endpoints…"*
+- *"Checking for design patterns…"*
+- *"Looking for capability gaps…"* (wenn Capability-Gap-Generation Spike erfolgreich)
+
+Dann **Score-Reveal mit Animation**: *"Your spec scored **32 / 100**"* — color-coded (red <60, amber 60-79, green ≥80). Zusammen mit Finding-Counts: *"3 critical · 5 high · 4 medium · 2 low"*.
+
+Warum das wirkt: ein Score ist viscerally — User vergleicht sich. Niedrig = "shit, ich muss was tun"; hoch = "yeah, ich kenne meinen Stuff".
+
+#### Magic Moment #2: Apply All Critical (One-Click Transformation)
+
+Prominent button: **"Apply all 3 critical fixes"** mit Severity-Color (red).
+
+User klickt einmal → 3 Patches applied → Score springt von 32 auf 53 oder so → **Animation: Score-Bar fillt sich**. Tactile, satisfying.
+
+Plus: alle 3 applied Findings flippen visuell zu *"applied"*-State mit grüner Markierung. Versions-Drawer-Trigger pulsiert (existing v0.1-Feature). User merkt: *"Ich habe gerade in 3 Sekunden 3 echte Probleme gelöst."*
+
+#### Magic Moment #3: Live Preview (das Wow)
+
+Nach Apply, Preview-Tab öffnet sich automatisch (oder mit Hint *"See your improved spec live"*). Embedded Stoplight Elements rendert die improved Spec interactively:
+- Endpoint-Liste links, browsbar
+- Request/Response-Schemas mit Examples rechts  
+- **"Try It"-Button** auf jedem Endpoint — sendet einen real Request an Prism Mock-Server
+- Engineer klickt POST `/orders` → sieht eine echte Response in 200 ms
+
+Das ist **der Moment**, in dem Engineers sich überzeugen lassen. Ihre eigene API, gerade verbessert, **läuft jetzt vor ihren Augen**. Andere Tools (Spectral, 42Crunch) liefern das nicht.
+
+### User-Flows pro Entry-Point
+
+#### (1) Web Landing (HN-Traffic)
+
+```
+Visit / → "Paste your spec or try a sample" CTA prominent
+   ↓
+Click "Try sample" (no signup) → 60s analysis on OpenWeatherMap
+   ↓
+Magic Moment #1 (Score-Reveal: 35/100, 2 critical)
+   ↓
+Click "Apply all 2 critical" → Magic Moment #2 (Score 35→58)
+   ↓
+Magic Moment #3 (Live Preview)
+   ↓
+"This was a sample. Try with your own spec →" CTA
+   ↓
+Paste/Upload own spec → Anonymous Demo OK for one analysis
+   ↓
+After own analysis: "Save this analysis? Sign up free" → Conversion
+   ↓
+[Account created]
+   ↓
+Continue Core Loop: Apply, Preview, Export, Share
+```
+
+**Signup-Wall:** *only* nach erstem Wert. User sieht den ganzen Loop bevor er ein Konto braucht. Niedrige Friction.
+
+#### (2) CLI (Engineer im Terminal)
+
+```
+Engineer hat ./openapi.yaml im Repo
+   ↓
+Reads about apiq somewhere → `npx apiq check ./openapi.yaml`
+   ↓
+Output: markdown report with findings + score (sofort, lokal, kein Server-Roundtrip*)
+   ↓
+*Real spec wird natürlich an apiq's Backend geschickt (LLM braucht den Spec)
+   ↓
+Engineer reviews report inline — copy/paste-friendly für Slack/PR
+   ↓
+`npx apiq apply ./openapi.yaml --critical-only` → file modifiziert in place
+   ↓
+Engineer prüft `git diff`, commits
+   ↓
+Optional: `npx apiq preview ./openapi.yaml` → öffnet localhost:5173 mit Stoplight Elements + Prism
+   ↓
+Optional: `npx apiq share ./openapi.yaml` → uploaded analysis, returns public-share-link
+```
+
+**Kein Web-Login nötig** für basic CLI-flow. Power-User-Channel. Kostenlose npm-Distribution = Discoverability.
+
+#### (3) MCP (Cursor/Claude Code Session)
+
+```
+Engineer arbeitet in Cursor, hat Claude scaffolden eine OpenAPI-Spec
+   ↓
+Claude sees apiq MCP tools registered → automatic call after spec generation:
+   `apiq.analyze({ spec: <generated_spec> })`
+   ↓
+Claude receives findings + score back
+   ↓
+Cursor UI: "apiq found 14 issues. Apply critical fixes? [Yes / Review first]"
+   ↓
+Yes → `apiq.apply({ spec_id: ..., scope: 'critical' })`
+   ↓
+Claude updates the spec in the editor with applied patches
+   ↓
+Engineer never opened apiq's web UI — apiq is part of the AI workflow
+```
+
+**Distribution-Strategie:** apiq.dev veröffentlicht den MCP-Server. User added einmal `apiq` zu ihrer MCP-Config. Danach **automatisch verfügbar** in jeder Cursor/Claude-Code-Session.
+
+#### (4) Public Share (Viral)
+
+```
+Freund tweetet "Look at apiq's analysis of Stripe's API: <link>"
+   ↓
+Visitor klickt /share/abc123 → sieht Stripe-Analysis (no signup)
+   ↓
+Sieht Quality Score 73/100 — vergleicht mit eigenem Tooling
+   ↓
+Curiosity: "What would my own API score?" → "Try with your spec" CTA
+   ↓
+→ Mündet in Web Landing Flow (1)
+```
+
+**Key:** der Share-Link enthält keinen Spec-Inhalt selbst (Privacy), sondern die Findings + Score + ggf. ein Public-Sample-Spec-Reference. User sieht das *Ergebnis*, nicht den Spec.
+
+### Exit-Options (4 Wege Wert mitzunehmen)
+
+Nach Apply-Loop kann User:
+
+1. **Export YAML/JSON** — die improved Spec in den Repo committen
+2. **Markdown Findings** — Findings-Report in Slack-Thread / PR-Comment / AI-Roundtrip einkopieren (*"AI, regenerate the spec with these fixes"*)
+3. **Public Share Link** — `/share/<token>` — viral mechanism, Freund clicked
+4. **Score Badge** — `<img src="https://apiq.dev/badge/<spec-id>" />` für GitHub README. Set-and-forget, jede Repo-View advertising apiq passiv
+
+Plus optional:
+5. **MCP-Roundtrip** — Findings zurück in Cursor → AI fixt den Code, der die Spec emittiert (Code-First-Workflow geschlossen)
+
+Alle 5 Exits sind **schon heute oder mit minimal extra Engineering machbar.** Score-Badge ist 1 Tag, Public-Share ist Teil des viral-loops, alles andere existiert oder ist schon im Plan.
+
+### Was den Flow "cool" macht (Selbst-Check)
+
+| Kriterium | Erfüllt? | Wie |
+|---|---|---|
+| Multiple low-friction entry points | ✅ | Web/CLI/MCP/Share — kein einziger Lock-in |
+| One unified core loop | ✅ | Analyze → Apply All Critical → Preview, gleich überall |
+| Tactile magic moments | ✅ | Score-Reveal + Apply-Animation + Live-Preview |
+| Multiple exit-options for value | ✅ | Export/Markdown/Share/Badge/MCP-Roundtrip |
+| Viral mechanism built-in | ✅ | Public-Share-Link + Score-Badge |
+| AI tools integrate apiq, not the other way around | ✅ | MCP-Server distribuiert apiq in Claude/Cursor-Sessions |
+| Privacy-respectful by design | ✅ | "We never log spec contents" + Anonymous-Demo + Score-Badge ohne Spec-Inhalt |
+| Audience-agnostisch | ✅ | Hand-edited / Framework-emitted / AI-generated alle gleich behandelt |
+| Differentiator-stack ist klar | ✅ | LLM-Narration + Apply-Mechanik + Live-Preview + Quality-Score = nicht von Spectral et al. replizierbar |
+
+**Verdict: das ist deutlich besser als der Original-PRD-Flow** ("Upload → Review → Apply → Export"). Der Loop hat jetzt:
+- Konkretere Magic-Moments
+- Mehrere Distribution-Channels (statt nur Web)
+- Eingebauten Viral-Loop (statt Marketing-Hoping)
+- AI-Tool-Integration (MCP) statt Konkurrenz-Strategie
+
+### Was wir bewusst NICHT in v1 reinnehmen
+
+Damit das Scope nicht aufbläht — Items, die "cool wären" aber post-Launch sind:
+
+- **Chat-mit-apiq-über-deinen-Spec** ("apply only the pagination findings") — over-scope für v1
+- **Auto-detect Spec-Origin** ("this looks like FastAPI-emitted") — over-engineered, kein User-Wert
+- **Continuous-Mode / CI-PR-Comments** — abgedeckt durch CLI; native GitHub-App ist post-Launch
+- **Diff-against-published-version** (Drift Detection) — v0.4 Governance, post-Launch
+- **Capability-Gap-Generation** — wenn der Spike erfolgreich ist und Phase 1 zündet, dann rein. Sonst v1.1.
+- **Business-Improvements / Implementation-Hints** — Spike-conditional, nur wenn Capability-Gap erfolgreich UND Resource übrig
+- **Self-Hosted Mode** — v1.2+, Enterprise-Feature
+- **BYOK (Bring Your Own OpenRouter Key)** — v1.1+
+- **TypeSpec-Roundtrip** — v0.2-Backlog
+
+### Implikation für die kommende PRD
+
+Die `prd-launch.md` wird vermutlich strukturiert nach:
+
+1. **Vision + Tagline** (1 Satz, klar)
+2. **Audience** (agnostisch mit AI-implicit)
+3. **Core Loop + Magic Moments** (das hier oben)
+4. **Entry-Points** (Web / CLI / MCP / Share)
+5. **Build-Liste** (Pre-Launch must-haves + should-haves, mit Aufwand)
+6. **Spike-Phase** (Big-Spec + conditional Capability-Gap)
+7. **Privacy + Legal** (Promise + ToS + Sentry-Setup)
+8. **Distribution-Strategie** (HN-Launch + npm + MCP-Registry + openapi.tools listing)
+9. **Out-of-Scope** (für klares "Nein" auf Scope-Creep)
+10. **Roadmap v1.1+** (Drift / Business / TypeSpec / etc.)
+
+Diese Struktur lehnt sich am Original-`prd.md` an, aber ist deutlich konkreter — durch das Brainstorming haben wir Daten + Entscheidungen, statt offene Fragen.
+
+### Frage zurück (wirklich final hoffe ich)
+
+Bin ich bereit, die `prd-launch.md` jetzt zu schreiben? Oder gibt es einen letzten Punkt aus dem Flow oben, den du noch challenge willst?
+
+Konkret:
+1. Magic Moment #1 (Score-Reveal mit Loading-Hints): OK, oder zu Marketing-y?
+2. Anonymous Demo erlaubt EINE Analyse vor Signup-Wall — OK oder lieber unbegrenzt anonym?
+3. MCP-Server bei Claude Code/Cursor: setzen wir voraus, dass User selbst MCP-Config einrichten? Oder bauen wir einen "1-click install" via einer apiq.dev/mcp-Setup-Anleitung?
+4. Score-Badge: zentral hosted (`apiq.dev/badge/...`) oder als statisches SVG im Export-File?
