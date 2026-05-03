@@ -1744,3 +1744,19 @@ Konkret:
 2. Anonymous Demo erlaubt EINE Analyse vor Signup-Wall — OK oder lieber unbegrenzt anonym?
 3. MCP-Server bei Claude Code/Cursor: setzen wir voraus, dass User selbst MCP-Config einrichten? Oder bauen wir einen "1-click install" via einer apiq.dev/mcp-Setup-Anleitung?
 4. Score-Badge: zentral hosted (`apiq.dev/badge/...`) oder als statisches SVG im Export-File?
+
+---
+
+## Final Flow Decisions (2026-05-03)
+
+User decisions on the four open Final-Flow questions:
+
+1. **Loading-Hints OK** — *"Reviewing your endpoints… Checking for design patterns… Looking for capability gaps…"* sind nicht zu Marketing-y für diese Audience. Engineers schätzen hints über generic "Loading…".
+
+2. **Anonymous Demo: hybrid.** Sample-Specs (OpenWeatherMap/Petstore/etc.) → **unlimited anonymous**. Eigene Specs → **1 freie Analyse pro IP/24h**, dann Signup-Wall. Public-Share-Links → unlimited anonymous (was already planned). Cost-Schutz via IP-Rate-Limit; nach Signup gilt der bestehende $10/24h-Workspace-Cap.
+
+3. **MCP Setup: Doc-Page mit Copy-Paste-Snippets, kein 1-Click-Install.** apiq.dev/mcp mit drei Sektionen (Claude Code / Cursor / Continue) + JSON-Block + Copy-Button. Standard-MCP-Distribution-Pattern. 1-Click-Install ist over-engineered + Permission-Albtraum.
+
+4. **Score-Badge: hosted.** SVG-Endpoint `apiq.dev/badge/<spec-id>`, color-coded Score, Cache-Control max-age=1800. Markdown-Wrap mit Link auf `/share/<token>` für Click-through. Static SVG wäre stale ab Tag 1 — defeats den Sinn.
+
+Alle Final-Flow-Decisions getroffen. Bereit für PRD-Draft.
