@@ -2,6 +2,8 @@ import Link from 'next/link';
 
 import { Button } from '@/components/ui/button';
 
+import { demoLoginAction } from './demo-login-action';
+
 export default function Home() {
   const isDemo = process.env.DEMO_MODE === 'true';
 
@@ -22,7 +24,7 @@ export default function Home() {
               Live demo
             </p>
             <p className="text-sm text-zinc-300">
-              Skip the signup — log in with the public demo account:
+              One click to explore the app — pre-seeded with analyzed specs:
             </p>
           </div>
           <div className="flex flex-col gap-1.5 rounded border border-zinc-800 bg-zinc-900 p-3 font-mono text-xs">
@@ -36,15 +38,15 @@ export default function Home() {
             </div>
           </div>
           <p className="text-xs text-zinc-500">
-            The demo workspace is pre-seeded with analyzed specs. State resets
-            daily at 03:00 UTC, so feel free to explore.
+            State resets daily at 03:00 UTC, so feel free to apply patches and
+            explore.
           </p>
           <div className="flex gap-2">
-            <Button asChild>
-              <Link href="/login">Open demo</Link>
-            </Button>
+            <form action={demoLoginAction}>
+              <Button type="submit">Open demo →</Button>
+            </form>
             <Button asChild variant="ghost">
-              <Link href="/signup">Sign up instead</Link>
+              <Link href="/signup">Or sign up</Link>
             </Button>
           </div>
         </div>
