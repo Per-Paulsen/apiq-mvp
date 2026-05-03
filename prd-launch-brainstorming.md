@@ -901,3 +901,129 @@ Begründung:
 2. Stoplight Elements Preview (a) als Pre-Launch must, Prism Mock-Server (b) als Pre-Launch nice-to-have? Oder beide Pflicht?
 3. Apply-all-critical: definitely Pre-Launch (du hast oben gesagt "selbstverständlich"). Bestätigt.
 4. Bei Phase 1-3 Spike: was ist dein Cancel-Schwellwert? "Wenn nach 5 Tagen die Hälfte der Outputs Schrott ist, abbrechen" oder "wenn 80% gut sind, in Launch rein"? Wir brauchen klare Kriterien vor Spike-Start.
+
+---
+
+## Reality-Check 2026: OpenAPI-Spec-User — noch ein lebender Markt oder 2017-Legacy? (2026-05-03)
+
+User: *"gibt es wirklich noch diesen openapi spec user, für die der von dir oben beschriebene user-workflow mit a+b wirklich immer noch einen mehrwert bringt? oder ist das eigentlich 2017 legacy?"*
+
+Echte Recherche, keine Bauchgefühl-Antwort. Daten aus 2025-2026 Quellen.
+
+### Datenlage 2025-26
+
+**Postman State of API 2025 Report:**
+- **82% der Organisationen** verfolgen einen "API-first"-Ansatz auf irgendeinem Level (vs. ~70% in 2024)
+- **25% der Organisationen** sind "fully API-first" — **+12 Prozentpunkte gegenüber 2024**
+- "The shift from code-first to API-first is not just happening, it's accelerating."
+- 93% aller APIs sind REST (also OpenAPI-applicable)
+- 60% der Teams versionieren ihre APIs explizit
+- 54% nutzen GitHub Actions in der API-Pipeline
+
+**OpenAPI-Generator Adoption (Hard-Data):**
+- **600.000 Downloads pro Woche** über das NPM-CLI-Wrapper
+- **30 Millionen Docker-Pulls** auf openapi-generator-cli image
+- Aktiv-maintained, supportiert >50 Sprachen + Frameworks (FastAPI, Spring, NestJS, Echo, ASP.NET, etc.)
+- Letzte Major-Updates regelmäßig in 2025
+
+**OpenAPI-Spec-Format selbst:**
+- **OpenAPI 3.2.0** released im **September 2025** — aktive Spec-Evolution, nicht stagnierend
+- 3.1 (Juli 2021) → 3.2 (Sept 2025): JSON Schema Draft 2020-12 alignment, neue Konstrukte für AI-Agent-Konsumption
+
+**TypeSpec Adoption (Microsoft):**
+- **TypeSpec 1.0 GA im Mai 2025** — mit explizitem **OpenApiMigration Tool**, um existierende OpenAPI-Specs nach TypeSpec zu konvertieren
+- TypeSpec-Positionierung von Microsoft selbst: *"complementary, high-level abstraction that can make OpenAPI better"* — **nicht Replacement**
+- TypeSpec emittiert OpenAPI als primäres Output-Format
+
+**AWS Smithy:**
+- Public-availability der AWS-eigenen Smithy-API-Models 2025 — inklusive Daily-Updates der Maven-Central-Veröffentlichung
+- AWS nutzt Smithy intern seit 2018, exportiert zu OpenAPI für externes Consumption
+- Smithy + TypeSpec + OpenAPI v3 alle als gleichberechtigte Inputs in AWS PDK
+
+**AI-Coding-Assistants + OpenAPI:**
+- Spec-Driven-Development-Workflows treat specs als "executable blueprints that continuously regenerate implementation"
+- **GitHub Spec Kit** (2025) läuft agent-agnostisch über Copilot, Claude Code, Gemini CLI, Cursor, Windsurf
+- AI-Agents lesen OpenAPI-Specs, um Client-Code in Stunden statt Wochen zu generieren
+- StackHawk's "Code → OpenAPI"-Pipeline produziert Specs aus existierendem Code für AI-Agent-Konsumption
+
+### Was die Daten *wirklich* sagen
+
+**OpenAPI ist nicht 2017-Legacy. Es ist 2026 zentraler als jemals zuvor.** Drei Trends machen das aus:
+
+1. **API-First-Adoption wächst schneller als jemals**, getrieben von der Erkenntnis, dass Specs als Contract zwischen Frontend/Backend/Mobile/Partner-Integration wertvoller sind als jemals.
+2. **AI-Coding-Assistants brauchen machine-readable Specs.** Eine schlechte oder fehlende OpenAPI-Spec = AI-Agent kann keinen sauberen Client/Server-Code generieren. Spec-Qualität wurde zum AI-Agent-Productivity-Multiplier.
+3. **Higher-Level-DSLs (TypeSpec, Smithy) verstärken OpenAPI**, statt es zu ersetzen — sie compileen alle zu OpenAPI als Lingua Franca.
+
+**ABER — und hier ist der ehrliche Reality-Check für apiq:**
+
+Der **Workflow-Archetyp**, der aus 2017 stammt — *"Engineer hand-editiert openapi.yaml in VSCode"* — **ist tatsächlich am schrumpfen.** Was ihn ablöst:
+
+| Workflow-Archetyp 2026 | Marktanteil-Schätzung | Was bedeutet das für apiq |
+|---|---|---|
+| **(I)** Hand-edited OpenAPI YAML/JSON (klassisches Spec-First, 2017-Style) | ~5-15% (schrumpfend) | apiq's "Try It Out + Apply All"-Flow paßt direkt rein |
+| **(II)** TypeSpec / Smithy → emittierte OpenAPI (modernes Spec-First) | ~10-20% (wachsend) | apiq analysiert die emittierte OpenAPI, aber Round-Trip zurück nach TypeSpec ist offen |
+| **(III)** Auto-generierte OpenAPI aus Code (FastAPI, Spring Boot, NestJS) | ~50-60% (dominant) | apiq's Output ist eine To-Do-Liste manueller Code-Änderungen — der Code-First-Gap, den wir oben diskutiert haben |
+| **(IV)** AI-Agent generiert OpenAPI aus Anforderungen (neu, wachsend) | ~5-10% (rapidly growing) | apiq als Quality-Gate nach AI-Generation — neue Niche! |
+| **(V)** Spec-Less / GraphQL / gRPC | ~10-15% | nicht apiq's Markt |
+
+### Was bedeutet das konkret für die Apply-All-Critical + Try-It-Out-Workflow-Idee?
+
+**Die gute Nachricht:** der Workflow ist **2026 relevanter, nicht weniger relevant** als 2017 — aber für eine etwas andere Audience als der naive Spec-First-User.
+
+**Die kritische Nachricht:** der primäre Markt ist nicht mehr Workflow (I) "engineer hand-edits YAML." Das ist heute eine schrumpfende Niche. Der primäre Markt für apiq's Wert-Loop ist:
+
+- **(II) TypeSpec/Smithy-Users**, die ihre emittierte OpenAPI-Spec quality-checken wollen, bevor sie Client-SDKs / API-Gateways daraus generieren. Apiq's Apply-Flow funktioniert hier zu 80% — die letzten 20% (Round-Trip nach TypeSpec) bleiben offen, aber für viele User reicht der Spec-Diff als Reference-Dokument für ihre TypeSpec-Anpassungen.
+
+- **(IV) AI-Generated-Specs**, die User vom Cursor/Claude-Code/Spec-Kit bekommen und vor dem Deploy validieren wollen. *"AI generated this OpenAPI for me, ist es gut genug zum Deploy?"* Apiq als post-AI-Quality-Gate ist eine genuin neue Kategorie. Apply-All-Critical macht hier perfekt Sinn — User vertraut dem AI-Agent nicht zu 100%, will manuell die kritischen Findings reviewen.
+
+- **(III) Code-First-Users mit auto-generierter Spec**, die apiq als Read-Only-Audit-Tool nutzen — nicht den Apply-Flow, sondern den Findings-Report als Code-Review-Hilfe. Hier ist apiq's aktueller Apply-Mechanik *Theater* (wir hatten den Riss oben), aber der Findings-Report ist trotzdem wertvoll.
+
+### Implikationen für die Launch-Positionierung
+
+Die Spec-First-Niche-Entscheidung von oben war richtig in der Richtung — aber die Audience-Beschreibung muss präziser werden:
+
+**Falsch (2017-Framing):** *"apiq is for engineers who hand-write OpenAPI YAML and want a design partner."*  
+**Schrumpfender Markt, Audience-Beschreibung wirkt veraltet.**
+
+**Besser (2026-Framing):** *"apiq is the quality-gate for OpenAPI specs in the AI age — whether you wrote it by hand, generated it from TypeSpec, or got it from your AI coding agent. Apply critical fixes in one click; preview the result; ship to codegen."*  
+**Wachsender Markt, AI-Trend reitend, Workflow-agnostisch.**
+
+Das ist gut für apiq:
+- **Audience-TAM ist deutlich größer** als pure-Spec-First (sagen wir 30-40% des API-Marktes statt 5-15%)
+- **AI-Wave ist Tailwind, nicht Headwind** — apiq ist genau das Tool, das User brauchen, wenn sie AI-Agents zur Spec-Generation nutzen
+- **Differentiation ist klarer**: Spectral linted Hand-Specs gut, aber niemand hat ein Quality-Gate für AI-generierte Specs gebaut. Das ist eine erkennbar offene Lücke.
+
+### Drei kritische Risiken bleiben
+
+1. **Big-AI-Lab-Threat verstärkt sich.** Wenn Anthropic / OpenAI / Google ein "review my OpenAPI spec" als Feature in Claude Projects / Custom GPTs / Gemini Gems launchen, ist apiq's Differentiation halbiert. Heute existiert das nicht; in 6-12 Monaten könnte es. Distribution + Brand-Building ist Time-Critical.
+
+2. **TypeSpec-Roundtrip ist offen.** Für die ~10-20% TypeSpec-User ist apiq's Output eine Diff, die sie manuell zu TypeSpec rückportieren müssen. Das ist Reibung, aber gleicher Reibung wie heute zu OpenAPI-Generator. Nicht-blockierend, aber ein offener Polish-Punkt.
+
+3. **Audience erkennen "Quality-Gate-for-AI-Generated-Specs" als ihren Pain.** Today (Mai 2026) sind viele Engineers noch nicht bei dem Workflow angekommen — sie nutzen AI-Agents in der Codebase, aber AI-Agent-zu-OpenAPI ist noch selteneres Pattern. apiq's Marketing müsste die Pain explicit machen, bevor User sich angesprochen fühlen.
+
+### Verdict
+
+**Markt ist real, größer als 2017, im Wandel.** Apiq's Workflow (Apply All Critical → Try It Out → Export) hat in 2026 mehr Relevanz, nicht weniger — aber die Audience-Sprache muss vom "Hand-YAML-Editor"-Framing zum "Spec-Quality-Gate-im-AI-Age"-Framing wechseln.
+
+**Empfehlung für die Launch-PRD:**
+
+- **Positioning:** "*Quality-Gate für OpenAPI-Specs im AI-Zeitalter. Apply critical fixes in one click, preview live, ship to codegen — egal ob deine Spec hand-edited, TypeSpec-generated oder AI-generiert ist.*"
+- **Primäre Audience:** TypeSpec/Smithy-Users + AI-Agent-Spec-Generators + sophisticated Spec-First-Engineers — kombiniert ~25-40% des API-Marktes statt 5-15% pure-classical-Spec-First.
+- **Demo-Story:** Zeige, wie apiq die Specs hochwertiger Public-APIs (Stripe, GitHub) verbessern könnte — das adressiert sowohl Hand-Editing-Users (klassischer Demo) als auch AI-Generation-Users (Implication: "wenn so professionelle APIs Findings haben, hat deine AI-generierte Spec auch welche").
+- **Try-It-Out-Feature** macht 100% Sinn für alle drei Primär-Audience-Subsegmente. Stoplight Elements + Prism als Pre-Launch-Investment lohnt sich.
+
+### Frage zurück
+
+1. OK mit dem Reframing: "Quality-Gate für OpenAPI-Specs im AI-Zeitalter" statt "Linter für Spec-First-Engineers"?
+2. Soll die Marketing-Story den AI-Aspekt explicit machen ("review your AI-generated specs") oder agnostisch bleiben?
+3. TypeSpec-Roundtrip-Polish: Pre-Launch oder Post-Launch?
+
+Sources:
+- [2025 State of the API Report | Postman](https://www.postman.com/state-of-api/2025/)
+- [Overview of TypeSpec - Microsoft Learn](https://learn.microsoft.com/en-us/azure/developer/typespec/overview)
+- [TypeSpec 1.0 Release Notes (May 2025)](https://typespec.io/docs/release-notes/release-2025-05-06/)
+- [OpenAPI Generator (GitHub)](https://github.com/OpenAPITools/openapi-generator)
+- [API-First Development 2026 Guide](https://www.programming-helper.com/tech/api-first-development-2026-rest-openapi-developer-experience-python)
+- [AWS Open-Sources Smithy API Models (InfoQ, 2025)](https://www.infoq.com/news/2025/06/aws-smithy-api-models-opensource/)
+- [Spec-Driven Development with AI Coding Assistants (arXiv)](https://arxiv.org/html/2602.00180v1)
+- [What Is the OpenAPI Specification? OAS 3.1 Guide (2026) - API7.ai](https://api7.ai/learning-center/api-101/openapi-specification)
