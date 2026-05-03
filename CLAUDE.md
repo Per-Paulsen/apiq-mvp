@@ -2,9 +2,11 @@
 
 Guidance for Claude Code (claude.ai/code) when working with this repository.
 
-> **Status:** Phase B — implementation in progress.
-> **Done:** Epic 00 (Research Spike), Epic 01 (Project Setup).
-> **Next:** Epic 02 (Auth + Workspace).
+> **Status:** v0.1 implementation complete (Epics 00–08). v1 launch in planning.
+> **Done:** Epic 00 (Research Spike) → Epic 08 (Export + Polish). 298 tests pass, lint + build clean.
+> **Next:** v1 launch — operative PRD at `prd-launch.md`. Run `/spec prd-launch.md` to derive Epic 09+ specs.
+>
+> **Naming note:** the project may rebrand from "apiq" post-PRD (naming-workshop pending). On rebrand, search-and-replace `apiq` strings codebase-wide; package names and domain-references will need careful update.
 
 ## Commands
 
@@ -28,16 +30,22 @@ cd scripts/spike && npx tsx run-prompt.ts <variant> <spec>
 
 | File | Purpose | Read when |
 |---|---|---|
-| `prd.md` | Product vision, four screens, scope, roadmap | Product context |
-| `prd-decisions.md` | Design system (zinc + violet, Geist Sans + JetBrains Mono, layout, components) | Any UI epic (01, 05, 07, 08) |
+| `prd.md` | Original v0.1 product vision (still valid as long-term direction) | Product context |
+| `prd-launch.md` | **Operative PRD for v1 public launch** — tagline, audience, build scope, spike strategy, distribution, success metrics | Any v1 launch work; input to `/spec` |
+| `prd-launch-brainstorming.md` | Full reasoning history that produced `prd-launch.md` (12 rounds of strategic discussion) | Edge cases / "why was X decided?" |
+| `prd-decisions.md` | Design system (zinc + violet, Geist Sans + JetBrains Mono, layout, components) | Any UI epic |
 | `tech-stack.md` | Pinned stack/versions | Architectural decisions |
-| `specs/research-spike.md` | Final v4 prompt + zod schema (canonical) | Epic 04, prompt changes |
+| `specs/research-spike.md` | Final v4 prompt + zod schema (canonical, v0.1) | Epic 04, prompt changes |
 | `specs/ind-epic-review.md` | Within-epic refinement decisions | "Why does spec X say Y?" |
 | `specs/cross-epic-review.md` | Cross-epic refinement decisions | Same, cross-epic semantics |
 | `specs/[N]-{name}.md` | Per-epic spec | Implementing that epic |
 | `specs/[N]-{name}-results.md` | Implementation results, deviations, risks | Before any subsequent epic |
 | `openapi-examples/README.md` | 4 sample specs catalog | Ingestion / analysis / verify |
 | `scripts/spike/*` | Reference impls (Epic 04 ports verbatim, Epic 06 reuses validate-patches) | Implementing Epic 04 / 06 |
+| `scripts/verify-spec-ingestion.ts` | Permanent regression script for Epic 03 (URL-pull pipeline) | Before changing ingestion |
+| `scripts/verify-llm-pipeline.ts` | Permanent regression script for Epic 04 (real LLM calls against fixture) | Before changing analysis |
+| `fillow-template-reference.png` | Layout-Vorbild for sidebar/topbar/grid (referenced from `prd-decisions.md`) | UI work |
+| `design-reference-{1,2}.png` | Additional design references at repo root | UI work |
 
 ## Repo structure
 
@@ -102,11 +110,8 @@ cd scripts/spike && npx tsx run-prompt.ts <variant> <spec>
 - **Commit format**: `feat: implement epic {N} — {name}` (epics) or `fix:` / `perf:` / `docs:` / etc. (patches).
 - **Never commit `.env`** or anything in `.gitignore`.
 
-## Pre-launch checklist (open issues)
+## Pre-launch checklist
 
-- Rotate Supabase password (early `.env` setup leaked it into chat history)
-- Replace `AUTH_SECRET` + `INTERNAL_API_SECRET` dev placeholders with `openssl rand -base64 32`
-- Replace Turnstile test keys with real Cloudflare keys (free tier)
-- ~~Rename 3 `{UUID}.png` design references at repo root to descriptive filenames~~ — RESOLVED in Epic 08 (renamed to `fillow-template-reference.png`, `design-reference-1.png`, `design-reference-2.png`; `prd-decisions.md` reference updated).
-- Verify OpenRouter pricing table in `src/lib/analysis/runAnalysis.ts` (Sonnet $3 / $15 per 1M) against the OpenRouter pricing page on a monthly cadence (per Epic 04 results §"Cross-cutting / pre-launch").
-- Clean up the dev-DB Petstore-failed spec (`cmooa9mr70001poulfc6lgbhl`) before broader collaboration; OR re-run analysis on it once and accept whichever terminal state lands (per Epic 04 results §"Open question Q6", left intentionally for Epic 05 failed-card UX testing).
+Operator-side launch-day items are tracked in `prd-launch.md` §"Production setup block" and §"Open Questions for Implementation". Includes Supabase password rotation, AUTH_SECRET / INTERNAL_API_SECRET rotation, real Turnstile keys, OpenRouter pricing-table verification, and dev-DB Petstore-failed-spec cleanup.
+
+The 3 `{UUID}.png` design-reference renames were RESOLVED in Epic 08 (now `fillow-template-reference.png`, `design-reference-1.png`, `design-reference-2.png`).
