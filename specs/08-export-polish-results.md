@@ -1,6 +1,6 @@
 # Epic 08 — Export + Polish — Results
 
-> Implementation results for [`08-export-polish.md`](08-export-polish.md). Author: Claude Code (Lead) + 4 delegated agents (foundation, layout-polish, spec-detail-polish, tests). Date: 2026-05-03. Commit: `d098d31`.
+> Implementation results for `[08-export-polish.md](08-export-polish.md)`. Author: Claude Code (Lead) + 4 delegated agents (foundation, layout-polish, spec-detail-polish, tests). Date: 2026-05-03. Commit: `d098d31`.
 > **Append-only** after this initial draft. Corrections go in a labelled "Correction" section at the end.
 
 ## What was built
@@ -20,26 +20,32 @@ Screenshot: `docs/screenshots/epic-08-spec-detail.png`.
 ## Key files created / modified
 
 ### Library installs
+
 - `src/components/ui/sonner.tsx` (NEW, via `npx shadcn@latest add sonner`).
 - `package.json`: `sonner` (transitively, by shadcn add).
 
 ### Toast infrastructure
+
 - `src/lib/toasts.ts` — `showToast` body now dispatches via `import { toast } from 'sonner'` (calls `toast.success / .error / .info` based on `kind`). `formatQuotaToast` unchanged. `TOASTS` catalog extended from 5 entries to **12**: existing `reanalyzeStarted`, `rePullComplete`, `specDeleted`, `workspaceUpdated`, `profileUpdated` + new `analysisComplete`, `patchApplied`, `patchRejected`, `applyUndone`, `rejectUndone`, `exportedJson`, `exportedYaml`. Per cross-epic Q1 Pass 6 the spec dropped `rePullStarted`; the catalog is consistent.
 - `src/app/(app)/layout.tsx` — mounts `<Toaster position="top-right" richColors />` from `@/components/ui/sonner` as a sibling of `<SidebarInset>` inside `<SidebarProvider>`. Existing TooltipProvider + SidebarProvider chain unchanged.
 
 ### Slug + Export
+
 - `src/lib/slug.ts` (NEW) — `slugify(name: string): string`. Lowercase → space-to-dash → strip non-`[a-z0-9-]` → collapse repeated dashes → trim → fallback `'spec'` when empty.
 - `src/app/(app)/specs/actions.ts` — added `exportSpecAction({ specId, format })`. Workspace-scoped via `getRequiredSession` + `findFirst`; loads the current SpecVersion for `versionNumber`. JSON: `JSON.stringify(currentJson, null, 2)`, contentType `application/json`. YAML: `import { stringify } from 'yaml'`, contentType `application/yaml`. Returns `{ success: true, filename, contentType, body } | { success: false, error: { kind: 'not_found' | 'unexpected' } }`.
 - `src/app/(app)/specs/[specId]/export-buttons.tsx` (NEW) — client component. Two buttons; default-highlighted matches `Spec.sourceFormat`. On click: build a `Blob`, `URL.createObjectURL`, click an `<a download={filename}>` element, `URL.revokeObjectURL`. Then `showToast(TOASTS.exportedJson | exportedYaml)`. Wired into `spec-detail-header.tsx` action-button row.
 
 ### Sidebar hydration fix (option (a) — chosen)
+
 - `src/app/(app)/sidebar-nav-items.tsx` (NEW) — `'use client'` component. Uses `useSyncExternalStore` to gate the mounted state (avoids React 19's `set-state-in-effect` lint rule that `useState + useEffect` would trigger). Pre-mount: renders `<SidebarMenuButton asChild>` WITHOUT the `tooltip` prop, eliminating the data-state mismatch source. Post-mount: the `tooltip` prop attaches and the Tooltip primitive renders. Chosen over (b) "controlled `open=false` SSR" and (c) `suppressHydrationWarning` because (a) actually fixes the root cause (the SSR/CSR `data-state` divergence on the Tooltip primitive) rather than pinning a brittle initial state or hiding the warning. Browser-verified zero hydration warnings on `/specs` after the fix.
 - `src/app/(app)/layout.tsx` — replaced inline `<SidebarMenuItem>` JSX with `<SidebarNavItems />` import.
 
 ### Mobile-fallback banner
+
 - `src/components/mobile-fallback-banner.tsx` (NEW) — `'use client'` component. `useEffect` reads `window.matchMedia('(max-width: 1023px)')` + `sessionStorage`. State: `isMobile` + `dismissed`. Render-gated on `isMobile && !dismissed`. Subscribes to mq `change` for live viewport changes. X close icon (`lucide-react`) writes the sessionStorage key + flips `dismissed`. Mounted in `(app)/layout.tsx` ABOVE the `<SidebarInset>` content.
 
 ### Spec-Detail polish
+
 - `src/app/(app)/specs/[specId]/spec-detail-header.tsx` — `onRepull` now branches on `result.success` and emits `showToast(TOASTS.rePullComplete)` on success / `showToast(formatQuotaToast(error))` on `rate_limited`. `onReanalyze` emits `showToast(TOASTS.reanalyzeStarted)` on success.
 - `src/app/(app)/specs/[specId]/spec-detail-view.tsx`:
   - `FailedPanel.onRetry`: emits `showToast(TOASTS.reanalyzeStarted)` on success before `router.refresh()`.
@@ -54,9 +60,11 @@ Screenshot: `docs/screenshots/epic-08-spec-detail.png`.
   - The stale-card branch's `showToast(TOASTS.reanalyzeStarted)` is unchanged (Epic 06).
 
 ### Add-spec form (TODO removal)
+
 - `src/app/(app)/specs/new/add-spec-form.tsx` — removed the `// TODO (Epic 08)` comment. Added a new `useEffect` keyed on `state` that detects `error.kind === 'rate_limited'` and emits `showToast(formatQuotaToast({ kind: 'rate_limited', retryAt: state.error.retryAt ?? new Date().toISOString() }))` once. Inline banner via `formatQuotaToast` is kept.
 
 ### Error / not-found boundaries
+
 - `src/app/(app)/specs/error.tsx` — polished: Card with border + rounded-lg, "Try again" primary + new "Go home" outline → `/specs`.
 - `src/app/(app)/specs/not-found.tsx` — polished to match the new error.tsx Cards convention.
 - `src/app/(app)/error.tsx` (NEW) — route-group root error boundary.
@@ -66,22 +74,27 @@ Screenshot: `docs/screenshots/epic-08-spec-detail.png`.
 - `src/app/not-found.tsx` (NEW) — top-level 404.
 
 ### Loading skeletons
+
 - `src/app/(app)/specs/loading.tsx` (NEW) — header + Add Spec button skeleton + table-5-row skeleton matching the columns.
 - `src/app/(app)/specs/[specId]/loading.tsx` (NEW) — header skeleton + 2-column grid skeleton.
 - `src/app/(app)/settings/loading.tsx` (NEW) — title + 4 card skeletons.
 
 ### Favicon + per-route metadata
+
 - `src/app/icon.svg` (NEW) — minimal violet-on-zinc 32×32 favicon.
 - Per-route `metadata` exports added to: `(app)/specs/page.tsx`, `(app)/specs/new/page.tsx`, `(app)/specs/[specId]/page.tsx` (async `generateMetadata` reading `Spec.name`; fallback `'Spec · apiq'`), `(app)/settings/page.tsx`, `(auth)/login/page.tsx`, `(auth)/signup/page.tsx`.
 
 ### README
+
 - `README.md` — added "Quick start" section between Status and Workflow: install → copy `.env.example` → fill required env vars → `npx prisma migrate dev` → `npm run dev` → signup → first spec.
 
 ### Pre-launch reconciliation (per AC #19)
+
 - 3 UUID-named PNGs renamed at repo root: `{F50D61EF-...}.png` → `fillow-template-reference.png`, `{1B526EBB-...}.png` → `design-reference-1.png`, `{731E7182-...}.png` → `design-reference-2.png`. `prd-decisions.md` reference updated.
 - `CLAUDE.md` Pre-launch checklist: UUID-rename item annotated `RESOLVED`. Added 2 follow-ups from Epic 04 results: OpenRouter pricing monthly verification (DEFERRED-V0.2) + Petstore-failed-state cleanup (DEFERRED-V0.2).
 
 ### Tests (+39 new tests, 259 → 298 total, 44 files)
+
 - `src/__tests__/export/actions.test.ts` — JSON/YAML happy paths (round-trip parse), cross-workspace 404.
 - `src/__tests__/lib/slug.test.ts` — 7 slugify edge cases (empty, all-special-chars, repeated dashes, trim, parentheses).
 - `src/__tests__/toasts/catalog.test.ts` — every TOASTS entry has `kind` + non-empty `message`; `showToast` dispatches to the right Sonner method.
@@ -97,72 +110,72 @@ Screenshot: `docs/screenshots/epic-08-spec-detail.png`.
 ## Decisions and deviations from spec
 
 1. **Sidebar hydration fix path: option (a) — mounted-gated client island.** Spec listed (a)/(b)/(c) and required picking one. (b) (controlled `open=false` SSR pinning) doesn't actually fix the underlying Tooltip-primitive `data-state` divergence — it only changes which divergence happens. (c) (`suppressHydrationWarning`) hides the warning without addressing the cause. (a) extracts `<SidebarNavItems />` as a tiny client island that only renders the `tooltip` prop after mount, eliminating the SSR Tooltip wrapper entirely. Implementation uses `useSyncExternalStore` (rather than `useState + useEffect`) so React 19's `react-hooks/set-state-in-effect` lint rule doesn't fire. Browser-verified: zero hydration warnings on `/specs` after the fix.
-
 2. **Sonner toast position is `top-right` with `richColors`.** Spec said top-right. `richColors` was a quality-of-life pick by the foundation agent — Sonner's defaults are very muted; `richColors` gives the success/error/info variants colour tokens that read as themed pills. Trivial to revert if user prefers monochrome.
-
 3. **"Notifications alt+T" region label is Sonner's default ARIA name** for the toast container. Surfaced in Playwright's a11y tree but invisible to sighted users. Acceptable.
-
 4. **Browser smoke check skipped re-pull rate_limited toast** — would require burning the 20/h URL-pull bucket on a real flow. Unit-tested in `header-toasts.test.tsx` against the action-mock returning `{ kind: 'rate_limited', retryAt }`. Mirrors the convention from Epic 06 (delete-flow not browser-verified, only RTL-tested).
-
 5. **Empty Versions-drawer line lives BELOW the list, not in place of it.** Spec line 48 said "if only the initial version exists, show 'No applies yet.'". The drawer ALWAYS lists the existing versions (even if just `v1`); the muted "No applies yet." line is appended below the list when `versions.length <= 1`. Reads cleaner than replacing the list with the empty-state text — the user still sees the v1 row.
-
 6. **Pre-launch checklist additions stayed conservative.** The cross-epic-review.md Pass 4 hint mentioned 3 Epic 04 follow-ups; reading Epic 04 results §"Cross-cutting / pre-launch" the actually-discrete items are 2 (pricing-table monthly check, Petstore-failed cleanup). The third hint ("INTERNAL_API_SECRET reaffirmed") is the same item already listed in CLAUDE.md, so it wasn't duplicated. The checklist has 6 items total now: 4 originals + 2 new + 1 RESOLVED.
-
 7. **Browser verification did not exercise the budget-toast or analysisComplete hooks live.** The hooks need a transition through `analyzing → completed` (analysisComplete) or a `failed` spec with a budget-shape error string (budget-toast). The completed Petstore is steady-state `completed` (cold-load → hook does NOT fire, by design). Reproducing live would have required either (a) re-analyzing the completed Petstore (~$0.08 OpenRouter cost) or (b) crafting a synthetic failed spec with a forged budget-shape `analysisError`. Both hooks are RTL-tested with explicit transition + dedupe assertions; the tests are stricter than a one-shot browser run would be.
 
 ## Verification results
 
-| Step | Result |
-|---|---|
-| `npm run test` | **298 / 298 pass** (was 259 + 39 new Epic 08 tests across 11 new files; 44 test files total). |
-| `npm run lint` | 0 errors. Same 10 pre-existing warnings in `scripts/spike/*` (Epic 00 baggage, untouched). |
-| `npm run build` | Clean. New routes: `/icon.svg` (static), `(app)` `not-found`, `(auth)` `not-found`, root `not-found`. All other routes unchanged. |
-| Browser: login → /specs | ✓ Title `Specs · apiq`. Zero hydration warnings in DevTools console. Sonner Toaster mount visible as `aria-label="Notifications alt+T"` region. |
-| Browser: /specs/[specId] | ✓ Title `<spec.name> · apiq`. Action-row shows Versions / Re-pull / Re-analyze / Export JSON / Export YAML. Default-highlighted is "Export JSON" (matches Petstore's `sourceFormat`). |
-| Browser: Export JSON click | ✓ File downloaded with name `swagger-petstore-openapi-30-v3.json`. Toast `Exported as JSON` rendered. |
-| Browser: Export YAML click | ✓ File downloaded `swagger-petstore-openapi-30-v3.yaml`. (Toast was forcibly cleared via `t.remove()` for the click — that JS-induced React error is a Playwright-test artefact, not a regression. Re-navigation confirmed clean console.) |
-| Browser: Versions drawer | ✓ Opens via Versions (3) trigger; shows v3 (current pill, violet) / v2 / v1 newest-first. |
-| Browser: Mobile banner @ 800×800 | ✓ Banner renders above `<SidebarInset>`. Click X → sessionStorage key `apiq.mobile-banner-dismissed = '1'` set, banner unmounts. |
-| Browser: Sidebar hydration | ✓ Zero hydration warnings on `(app)` routes. |
+
+| Step                             | Result                                                                                                                                                                                                                                     |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `npm run test`                   | **298 / 298 pass** (was 259 + 39 new Epic 08 tests across 11 new files; 44 test files total).                                                                                                                                              |
+| `npm run lint`                   | 0 errors. Same 10 pre-existing warnings in `scripts/spike/`* (Epic 00 baggage, untouched).                                                                                                                                                 |
+| `npm run build`                  | Clean. New routes: `/icon.svg` (static), `(app)` `not-found`, `(auth)` `not-found`, root `not-found`. All other routes unchanged.                                                                                                          |
+| Browser: login → /specs          | ✓ Title `Specs · apiq`. Zero hydration warnings in DevTools console. Sonner Toaster mount visible as `aria-label="Notifications alt+T"` region.                                                                                            |
+| Browser: /specs/[specId]         | ✓ Title `<spec.name> · apiq`. Action-row shows Versions / Re-pull / Re-analyze / Export JSON / Export YAML. Default-highlighted is "Export JSON" (matches Petstore's `sourceFormat`).                                                      |
+| Browser: Export JSON click       | ✓ File downloaded with name `swagger-petstore-openapi-30-v3.json`. Toast `Exported as JSON` rendered.                                                                                                                                      |
+| Browser: Export YAML click       | ✓ File downloaded `swagger-petstore-openapi-30-v3.yaml`. (Toast was forcibly cleared via `t.remove()` for the click — that JS-induced React error is a Playwright-test artefact, not a regression. Re-navigation confirmed clean console.) |
+| Browser: Versions drawer         | ✓ Opens via Versions (3) trigger; shows v3 (current pill, violet) / v2 / v1 newest-first.                                                                                                                                                  |
+| Browser: Mobile banner @ 800×800 | ✓ Banner renders above `<SidebarInset>`. Click X → sessionStorage key `apiq.mobile-banner-dismissed = '1'` set, banner unmounts.                                                                                                           |
+| Browser: Sidebar hydration       | ✓ Zero hydration warnings on `(app)` routes.                                                                                                                                                                                               |
+
 
 ## Acceptance-criteria coverage (23 / 23)
 
-| AC | Status | Evidence |
-|---|---|---|
-| 1. Two export buttons; default-highlighted matches `Spec.sourceFormat`; not both primary | ✓ | Browser snapshot: JSON variant=default, YAML variant=outline (Petstore is JSON-sourced) |
-| 2. Export JSON downloads `<slug>-v<n>.json` with 2-space-indented currentJson | ✓ | Downloaded `swagger-petstore-openapi-30-v3.json` |
-| 3. Export YAML downloads `<slug>-v<n>.yaml` | ✓ | Downloaded `swagger-petstore-openapi-30-v3.yaml` |
-| 4. Round-trip JSON.parse / yaml.parse deep-equals currentJson | ✓ | `src/__tests__/export/actions.test.ts` round-trip assertions |
-| 5. Filename slug rules ("My Spec!" → "my-spec-v1.json") | ✓ | `src/__tests__/lib/slug.test.ts` 7 cases |
-| 6. Cross-workspace export returns 404 | ✓ | `src/__tests__/export/actions.test.ts` cross-workspace |
-| 7. All `(app)` screens render skeletons on initial load | ✓ | New `loading.tsx` for /specs, /specs/[specId], /settings |
-| 8. Each route group has `error.tsx` per Cards conventions | ✓ | `(app)/error.tsx`, `(auth)/error.tsx` + polished `(app)/specs/error.tsx` |
-| 9. Each route group has `not-found.tsx` | ✓ | `(app)/not-found.tsx`, `(auth)/not-found.tsx`, root `not-found.tsx` + polished `(app)/specs/not-found.tsx` |
-| 10. Versions drawer empty state ("No applies yet.") | ✓ | `versions-drawer.tsx` line below list when `length <= 1` |
-| 11. Mobile fallback banner at <1024 px, dismissible per session | ✓ | Browser-verified at 800×800 + RTL test |
-| 12. Toast infrastructure functional + TOASTS catalog assertion | ✓ | Browser observed `Exported as JSON` toast + `src/__tests__/toasts/catalog.test.ts` |
-| 13. `formatQuotaToast` is canonical for both shapes | ✓ | Existing `spec-ingestion/toasts.test.ts` covers both branches |
-| 14. Favicon + `<title>` + `<meta description>` per route | ✓ | Browser titles confirmed: `Sign in · apiq`, `Specs · apiq`, `<spec.name> · apiq`. `src/app/icon.svg` shipped. |
-| 15. README "Quick start" section | ✓ | `README.md` updated |
-| 16. Vitest export tests pass | ✓ | 298 / 298 |
-| 17. `formatAnalysisError` (Epic 05-shipped) verified, single source of truth | ✓ | Existing 12 tests still pass; budget-toast hook imports the unchanged helper |
-| 18. Sidebar hydration warning fixed (option chosen + reasoned) | ✓ | Option (a) chosen; browser-verified zero warnings |
-| 19. Pre-launch checklist reconciliation | ✓ | See "Pre-launch checklist reconciliation" section below |
-| 20. Spec-Detail budget-toast hook | ✓ | `src/__tests__/spec-detail/budget-toast-hook.test.tsx` once-per-session dedupe |
-| 21. Toast wiring on Spec Detail header buttons (7 wiring points) | ✓ | All 7: spec-detail-header onRepull (success + rate_limited) + onReanalyze; FailedPanel.onRetry; finding-card stale Re-analyze (Epic 06); specs-list-view row Re-analyze + Re-pull + Delete (Epic 07). All RTL-tested. |
-| 22. `TOASTS.analysisComplete` polling-layer hook | ✓ | `src/__tests__/spec-detail/analysis-complete-hook.test.tsx` transition + cold-load + dedupe |
-| 23. Versions-drawer trigger pulse on Apply / Undo Apply | ✓ | `src/__tests__/spec-detail/versions-drawer.test.tsx` |
+
+| AC                                                                                       | Status | Evidence                                                                                                                                                                                                              |
+| ---------------------------------------------------------------------------------------- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1. Two export buttons; default-highlighted matches `Spec.sourceFormat`; not both primary | ✓      | Browser snapshot: JSON variant=default, YAML variant=outline (Petstore is JSON-sourced)                                                                                                                               |
+| 2. Export JSON downloads `<slug>-v<n>.json` with 2-space-indented currentJson            | ✓      | Downloaded `swagger-petstore-openapi-30-v3.json`                                                                                                                                                                      |
+| 3. Export YAML downloads `<slug>-v<n>.yaml`                                              | ✓      | Downloaded `swagger-petstore-openapi-30-v3.yaml`                                                                                                                                                                      |
+| 4. Round-trip JSON.parse / yaml.parse deep-equals currentJson                            | ✓      | `src/__tests__/export/actions.test.ts` round-trip assertions                                                                                                                                                          |
+| 5. Filename slug rules ("My Spec!" → "my-spec-v1.json")                                  | ✓      | `src/__tests__/lib/slug.test.ts` 7 cases                                                                                                                                                                              |
+| 6. Cross-workspace export returns 404                                                    | ✓      | `src/__tests__/export/actions.test.ts` cross-workspace                                                                                                                                                                |
+| 7. All `(app)` screens render skeletons on initial load                                  | ✓      | New `loading.tsx` for /specs, /specs/[specId], /settings                                                                                                                                                              |
+| 8. Each route group has `error.tsx` per Cards conventions                                | ✓      | `(app)/error.tsx`, `(auth)/error.tsx` + polished `(app)/specs/error.tsx`                                                                                                                                              |
+| 9. Each route group has `not-found.tsx`                                                  | ✓      | `(app)/not-found.tsx`, `(auth)/not-found.tsx`, root `not-found.tsx` + polished `(app)/specs/not-found.tsx`                                                                                                            |
+| 10. Versions drawer empty state ("No applies yet.")                                      | ✓      | `versions-drawer.tsx` line below list when `length <= 1`                                                                                                                                                              |
+| 11. Mobile fallback banner at <1024 px, dismissible per session                          | ✓      | Browser-verified at 800×800 + RTL test                                                                                                                                                                                |
+| 12. Toast infrastructure functional + TOASTS catalog assertion                           | ✓      | Browser observed `Exported as JSON` toast + `src/__tests__/toasts/catalog.test.ts`                                                                                                                                    |
+| 13. `formatQuotaToast` is canonical for both shapes                                      | ✓      | Existing `spec-ingestion/toasts.test.ts` covers both branches                                                                                                                                                         |
+| 14. Favicon + `<title>` + `<meta description>` per route                                 | ✓      | Browser titles confirmed: `Sign in · apiq`, `Specs · apiq`, `<spec.name> · apiq`. `src/app/icon.svg` shipped.                                                                                                         |
+| 15. README "Quick start" section                                                         | ✓      | `README.md` updated                                                                                                                                                                                                   |
+| 16. Vitest export tests pass                                                             | ✓      | 298 / 298                                                                                                                                                                                                             |
+| 17. `formatAnalysisError` (Epic 05-shipped) verified, single source of truth             | ✓      | Existing 12 tests still pass; budget-toast hook imports the unchanged helper                                                                                                                                          |
+| 18. Sidebar hydration warning fixed (option chosen + reasoned)                           | ✓      | Option (a) chosen; browser-verified zero warnings                                                                                                                                                                     |
+| 19. Pre-launch checklist reconciliation                                                  | ✓      | See "Pre-launch checklist reconciliation" section below                                                                                                                                                               |
+| 20. Spec-Detail budget-toast hook                                                        | ✓      | `src/__tests__/spec-detail/budget-toast-hook.test.tsx` once-per-session dedupe                                                                                                                                        |
+| 21. Toast wiring on Spec Detail header buttons (7 wiring points)                         | ✓      | All 7: spec-detail-header onRepull (success + rate_limited) + onReanalyze; FailedPanel.onRetry; finding-card stale Re-analyze (Epic 06); specs-list-view row Re-analyze + Re-pull + Delete (Epic 07). All RTL-tested. |
+| 22. `TOASTS.analysisComplete` polling-layer hook                                         | ✓      | `src/__tests__/spec-detail/analysis-complete-hook.test.tsx` transition + cold-load + dedupe                                                                                                                           |
+| 23. Versions-drawer trigger pulse on Apply / Undo Apply                                  | ✓      | `src/__tests__/spec-detail/versions-drawer.test.tsx`                                                                                                                                                                  |
+
 
 ## Pre-launch checklist reconciliation (AC #19)
 
-| Item | Status | Reasoning |
-|---|---|---|
-| Rotate Supabase password | DEFERRED-V0.2 | Operator-side runbook step; no code change. Engineer-time-vs-impact: dev-only DB, password is in chat history but not public; the rotation belongs to the deploy-prep checklist, not the v0.1 codebase. |
-| Replace `AUTH_SECRET` + `INTERNAL_API_SECRET` dev placeholders | DEFERRED-V0.2 | Operator-side runbook step. The placeholders are explicitly dev-only; production deploy runbook (Epic 04 results §"Cross-cutting / pre-launch") covers the rotation. |
-| Replace Turnstile test keys with real Cloudflare keys | DEFERRED-V0.2 | Operator-side; requires creating a Cloudflare zone for the actual deploy domain. Test keys auto-pass which is correct for dev. |
-| Rename 3 `{UUID}.png` design references | **RESOLVED** | Renamed to `fillow-template-reference.png` (referenced in `prd-decisions.md`), `design-reference-1.png`, `design-reference-2.png`. `prd-decisions.md` reference updated. CLAUDE.md checklist annotated. |
-| Verify OpenRouter pricing table (monthly cadence) | DEFERRED-V0.2 | Operational cadence task, not code work. The pricing table in `src/lib/analysis/runAnalysis.ts` carries a `// Last verified 2026-05-02` comment; future epics or v0.2 add this to a deploy runbook. |
-| Clean up dev-DB Petstore-failed spec | DEFERRED-V0.2 | Per Epic 04 results §Q6 the `cmooa9mr70001poulfc6lgbhl` spec is intentionally left in `failed` state for Epic 05 failed-card UX testing. Cleanup before broader collaboration is correct, but it's a one-line `prisma.spec.delete({ where: { id: '...' }})` at deploy-prep time; not v0.1 engineering. |
+
+| Item                                                           | Status        | Reasoning                                                                                                                                                                                                                                                                                              |
+| -------------------------------------------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Rotate Supabase password                                       | DEFERRED-V0.2 | Operator-side runbook step; no code change. Engineer-time-vs-impact: dev-only DB, password is in chat history but not public; the rotation belongs to the deploy-prep checklist, not the v0.1 codebase.                                                                                                |
+| Replace `AUTH_SECRET` + `INTERNAL_API_SECRET` dev placeholders | DEFERRED-V0.2 | Operator-side runbook step. The placeholders are explicitly dev-only; production deploy runbook (Epic 04 results §"Cross-cutting / pre-launch") covers the rotation.                                                                                                                                   |
+| Replace Turnstile test keys with real Cloudflare keys          | DEFERRED-V0.2 | Operator-side; requires creating a Cloudflare zone for the actual deploy domain. Test keys auto-pass which is correct for dev.                                                                                                                                                                         |
+| Rename 3 `{UUID}.png` design references                        | **RESOLVED**  | Renamed to `fillow-template-reference.png` (referenced in `prd-decisions.md`), `design-reference-1.png`, `design-reference-2.png`. `prd-decisions.md` reference updated. CLAUDE.md checklist annotated.                                                                                                |
+| Verify OpenRouter pricing table (monthly cadence)              | DEFERRED-V0.2 | Operational cadence task, not code work. The pricing table in `src/lib/analysis/runAnalysis.ts` carries a `// Last verified 2026-05-02` comment; future epics or v0.2 add this to a deploy runbook.                                                                                                    |
+| Clean up dev-DB Petstore-failed spec                           | DEFERRED-V0.2 | Per Epic 04 results §Q6 the `cmooa9mr70001poulfc6lgbhl` spec is intentionally left in `failed` state for Epic 05 failed-card UX testing. Cleanup before broader collaboration is correct, but it's a one-line `prisma.spec.delete({ where: { id: '...' }})` at deploy-prep time; not v0.1 engineering. |
+
 
 5 of 6 items DEFERRED with reasoning; 1 RESOLVED in this commit. All 4 deferred items are operator-side runbook steps, not code work — the v0.1 codebase is launch-ready in code terms.
 
@@ -171,46 +184,148 @@ Screenshot: `docs/screenshots/epic-08-spec-detail.png`.
 There are no future v0.1 epics — Epic 08 closes the v0.1 sequence. Risks below are forward-looking notes for v0.2.
 
 1. **Sonner toast persistence in Playwright tests.** The default Sonner config keeps toasts on-screen indefinitely until dismissed; a Playwright test that interacts with elements behind a toast will block until the toast is dismissed. The browser-verification harness in this epic worked around it once via `t.remove()` (which broke React's reconciliation). v0.2 / future epic verifications should either (a) configure Sonner with `duration={2500}` ms to auto-dismiss, or (b) call `toast.dismiss()` programmatically between assertions. Not blocking for v0.1; flagging.
-
 2. **Toast catalog growth.** 12 entries in v0.1 is small enough that linear inspection works. v0.2's first multi-locale or multi-message epic should consider grouping by emitting-feature in `src/lib/toasts.ts` (e.g. nested namespaces `TOASTS.spec.deleted` etc.) so consumers don't `cmd-F` through 50+ flat keys.
-
 3. **Mobile-fallback banner is one-time-per-session per browser.** A user who dismisses on a small viewport and resizes back-and-forth will not see the banner again until they open a new tab. Acceptable for v0.1's "engineer-tool, desktop-only" stance. v0.2 may want a "remember dismissed for N days" cookie if any mobile-marketing path opens up.
-
 4. **Sidebar mounted-gate adds a brief no-tooltip render on first load.** Pre-mount, the icon-only collapsed sidebar (if cookie says collapsed) shows raw icons without their hover tooltips. The mount completes within 1 frame in practice; user-perceptible cost is negligible. Worth knowing if any future a11y audit flags the gap.
-
 5. **Per-route metadata uses static `metadata` exports.** Next.js 16's metadata API does not allow conditionally-async metadata in static exports — only the dynamic `[specId]` page uses `generateMetadata`. If v0.2 introduces user-personalised titles ("Welcome, Per ·"), the static exports need to be replaced with `generateMetadata`. Not a v0.1 concern.
-
-6. **`exportSpecAction` ships dereferenced + cycle-stripped specs.** Per Epic 03 + spec line 16, recursive types in the exported file appear as `{"$ref": "#cyclic"}` markers, not standard OpenAPI. A user opening the export in Swagger Editor will see those as invalid `$ref` URIs. v0.2's "re-bundling on export" is the documented fix. Out of scope for v0.1.
+6. `**exportSpecAction` ships dereferenced + cycle-stripped specs.** Per Epic 03 + spec line 16, recursive types in the exported file appear as `{"$ref": "#cyclic"}` markers, not standard OpenAPI. A user opening the export in Swagger Editor will see those as invalid `$ref` URIs. v0.2's "re-bundling on export" is the documented fix. Out of scope for v0.1.
 
 ## Patterns established
 
 1. **Mounted-gated client island for hydration-sensitive primitives.** `<SidebarNavItems />` uses `useSyncExternalStore` to detect mount, then conditionally passes a prop that controls the SSR/CSR-divergent behaviour. Reusable for any future shadcn primitive that produces a hydration warning.
-
 2. **sessionStorage dedupe pattern for per-spec / per-resource toasts.** The budget-toast and analysisComplete hooks both write a per-resource key (`apiq.<feature>-toast.<resourceId>`) and check it before firing. Future polling-driven hooks (e.g. v0.2 spec-drift detection) follow the same shape.
-
 3. **Sonner dispatch via thin `showToast` wrapper.** `src/lib/toasts.ts` is the single integration point for the toast library. Switching to a different toast lib in v0.2 only touches one file.
-
-4. **`generateMetadata` for dynamic routes; static `metadata` for everything else.** Established convention for any future route the project adds. The `(app)/specs/[specId]/page.tsx` shape is the reference.
-
+4. `**generateMetadata` for dynamic routes; static `metadata` for everything else.** Established convention for any future route the project adds. The `(app)/specs/[specId]/page.tsx` shape is the reference.
 5. **Per-route `error.tsx` + `not-found.tsx` + `loading.tsx` triplet.** Every route group now has all three, providing a baseline for any future route the project adds.
 
 ## Open questions
 
 1. **Should Sonner toasts auto-dismiss after N seconds?** Today: no auto-dismiss (Sonner default). User must click or ignore. Pro for keep-as-is: persistent feedback is useful for transient operations. Con: stacking toasts during a multi-action flow (e.g. apply 5 findings in quick succession → 5 stacked "Patch applied" toasts) becomes visual noise.
-   **Recommendation:** Add `duration={4000}` to the `<Toaster>` mount. 4 s is the common convention (Sonner docs default suggestion; Linear / Vercel use ~4 s). Cheap one-line change. If left as-is, the "Patch applied 5 times" stack is a UX rough edge that only surfaces on first power-user.
-
+  **Recommendation:** Add `duration={4000}` to the `<Toaster>` mount. 4 s is the common convention (Sonner docs default suggestion; Linear / Vercel use ~4 s). Cheap one-line change. If left as-is, the "Patch applied 5 times" stack is a UX rough edge that only surfaces on first power-user.
 2. **Should the mobile-fallback banner block the app entirely (e.g. show a full-screen "Use desktop" page) instead of just warning?** Today: warns + lets user proceed. Per spec scope §"Mobile fallback banner" the warning approach is correct ("the app still renders below the banner"). But a user who dismisses + uses the app on mobile will see broken layouts and may blame apiq.
-   **Recommendation:** Keep current. Spec text is unambiguous. v0.2 mobile-responsive work (out of scope per `prd.md`'s "Not for v0.1" mobile UI exclusion) replaces the banner with real responsive layouts. Closing the door entirely would frustrate engineers who briefly check apiq from a phone.
+  **Recommendation:** Keep current. Spec text is unambiguous. v0.2 mobile-responsive work (out of scope per `prd.md`'s "Not for v0.1" mobile UI exclusion) replaces the banner with real responsive layouts. Closing the door entirely would frustrate engineers who briefly check apiq from a phone.
 
-3. **Should the export endpoint also be available as a GET route (`/api/specs/[specId]/export.json`)?** Spec line 173 raised this; recommendation in spec was "no, v0.1 keeps it as a server action only". Implementation matches: server action only.
-   **Recommendation:** Keep current. `curl`-friendly export is v0.2 territory. Today's flow is browser-only; the server-action shape is the right v0.1 affordance.
+do it now ie full responsive
 
-4. **Should the README quick-start include a section on running the Phase 0 spike?** Spec line 176 raised this as a recommendation-yes. Today's README quick-start is implementation-focused and does NOT mention the spike harness.
-   **Recommendation:** Add a one-line pointer at the bottom of the quick-start: "For prompt experimentation: see `specs/research-spike.md` and run `cd scripts/spike && npx tsx run-prompt.ts <variant> <spec>`." Cheap addition; helps a contributor who wants to iterate on the prompt without reading 8 epic specs first.
+1. **Should the export endpoint also be available as a GET route (`/api/specs/[specId]/export.json`)?** Spec line 173 raised this; recommendation in spec was "no, v0.1 keeps it as a server action only". Implementation matches: server action only.
+  **Recommendation:** Keep current. `curl`-friendly export is v0.2 territory. Today's flow is browser-only; the server-action shape is the right v0.1 affordance.
+2. **Should the README quick-start include a section on running the Phase 0 spike?** Spec line 176 raised this as a recommendation-yes. Today's README quick-start is implementation-focused and does NOT mention the spike harness.
+  **Recommendation:** Add a one-line pointer at the bottom of the quick-start: "For prompt experimentation: see `specs/research-spike.md` and run `cd scripts/spike && npx tsx run-prompt.ts <variant> <spec>`." Cheap addition; helps a contributor who wants to iterate on the prompt without reading 8 epic specs first.
 
-5. **Should the Petstore-failed spec in the dev DB get auto-cleaned during deploy-prep?** Today: leftover `cmooa9mr70001poulfc6lgbhl` carries a real zod-error `analysisError`. Useful for failed-card UX testing in dev (Epic 05 / Epic 08); confusing in a production-like environment.
-   **Recommendation:** Add a one-line `prisma.spec.delete({ where: { id: '...' } })` to the eventual deploy-prep runbook. Or accept that v0.1's launch is small enough that this 1-row cleanup is operator-trivial. v0.1 codebase change: NONE.
+should we have something like an oboarding demo or so?
+
+1. **Should the Petstore-failed spec in the dev DB get auto-cleaned during deploy-prep?** Today: leftover `cmooa9mr70001poulfc6lgbhl` carries a real zod-error `analysisError`. Useful for failed-card UX testing in dev (Epic 05 / Epic 08); confusing in a production-like environment.
+  **Recommendation:** Add a one-line `prisma.spec.delete({ where: { id: '...' } })` to the eventual deploy-prep runbook. Or accept that v0.1's launch is small enough that this 1-row cleanup is operator-trivial. v0.1 codebase change: NONE.
+
+of course it needs to be cleaned up before deploy. but when is deploy actually going to happen?
 
 ---
 
-> **Status:** Awaiting user review. After your review, this file becomes append-only and Epic 08 is final. Epic 08 closes the v0.1 sequence — apiq v0.1 is feature-complete pending the operator-side pre-launch items.
+## Follow-up after user review (2026-05-03)
+
+User left three inline comments on the open questions. None of them request a recommendation — they're directives or genuine questions. Responses below; no code changes in this round (Q2 needs an upstream PRD decision; Q4 + Q5 are clarifying questions back to the user).
+
+### Q2 — "do it now ie full responsive" — PRD conflict, escalating
+
+The user wants full responsive layouts instead of the v0.1 mobile-fallback banner. **This conflicts with the PRD directly:**
+
+> `prd.md` §"What apiq is NOT (for v0.1)" — table row: `Mobile UI | Engineering tool, desktop-first | **Not on roadmap`**
+
+"Not on roadmap" is stronger than "v0.2" — the PRD currently states mobile UI is permanently out of scope, not deferred. The mobile-fallback banner (Epic 08 spec line 50, AC #11) is the documented v0.1 acknowledgement of that stance. Doing full responsive now is therefore (a) a PRD-level scope change, AND (b) bigger than any single epic.
+
+**Effort estimate, if approved:**
+
+- `(app)/layout.tsx` — already partly responsive (shadcn `<Sidebar>` flips to a Sheet at small viewports). One pass to verify the sheet variant works end-to-end.
+- `(app)/specs/page.tsx` — the 7-column shadcn `<Table>` at <800 px overflows horizontally. Replace with a card-list-per-row layout below `md:` breakpoint OR add `overflow-x-auto`. Card-list is a real redesign; overflow-x is a one-liner band-aid.
+- `(app)/specs/[specId]/page.tsx` — already stacks at `<lg` (1024 px) thanks to `lg:grid-cols-[280px_1fr]`. Verify finding-card render at 360 px.
+- `spec-detail-header.tsx` — already `flex flex-wrap`. Probably OK.
+- `finding-card.tsx` — diff viewer + JSON-patch table need horizontal-scroll wrappers; both currently wrap (DiffViewer is OK; PatchOpsTable already has `overflow-x-auto`). Verify at 360 px.
+- `(app)/settings/page.tsx` + auth pages — already mobile-friendly (max-w-2xl / max-w-sm).
+- `(app)/specs/new/page.tsx` — Card with form, probably OK.
+
+Rough size: 1–2 days of work for a clean responsive pass + browser-verification at 360 / 768 / 1024 / 1440 viewports + RTL responsive snapshots. NOT polish-sized — closer to a full new epic.
+
+**Recommendation:** Two options, pick one before I proceed:
+
+- **(A) Treat as a new follow-up patch.** Update `prd.md` to remove "Mobile UI" from the "Not for v0.1" table (or move it to v0.2 explicitly). Spawn `/spec_ind 09 mobile-responsive "..."` to scope the redesign properly. Epic 08 stays closed as-is. The mobile-fallback banner is removed in Epic 09 once responsive lands.
+- **(B) Cheap band-aid only — append to Epic 08.** Add `overflow-x-auto` to the specs-list table wrapper, verify finding-card at 360 px, keep the banner for everything else. Doable in 30 minutes. NOT a real responsive design — just stops the worst horizontal-overflow paper-cut.
+
+I lean (A) because (B) ships a half-finished mobile experience that's worse than the current banner-only honesty. The banner says "this is desktop-first"; (B) silently degrades on mobile without telling the user.
+
+**Question for you:** which path? If (B), I can do it now and re-commit as a polish patch on top of `d098d31`. If (A), I'll wait for the PRD update + new epic spec before touching responsive.
+
+maybe b is enough. who needs openapi specs mobile? i dont know how important this is - do you have any idea?
+
+### Q4 — "should we have something like an onboarding demo or so?"
+
+Today's onboarding flow is the empty-state CTA on `/specs` (Epic 07): "Try with a sample spec" → `loadSampleSpecAction({ sampleId: 'openweathermap' })` → redirect to `/specs/[newSpecId]` → analysis runs → user sees real findings within ~60 s. That IS the v0.1 onboarding demo. It's not gated on signup-vs-existing-user (the empty state shows whenever the workspace has zero specs).
+
+A richer onboarding (interactive guided tour, multi-step welcome modal, video) is real product work. Options if you want more:
+
+- **(A) Lightweight — add a "Hi, you're new here" copy-block** above the empty state with one paragraph explaining what apiq does. Cheap (~30 min), discoverable.
+- **(B) Mid — guided tour using `react-joyride` or `shepherd.js`** that highlights the Add Spec button → Spec Detail → Findings → Apply flow on first login. ~1 day. Library + content + dismiss-state.
+- **(C) Heavy — recorded video / screencast + landing page**. Marketing work, not engineering.
+
+**Recommendation:** Today's "Try with a sample" CTA is enough for v0.1's engineer-tool audience. Engineers don't read welcome modals; they want to see the tool work. If usage data later shows new users bounce without trying the sample, add (A) as a one-paragraph polish patch. (B) is v0.2 territory.
+
+**Question for you:** is today's "Try with a sample spec" enough, or do you want me to ship (A) the one-paragraph welcome copy now?
+
+its enough i think. i like it. do users have to be signed up for this?
+
+### Q5 — "of course it needs to be cleaned up before deploy. but when is deploy actually going to happen?"
+
+I don't know — that's a product / business decision, not engineering. From context: v0.1 is now feature-complete (Epic 08 closes the implementation sequence). The 4 remaining `DEFERRED-V0.2` items in the pre-launch checklist are operator-side runbook steps (Supabase password rotation, secret rotation, Turnstile real keys, Petstore-failed cleanup, OpenRouter pricing verification) — most take <1 hour total.
+
+**Question for you:** do you have a target deploy date? If yes, I'd recommend writing a `LAUNCH-RUNBOOK.md` at the repo root listing the 5 operator-side steps in order, so the deploy-day work is mechanical. I can draft that runbook now if you'd like — it's ~50 lines of markdown, no code.
+
+lets discuss this in more detail, after the other questions are resolved? is that possible?
+
+
+
+---
+
+## Round 2 — user responses + (B)-band-aid shipped (2026-05-03)
+
+### Q2 — "(B) is enough … do you have any idea?"
+
+User picked (B) — band-aid responsive — and asked whether I have data on mobile usage for OpenAPI tooling. **I don't have hard data**, but the qualitative read is: API engineers reviewing specs almost always do it at a workstation. They need an IDE, a wide diff viewer, and shell access to run `openapi-generator` / `redoc` / `curl` / git workflows alongside. The realistic mobile traffic shape for a tool like apiq is: someone clicks a Slack link from their phone to glance at "what is this", then re-opens it on desktop to actually work. So (B) — keep desktop-only, just stop the worst horizontal-overflow paper-cut on mobile glance — is the right size.
+
+**Implemented in this commit:**
+
+1. `src/app/(app)/specs/specs-list-view.tsx` — table wrapper class changed from `overflow-hidden rounded-lg border border-border` to `overflow-x-auto rounded-lg border border-border`. The 7-column table now scrolls horizontally **inside** its container at <800 px instead of pushing the whole page wider than the viewport.
+2. `src/app/(app)/specs/[specId]/spec-detail-header.tsx`:
+   - Long source-URL `<code>` got `break-all` (was wrapping but not breaking long URLs at 360 px).
+   - Action-button row got `flex-wrap` (was `flex` — 4 buttons at 360 px overflowed to 560 px). Now the row wraps to 2–3 lines on narrow screens.
+
+**Browser-verified at 360 × 800:**
+
+| Screen | Before | After |
+|---|---|---|
+| `/specs` | document overflows to ~700 px | `documentScrollWidth = 360`, table scrolls internally (table = 942 px wide, wrapper = 310 px) |
+| `/specs/[specId]` | document overflows to ~560 px | `documentScrollWidth = 345`, no overflow (URL break + button-row wrap fixed) |
+| `/settings` | already fine (max-w-2xl) | `documentScrollWidth = 345`, no overflow |
+
+The mobile-fallback banner stays — its job is now just to set expectations ("this is best on desktop") rather than be the only mobile-handling mechanism. Screenshot: `docs/screenshots/epic-08-specs-360.png` (specs list + banner at 360 px).
+
+Tests still 298 / 298 (no test changes; no behavioural changes — only Tailwind utility-class tweaks). Lint clean. Build clean.
+
+### Q4 — "its enough i think. do users have to be signed up for this?"
+
+**Yes** — `/specs` is in the `(app)` route group, gated by Epic 02's middleware (`middleware.ts` matcher: `['/specs/:path*', '/settings/:path*']`). Anonymous users get redirected to `/login?callbackUrl=/specs`. The empty-state CTA only renders for authenticated users with zero specs.
+
+**If you want unauthenticated demo access**, you'd need to add a public route like `/demo` that renders a mock Spec Detail with hard-coded findings (no DB, no analysis). Rough cost: half a day. Trade-off: another surface to maintain + a fake-data path that drifts from real findings over time. Not recommended unless landing-page conversion data later shows the signup gate is dropping warm leads.
+
+For v0.1 the signup-required path is the right shape — it ensures every demo run goes through `loadSampleSpecAction` which uses real LLM analysis on a real Postgres row, so the user sees the actual product immediately.
+
+### Q5 — "lets discuss this in more detail, after the other questions are resolved?"
+
+Yes — happy to. When you're ready, reply with one of:
+
+- "Draft `LAUNCH-RUNBOOK.md` now, target date TBD" → I write the markdown, no other change.
+- "Target date is YYYY-MM-DD, draft the runbook + checklist with that date" → I anchor the runbook to your timeline.
+- "Skip the runbook, I'll keep it in my head" → I close Q5 with no action.
+
+---
+
+> **Status:** Q2 (B) shipped. Q4 closed (signup required, by design). Q5 open by user choice — awaiting your reply on which runbook variant you want. Epic 08 implementation otherwise complete.
+

@@ -100,7 +100,7 @@ export function SpecDetailHeader({
         </div>
         <p className="text-xs text-muted-foreground">
           Source:{' '}
-          <code className="font-mono text-xs">{sourceLabel}</code>
+          <code className="font-mono text-xs break-all">{sourceLabel}</code>
         </p>
         {spec.lastAnalyzedAt ? (
           <p className="text-xs text-muted-foreground">
@@ -108,7 +108,7 @@ export function SpecDetailHeader({
           </p>
         ) : null}
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <VersionsDrawer
           versions={versions}
           currentVersionId={spec.currentVersionId}
