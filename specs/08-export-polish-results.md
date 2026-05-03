@@ -569,3 +569,138 @@ Wenn keine Traction da ist (was real möglich ist): du hast 2 Wochen verloren, a
 
 > **Status:** Round 4 ist eine kritische Bewertung — keine Code-Änderungen. Empfehlung: 2 Wochen / 4 Folge-Epics vor Public Launch. Awaiting your call on whether you agree with the assessment or want to push today anyway.
 
+---
+
+## Round 5 — welcher v0.2-Move zum Launch dazu? (2026-05-03)
+
+User: "ich will diesen plan. aber können wir noch iwas aus v0.2 einbauen, dass die user wirklich noch mehr reizen könnte?"
+
+OK. Plan steht: Epics 09 (public-demo + share-link), 10 (auth-recovery), 11 (production-prep), optional 12 (CLI). Frage: was aus v0.2 zusätzlich einbauen, das **wirklich reizt**.
+
+Wichtige Differenzierung vorab — "reizen" zerfällt in zwei Achsen:
+
+- **Anziehung beim ersten Eindruck** (Cold Visitor → "wow, das probier ich"). Wirkt im HN-Thread, im Tweet, in den ersten 30 s nach Klick. Hier punktet alles, was eine Demo-Story besser macht.
+- **Stickiness / Retention** (Erstnutzer → "ich komm nächste Woche wieder"). Wirkt nicht beim Launch direkt, aber bestimmt, ob die 200 HN-Signups nach 2 Wochen noch da sind oder weg.
+
+Beide brauchen verschiedene Features. Ich evaluiere die Kandidaten kritisch unter beiden Achsen.
+
+### Kandidaten (alle aus v0.2-Roadmap oder dem Deferred-Backlog)
+
+#### (A) Public Spec Gallery — "Hier sind apiq-Analysen der 10 berühmtesten APIs"
+
+Was: ein öffentlich einsehbarer Katalog (z. B. `/gallery`) mit pre-analysierten famous public APIs — GitHub, Stripe, Twilio, Slack, Discord, Spotify, OpenWeatherMap, dnd5eapi etc. Jede Karte zeigt Name + Quality Score + Top-3-Findings, Klick → Public Spec Detail (über die `/share/<token>`-Infrastruktur aus Epic 09 — Zero zusätzliche Infra).
+
+- **Cost:** ~2-3 Tage. Specs runterladen, durch `loadSampleSpecAction`-Variante in eine Demo-Workspace laden, analyze laufen lassen, Gallery-Page bauen.
+- **First-impression-Wirkung:** **sehr hoch.** Das ist HN-Frontpage-Material: *"I analyzed the 10 most famous APIs with an LLM, here's what I found"*. Tweet-Body schreibt sich selbst.
+- **Stickiness-Wirkung:** niedrig — statischer Content.
+- **Risiko:** GitHub / Stripe / co. könnten unhappy sein, dass ihre API mit "32 / 100" public bewertet wird. PR-Risk gering (Specs sind public, Analysen sind Kommentar = Fair Use), aber real. Mitigation: in der Gallery klar formulieren *"LLM-generated commentary, not authoritative ranking"*, und einen Take-Down-Prozess vorsehen.
+- **PRD-Alignment:** dünn — ist eher eigenes Marketing-Artefakt als v0.2-Feature.
+
+#### (B) Cross-spec consistency check — Slice von v0.2 Landscape
+
+Was: wenn ein User 2+ Specs hochlädt, kommt eine neue Befund-Klasse mit `scope: 'cross_spec'`: *"Your `/users` endpoint paginiert mit `cursor`, aber `/orders` mit `?page=N` — pick one."* / *"Drei deiner fünf Specs nutzen `error.message` für Fehler, zwei nutzen `error.detail` (RFC 7807) — drift entdeckt."*. Eigene Tab oder Section "Cross-spec findings" auf der Specs List.
+
+- **Cost:** ~3-5 Tage. Neue Action `runCrossSpecAnalysis`, neuer Prompt fokussiert auf Consistency, neue Finding-Visualisierung.
+- **First-impression-Wirkung:** **niedrig** — feuert nur für User mit 2+ Specs. Cold Visitor sieht das nicht.
+- **Stickiness-Wirkung:** **hoch** — schafft einen echten Grund, mehr Specs hochzuladen. Compound-Value: jeder zusätzliche Spec macht alle bestehenden wertvoller (mehr Cross-spec-Findings).
+- **Risiko:** keiner.
+- **PRD-Alignment:** **stark** — explizit v0.2 Landscape ("multi-spec intelligence, cross-spec naming-convention drift").
+
+#### (C) Scheduled re-analysis + drift-email — Slice von v0.4 Governance
+
+Was: User kann pro Spec opt-in zu "re-analyze weekly". Vercel Cron triggert `runAnalysis`, vergleicht neue Findings mit alten, schickt Email "3 new findings on your spec since last week". Email-Infra wird bereits in Epic 10 (auth-recovery → email verification) gebraucht — gemeinsam genutzt.
+
+- **Cost:** ~3-4 Tage incl. Email-Infra-Setup (Resend ist die naheliegendste Wahl).
+- **First-impression-Wirkung:** **niedrig** — feuert erst nach 1 Woche.
+- **Stickiness-Wirkung:** **sehr hoch** — das ist die GitHub-Dependabot-Mechanik für API-Design. *Der* Retention-Hook.
+- **Risiko:** Email-Deliverability (Spam-Folder), Cost-Explosion (jeder User × jeder Spec × 1× pro Woche = LLM-Calls); braucht User-Cap.
+- **PRD-Alignment:** v0.4 Governance, also weiter weg als (B).
+
+#### (D) "Compare two APIs" — Lite-Version von Cross-spec
+
+Was: anonyme `/compare?a=<url>&b=<url>` Route. User pasten zwei Spec-URLs, sehen einen Side-by-Side-Quality-Score-Report. Kein Login.
+
+- **Cost:** ~5-7 Tage.
+- **First-impression-Wirkung:** **hoch** — Tweet-bait *"compare GitHub's API to Stripe's"*.
+- **Stickiness-Wirkung:** mittel — hat Ein-Mal-Charakter pro Vergleich.
+- **Risiko:** OpenRouter-Cost-Explosion bei anonymen Calls (kein Workspace = kein Cap). Müsste IP-rate-limit haben.
+- **PRD-Alignment:** mittel — Sliver von Landscape.
+
+#### (E) Two-call architecture für >50-endpoint specs
+
+Was: das v0.2-Item aus Epic 04 — bei großen Specs (Stripe = 500+ Endpoints, GitHub = 1000+) erst per-Endpoint mit Haiku, dann Aggregation mit Sonnet. Heute scheitern Stripe und GitHub-Specs am Token-Limit.
+
+- **Cost:** ~3-5 Tage Engineering + 1-2 Tage Calibration (Spike-style — der Output muss bei Big-Specs noch sinnvoll sein).
+- **First-impression-Wirkung:** **niedrig** — User merkt's nicht, wenn ein Spec klein ist.
+- **Stickiness-Wirkung:** niedrig.
+- **First-impression-Wirkung *via Gallery*:** **mittel** — wenn (A) die Gallery beinhaltet, dann sind Stripe + GitHub die Headline-Specs, und ohne (E) bekommst du keine Analysen davon hin. (E) ist *Voraussetzung* für eine eindrucksvolle Gallery.
+- **Risiko:** Calibration-Aufwand kann die 1-2 Tage Estimate sprengen.
+- **PRD-Alignment:** v0.2 explicit.
+
+### Kritische Bewertung — was reizt User wirklich?
+
+Wenn Ziel = "Public Launch klappt, erster Eindruck zündet, HN-Frontpage realistisch": **(A) Public Spec Gallery + (E) Two-call architecture** als Bündel.
+
+Logik: (A) ist die Demo-Story, die Reichweite produziert. Aber (A) ohne (E) ist halbgar — du kannst keine Stripe-Analyse zeigen, weil der Spec zu groß ist. Mit (E) wird die Gallery erst eindrucksvoll: *"Hier sind apiq-Analysen von Stripe, GitHub, Twilio — den drei größten OpenAPI-Specs der Welt."*
+
+Bündel-Cost: 5-8 Tage. Passt in das 2-Wochen-Budget des Launch-Plans **eng**, nicht locker. Würde Epic 12 (CLI) verdrängen.
+
+Wenn Ziel = "User die kommen, kommen wieder zurück" (Retention): **(B) Cross-spec consistency** + langfristig **(C) Scheduled re-analysis**.
+
+Aber das wirkt *nicht* auf den Launch-Eindruck. Beide sind Features, die ein User erst nach Tagen/Wochen entdeckt. Vor dem Launch eingebaut wären sie verschwendetes Engineering.
+
+### Meine konkrete Empfehlung
+
+**Bündel-Add zum Launch-Plan: (A) + (E).** Begründung:
+
+1. **(A) ist der einzige Move, der den ersten Eindruck wirklich verändert.** Cross-spec, Drift, etc. wirken alle erst, wenn der User schon engagiert ist — sie reizen nicht den Cold Visitor.
+2. **(A) ohne (E) ist enttäuschend.** Gallery mit nur Twilio + Slack + OpenWeatherMap (= mittlere bis kleine Specs) ist OK, aber nicht *wow*. Mit Stripe + GitHub als Headline-Cards ist es ein "ich teile das"-Artefakt.
+3. **(E) hat zusätzlich einen Bonus-Effekt:** ab dem Moment funktioniert apiq für 99% aller real-world-Specs (statt 90%). Ein User, der seinen 800-Endpoint-internen-Spec hochlädt und scheitern sieht, ist verloren. Mit (E) klappt's.
+
+**(B) Cross-spec parke ich für nach dem Launch** — als Epic 13. Das ist der **Stickiness-Hook**, der sich daran misst, ob die HN-Signups in 4 Wochen noch da sind. Erst Daten, dann das Feature.
+
+**(C) Scheduled re-analysis** parke ich noch weiter — Epic 14 oder 15. Erst wenn (B) zeigt, dass User mehrere Specs adden.
+
+**(D) Compare-two-APIs lass ich weg.** Cost zu hoch, anonyme Calls sind ein Cost-Risk-Problem, und (A) + (E) erreichen den gleichen "Tweet-bait"-Effekt günstiger.
+
+### Aktualisierter Launch-Plan
+
+| Epic | Was | Cost | Begründung |
+|---|---|---|---|
+| 09 | public-demo + share-link + **public spec gallery** | 4-5 Tage (war 3) | Anonymous Demo + viral Sharing + Gallery als Launch-Content. Gallery dockt an die Share-Link-Infra an. |
+| 10 | auth-recovery (email verify + forgot-pw) + **email-infra (Resend)** | 2-3 Tage | Email-Setup zahlt auch auf späteres Epic 14 ein. |
+| 11 | production-prep (sentry + privacy/tos + vercel/supabase + DNS) | 2 Tage | Unverändert. |
+| **NEU 12** | **two-call architecture für big specs** | 3-5 Tage | Voraussetzung für eine eindrucksvolle Gallery (Stripe + GitHub müssen analysiert werden können). |
+| ~~12 (alt)~~ | ~~CLI / GitHub Action~~ | — | Verschoben auf nach dem Launch (war optional). |
+
+**Total:** ~11-15 Werktage statt 6-8 → **~3 Wochen** statt 2.
+
+Plus nach dem Launch:
+- Epic 13: Cross-spec consistency (~3-5 Tage) — der Retention-Hook
+- Epic 14: Scheduled re-analysis (~3-4 Tage) — der zweite Retention-Hook
+- Epic 15: CLI / GitHub Action (~1 Tag) — bringt apiq in den Workflow rein
+
+### Was passiert ohne (A)+(E)?
+
+Du launchst mit dem 4-Epic-Plan, 200 Signups, 8 Mails. Dann sind 2 Wochen rum und du fragst dich, ob das Tool zünden würde, wenn HN nochmal kommt. Mit (A)+(E) hast du eine konkrete Demo-Hook, die wieder wegklickbar ist *aber zumindest gesehen wurde*.
+
+### Realistisches Risiko bei (A)+(E)
+
+- **(A) PR-Risk:** sehr klein (Public-API-Specs sind public, Analysen sind Fair-Use-Kommentar). Aber: lass eine Take-Down-Klausel im Footer der Gallery-Seite. *"Quote takedown? Email me."*
+- **(E) Calibration-Risk:** real. Two-call braucht Spike-Style-Tuning, sonst produziert es bei großen Specs Schrott. Plan-B falls die Calibration scheitert: (E) auf 50-200-Endpoint-Bucket beschränken (Per-Endpoint-Haiku + Aggregation-Sonnet bei *kleineren* Specs ist einfacher als bei 1000+); Stripe + GitHub aus der Gallery rauslassen, Twilio + Discord als Headline.
+- **3-Wochen-Budget:** muss ehrlich gehalten werden. Wenn (E) am Tag 5 nicht funktioniert, abbrechen und ohne (E) launchen.
+
+### Frage an dich
+
+Drei Optionen:
+
+1. **Bündel-Plan (A)+(E) annehmen** → ich starte Epic 09 (mit Gallery erweitert) als nächstes, dann 12 (two-call), dann 10/11 parallelisierbar. Drei Wochen Pfad. Empfehle ich.
+2. **Nur (A) ohne (E)** → ~2.5 Wochen, Gallery ist OK aber nicht wow (kein Stripe / GitHub). Risikoarm.
+3. **Original 4-Epic-Plan ohne v0.2-Add** → 2 Wochen, kleinster sauberer Public Launch. Risiko: zündet wahrscheinlich nicht.
+
+Wenn du dich entscheidest, sag's mir, dann starte ich Epic 09 mit `/spec_ind 09 public-demo "anonymous /demo route + /share/<token> + /gallery + 10 pre-analyzed famous APIs"`. Sonst gerne weiter diskutieren.
+
+---
+
+> **Status:** Round 5 = strategischer Add-on-Vorschlag (Public Spec Gallery + Two-call architecture als Pre-Launch-Bündel). Cross-spec consistency ist klassischer Retention-Hook und kommt POST-Launch. Awaiting your decision on which of the three plan-shapes to commit to.
+
