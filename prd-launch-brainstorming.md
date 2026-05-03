@@ -734,3 +734,170 @@ Aufwand dann ~4-5 Wochen extra. Würde apiq als "AI-API-Consultant" positioniere
 2. Capability-Gap-Generation (i): bauen wir die für den Launch ein? Wenn ja, brauchen wir den Spike *vor* dem Big-Spec-Spike (zwei separate Calibrations).
 3. Business-Improvements (ii): zu viel auf einmal für den ersten Launch, oder genau die Kategorie-Definition, die du willst?
 4. Wo zieht ihr die Grenze zwischen "noch apiq" und "neues Produkt" — wenn apiq Implementation-Hints gibt, ist es noch dasselbe Tool oder geht's in Cursor-Territorium?
+
+---
+
+## "Try It Out"-Funktionalität + alle drei Spike-Dimensionen testen? (2026-05-03)
+
+User: *"ein user soll apiq wirklich cool nutzen können. einloggen, spec importieren, apply all, und verbesserte spec exportieren! super workflow! das kann man usern zum ausprobieren verkaufen oder? können wir nicht selbst so eine art 'try out your new specs' funktionalität zur verfügung stellen? vielleicht mit irgendeiner integration oder so?"* + *"angenommen wir machen jetzt unseren research spike, sollen wir nicht einfach i) bis iii) mittesten? was ist wenn die ergebnisse gut sind? dann ist das doch gar kein wirklicher mehraufwand aber 100x höherer Wert für den user oder nicht?!"*
+
+Zwei Punkte. Geh sie der Reihe nach an.
+
+### Q1: "Try out your new specs" — Mock-Server / Interactive-Preview / Codegen integriert?
+
+**Du hast eine sehr gute Intuition.** Das ist potentiell DAS killer-Feature für den Spec-First-Launch. Wenn der User-Flow nicht endet bei "Export-Datei landet auf Festplatte", sondern bei "klick → siehe deine improved API live, klick → download server stubs", dann hat apiq einen geschlossenen Wert-Loop, den Spectral / 42Crunch / Stoplight (separat) nicht haben.
+
+#### Drei Integrations-Optionen, sortiert nach Aufwand/Wert
+
+**(a) Stoplight Elements als embedded Interactive-Preview** — *cheap, hoher Wert*
+
+[Stoplight Elements](https://github.com/stoplightio/elements) ist eine OSS-Web-Component (`<elements-api>`), die eine OpenAPI-Spec interaktiv rendert: Endpoint-Browser links, Request/Response-Schemas + Try-It-Out-Buttons rechts. Wie Swagger UI, aber moderner gestaltet, MIT-lizenziert, 1-Tag-Integration in eine bestehende Next-App.
+
+User-Flow: nach Apply All → "Preview improved spec" Tab → embedded Elements-Component rendert die Spec → User browst seine API live, klickt "Try It" auf einem Endpoint → sieht Sample-Response (initial faked aus Schema-Examples).
+
+Aufwand: ~half day für die Integration als Drittes Tab im Spec-Detail (neben "Findings" und "Versions").
+Wert: hoch — selbst ohne echten Mock-Backend ist das ein deutlicher UX-Gewinn. Spec-First-Engineers wollen ihre Spec sehen + drücken, nicht nur als JSON exportieren.
+
+**(b) Prism Mock-Server für echte Try-It-Out Calls** — *mittel-hoch, sehr hoher Wert*
+
+[Prism](https://github.com/stoplightio/prism) ist Stoplights OSS-Mock-Server: nimmt eine OpenAPI-Spec, serviert echte HTTP-Responses basierend auf Schema-`example`s + Faker-Patterns. Engineers können `curl` gegen den Mock laufen lassen.
+
+Integration: pro Spec ein ephemeral Prism-Instance (Docker oder Vercel-Function), mit URL wie `https://mock.apiq.dev/<specId>/<endpoint>`. Auto-Cleanup nach 24 h. Combined mit (a): die Try-It-Out-Buttons im Stoplight-Elements-Preview rufen den echten Prism-Mock.
+
+Aufwand: ~3-5 Tage für Prism-Containerization + Routing + Rate-Limit + Lifecycle-Management.
+Wert: sehr hoch — das ist real-feel-good. User schickt einen `curl` an seine improved API, sieht die Response, glaubt das Tool. **Das ist Demo-Magic, das niemand sonst hat.** (Stoplight selbst hat Prism + Elements separat zum kombinieren; apiq würde sie als One-Click-Experience anbieten.)
+
+**(c) Server-Stub-Codegen on-demand** — *mittel, mittel-hoher Wert*
+
+Auf Knopfdruck "Download server stubs (FastAPI / NestJS / Spring / ...)" → server-seitig wird `openapi-generator-cli generate` ausgeführt → ZIP-Download.
+
+Aufwand: ~2 Tage. OpenAPI Generator als Subprocess oder Docker-Image; Templates für ~5 Top-Sprachen.
+Wert: mittel. Engineers könnten das auch lokal machen (`openapi-generator-cli` ist frei verfügbar) — aber die Convenience ist real.
+
+**Empfehlung — alle drei einbauen, in dieser Reihenfolge:**
+
+| Phase | Was | Aufwand | Wert-Multiplikator |
+|---|---|---|---|
+| Pre-Launch must | (a) Stoplight Elements Preview | half day | macht Export greifbar |
+| Pre-Launch optional | (b) Prism Mock | 3-5 Tage | Demo-Killer-Feature |
+| Post-Launch v1.1 | (c) Server-Stub-Download | 2 Tage | Convenience |
+
+(a) ist no-brainer. (b) ist die Frage: lohnt sich 3-5 Tage extra für ein echtes Demo-Wow? Mein Bauch: **ja**, weil es eine genuine Differenzierung schafft, die niemand sonst integriert anbietet. (c) kann post-Launch.
+
+#### Bonus-Idee: User-Workflow als nahtlose Demo-Loop
+
+Mit (a)+(b) wird der User-Flow:
+
+```
+1. Login
+2. Paste Spec (Paste-Mode aus dem File-Upload-Bullet oben)
+3. ~60s Analyse → 14 Findings
+4. "Apply all critical" Button → 2 Patches sofort applied
+5. Preview-Tab öffnen → Stoplight Elements rendert die improved Spec live
+6. Engineer browst Endpoints, klickt "Try It Out" auf POST /orders
+7. Prism-Mock antwortet mit gefakter Response basierend auf der improved Schema
+8. Engineer ist überzeugt → Export improved Spec → committet im Repo
+9. (Post-Launch) "Download server stubs" → ZIP
+```
+
+Das ist ein vollständiger Funnel von "ich verstehe nichts" zu "ich habe deploybare Code-Stubs" in **5 Minuten**. Das ist der Pitch.
+
+### Q2: Sollten wir (i)+(ii)+(iii) parallel im Spike testen?
+
+**Deine Intuition ist gut, aber die Mathematik stimmt nicht ganz.** Lass mich kritisch sein.
+
+#### Was ein Spike kostet
+
+Ein Spike ist nicht "ein bisschen Prompt schreiben". Pro getestete Dimension brauchst du:
+
+1. **Test-Spec-Curation** — welche Specs zeigen das gewünschte Pattern? Für (i) brauchst du Specs mit erkennbar fehlenden Endpoints (mehrere Beispiele aus verschiedenen Domänen). Für (ii) brauchst du Specs *mit Business-Context-Annotation* — die hast du nicht; muss man erst zusammenstellen oder synthetisch erzeugen.
+2. **Prompt-Iteration** — pro Dimension mehrere Prompt-Versionen testen, Output-Qualität bewerten.
+3. **Evaluation-Kriterien** — wer entscheidet, ob ein Output "gut" ist? Für (i) "Capability-Gap": ist `/users/{id}/social-graph`-Vorschlag bei Banking-API gut oder nicht? Subjektiv. Für (iii) "Implementation-Hint": ist der vorgeschlagene Code-Skeleton korrekt? Kann nur durch Code-Review verifiziert werden.
+4. **Iterations-Zyklen** — wenn die erste Version nicht funktioniert, neu kalibrieren.
+
+**Geschätzte Kosten pro Dimension:**
+
+- (i) Capability-Gap-Generation: 4-7 Tage Spike
+- (ii) Business-Improvements: 5-10 Tage Spike (komplizierter wegen Business-Context-Anforderung)
+- (iii) Implementation-Hints: 7-15 Tage Spike (extrem schwer zu evaluieren; Hallucination-Konsequenzen real)
+- Big-Spec-Architecture-Spike (sowieso gebraucht): 3-5 Tage
+
+**Sequenziell:** 19-37 Tage = ~4-7 Wochen pure Spike-Phase.
+**Parallel:** ~10-15 Tage wenn alle gleichzeitig laufen mit Prompt-Engineering-Aufwand-Sharing — aber Evaluation-Aufwand bleibt linear (jede Dimension muss separat bewertet werden).
+
+#### Wahrscheinlichkeiten der "guten Ergebnisse"
+
+Hier wird's hart. Die Frage ist: wie wahrscheinlich ist es, dass JEDE der drei Dimensionen Ergebnisse liefert, die in v0.1 shippable sind?
+
+Honest probabilities (basierend auf LLM-Track-Record für ähnliche Tasks 2025-26):
+
+- **(i) Capability-Gap-Generation:** **60-70% Erfolg.** LLM kann Domain-Patterns aus Spec-Inhalt erkennen, wenn Beispiele gut sind. Aber Hallucination-Risk real (irrelevante Endpoint-Vorschläge).
+- **(ii) Business-Improvements:** **30-40% Erfolg.** Zu vage ohne starkes Business-Context-Input vom User. Evaluation-Subjektivität hoch. "Ist dieses Endpoint-Vorschlag businessrelevant?" hängt davon ab, was du nicht weißt.
+- **(iii) Implementation-Hints:** **15-25% Erfolg in shippable Quality.** LLM-Code-Generation ist 2026 gut genug für Boilerplate, aber Architektur-Empfehlungen ("verwende Saga statt Choreography") sind notoriously fragil. Evaluator brauchst Senior-Engineers, nicht skalierbar.
+
+**Multiplikative Wahrscheinlichkeit, dass *alle drei* shippable sind:** ~3-7%.
+
+**Wahrscheinlichkeit, dass *mindestens eine* shippable ist:** ~80-90% (additiv).
+
+**Wichtigste Konsequenz:** "100x Wert wenn alles funktioniert" stimmt mathematisch. Aber die Wahrscheinlichkeit dafür ist <10%. Du würdest 4-7 Wochen investieren, um eine 7%-Chance zu spielen.
+
+#### Smart Play: Staged Spike
+
+Statt parallel: **sequenziell, aber mit hartem Budget pro Dimension und Cancel-bei-Misserfolg.**
+
+```
+Phase 0 (sowieso): Big-Spec-Architecture-Spike — 3-5 Tage
+  → entscheidet über Bigger-Context vs. Chunking vs. Two-Call
+  → MUSS klappen, sonst hast du keinen Build-Ground
+
+Phase 1: (i) Capability-Gap-Generation Spike — Budget 5 Tage
+  → Wenn nach 5 Tagen "good enough" → in Launch-Scope rein
+  → Wenn nach 5 Tagen "nicht überzeugend" → nach v0.2 verschieben, weiter zu Phase 2 oder Launch
+
+Phase 2 (NUR wenn Phase 1 erfolgreich): (ii) Business-Improvements Spike — Budget 5 Tage
+  → Gleiche Cancel-Bedingung
+  → Aufbauend auf Phase-1-Findings (Business-Context kann an Capability-Gap-Findings anknüpfen)
+
+Phase 3 (NUR wenn Phase 1 + 2 erfolgreich): (iii) Implementation-Hints Spike — Budget 7 Tage
+  → Sehr hohe Skepsis; nur wenn die anderen zwei stark sind
+  → Eher ein Stretch-Goal als Launch-Feature
+```
+
+**Erwartungswert dieser Strategie:**
+
+- ~70% Wahrscheinlichkeit (i) shippt → +1 Differenziator zum Launch
+- ~25% Wahrscheinlichkeit (i)+(ii) shipping → repositioniert apiq als "AI-API-Consultant"
+- ~5% Wahrscheinlichkeit alle drei shipping → komplett-andere Produkt-Kategorie
+
+**Aufwand:** 3-5 Tage Phase 0 + 5 Tage Phase 1 + 0-12 Tage Phase 2-3 = **8-22 Tage gesamt**, je nachdem wo wir stoppen.
+
+**Vs. der Parallel-Variante:** ~10-15 Tage egal was rauskommt. Du sparst 0-7 Tage gegenüber sequenziell, aber riskierst 2-7 Tage in Dimensionen, die nicht funktionieren werden.
+
+#### Empfehlung: Staged Spike
+
+**Mache (i) + (ii) auf jeden Fall, (iii) nur wenn die ersten zwei stark genug sind.**
+
+Begründung:
+- (i) ist hochwahrscheinlich erfolgreich + bringt klare Differentiation. Worth spike-investment.
+- (ii) ist ~30-40% — aber wenn's klappt, transformiert es das Produkt komplett. Worth conditional spike-investment.
+- (iii) ist ~15-25% + hoher Schaden bei falschen Outputs (User baut dann basierend auf Halluzinationen) → eher Skepsis-Modus.
+
+**Konkret im Launch-Plan:**
+
+| Phase | Was | Aufwand |
+|---|---|---|
+| Pre-Launch Phase 0 | Big-Spec-Architecture-Spike | 3-5 Tage |
+| Pre-Launch Phase 1 | (i) Capability-Gap Spike | 5 Tage |
+| Pre-Launch Phase 2 (conditional) | (ii) Business-Improvements Spike | 5 Tage if Phase 1 erfolgreich, sonst 0 |
+| Pre-Launch Phase 3 (conditional) | (iii) Implementation-Hints Spike | 7 Tage if Phase 2 erfolgreich, sonst 0 |
+| Pre-Launch Engineering | (a)+(b) Try-It-Out + 1-2 Tage Spec-Fixes + Naming + UI | 7-10 Tage |
+| Launch-Prep | Vercel/Supabase/Privacy/etc. | 3-5 Tage |
+
+**Total: ~21-37 Tage = 4-7 Wochen.** Range hängt davon ab, wie viele der Spike-Phasen erfolgreich sind und wie viel UI-Redesign du willst.
+
+### Frage zurück
+
+1. OK mit der Staged-Spike-Strategie statt parallelem all-three-Spike?
+2. Stoplight Elements Preview (a) als Pre-Launch must, Prism Mock-Server (b) als Pre-Launch nice-to-have? Oder beide Pflicht?
+3. Apply-all-critical: definitely Pre-Launch (du hast oben gesagt "selbstverständlich"). Bestätigt.
+4. Bei Phase 1-3 Spike: was ist dein Cancel-Schwellwert? "Wenn nach 5 Tagen die Hälfte der Outputs Schrott ist, abbrechen" oder "wenn 80% gut sind, in Launch rein"? Wir brauchen klare Kriterien vor Spike-Start.
