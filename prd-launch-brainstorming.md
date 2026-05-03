@@ -1027,3 +1027,125 @@ Sources:
 - [AWS Open-Sources Smithy API Models (InfoQ, 2025)](https://www.infoq.com/news/2025/06/aws-smithy-api-models-opensource/)
 - [Spec-Driven Development with AI Coding Assistants (arXiv)](https://arxiv.org/html/2602.00180v1)
 - [What Is the OpenAPI Specification? OAS 3.1 Guide (2026) - API7.ai](https://api7.ai/learning-center/api-101/openapi-specification)
+
+---
+
+## Lock-In: Positionierung als AI-Age-Quality-Gate (2026-05-03)
+
+User-Entscheidung:
+1. ✅ Reframing zu "Quality-Gate für OpenAPI-Specs im AI-Zeitalter" angenommen
+2. ✅ AI-Aspekt sollte selbstverständlich sein — wir adressieren "händisch" / Hand-Editing **gar nicht**, weil das den Punkt verwässert
+3. ✅ TypeSpec-Roundtrip raus — nicht relevant wenn der Fokus AI-generierte Specs ist
+
+Klares Commitment. Implikationen ziehen.
+
+### Die neue Positionierung in einem Satz
+
+> **apiq — Your AI-generated OpenAPI specs, quality-gated.**
+
+Tagline-Variationen für unterschiedliche Surfaces:
+- **Landing-Page:** *"AI generates your OpenAPI spec in 30 seconds. apiq makes sure it's production-ready in 60."*
+- **Empty-State:** *"Paste your AI-generated spec. We'll find what your AI missed."*
+- **Tweet-Bait:** *"I asked Claude to write me an OpenAPI spec. Then I asked apiq if it was any good. Spoiler: 14 findings."*
+- **HN-Title:** *"Show HN: apiq — Quality-gate for AI-generated OpenAPI specs"*
+
+### Was wir explizit NICHT mehr ansprechen
+
+Die Audience-Sprache wird **single-minded:**
+
+❌ "Linter for engineers who write OpenAPI YAML by hand" → kommunizieren wir nicht.  
+❌ "Works great with TypeSpec / Smithy / Stoplight Studio output too" → kommunizieren wir nicht.  
+❌ "Compatible with auto-generated specs from FastAPI / Spring / NestJS" → kommunizieren wir nicht.
+
+Diese User-Subsegmente werden apiq trotzdem nutzen können (das Tool ist Workflow-agnostisch — es nimmt jeden valid OpenAPI 3.x-Input). Aber sie sind **nicht der Pitch.** Marketing, Empty-State-Copy, Demo-Story, Onboarding adressieren ausschließlich den AI-Workflow.
+
+Begründung: 
+- **Schärfere Positionierung verkauft besser** als Multi-Audience-Marketing
+- **AI-Wave ist der Wachstumsvektor** — TAM wird in den nächsten 12 Monaten verdoppeln
+- **Selbstselektion funktioniert** — Engineers in anderen Workflows finden apiq trotzdem, wenn sie suchen ("OpenAPI quality tool")
+- **Authentic AI-Positioning beats hype** — die Workflow ist real, nicht erfunden
+
+### Wie der User-Flow jetzt aussieht
+
+Pre-AI-Framing (alt):
+```
+User has OpenAPI spec → Reviews → Applies fixes → Exports
+```
+
+AI-Framing (neu):
+```
+1. User asks Cursor / Claude Code / Spec Kit / GPT to generate an OpenAPI spec
+   ("Generate an OpenAPI 3.x spec for an order management API with...")
+2. AI returns plausible-looking spec — but is it actually production-ready?
+3. User pastes / uploads to apiq
+4. apiq finds 14 issues, applies the 3 critical ones automatically
+5. User previews live (Stoplight Elements + Prism mock)
+6. User exports / commits → feeds back to AI for implementation
+   OR feeds the *findings markdown* back to AI: "here's what apiq found, regenerate the spec with these fixes"
+```
+
+Das ist jetzt der Pitch. Konkret und zeitgemäß.
+
+### Implikationen für die Build-Liste
+
+**Was sich verstärkt:**
+- **Paste-Mode** ist jetzt critical (AI-Agents output to Clipboard, nicht zu URLs) — schon im Plan, jetzt höhere Priorität
+- **Markdown-Export der Findings** wird neu wichtig: User soll die Findings als strukturierten Prompt zurück an seinen AI-Agent geben können (*"regenerate with these 14 fixes"*) → ~half day extra
+- **"Try It Out"-Preview** wird kritisch wertvoll, weil User die AI-Spec noch nie als rendered Doc gesehen hat
+- **Capability-Gap-Generation** (i) — der Spike-Punkt von oben — wird ein Hero-Feature: *"AI agents miss endpoints. apiq spots the gaps."* Das ist genau die Pain Point der AI-Spec-Generation. Stark als Differenzierung.
+
+**Was verliert Priorität:**
+- **TypeSpec-Roundtrip:** raus. Nicht im Pre-Launch.
+- **Multi-File-Upload für modulare Specs:** raus aus Pre-Launch. AI-Agents emittieren typischerweise einzelne JSON/YAML-Files, keine modularen Specs mit `$ref`-Splits.
+- **GitHub-PR-Integration:** unklar. Wenn AI-Spec-Generation oft outside-of-Repo passiert (in Chat-UI), brauchen User keine PR-Flow → Post-Launch vermutlich genug.
+- **CLI / GitHub Action:** weniger zentral als gedacht. AI-Workflow ist heute oft interactive (chat-driven), nicht CI-driven. CLI bleibt v1.1+.
+
+**Was unverändert bleibt:**
+- Apply-All-Critical: ✅ critical
+- Stoplight Elements + Prism: ✅ critical
+- Big-Spec-Spike Phase 0: ✅ critical (auch AI-generierte Specs können groß sein)
+- Auth-Recovery / Sentry / Privacy/ToS: ✅ critical (Standard-Launch-Hygiene)
+
+### Die Differentiation gegen die Big-AI-Lab-Threat schärfen
+
+Mit AI-Age-Positionierung wird die Frage *"warum nicht einfach Claude / GPT direkt fragen?"* schärfer. Antworten:
+
+1. **Apiq ist deterministisch + structured.** Claude/GPT geben dir Prosa-Reviews. Apiq gibt dir validierte JSON Patches mit Apply-Mechanik + Quality Score. Du klickst Apply, du siehst was sich ändert, du hast Versions-History. Das ist Engineering-Tool, kein Chat-Tool.
+2. **Apiq ist preview-fähig.** Du siehst deine improved Spec live (Stoplight Elements + Prism). Im Chat müsstest du den Spec exportieren, in Swagger Editor laden, separates Mock-Tool aufsetzen.
+3. **Apiq misst Qualität numerisch.** Quality Score 32→78 nach Apply ist messbar; "Claude says it looks better now" ist nicht.
+4. **Apiq spotting Gaps systematisch.** Capability-Gap-Generation (i) wenn der Spike erfolgreich ist: *"your AI missed `/customers/{id}/payment_methods`"* — hochspezifisch, kein Chat-Allgemeinplatz.
+
+Diese vier Punkte sind die Anti-Big-AI-Threat-Story. Nicht ein Moat aus Network-Effects oder Switching-Cost (haben wir nicht), sondern aus **specialized engineering tooling** vs. **general chat assistant**.
+
+### Was ändert sich im Plan?
+
+Vorheriger Plan (4-7 Wochen):
+- Phase 0: Big-Spec-Architecture-Spike (3-5 Tage)
+- Phase 1: (i) Capability-Gap Spike (5 Tage) [conditional Phase 2-3]
+- Pre-Launch Engineering: Try-It-Out + Spec-Fixes + Naming + UI (7-10 Tage)
+- Launch-Prep: Vercel/Supabase/Privacy etc. (3-5 Tage)
+
+**Neuer Plan mit AI-Age-Framing (kein zusätzlicher Aufwand, gleiche Reihenfolge):**
+
+Eigentlich ist die Build-Liste bemerkenswert ähnlich. Was sich ändert:
+- **Markdown-Findings-Export** (~half day) ergänzt den Build-Plan
+- **TypeSpec-Roundtrip-Polish + Multi-File-Upload + GitHub-PR raus** → -1-2 Tage
+- **Marketing-Surfaces + Onboarding-Copy** auf AI-Framing trimmen (~half day)
+
+Netto: **gleicher Aufwand, schärferes Produkt.**
+
+### Naming-Implikation
+
+Mit der neuen Positionierung wird das Naming kohärenter zu lösen sein:
+- Wir suchen einen Namen, der "AI-Quality-Gate für API-Specs" konnotiert
+- Nicht generic "API tool" — sondern spezifisch zur AI-Wave
+- Beispiele zur Inspiration (nicht final): "specgate", "apiproof", "specsmith", "validspec", "speccheck", "openspec.ai"
+- Naming-Workshop separat — wenn die Positionierung steht, ist das wesentlich einfacher
+
+### Frage zurück
+
+Mit dem klaren Commitment auf AI-Age-Positionierung:
+
+1. Soll ich jetzt den ersten Draft der **echten Launch-PRD** (`prd-launch.md`) schreiben, basierend auf dem was wir hier diskutiert haben? Oder gibt's noch offene Punkte aus deiner ursprünglichen "weitere Dinge"-Liste, die wir in der Brainstorming-Datei zuerst abklären sollten?
+2. Naming-Workshop: jetzt parallel zu PRD-Draft, oder erst nach PRD?
+3. Big-Spec-Spike + Capability-Gap-Spike: starten wir die *vor* oder *nach* PRD-Finalisierung? (Vorher = empirische Daten in der PRD; nachher = klares Spike-Briefing aus PRD heraus.)
