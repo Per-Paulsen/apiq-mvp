@@ -1986,3 +1986,191 @@ Drei Optionen, je nach Risk-Tolerance:
 1. Welche Option (α/β/γ)? **Empfehlung: (α)** — die Items sind alle 1-2-Stunden bis 1-Tag groß; gemeinsam ~4-5 Tage. Lohnt sich für seriösen Launch.
 
 2. Ist jetzt — mit Gap-Check eingearbeitet — der Stand wirklich vollständig genug für PRD-Draft? Oder fehlt aus deiner Sicht noch was Konkretes?
+
+---
+
+## Final Consolidated Build-Liste — alles aus allen Rounds (2026-05-03)
+
+User: *"was ist mit dem spec import button und allen dingen, die wir vorher noch so besprochen hatten inklusive ui verbesserungen etc.?"*
+
+Berechtigt. Spec-Import war in mehreren Sektionen erwähnt aber nie als diskreter Item; UI-Redesign hatten wir gar nicht konkret gescopt. Hier die vollständige konsolidierte Liste, gruppiert nach Phase. Nichts wird vergessen.
+
+### Spike-Phase (Pre-Engineering) — ~1-2 Wochen
+
+| Item | Aufwand | Conditional |
+|---|---|---|
+| Big-Spec-Architecture-Spike (Bigger-Context vs Chunking vs Two-Call) | 3-5 Tage | unconditional |
+| (i) Capability-Gap-Generation-Spike | 5 Tage | only if Big-Spec-Spike done |
+| (ii) Business-Improvements-Spike | 5 Tage | only if (i) successful |
+| (iii) Implementation-Hints-Spike | 7 Tage | only if (i)+(ii) successful |
+
+**Realistic spike-phase length:** 3-12 Tage je nach Cancel-Schwellwerten. (i) hat ~60-70% Erfolgswahrscheinlichkeit → realistisch 8-10 Tage Total für Phase 0+1.
+
+### Pre-Launch Engineering — voller Critical-Gap-Fix (Option α)
+
+#### Foundation (Tag-0 Items, das Fundament)
+
+| Item | Aufwand | Quelle |
+|---|---|---|
+| 3 Pre-Launch Spec-Fixes (Re-Validate-after-Apply / Re-Bundle / Cycle-Marker-Roundtrip) | 1-2 Tage | Spec-First-Niche-Validation |
+| **Paste/Upload Spec-Import Button** (paste-as-text + drag-drop file) | half day | Workflow-Frage + Spec-First-Validation + AI-Age-Reframe |
+| Apply-All-Critical Bulk-Operation | 1 Tag | Scope-Eröffnung |
+| Stoplight Elements + Prism (Try-It-Out Live-Preview) | 4-5 Tage | Final-Flow Q1 |
+| Markdown-Findings-Export (für AI-Roundtrip) | half day | AI-Lock-in |
+
+#### Distribution & Viral
+
+| Item | Aufwand | Quelle |
+|---|---|---|
+| MCP-Server (Claude Code / Cursor / Continue Integration) | 1-2 Tage | Synthesis #A |
+| CLI (`npx apiq check / apply / preview / share`) | 2 Tage | Synthesis #B |
+| Anonymous-Demo (sample-specs unlimited, eigener Spec 1/IP/24h) | 1-2 Tage | Final-Flow Q2 |
+| Public-Share-Link Infrastructure (`/share/<token>` route) | 1 Tag | Round 5 |
+| Score-Badges hosted SVG (`/badge/<spec-id>`) | 1 Tag | Synthesis #F |
+| MCP-Setup-Doc-Page (apiq.dev/mcp Copy-Paste-Snippets) | 2h | Final-Flow Q3 |
+
+#### Security (Critical-Gap-Check Blocking-Items)
+
+| Item | Aufwand | Quelle |
+|---|---|---|
+| **(B1) SSRF-Härtung auf URL-Pull** (IP-Range-Blacklist + HTTPS-only + Public-DNS) | 2h | Gap-Check Blocking |
+| **(B2) GDPR Cookie-Consent-Banner** (klaro oder ähnlich) | half day | Gap-Check Blocking |
+| **(B3) GDPR Data-Export + Account-Delete** (Settings-Buttons + Backend-Cascades) | 1 Tag | Gap-Check Blocking |
+| **(B4) Open Graph + Twitter Card Meta** (per Route + dyn. Preview-Image für Share) | 1h | Gap-Check Blocking |
+
+#### Security (Critical-Gap-Check High-Items)
+
+| Item | Aufwand | Quelle |
+|---|---|---|
+| (H1) Prompt-Injection-Härtung (Delimiter + System-Prompt + Output-Sanitisation) | half day | Gap-Check High |
+| (H2) XSS-Härtung Spec-Content-Render (DOMPurify auf user-strings) | 2h | Gap-Check High |
+| (H3) Generischer IP-Rate-Limit auf alle non-auth-protected Endpoints | 2h | Gap-Check High |
+| (H4) Health-Check-Endpoint `/api/health` | 30min | Gap-Check High |
+
+#### Auth & Account (aus Round 3 + Gap-Check)
+
+| Item | Aufwand | Quelle |
+|---|---|---|
+| Email-Verifizierung bei Signup (Auth.js Email-Provider + Resend) | 1 Tag | Round 3 (e.1) |
+| Forgot-Password-Flow (Reset-Token + Email-Template) | 1 Tag | Round 3 (e.2) |
+| Login-Rate-Limit (per IP + per Email) | half day | Round 3 (e.5) + Gap-Check |
+| Bcrypt-Cost-Factor 12+ | 1h | Gap-Check Medium |
+
+#### Privacy & Legal
+
+| Item | Aufwand | Quelle |
+|---|---|---|
+| Privacy Policy + ToS Pages (Acceptable-Use-Section inklusive) | 1 Tag | Round 3 (e.4) + Gap-Check |
+| Privacy Promise auf Landing + Spec-Detail (*"We never log spec contents"*) | 2h | Synthesis #E |
+| Sub-Processor-Disclosure (OpenRouter/Anthropic) | 1h | Gap-Check |
+| Content-Moderation-Policy + `abuse@apiq.dev` Mailbox | 1h | Gap-Check Medium |
+
+#### Operational & Hygiene
+
+| Item | Aufwand | Quelle |
+|---|---|---|
+| Sentry / Error-Tracking | 2h | Round 3 (e.3) |
+| PostHog / Analytics | half day | Pre-PRD Best-Practice |
+| Comprehensive Security Headers (HSTS + X-Frame-Options + etc.) | 30min | Gap-Check Medium |
+| Sitemap + robots.txt + Canonical URLs | 2h | Gap-Check Medium |
+| Status-Page (Better-Stack / Statuspage / OneUptime) | half day | Gap-Check Medium |
+| Database-Backup-Verifikation + Rollback-Procedure-Doc | 1h | Gap-Check Medium |
+| Welcome-Email post-Signup | 2h | Gap-Check Medium |
+| Contact-Support-Channel (`support@apiq.dev` + `/contact` form) | half day | Gap-Check Medium |
+| Pricing-Page (*"Free during beta"*) | 2h | Gap-Check Medium |
+
+#### Marketing-Surfaces
+
+| Item | Aufwand | Quelle |
+|---|---|---|
+| Landing-Page (`/`) — Hero + Demo + Tagline + Try-Sample-CTA | 2-3 Tage | Final-Flow + Synthesis |
+| Empty-State (Specs-List für 0-Specs-User) | half day | Round 3 |
+| Marketing-Copy auf alle Surfaces (agnostisch mit AI-implicit) | half day | Lock-in + Reframe-Korrektur |
+| Onboarding-Hints (smarte Loading-States während Analyse) | 2h | Final-Flow Q1 |
+
+#### **Naming & UI Redesign — neue Sektion, vorher nicht gescopt**
+
+| Item | Aufwand | Anmerkung |
+|---|---|---|
+| Naming-Workshop (Trademark-Search + Domain-Verfügbarkeit + GitHub-Org + npm-Package) | 1 Tag | nach PRD per User-Decision |
+| Logo + Brand-Assets (Logo + Favicon-Variants + Color-Palette-Refinement) | 1-2 Tage | nach Naming |
+| **UI-Redesign: aktueller Stand → was du eigentlich willst** | **3-7 Tage je nach Scope** | **siehe unten — offene Frage** |
+
+**UI-Redesign ist die noch-nicht-resolved-Sache.** Du sagtest *"die ui gefällt mir noch nicht. zb im menue sind einfach schmale cards übereinander gestaked. das sieht total komisch aus..."* — aber wir haben nie spezifiziert was du *stattdessen* willst.
+
+Realistische Optionen:
+
+- **Option (i) Surgical:** spezifische Schmerzpunkte fixen — Sidebar-Nav-Layout, Empty-States, Magic-Moment-Animations (Score-Reveal Animation, Apply-Button-Hierarchy, Live-Preview-Tab-Placement). ~3-4 Tage. Zielt auf 80% des Wertes mit minimalem Re-Architecture.
+
+- **Option (ii) Wholesale:** vollständige Re-Designe der existierenden Screens. Figma-Mockups vorab (1-2 Tage), dann Implementation (5-7 Tage). ~7-9 Tage Total. Zielt auf "feels-completely-different" Niveau.
+
+- **Option (iii) Hybrid:** Figma-Mockup nur für Sidebar + Specs-List + Spec-Detail-Header (1 Tag), dann surgical für den Rest (3 Tage). ~4 Tage Total.
+
+Dafür braucht's deine Direction:
+1. Konkrete Schmerzpunkte über die *Sidebar* hinaus
+2. Reference-Produkt(e) deren Aesthetik du gut findest (z. B. Linear / Vercel-Dashboard / GitHub / Stripe-Dashboard sind in `prd-decisions.md` schon als Anker genannt)
+3. Bist du bereit Figma-Zeit zu investieren oder direkt in Code prototypen?
+
+#### Production-Setup
+
+| Item | Aufwand | Quelle |
+|---|---|---|
+| Vercel-Project + Production-Deploy-Pipeline | half day | Round 3 (c) |
+| Supabase Production-Project + Migrations + Backup-Settings | half day | Round 3 (c) |
+| DNS + SSL + Domain-Setup | 2h | Round 3 (c) |
+| Real Cloudflare Turnstile Keys + AUTH_SECRET + INTERNAL_API_SECRET Rotation | 1h | Pre-Launch Checklist |
+| Real OpenRouter-Production-Key + Cost-Alarm | 1h | Round 3 |
+| Smoke-Test full-flow Production-Domain | 2h | Round 3 (c) |
+
+### Total-Effort-Bilanz Pre-Launch (Option α, voller Fix)
+
+| Block | Min | Max |
+|---|---|---|
+| Foundation | 7 Tage | 9 Tage |
+| Distribution & Viral | 4-5 Tage | 6 Tage |
+| Security (Blocking + High) | 1.5 Tage | 2 Tage |
+| Auth & Account | 2 Tage | 2.5 Tage |
+| Privacy & Legal | 1.5 Tage | 1.5 Tage |
+| Operational & Hygiene | 2 Tage | 3 Tage |
+| Marketing-Surfaces | 3 Tage | 4 Tage |
+| Naming & UI Redesign | 5 Tage (Hybrid) | 12 Tage (Wholesale + Logo) |
+| Production-Setup | 1.5 Tage | 2 Tage |
+| **TOTAL Engineering** | **~28 Tage** | **~42 Tage** |
+| Spike-Phase (Phase 0 + 1) | 8 Tage | 10 Tage |
+| **GRAND TOTAL** | **~36 Tage = 7-8 Wochen** | **~52 Tage = 10-11 Wochen** |
+
+Realistische Mittel-Schätzung mit normaler Productivity + Surprise-Faktor: **~8-10 Wochen Kalenderzeit**.
+
+### Was bewusst NICHT in v1 (zur Klarstellung)
+
+Aus früheren Discussions explicit als Post-Launch markiert:
+- Capability-Gap-Generation-Implementation (nur wenn Spike erfolgreich → conditional)
+- Business-Improvements + Implementation-Hints Spikes
+- Self-Hosted-Mode + BYOK
+- TypeSpec-Roundtrip
+- Multi-File-Upload
+- GitHub-PR-Integration / GitHub-App
+- Drift-Detection (v0.4 Governance)
+- Cross-Spec / Landscape (v0.2 Multi-Spec-Intelligence)
+- 2FA / SSO / Multi-Factor
+- Audit-Log für Workspace-Aktionen (multi-user)
+- Server-Stub-Codegen-Download
+- Bulk-Apply jenseits "Apply All Critical"
+- Code-First-Mode (Stack-spezifische Code-Patches)
+- Continuous-Mode / CI-PR-Comments (über CLI hinaus)
+- Chat-mit-apiq-über-deinen-Spec
+- Auto-Origin-Detection
+- DPA / Enterprise-Contracts
+- Trademark-Filing (separate Übung post-Launch)
+- Bug-Bounty-Programm
+- Liability-Insurance
+
+### Frage zurück (echt-final)
+
+Mit der vollständigen Liste:
+
+1. **UI-Redesign-Scope:** (i) Surgical / (ii) Wholesale / (iii) Hybrid? Für die Total-Effort-Range macht das 5-12 Tage Unterschied. Und welche Reference-Produkte willst du visuell anpeilen (über Linear/Vercel/Stripe in prd-decisions.md hinaus)?
+
+2. **Etwas vergessen?** Mit dieser konsolidierten Liste — fehlt aus deiner Sicht jetzt wirklich nichts mehr? Items aus früheren Brainstorming-Runden, die du noch nicht in der Tabelle siehst?
+
+3. **Ready für PRD-Draft?** Nach UI-Scope-Decision sollte ich `prd-launch.md` jetzt schreiben.
