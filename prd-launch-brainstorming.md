@@ -2395,3 +2395,89 @@ Sources:
 ### Frage zurück (jetzt wirklich-wirklich-final)
 
 OK mit dem strukturierten-surgical UI-Vorschlag (6.5 Tage)? Wenn ja, schreibe ich `prd-launch.md` jetzt. Sonst: was fehlt oder gefällt nicht?
+
+---
+
+## Pre-PRD Final Verification (2026-05-03)
+
+User: *"hast du jetzt auch an den research spike mit big spec check und i) - iii) test gedacht in der ordnung wie von dir empfohlen und an den openapi spec check vor export und eventuell dann an fixes falls der check fehlschlägt etc."*
+
+Verification — und ein User-spotted Edge-Case, der ergänzt wird.
+
+### Spike-Reihenfolge ✓ already in build-list
+
+```
+Phase 0: Big-Spec-Architecture-Spike  (3-5 Tage, unconditional)
+   ↓
+Phase 1: (i) Capability-Gap-Generation-Spike  (5 Tage)
+   ↓ only if Phase 1 successful
+Phase 2: (ii) Business-Improvements-Spike  (5 Tage)
+   ↓ only if Phase 2 successful
+Phase 3: (iii) Implementation-Hints-Spike  (7 Tage)
+```
+
+Klare Cancel-Schwellwerte. Steht so in der Spike-Phase-Sektion der konsolidierten Build-Liste.
+
+### OpenAPI-Validation — User-spotted Edge-Case ergänzt
+
+Bisher in der Foundation-Sektion:
+- ✅ Re-Validate-**after-Apply** (verhindert dass LLM-Patches semantisch invalides OpenAPI produzieren)
+- ✅ Re-Bundle der `$refs` beim Export (preserve Modularität)
+- ✅ Cycle-Marker zurück zu echten `$refs` beim Export (rekursive Schemas)
+
+**Edge-Case, den der User identifiziert hat und der bisher fehlte:**
+
+Was wenn der User uploadet einen Spec, applied keine Patches, und exportiert direkt? Der Re-Validate-after-Apply triggered nie. Der Spec wurde nur beim Import validiert. Falls zwischen Import und Export Wochen liegen oder unsere Validierungsregeln strenger werden, könnte ein "valid-bei-Import / invalid-bei-Export"-Gap entstehen.
+
+**Lösung — neue Build-Items:**
+
+| Item | Aufwand | Begründung |
+|---|---|---|
+| Export-Time-Validation Safety-Net | 1h | `swagger-parser.validate()` final vor Serialization, immer, unabhängig von vorherigen Validierungen |
+| Export-Validation-Failed Error-UX | 2h | Wenn final-validation fails: Error-Card in Spec-Detail (*"Cannot export — your spec has X validation errors"*) + Liste der Issues + Re-Analyze-Button |
+
+**Behavior bei Failure:** Refuse export (Option A), zeige Error + Issues, biete Re-Analyze. *Keine* Auto-Fix in v1 (das wäre LLM-Call mit eigenem Calibration-Risk → v1.1+ wenn überhaupt).
+
+**Total Aufwand-Add: 3 Stunden.** Vernachlässigbar im Gesamt-Plan, aber löst die Edge-Case.
+
+### Vollständigkeits-Audit — alles aus dem Brainstorming?
+
+Schnell durchgegangen, alles aus den Rounds:
+
+✅ Tagline + Positioning + Audience-Reframe  
+✅ 4 Entry-Points (Web/CLI/MCP/Share) + Core-Loop + 3 Magic Moments + 5 Exit-Options  
+✅ Apply-All-Critical + Apply-All-Total (mit Confirm-Dialog)  
+✅ Stoplight Elements + Prism Live-Preview  
+✅ Three-pane Spec-Detail Layout  
+✅ Quality-Score-Hero  
+✅ Spike-Phase 0+1+2+3 staged mit Cancel-Schwellwerten  
+✅ Big-Spec-Architecture-Spike (Bigger-Context vs Chunking vs Two-Call)  
+✅ Markdown-Findings-Export (für AI-Roundtrip)  
+✅ MCP Server + CLI + Score-Badges + viral loop  
+✅ Anonymous-Demo (Hybrid: sample unlimited, eigener Spec 1/IP/24h)  
+✅ Public-Share-Links  
+✅ MCP-Setup-Doc-Page  
+✅ Paste/Upload Spec-Import  
+✅ Re-Validate-after-Apply / Re-Bundle / Cycle-Marker-Roundtrip  
+✅ **NEU: Export-Time-Validation-Safety-Net + Error-UX**  
+✅ SSRF-Härtung / GDPR-Banner / GDPR-Export+Delete / OG+Twitter-Meta  
+✅ Prompt-Injection / XSS-Härtung / IP-Rate-Limit / Health-Check  
+✅ Email-Verify / Forgot-Password / Login-Rate-Limit / Bcrypt-Cost  
+✅ Privacy/ToS / Privacy-Promise / Sub-Processor-Disclosure / Content-Moderation  
+✅ Sentry / PostHog / Security-Headers / Sitemap / Status-Page / Backup-Verify / Welcome-Email / Contact / Pricing  
+✅ Landing / Empty-State / Marketing-Copy / Onboarding-Hints  
+✅ Sidebar-Restructure (3 Sections + Footer-Menu)  
+✅ Command Palette (Cmd+K)  
+✅ Quality-Score-Hero  
+✅ Empty-State Polish + General Density-Pass  
+✅ Naming-Workshop (post-PRD)  
+✅ Logo + Brand-Assets (post-Naming)  
+✅ Vercel + Supabase Prod + DNS + Secret-Rotation + Smoke-Test  
+
+Plus alle "What we explicitly NOT in v1" — Drift-Detection, Cross-Spec Landscape, Code-First-Mode, Audit-Log, BYOK, Self-Hosted, TypeSpec-Roundtrip, GitHub-PR-Integration, Stripe-Billing, 2FA/SSO etc. — als post-Launch-Roadmap dokumentiert.
+
+### Updated Total
+
+Vorher: ~36-42 Tage Engineering. Mit den 3 Stunden Export-Validation-Add: **immer noch ~36-42 Tage** (3h sind im Rauschen).
+
+**Status: vollständig. Bereit für PRD-Draft.**
