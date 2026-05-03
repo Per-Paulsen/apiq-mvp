@@ -415,3 +415,48 @@ Epics 10, 11, 12, 13 sind **on-demand spec'd** — keine Vorab-Files, kein Stub.
 ### Praktischer Hinweis
 
 Direkt nach Implementation von Epic 09 (S0): **Resultatfile sofort lesen** und Trigger-Entscheidung treffen — nicht aufschieben. Wenn S1 erfolgreich (~60-70% Wahrscheinlichkeit per PRD §4), spart sofortiges `/spec_ind 10` Kontext-Wiederherstellung.
+
+---
+
+## Portfolio-Deploy von v0.1 (live since 2026-05-03) — Auswirkungen auf v1-Epics
+
+Pre-v1 wurde v0.1 als Portfolio-Demo auf Vercel deployed. Details + Cross-Cutting-Touchpoints in `LAUNCH-PROGRESS.md` §"Production state — v0.1 portfolio deploy". Hier die epic-spezifischen Implikationen:
+
+### Epic 17 (UI Redesign)
+
+Aktuelle Landing-Page (`src/app/(public)/page.tsx`) enthält den Demo-Banner mit Credentials + One-Click-Login-Button (gated by `DEMO_MODE=true`). Beim Redesign:
+- Die `DEMO_MODE`-conditional muss erhalten bleiben — sonst verschwindet der Demo-Pfad bei Production-Redesign.
+- Falls UI-Redesign die komplette Landing umstrukturiert (Epic 27 territory), Demo-Banner als eigene Komponente extrahieren und konditional einbinden.
+
+### Epic 19 (Anonymous Demo + Public Share)
+
+Strategischer Konflikt mit dem aktuellen Pre-Seeded-Demo-Account-Modell. Drei Migrations-Optionen post-Epic-19:
+- **Beide-coexist:** Demo-Account-Login bleibt erhalten als Quick-Path; `/anon/<token>` ist die volle anonyme Reise. Kein Code-Refactor nötig.
+- **Demo-Account ablösen:** `demo-login-action.ts` + `seed-demo` + Reset-Cron werden retired; Landing-CTA zeigt nur noch `/try`-Button (Epic 19's anon-flow). Sauberer aber bedeutet ~50 Zeilen Code-Löschung + Datenbereinigung.
+- **Hybrid:** Demo-Account bleibt für Power-User-Showcase (volle App, alle Features), `/anon/<token>` ist die Marketing-Front-Door. Vermutlich beste UX.
+
+Entscheidung post-Epic-19-Implementation. Epic 19's Spec sollte das berücksichtigen — eine Brainstorming-Append in `specs/19-anonymous-demo-public-share-brainstorming.md` ist sinnvoll, sobald implementiert wird.
+
+### Epic 23 (Auth Hardening)
+
+Strict Email-Verification-Block könnte den Demo-Login-Flow brechen, falls `User.emailVerifiedAt` für den Demo-User nicht gesetzt ist. Aktuell wird `emailVerified: new Date()` im Seed gesetzt (`src/lib/seed-demo.ts` Zeile ~85). Wenn Epic 23 das Field umbenennt (z.B. `emailVerifiedAt`), muss der Seed entsprechend angepasst werden.
+
+Bcrypt-12-Migration: der Demo-User wird beim Seed mit Cost-Factor 10 gehashed (existing v0.1-Default). Auth.js bcrypt-compare funktioniert gegen jeden Cost-Factor → kein Bruch. Aber falls Epic 23 strict-Cost-Check macht: Seed auf Cost-12 anpassen (1-Zeilen-Change in `seed-demo.ts`).
+
+### Epic 26 (Operational Hygiene)
+
+`vercel.json` enthält bereits einen Cron-Eintrag für `/api/cron/reset-demo`. Epic 26 fügt `/api/cron/cleanup-anonymous-analyses` hinzu — **nicht ersetzen, append**. Final `vercel.json` sollte beide Crons enthalten.
+
+`.env.production.example` muss erweitert werden um Sentry-DSN, PostHog-Key, Resend-API-Key etc. — additiv zur bestehenden Liste.
+
+### Epic 27 (Marketing Surfaces)
+
+Landing-Page-Redesign konkurriert direkt mit der aktuellen Demo-Landing. Empfehlung: Epic 27 baut die neue Marketing-Landing, integriert Demo-Banner als optionale Sektion (gated by `DEMO_MODE=true`). Fallback bei `DEMO_MODE=false` ist der reguläre Sign-up/Login-CTA (Epic 27 Marketing-Hero).
+
+### Epic 28 (Production Setup)
+
+Geht in Spec aktuell von Greenfield-Setup aus (neues Vercel-Project, neue Supabase-Production-Project, etc.). **Realität:** Vercel-Project + Supabase laufen schon. Smoke-Test-Matrix bleibt relevant, aber "provisioning"-Schritte sind teilweise schon abgehakt.
+
+Konkret: Epic 28's Acceptance-Criteria #1 ("Vercel production project provisioned") ist bereits erfüllt. Epic 28's #3 ("Supabase EU-Region") ebenfalls (eu-north-1). Epic 28 wird beim `/dev`-Run pragmatisch: was schon existiert, wird wiederverwendet, was fehlt (echter Domain, separate Prod-DB falls gewünscht, Production-grade Backup-Verify) wird ergänzt.
+
+Empfehlung beim Epic 28 Implementation-Start: erst `LAUNCH-PROGRESS.md` §"Production state" lesen, dann Spec-AC durchgehen + per-AC entscheiden "schon erfüllt" / "muss noch".

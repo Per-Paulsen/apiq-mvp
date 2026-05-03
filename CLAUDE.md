@@ -4,6 +4,7 @@ Guidance for Claude Code (claude.ai/code) when working with this repository.
 
 > **Status:** v0.1 implementation complete (Epics 00–08). v1 launch specs in place (Epics 09 + 14–28). Conditional Spike-Epics 10–13 NOT yet spec'd.
 > **Done:** Epic 00 (Research Spike) → Epic 08 (Export + Polish). 298 tests pass, lint + build clean.
+> **Live:** Portfolio-deploy of v0.1 at https://apiq-mvp.vercel.app — pre-seeded demo (`demo@example.com` / `demo`) with daily 03:00 UTC reset. **v1 epic work touches the live codebase — read `LAUNCH-PROGRESS.md` §"Production state" before changes that affect landing-page / login / cron / seed.**
 > **Next:** v1 launch implementation. Start with Epic 09 (Big-Spec Architecture Spike) via `/dev specs/09-big-spec-architecture-spike.md`.
 >
 > **Conditional epics 10–13 (Spike S1/S2/S3 + Capability-Gap-Implementation):** spec'd ON-DEMAND after each preceding spike's `*-results.md` Cancel-Decision. Workflow + cancel-thresholds in `specs/brainstorming-launch.md` §"Conditional Epic Trigger Workflow". Trigger via `/spec_ind <n> <slug> "<context-prompt>"`. Skipping is safe (those features auto-defer to v1.1+); the engineering-track 14→28 ships v1 either way.

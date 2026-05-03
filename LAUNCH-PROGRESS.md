@@ -3,6 +3,59 @@
 > Live checklist of v1-launch epic implementation. Edit checkboxes as epics ship.
 > Source-of-truth for the conditional-spike-trigger workflow (Epics 10–13).
 
+## Production state — v0.1 portfolio deploy (live since 2026-05-03)
+
+Pre-v1, the v0.1 build is deployed to Vercel as a portfolio-grade demo. All v1 epic-implementation work happens against this live codebase — relevant cross-cutting touchpoints below.
+
+| Item | Value |
+|---|---|
+| Production URL | https://apiq-mvp.vercel.app |
+| GitHub repo | https://github.com/Per-Paulsen/apiq-mvp (private; can be flipped to public via `gh repo edit Per-Paulsen/apiq-mvp --visibility public --accept-visibility-change-consequences`) |
+| Vercel project | per-paulsens-projects/apiq-mvp · prj_NxMsbdfCjwdjAsJ73BIJ8tjUhlFy |
+| DB | Supabase EU-North-1, project `ouzznqiooklxdllhxgiu` — **dev + prod share the same DB** (workspace-scoped isolation; Demo-Workspace is one user out of many) |
+| Demo credentials | `demo@example.com` / `demo` — pre-seeded via `scripts/seed-demo.ts`, daily-reset cron at 03:00 UTC via `vercel.json` + `/api/cron/reset-demo` |
+| Demo content | 1 fixture: Swagger Petstore 3.0 (score 32, 14 findings, 19 endpoints) — committed at `scripts/seed-fixtures/swagger-petstore-openapi-3-0.json` |
+| Env-flag | `DEMO_MODE=true` — gates landing-page banner + auto-login button + reset-cron route |
+| OpenRouter cap | $20 lifetime credit-cap on the production key (account-level kill-switch in case of abuse) |
+| Workspace LLM cap | $10/24h per workspace (existing v0.1, unchanged) |
+| Anti-bot | Cloudflare Turnstile (production keys) on signup; login has no Turnstile per Epic 02 design |
+
+### Files owned by the portfolio deploy (v1 epics must NOT silently break these)
+
+| File | Purpose | v1 epic interaction |
+|---|---|---|
+| `src/app/(public)/page.tsx` | Landing page with demo banner | **Epic 17 / 27** UI Redesign + Marketing Surfaces — must preserve or migrate the `DEMO_MODE` banner |
+| `src/app/(public)/demo-login-action.ts` | Server-action that auto-logs in demo user | **Epic 23** Auth Hardening — if email-verification adds a strict block, the demo user must keep `emailVerified` set (already done by seed-demo) |
+| `src/lib/seed-demo.ts` | Idempotent seed logic | **Epic 19** Anonymous Demo introduces a richer anon-flow; demo-account pattern can stay alongside or be retired in favor of `/anon/<token>` |
+| `src/app/api/cron/reset-demo/route.ts` | Daily reset cron route | **Epic 26** Operational Hygiene adds more crons — keep this route in `vercel.json` cron list |
+| `scripts/capture-demo-fixtures.ts` + `scripts/seed-demo.ts` | CLI scripts | None directly affected; but new fixtures from updated v1 prompt may need re-capture |
+| `scripts/seed-fixtures/*.json` | Pre-baked demo analyses | Re-capture if v1's prompt (Epic 04 evolution / Epic 09 spike outcome) significantly changes finding-shape |
+| `vercel.json` | Cron schedule | **Epic 26** appends `cleanup-anonymous-analyses` cron — DO NOT replace, append |
+| `.env.production.example` | Env-template (committed) | **Epic 23/24/25/26** add new vars (Resend, Sentry, PostHog, etc.) — extend, don't overwrite |
+| `DEPLOY-PORTFOLIO.md` | Runbook | Update when v1 launches — either retire the portfolio-deploy mechanism or document the v0.1 → v1 transition |
+
+### Honest gaps in the portfolio deploy (acceptable for v0.1; closed by v1 epics)
+
+- No email verification (Epic 23 fixes)
+- No forgot-password (Epic 23)
+- No Privacy/ToS pages, no cookie banner (Epic 25)
+- No SSRF hardening on URL pull (Epic 24)
+- No Sentry / PostHog (Epic 26)
+- No prompt-injection delimiters (Epic 24)
+- Single-region Vercel + same DB for dev+prod (Epic 28 production setup formalizes this)
+
+### v1-launch-day: portfolio-deploy disposition
+
+Three options when v1 ships, decide post-Epic 28:
+
+1. **Retire** — flip `DEMO_MODE=false`, demo-banner disappears, the same Vercel project becomes the v1 launch site. Demo workspace + reset cron stay (harmless), or get cleaned up.
+2. **Coexist** — keep `DEMO_MODE=true` for the demo experience, separately deploy v1 to a new Vercel project at the post-naming-workshop domain. Two live deploys.
+3. **Migrate to Epic 19's `/anon/<token>`** — replace the pre-seeded demo-account model with the proper anonymous-demo flow. Cleanest long-term; means deleting `demo-login-action.ts` + the seed cron, and relying on Epic 19's UX instead.
+
+Recommendation: option 1 (retire). The pre-seeded demo-account is a v0.1 stopgap; Epic 19's anon-flow is the v1 native answer.
+
+---
+
 ## Epics
 
 ### Spike track
