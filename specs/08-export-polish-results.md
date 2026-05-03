@@ -280,8 +280,6 @@ I don't know — that's a product / business decision, not engineering. From con
 
 lets discuss this in more detail, after the other questions are resolved? is that possible?
 
-
-
 ---
 
 ## Round 2 — user responses + (B)-band-aid shipped (2026-05-03)
@@ -294,16 +292,18 @@ User picked (B) — band-aid responsive — and asked whether I have data on mob
 
 1. `src/app/(app)/specs/specs-list-view.tsx` — table wrapper class changed from `overflow-hidden rounded-lg border border-border` to `overflow-x-auto rounded-lg border border-border`. The 7-column table now scrolls horizontally **inside** its container at <800 px instead of pushing the whole page wider than the viewport.
 2. `src/app/(app)/specs/[specId]/spec-detail-header.tsx`:
-   - Long source-URL `<code>` got `break-all` (was wrapping but not breaking long URLs at 360 px).
-   - Action-button row got `flex-wrap` (was `flex` — 4 buttons at 360 px overflowed to 560 px). Now the row wraps to 2–3 lines on narrow screens.
+  - Long source-URL `<code>` got `break-all` (was wrapping but not breaking long URLs at 360 px).
+  - Action-button row got `flex-wrap` (was `flex` — 4 buttons at 360 px overflowed to 560 px). Now the row wraps to 2–3 lines on narrow screens.
 
 **Browser-verified at 360 × 800:**
 
-| Screen | Before | After |
-|---|---|---|
-| `/specs` | document overflows to ~700 px | `documentScrollWidth = 360`, table scrolls internally (table = 942 px wide, wrapper = 310 px) |
-| `/specs/[specId]` | document overflows to ~560 px | `documentScrollWidth = 345`, no overflow (URL break + button-row wrap fixed) |
-| `/settings` | already fine (max-w-2xl) | `documentScrollWidth = 345`, no overflow |
+
+| Screen            | Before                        | After                                                                                         |
+| ----------------- | ----------------------------- | --------------------------------------------------------------------------------------------- |
+| `/specs`          | document overflows to ~700 px | `documentScrollWidth = 360`, table scrolls internally (table = 942 px wide, wrapper = 310 px) |
+| `/specs/[specId]` | document overflows to ~560 px | `documentScrollWidth = 345`, no overflow (URL break + button-row wrap fixed)                  |
+| `/settings`       | already fine (max-w-2xl)      | `documentScrollWidth = 345`, no overflow                                                      |
+
 
 The mobile-fallback banner stays — its job is now just to set expectations ("this is best on desktop") rather than be the only mobile-handling mechanism. Screenshot: `docs/screenshots/epic-08-specs-360.png` (specs list + banner at 360 px).
 
@@ -317,6 +317,10 @@ Tests still 298 / 298 (no test changes; no behavioural changes — only Tailwind
 
 For v0.1 the signup-required path is the right shape — it ensures every demo run goes through `loadSampleSpecAction` which uses real LLM analysis on a real Postgres row, so the user sees the actual product immediately.
 
+
+
+do the users can an example link ie to the swagger petshop or whatever? so that they can easily check out apiq before applying to their own specs?
+
 ### Q5 — "lets discuss this in more detail, after the other questions are resolved?"
 
 Yes — happy to. When you're ready, reply with one of:
@@ -325,7 +329,137 @@ Yes — happy to. When you're ready, reply with one of:
 - "Target date is YYYY-MM-DD, draft the runbook + checklist with that date" → I anchor the runbook to your timeline.
 - "Skip the runbook, I'll keep it in my head" → I close Q5 with no action.
 
+
+
+actually my question is: where are we now? what exactly, or which user flow, have we implemented in v0.1? and what is in v0.2? is it worth already deploying v0.1 and maybe publishing it somewhere? what do we have to do to publish it somewhere? shall users pay their own llm calls? and how to implement this? and what else do we still have to implement for real users to be able to use apiq?
+
+
+
 ---
 
-> **Status:** Q2 (B) shipped. Q4 closed (signup required, by design). Q5 open by user choice — awaiting your reply on which runbook variant you want. Epic 08 implementation otherwise complete.
+## Round 3 — sample-link follow-up + launch-readiness brief (2026-05-03)
+
+### Q4 follow-up — "can users click an example link (Swagger Petstore etc.)?"
+
+**Yes, this already exists** — the empty-state on `/specs` has a secondary "Try with a sample spec" button. Per Epic 03 + Epic 07: when the workspace has zero specs, the Empty State renders the violet "Add spec from URL" primary CTA + a ghost "Try with a sample spec" secondary CTA. Clicking the secondary CTA calls `loadSampleSpecAction({ sampleId: 'openweathermap' })` → loads the bundled OpenWeatherMap spec from disk → analyzes → redirects to `/specs/[newSpecId]` where the user sees real findings within ~60 s.
+
+The sample is **OpenWeatherMap, not Petstore.** Why: OpenWeatherMap is small (1 endpoint), publicly known, and produces interesting findings (the spec literally embeds an API key as a default query parameter — Epic 04's verify run flagged this as critical). Petstore is bigger (19 endpoints), more design-mature, and produces more "design" findings than "risk" findings — less compelling as a first impression.
+
+**If you want to also offer Petstore (or others)**, the work is small:
+
+- `src/app/(app)/specs/actions.ts` — extend `SAMPLE_ALLOW_LIST` from `Set(['openweathermap'])` to include the others (`stripe`, `dnd5eapi`; **not** `pagerduty` per the existing CLAUDE.md note: no upstream LICENSE).
+- `src/app/(app)/specs/empty-state.tsx` — replace the single secondary button with a small radio / select / 2-3 buttons row (Try OpenWeatherMap / Try Petstore / Try D&D 5e API).
+- Cost: ~15-30 minutes + 1 follow-up Vitest test.
+
+Two Petstore caveats:
+- Petstore is in `openapi-examples/` but I don't see a `petstore` sample folder there. Would need to add `openapi-examples/petstore/spec.json` + a tiny README. Maybe 5 minutes more.
+- The dev DB already has 2 Petstore specs from Epic-03/04 verification runs — the workspace would show the new sample-loaded Petstore plus those leftover ones. Not a blocker but visually confusing during testing.
+
+**Recommendation:** Today's single OpenWeatherMap sample is doing the marketing job ("see findings on a real API in 60 s"). Adding more samples is value-add for repeat trial users (people who already hit the OpenWeatherMap demo and want to see another) — relatively rare on first-impression. Keep as-is for v0.1; if user feedback says "I tried the sample, what now?", add Petstore as a v0.2 polish patch.
+
+**Question for you:** keep single sample for v0.1, or add Petstore now (~30 min)?
+
+### Q5 — Launch-readiness brief
+
+Genuinely good questions. Long answer; I'll structure as: (a) what's in v0.1, (b) what's NOT in v0.1, (c) what it takes to publish, (d) the LLM-payment question, (e) what's left for real users. No code in this round — this is a planning artefact.
+
+#### (a) What v0.1 actually does (the implemented user flow)
+
+A solo engineer (or small workspace owner) lands on the signup page, creates an account, and gets a workspace. They:
+
+1. **Sign up** at `/signup` → Cloudflare Turnstile passes → User + Workspace + UserWorkspace created atomically → redirected to `/specs`.
+2. **Land on /specs** with an empty state. Two CTAs: "Add spec from URL" or "Try with a sample spec" (loads OpenWeatherMap).
+3. **Add their first spec** at `/specs/new` by pasting a URL (optionally with an `Authorization` header for private specs). Backend fetches → validates as OpenAPI 3.x → dereferences `$ref`s → saves originalJson + currentJson + initial SpecVersion → redirects to `/specs/[id]`.
+4. **Watch the analysis happen** on `/specs/[id]` — `analysisStatus` flips `pending` → `analyzing` → `completed` (~60 s). UI polls every 3 s and shows a spinner. On `completed`, the user sees a quality score (0–100), a tag-grouped endpoint list on the left, and 5–20 finding cards on the right. Each finding has: title, severity, category, narration (~3-5 sentences, engineering-grade), rationale, JSON Patch ops, before/after diff preview, Apply / Reject buttons.
+5. **Apply or Reject patches** one at a time. Apply mutates `currentJson`, creates a new SpecVersion (linear history), and updates the quality score. Reject just dismisses the finding. Both have Undo. The Versions drawer shows the full edit history.
+6. **Re-pull or Re-analyze** any time. Re-pull fetches the URL again (open findings flip to `outdated`); Re-analyze runs LLM analysis on the current spec (open findings replaced with fresh ones).
+7. **Export** the modified spec as JSON or YAML. Filename includes spec slug + version number.
+8. **Manage settings** at `/settings` — workspace name, profile name, theme (Light/Dark), sign out.
+
+That's the v0.1 promise: "Upload a spec, see what's wrong, fix it in clicks, export the result." It works end-to-end against the real Supabase DB + real OpenRouter Sonnet (verified by `scripts/verify-llm-pipeline.ts` + every Epic-04+ browser run).
+
+#### (b) What v0.1 deliberately does NOT do
+
+From `prd.md` §"What apiq is NOT" + epic out-of-scope sections:
+
+- Multi-spec aggregation, capability/journey mapping (v0.2 "Landscape")
+- Net-new endpoint generation from gaps (v0.3 "Generation")
+- Spec-drift detection / change monitoring (v0.4 "Governance")
+- Deep auth scanning (BOLA exploitation, runtime fuzzing) — different lane, stays out
+- Spec-discovery from Git / API gateways — different lane, stays out
+- Team features (commenting, approvals, role hierarchy) — single user per workspace
+- AsyncAPI / GraphQL / gRPC — OpenAPI 3.x only
+- Mobile UI — desktop-first, banner only (now with the (B) band-aid for graceful degradation)
+- i18n — English only
+- Formal a11y audit — best-effort via shadcn defaults
+- Re-bundling `$ref`s on export — exports are dereferenced + cycle-stripped
+- Specific-version export / bulk export / diff export — single-current-version export only
+- CI/CD pipeline / preview deploys / production deploy runbook
+- Performance profiling / bundle-size audit
+- Custom error illustrations / branding polish
+- Two-call architecture for >50-endpoint specs (v0.2 if calibration says it's needed)
+- Analytics / telemetry beyond the internal `LLMCall` audit
+
+So v0.1 is a **single-user, single-spec, single-workspace, English-only, desktop-only design partner.** That's the focus.
+
+#### (c) What it takes to publish v0.1 somewhere
+
+Today the codebase runs on `localhost:3000` against a dev Supabase DB. To put it in front of real users:
+
+**Infrastructure (operator-side, ~half a day):**
+1. Create a production Supabase project (separate from dev). Copy the migration history, run `npx prisma migrate deploy` against the prod URL.
+2. Create a Vercel project, point it at this GitHub repo. Configure environment variables on Vercel: `DATABASE_URL` (prod Supabase), `AUTH_SECRET` (rotate via `openssl rand -base64 32`), `INTERNAL_API_SECRET` (rotate), `OPENROUTER_API_KEY` (your real key), `TURNSTILE_SITE_KEY` + `TURNSTILE_SECRET_KEY` (real Cloudflare keys; create a new Turnstile widget on your deploy domain).
+3. Buy or assign a domain (apiq.dev / apiq.io / wherever). Point DNS to Vercel.
+4. Verify deploy: signup → add spec → analyze → export. End-to-end on the real domain.
+5. Set up Vercel's deploy notifications + a basic health check.
+
+**Legal + content (engineering-adjacent, ~half a day):**
+6. Privacy policy page at `/privacy` (legally required for accounts; even a templated one is enough for v0.1). Mention: Supabase data location, OpenRouter as a sub-processor (your prompts get sent to Anthropic via OpenRouter).
+7. Terms of service page at `/terms` (use rate limits, no warranty, etc.). Templated is fine.
+8. A footer link to both from at least the signup page (most jurisdictions require pre-signup acceptance).
+
+**Smoke testing (~2 hours):**
+9. Real signup with a fresh email → real spec analysis → real export. Verify each step on the deploy.
+
+That's the minimum to publish. Probably **1 day end-to-end** if everything goes smoothly. Two days if Vercel / Supabase / DNS surprises happen.
+
+#### (d) Should users pay for their own LLM calls?
+
+Three viable shapes — pick based on your audience:
+
+- **(A) Operator-funded with workspace caps (today's shape).** Each workspace gets `$10 / 24h` (per Epic 04). You eat the cost. **Pros:** zero friction for users, fastest signup → value path. **Cons:** doesn't scale beyond a small group; one bad-actor workspace could cost you up to $10/day until they hit the cap. **Best for:** public-but-friend-small launch (≤50 users), or a free-tier with a paid tier added later.
+- **(B) Bring-your-own-key.** Add an `OpenRouter API key` field in Settings; `runAnalysis` uses it instead of the env var. **Pros:** zero ongoing cost to you. **Cons:** UX friction (most engineers don't have OpenRouter accounts; explaining what to sign up for adds another funnel step); secret management complexity (encrypt-at-rest in Postgres, never log, rotation flow). Implementation: ~2 days. **Best for:** open-source / self-hosted positioning where you're publishing the codebase and users run their own instances.
+- **(C) Stripe-billed metered usage.** You pay OpenRouter; users pay you a markup (e.g., $0.10 per analysis above the free tier of N/month). Stripe Customer Portal for billing. **Pros:** sustainable revenue model. **Cons:** ~2 weeks of work (Stripe integration, usage metering, plan-tier UI, dunning, refunds). **Best for:** real product launch where you intend to grow.
+
+**For "publish v0.1 somewhere" today, my recommendation: stay on (A).** $10/day/workspace is a small enough cap that even 50 active workspaces in a worst-case bad-actor day costs you $500. Watch the `LLMCall` table; if a workspace burns through the cap repeatedly, you can manually add a per-workspace override or kick them. Plan the v0.2 → (B) or (C) migration after you have actual usage data showing whether engineers will pay.
+
+#### (e) What else is needed for "real users"
+
+These are the gaps between "feature-complete v0.1" and "actually serviceable for paying / public users". Roughly ordered by importance:
+
+1. **Email verification on signup.** Today: signup just succeeds with the user's claimed email — no proof of ownership. Anyone can sign up with `someone-else@gmail.com`. Auth.js v5 has a `Email` provider that handles verification flows. Cost: ~1 day. Important if real users are coming.
+2. **Forgot-password flow.** Today: no recovery. If a user forgets their password they're locked out forever. Cost: ~1 day.
+3. **Sentry (or equivalent) for error tracking.** Today: server-side errors print to stdout; client-side errors disappear. You won't know about a broken deploy until a user complains. Cost: ~2 hours.
+4. **Privacy + ToS pages (covered in (c) above).**
+5. **Better failed-analysis UX.** Today: when LLM analysis fails (zod validation, OpenRouter outage), the failed-card shows the raw zod error JSON via `formatAnalysisError`. Engineer-readable but ugly. Cost: ~half a day to add user-friendly error categories ("LLM service is temporarily unavailable, please retry" / "Your spec is too complex to analyze, try a smaller subset").
+6. **Account-deletion + data-export.** GDPR/privacy compliance in the EU. "Delete my account" button in Settings → cascades to Workspace, Specs, etc. "Export my data" button → ZIP of all your specs. Cost: ~1 day combined.
+7. **Usage limits visible to the user.** Today: when a user hits the $10/24h cap, they see "Daily LLM budget reached ($X / $10) — resets at <time>" via the budget-toast hook. But they have no UI to see their usage *before* hitting the cap. A simple usage meter in Settings ("$X.XX of $10.00 used today") would help. Cost: ~half a day.
+8. **Documentation / FAQ.** Today the only docs are in this repo's `prd.md` etc. — internal-facing. A user-facing "what is apiq" landing page + 5–10 FAQ entries are needed. Cost: ~1 day for content + a simple `/about` route.
+9. **Welcome email after signup.** Standard onboarding signal. ~2 hours via a transactional email service (Resend / Postmark).
+
+**Rough total to "real users":** ~5–8 days of engineering. Order of priority: (4) + (1) + (2) + (3) before any external link goes out, then (5)–(9) over the first week of usage.
+
+#### So — is it worth deploying v0.1?
+
+**Yes, IF the audience is friends-and-collaborators ("look at this, give me feedback") rather than the public.** That audience tolerates the missing email-verification, forgot-password, sentry, privacy-page gaps. You'd just need to: do (c) infrastructure + privacy/ToS, run the operator-side pre-launch checklist, and you can put it behind a public URL.
+
+**Not yet, if the audience is the public.** Without (1) + (2) + (3) at minimum, the first time someone forgets a password or hits a bug, you'll lose them.
+
+**Concrete next step recommendation:** Decide which audience first. If friends-and-collaborators, I can spawn `/spec_ind 09 launch-prep "infrastructure + privacy-page + onboarding gaps for friends-launch"` and we close out the operator-side work in one focused epic. If public, that's `/spec_ind 09 production-readiness "..."` and it's a 1-week sequence covering everything in section (e).
+
+**Question for you:** which audience? (Or: do you want me to draft both options as one-page sketches so you can decide?)
+
+---
+
+> **Status:** Q4 closed for v0.1 (single sample is enough; expansion deferred). Q5 expanded into a launch-readiness brief — awaiting your call on (1) Petstore-as-2nd-sample (~30 min) and (2) friends-launch vs public-launch path for v0.1 deploy. Epic 08 code is final and committed at `5430fd6`.
 
