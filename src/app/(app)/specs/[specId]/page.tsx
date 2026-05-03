@@ -16,12 +16,29 @@
  * controls what the right pane renders; the findings always feed the endpoint
  * list's per-row counts.
  */
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
 import { prisma } from '@/lib/prisma';
 import { getRequiredSession } from '@/lib/session';
 
 import { SpecDetailView } from './spec-detail-view';
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ specId: string }>;
+}): Promise<Metadata> {
+  const session = await getRequiredSession();
+  const { specId } = await params;
+  const spec = await prisma.spec.findFirst({
+    where: { id: specId, workspaceId: session.workspaceId },
+    select: { name: true },
+  });
+  return {
+    title: spec ? `${spec.name} · apiq` : 'Spec · apiq',
+  };
+}
 
 export default async function SpecDetailPage({
   params,

@@ -6,6 +6,8 @@
  * route segment is gated by Epic 02 middleware, and `getRequiredSession()`
  * itself redirects to `/login` if anything is missing.
  */
+import type { Metadata } from 'next';
+
 import {
   Card,
   CardContent,
@@ -20,6 +22,11 @@ import { AppearanceSection } from './appearance-section';
 import { ProfileForm } from './profile-form';
 import { SessionSection } from './session-section';
 import { WorkspaceForm } from './workspace-form';
+
+export const metadata: Metadata = {
+  title: 'Settings · apiq',
+  description: 'Workspace and profile settings',
+};
 
 export default async function SettingsPage() {
   const { workspaceId, userId, email } = await getRequiredSession();

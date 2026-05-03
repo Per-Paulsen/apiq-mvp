@@ -25,7 +25,7 @@ import { useActionState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { formatQuotaToast } from '@/lib/toasts';
+import { formatQuotaToast, showToast } from '@/lib/toasts';
 
 import { type AddSpecResult } from '../actions';
 import { addSpecFromUrlFormAction } from './form-action';
@@ -50,9 +50,6 @@ function renderTopErrorMessage(error: {
 }): string {
   switch (error.kind) {
     case 'rate_limited': {
-      // TODO (Epic 08): also call showToast(formatQuotaToast(error)) here so
-      // the same message surfaces top-right as a toast. For now the inline
-      // banner is the only surface.
       const formatted = formatQuotaToast({
         kind: 'rate_limited',
         retryAt: error.retryAt ?? new Date().toISOString(),
@@ -112,6 +109,17 @@ export function AddSpecForm() {
       router.push(`/specs/${state.specId}`);
     }
   }, [state, router]);
+
+  useEffect(() => {
+    if (!state || state.success) return;
+    if (state.error.kind !== 'rate_limited') return;
+    showToast(
+      formatQuotaToast({
+        kind: 'rate_limited',
+        retryAt: state.error.retryAt ?? new Date().toISOString(),
+      }),
+    );
+  }, [state]);
 
   const error = state && !state.success ? state.error : null;
   const fieldError = error && isFieldError(error.kind) ? error : null;

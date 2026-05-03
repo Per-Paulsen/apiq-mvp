@@ -359,6 +359,7 @@ function OpenActions({ finding }: { finding: Finding }): React.JSX.Element {
     startTransition(async () => {
       const result = await applyFindingAction({ findingId: finding.id });
       if (result.success) {
+        showToast(TOASTS.patchApplied);
         router.refresh();
         return;
       }
@@ -381,6 +382,7 @@ function OpenActions({ finding }: { finding: Finding }): React.JSX.Element {
     startTransition(async () => {
       const result = await rejectFindingAction({ findingId: finding.id });
       if (result.success) {
+        showToast(TOASTS.patchRejected);
         router.refresh();
         return;
       }
@@ -410,6 +412,7 @@ function AppliedActions({ finding }: { finding: Finding }): React.JSX.Element {
     startTransition(async () => {
       const result = await undoApplyAction({ findingId: finding.id });
       if (result.success) {
+        showToast(TOASTS.applyUndone);
         router.refresh();
         return;
       }
@@ -450,6 +453,7 @@ function RejectedActions({ finding }: { finding: Finding }): React.JSX.Element {
     startTransition(async () => {
       const result = await undoRejectAction({ findingId: finding.id });
       if (result.success) {
+        showToast(TOASTS.rejectUndone);
         router.refresh();
         return;
       }

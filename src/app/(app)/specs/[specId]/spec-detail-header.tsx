@@ -33,8 +33,10 @@ import { useTransition } from 'react';
 import type { Spec, SpecVersion } from '@/generated/prisma/client';
 import { Button } from '@/components/ui/button';
 import { QualityScoreBadge, StatusPill } from '@/components/spec-badges';
+import { formatQuotaToast, showToast, TOASTS } from '@/lib/toasts';
 
 import { reanalyzeSpecAction, repullSpecAction } from '../actions';
+import { ExportButtons } from './export-buttons';
 import { VersionsDrawer } from './versions-drawer';
 
 // ---------------------------------------------------------------------------
@@ -59,14 +61,26 @@ export function SpecDetailHeader({
 
   function onRepull() {
     startRepull(async () => {
-      await repullSpecAction({ specId: spec.id });
+      const result = await repullSpecAction({ specId: spec.id });
+      if (result.success) {
+        showToast(TOASTS.rePullComplete);
+        router.refresh();
+        return;
+      }
+      if (result.error.kind === 'rate_limited') {
+        showToast(formatQuotaToast(result.error));
+        return;
+      }
       router.refresh();
     });
   }
 
   function onReanalyze() {
     startReanalyze(async () => {
-      await reanalyzeSpecAction({ specId: spec.id });
+      const result = await reanalyzeSpecAction({ specId: spec.id });
+      if (result.success) {
+        showToast(TOASTS.reanalyzeStarted);
+      }
       router.refresh();
     });
   }
@@ -118,6 +132,7 @@ export function SpecDetailHeader({
         >
           Re-analyze
         </Button>
+        <ExportButtons spec={spec} />
       </div>
     </header>
   );

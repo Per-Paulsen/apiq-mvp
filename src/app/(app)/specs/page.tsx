@@ -14,11 +14,18 @@
  * Cross-workspace isolation: every query is scoped via
  * `workspaceId = session.workspaceId` (AC #8).
  */
+import type { Metadata } from 'next';
+
 import { prisma } from '@/lib/prisma';
 import { getRequiredSession } from '@/lib/session';
 
 import { EmptyState } from './empty-state';
 import { SpecsListView, type FindingCounts } from './specs-list-view';
+
+export const metadata: Metadata = {
+  title: 'Specs · apiq',
+  description: 'Your API specs',
+};
 
 export default async function SpecsPage(): Promise<React.JSX.Element> {
   const session = await getRequiredSession();

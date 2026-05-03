@@ -107,4 +107,6 @@ cd scripts/spike && npx tsx run-prompt.ts <variant> <spec>
 - Rotate Supabase password (early `.env` setup leaked it into chat history)
 - Replace `AUTH_SECRET` + `INTERNAL_API_SECRET` dev placeholders with `openssl rand -base64 32`
 - Replace Turnstile test keys with real Cloudflare keys (free tier)
-- Rename 3 `{UUID}.png` design references at repo root to descriptive filenames
+- ~~Rename 3 `{UUID}.png` design references at repo root to descriptive filenames~~ — RESOLVED in Epic 08 (renamed to `fillow-template-reference.png`, `design-reference-1.png`, `design-reference-2.png`; `prd-decisions.md` reference updated).
+- Verify OpenRouter pricing table in `src/lib/analysis/runAnalysis.ts` (Sonnet $3 / $15 per 1M) against the OpenRouter pricing page on a monthly cadence (per Epic 04 results §"Cross-cutting / pre-launch").
+- Clean up the dev-DB Petstore-failed spec (`cmooa9mr70001poulfc6lgbhl`) before broader collaboration; OR re-run analysis on it once and accept whichever terminal state lands (per Epic 04 results §"Open question Q6", left intentionally for Epic 05 failed-card UX testing).

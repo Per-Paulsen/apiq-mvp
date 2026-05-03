@@ -6,6 +6,8 @@
  * Epic 02's middleware, and the form's server action calls
  * `getRequiredSession()` itself.
  */
+import type { Metadata } from 'next';
+
 import {
   Card,
   CardContent,
@@ -15,6 +17,11 @@ import {
 } from '@/components/ui/card';
 
 import { AddSpecForm } from './add-spec-form';
+
+export const metadata: Metadata = {
+  title: 'Add Spec · apiq',
+  description: 'Add a new OpenAPI spec to your workspace',
+};
 
 export default function NewSpecPage() {
   return (

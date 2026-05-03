@@ -9,14 +9,14 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 
-export default function SpecsNotFound() {
+export default function RootNotFound() {
   return (
     <main className="mx-auto max-w-xl p-6">
       <Card>
         <CardHeader>
-          <CardTitle>Spec not found</CardTitle>
+          <CardTitle>Page not found</CardTitle>
           <CardDescription>
-            That spec doesn&apos;t exist or isn&apos;t in your workspace.
+            The page you&apos;re looking for doesn&apos;t exist.
           </CardDescription>
         </CardHeader>
         <CardContent>

@@ -21,6 +21,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 
 import { applyPatch, type Operation } from 'fast-json-patch';
+import { stringify as yamlStringify } from 'yaml';
 
 import { Prisma } from '@/generated/prisma/client';
 import { computeQualityScore } from '@/lib/analysis/quality-score';
@@ -47,6 +48,7 @@ import {
   URL_PULL_LIMIT_PER_HOUR,
 } from '@/lib/rate-limit-workspace';
 import { getRequiredSession } from '@/lib/session';
+import { slugify } from '@/lib/slug';
 
 // =====================================================================
 // Result types
@@ -97,6 +99,13 @@ export type LoadSampleResult =
 export type DeleteSpecResult =
   | { success: true }
   | { success: false; error: { kind: 'not_found' } | { kind: 'unexpected'; message: string } };
+
+export type ExportResult =
+  | { success: true; filename: string; contentType: string; body: string }
+  | {
+      success: false;
+      error: { kind: 'not_found' } | { kind: 'unexpected'; message: string };
+    };
 
 export type ApplyFindingError =
   | { kind: 'not_found' }
@@ -624,6 +633,60 @@ export async function deleteSpecAction(input: {
     return { success: false, error: { kind: 'unexpected', message } };
   }
   return { success: true };
+}
+
+// =====================================================================
+// Action: exportSpecAction (Epic 08)
+// =====================================================================
+
+export async function exportSpecAction(input: {
+  specId: string;
+  format: 'json' | 'yaml';
+}): Promise<ExportResult> {
+  const { specId, format } = input;
+  const session = await getRequiredSession();
+  const { workspaceId } = session;
+
+  try {
+    const spec = await prisma.spec.findFirst({
+      where: { id: specId, workspaceId },
+      select: {
+        name: true,
+        currentJson: true,
+        currentVersionId: true,
+      },
+    });
+    if (!spec || !spec.currentVersionId) {
+      return { success: false, error: { kind: 'not_found' } };
+    }
+
+    const currentVersion = await prisma.specVersion.findUnique({
+      where: { id: spec.currentVersionId },
+      select: { versionNumber: true },
+    });
+    if (!currentVersion) {
+      return { success: false, error: { kind: 'not_found' } };
+    }
+
+    const base = `${slugify(spec.name)}-v${currentVersion.versionNumber}`;
+    if (format === 'json') {
+      return {
+        success: true,
+        filename: `${base}.json`,
+        contentType: 'application/json',
+        body: JSON.stringify(spec.currentJson, null, 2),
+      };
+    }
+    return {
+      success: true,
+      filename: `${base}.yaml`,
+      contentType: 'application/yaml',
+      body: yamlStringify(spec.currentJson),
+    };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return { success: false, error: { kind: 'unexpected', message } };
+  }
 }
 
 // =====================================================================

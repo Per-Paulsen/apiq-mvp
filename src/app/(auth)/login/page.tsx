@@ -6,6 +6,8 @@
  *
  * Next.js 15+: `searchParams` is a Promise — `await` before destructuring.
  */
+import type { Metadata } from 'next';
+
 import {
   Card,
   CardContent,
@@ -15,6 +17,11 @@ import {
 } from '@/components/ui/card';
 
 import { LoginForm } from './login-form';
+
+export const metadata: Metadata = {
+  title: 'Sign in · apiq',
+  description: 'Sign in to your apiq account',
+};
 
 export default async function LoginPage({
   searchParams,

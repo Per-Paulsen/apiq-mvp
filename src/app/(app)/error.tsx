@@ -11,7 +11,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 
-export default function SpecsError({
+export default function AppError({
   error,
   reset,
 }: {

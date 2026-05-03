@@ -9,7 +9,7 @@
 apiq's Zielgruppe sind **Backend-Engineers** auf der Suche nach einer "knowledgeable second opinion" — nicht Marketing-/Founder-Dashboards. Visueller Anker:
 
 - **Look-und-Feel-Vorbild:** Linear / Vercel Dashboard / GitHub / Stripe Dashboard. Ruhig, dicht, neutral, eine Akzentfarbe, monospace-friendly.
-- **Layout-Vorbild:** Fillow-Template (Sidebar-Mini-Variante, Topbar, Card-Grid) — siehe `{F50D61EF-CC15-4B0E-8760-3D3B31FF0845}.png` im Repo-Root. Aus Fillow nehmen wir die **Layout-Struktur**, nicht die bunte DexignZone-Aesthetik.
+- **Layout-Vorbild:** Fillow-Template (Sidebar-Mini-Variante, Topbar, Card-Grid) — siehe `fillow-template-reference.png` im Repo-Root. Aus Fillow nehmen wir die **Layout-Struktur**, nicht die bunte DexignZone-Aesthetik.
 - **Out-of-scope-Stilelemente:** Hero-Cards mit Illustrationen, bunte Akzent-Mischungen (lila + orange + pink + türkis), große Donut/Bar-Charts, Marketing-Banners. Apiq hat keinen Use-Case dafür.
 
 ## Color Palette

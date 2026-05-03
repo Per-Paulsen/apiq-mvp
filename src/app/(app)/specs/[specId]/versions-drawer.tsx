@@ -7,7 +7,7 @@
  * while a spec analyzes (cross-epic Q1, 2026-05-02).
  */
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -28,10 +28,28 @@ export function VersionsDrawer({
   currentVersionId: string | null;
 }): React.JSX.Element {
   const [open, setOpen] = useState(false);
+  const [flash, setFlash] = useState(false);
+  const prevCount = useRef(versions.length);
+
+  useEffect(() => {
+    if (versions.length > prevCount.current) {
+      setFlash(true);
+      const timeoutId = window.setTimeout(() => setFlash(false), 1200);
+      prevCount.current = versions.length;
+      return () => window.clearTimeout(timeoutId);
+    }
+    prevCount.current = versions.length;
+  }, [versions.length]);
+
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button type="button" variant="outline" size="sm">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className={cn(flash && 'bg-violet-500/15')}
+        >
           Versions ({versions.length})
         </Button>
       </SheetTrigger>
@@ -39,7 +57,7 @@ export function VersionsDrawer({
         <SheetHeader>
           <SheetTitle>Versions</SheetTitle>
         </SheetHeader>
-        <ul className="mt-4 flex flex-col gap-2 overflow-y-auto px-4 pb-4">
+        <ul className="mt-4 flex flex-col gap-2 overflow-y-auto px-4 pb-2">
           {versions.map((v) => (
             <li
               key={v.id}
@@ -67,6 +85,11 @@ export function VersionsDrawer({
             </li>
           ))}
         </ul>
+        {versions.length <= 1 ? (
+          <p className="px-5 pb-4 text-xs text-muted-foreground">
+            No applies yet.
+          </p>
+        ) : null}
       </SheetContent>
     </Sheet>
   );

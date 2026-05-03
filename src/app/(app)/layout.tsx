@@ -1,5 +1,3 @@
-import Link from "next/link";
-import { FileSearch, Settings } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -8,14 +6,15 @@ import {
   SidebarGroupContent,
   SidebarHeader,
   SidebarInset,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
   SidebarProvider,
 } from "@/components/ui/sidebar";
+import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { MobileFallbackBanner } from "@/components/mobile-fallback-banner";
 import { getRequiredSession } from "@/lib/session";
 import { getWorkspaceNameCached } from "@/lib/workspace-cache";
+
+import { SidebarNavItems } from "./sidebar-nav-items";
 
 // Note: This shadcn version exposes the older `asChild` API (not the newer
 // `render` prop). Per CLAUDE.md the project prefers `render`, but we use
@@ -52,24 +51,7 @@ export default async function AppLayout({
           <SidebarContent>
             <SidebarGroup>
               <SidebarGroupContent>
-                <SidebarMenu>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild tooltip="Specs">
-                      <Link href="/specs">
-                        <FileSearch />
-                        <span>Specs</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild tooltip="Settings">
-                      <Link href="/settings">
-                        <Settings />
-                        <span>Settings</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                </SidebarMenu>
+                <SidebarNavItems />
               </SidebarGroupContent>
             </SidebarGroup>
           </SidebarContent>
@@ -79,7 +61,11 @@ export default async function AppLayout({
             </div>
           </SidebarFooter>
         </Sidebar>
-        <SidebarInset>{children}</SidebarInset>
+        <SidebarInset>
+          <MobileFallbackBanner />
+          {children}
+        </SidebarInset>
+        <Toaster position="top-right" />
       </SidebarProvider>
     </TooltipProvider>
   );

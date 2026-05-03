@@ -32,6 +32,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { Finding, Spec, SpecVersion } from '@/generated/prisma/client';
 import { formatAnalysisError } from '@/lib/format-analysis-error';
+import { formatQuotaToast, showToast, TOASTS } from '@/lib/toasts';
 
 import { reanalyzeSpecAction } from '../actions';
 import { EndpointList } from './endpoint-list';
@@ -56,6 +57,7 @@ export function SpecDetailView({
 }): React.JSX.Element {
   const router = useRouter();
   const cardRefs = useRef<Map<string, HTMLElement>>(new Map());
+  const prevAnalysisStatus = useRef<string | null>(null);
 
   const isPolling =
     spec.analysisStatus === 'pending' || spec.analysisStatus === 'analyzing';
@@ -68,6 +70,45 @@ export function SpecDetailView({
     }, POLL_INTERVAL_MS);
     return () => window.clearInterval(id);
   }, [isPolling, router]);
+
+  // Budget-toast hook — fires once per session per spec when analysis fails
+  // with a budget-exceeded shape (Epic 08).
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (spec.analysisStatus !== 'failed' || !spec.analysisError) return;
+    const formatted = formatAnalysisError(spec.analysisError);
+    if (!formatted.budgetShape) return;
+    const key = 'apiq.budget-toast.' + spec.id;
+    if (sessionStorage.getItem(key)) return;
+    sessionStorage.setItem(key, '1');
+    showToast(
+      formatQuotaToast({
+        kind: 'budget_exceeded',
+        spent: formatted.budgetShape.spent,
+        limit: formatted.budgetShape.limit,
+        retryAt: formatted.budgetShape.retryAt,
+      }),
+    );
+  }, [spec.analysisStatus, spec.analysisError, spec.id]);
+
+  // analysisComplete hook — fires when status transitions from
+  // analyzing/pending → completed during this session (Epic 08).
+  useEffect(() => {
+    const prev = prevAnalysisStatus.current;
+    if (
+      spec.analysisStatus === 'completed' &&
+      (prev === 'analyzing' || prev === 'pending')
+    ) {
+      if (typeof window !== 'undefined') {
+        const key = 'apiq.analysis-complete-toast.' + spec.id;
+        if (!sessionStorage.getItem(key)) {
+          sessionStorage.setItem(key, '1');
+          showToast(TOASTS.analysisComplete);
+        }
+      }
+    }
+    prevAnalysisStatus.current = spec.analysisStatus;
+  }, [spec.analysisStatus, spec.id]);
 
   const registerCardRef = useCallback(
     (key: string, el: HTMLElement | null) => {
@@ -162,7 +203,10 @@ function FailedPanel({ spec }: { spec: Spec }): React.JSX.Element {
 
   function onRetry() {
     startTransition(async () => {
-      await reanalyzeSpecAction({ specId: spec.id });
+      const result = await reanalyzeSpecAction({ specId: spec.id });
+      if (result.success) {
+        showToast(TOASTS.reanalyzeStarted);
+      }
       router.refresh();
     });
   }
