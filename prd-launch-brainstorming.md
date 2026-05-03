@@ -1149,3 +1149,128 @@ Mit dem klaren Commitment auf AI-Age-Positionierung:
 1. Soll ich jetzt den ersten Draft der **echten Launch-PRD** (`prd-launch.md`) schreiben, basierend auf dem was wir hier diskutiert haben? Oder gibt's noch offene Punkte aus deiner ursprünglichen "weitere Dinge"-Liste, die wir in der Brainstorming-Datei zuerst abklären sollten?
 2. Naming-Workshop: jetzt parallel zu PRD-Draft, oder erst nach PRD?
 3. Big-Spec-Spike + Capability-Gap-Spike: starten wir die *vor* oder *nach* PRD-Finalisierung? (Vorher = empirische Daten in der PRD; nachher = klares Spike-Briefing aus PRD heraus.)
+
+---
+
+## Korrektur: agnostisch mit AI-implicit ist klüger als AI-only (2026-05-03)
+
+User: *"oder sollen wir es einfach total agnostisch lassen, aber trotzdem den ai generated specs wf indirekt als first annehmen? dann schließen wir keinen nutzer aus."*
+
+Du hast recht. Die aggressive AI-only-Positionierung von oben war zu eng — und 2026-Daten zeigen warum.
+
+### Was die Daten *wirklich* zeigen
+
+Aus der Recherche zu *"how engineers actually write OpenAPI specs 2026"*:
+
+> "Most modern API frameworks generate OpenAPI specs automatically — ASP.NET, FastAPI, NestJS, and Express with swagger-jsdoc all do this. **This is the dominant workflow for new projects.**"
+>
+> "AI tools like Cursor and Copilot are increasingly part of the spec and code generation workflow."
+>
+> "Cursor is faster for the initial scaffold, generating a full FastAPI application with 12 endpoints in under 90 seconds."
+
+Übersetzt: in 2026 gibt es **keine saubere Trennung** mehr zwischen "hand-written" und "AI-generated". Der typische Workflow ist:
+
+```
+Engineer asks Cursor / Claude / Copilot
+  → AI scaffolds FastAPI / Spring / NestJS code
+    → Framework auto-generates OpenAPI spec from decorators
+      → Engineer iterates via more AI prompts
+        → Spec evolves continuously
+```
+
+**Es ist alles AI-touched — irgendwo im Lifecycle.** Die "AI-generated vs hand-written"-Dichotomie ist 2026 ein falsches Framing. Realität:
+- ~80%+ der Engineers in 2026 nutzen AI **irgendwo** im Spec-Lifecycle
+- Aber viele davon nutzen es **nicht** zum direkten Schreiben der Spec — sie nutzen es zum Schreiben des Codes, der Spec emittiert
+- Die Spec selbst ist oft *Framework-emittiert*, *AI-generated*, oder *AI-iterated* — alle drei vermischen sich
+
+### Konsequenz für die Positionierung
+
+**AI-only-Positionierung war ein strategischer Fehler.** Wenn 80%+ AI-touched sind, aber nur ~5-10% direkt-AI-generated, sprichst du mit AI-only-Marketing nur die kleine Subgruppe an. Schlechte Reichweite.
+
+**Workflow-agnostisch mit AI-tailwind im Subtext** ist die richtige Antwort:
+
+> **apiq — The quality gate for your OpenAPI specs. Wherever they came from.**
+
+Tagline-Variationen:
+- **Landing-Headline:** *"Your OpenAPI spec, quality-gated. Find what your framework, your AI, or you missed — and fix it in one click."*
+- **Sub-Headline:** *"Whether your spec was hand-edited, framework-emitted (FastAPI / Spring / NestJS), or AI-generated (Cursor / Claude / GPT) — apiq reviews, suggests fixes, and lets you preview the result."*
+- **Tweet-Bait:** *"I asked Claude to scaffold an API. FastAPI emitted the OpenAPI spec. apiq found 14 things wrong with it."* (AI-Wave bleibt im Marketing, ohne andere Workflows zu exkludieren.)
+- **HN-Title:** *"Show HN: apiq — Find what's wrong with your OpenAPI spec"* (Generic, funktioniert für jede Audience.)
+
+### Was bleibt unverändert vom AI-Lock-in?
+
+- Apply-All-Critical, Try-It-Out (Stoplight Elements + Prism), Big-Spec-Spike, Capability-Gap-Spike — alles relevant, **alles workflow-agnostisch**
+- **Markdown-Findings-Export** für AI-Roundtrip ist immer noch wertvoll — aber jetzt als *eines von mehreren* Output-Formaten, nicht das Primary
+- Die 80% des Build-Plans ändern sich nicht; nur Marketing/Onboarding-Sprache wird breiter
+
+### Was ändert sich konkret?
+
+| Surface | AI-only (alt) | Agnostisch mit AI-implicit (neu) |
+|---|---|---|
+| Empty-State | "Paste your AI-generated spec" | "Paste your spec — whether you wrote it, your framework generated it, or your AI did" |
+| Marketing-Hero-Story | exklusiv "Cursor/Claude generated → apiq fixes" | AI-Workflow als Demo-Hook, aber Landing zeigt drei plausible Origins |
+| TypeSpec-Roundtrip | raus | bleibt v0.2-Backlog (nicht beworben, nicht abgelehnt) |
+| Capability-Gap-Generation | "AI agents miss endpoints" | "Frameworks emit minimal specs / AI generates incomplete specs / hand-written specs drift — apiq spots gaps" |
+
+Das ist ein deutlich breiterer TAM bei minimal anderem Build. Smart.
+
+### Wettbewerbs-Update: OpenSpec von Fission-AI
+
+Du hast OpenSpec auf GitHub gefunden — habe nachgeforscht. **Es ist ein adjacent-but-not-competing Produkt**, kein OpenAPI-Spec von Fission-AI selbst.
+
+Was OpenSpec ist:
+- **Spec-Driven Development Framework für AI Coding Assistants**
+- npm-Paket: `npm install -g @fission-ai/openspec`
+- Domain: [openspec.dev](https://openspec.dev/)
+- Workflow: 3 Schritte — *Proposal* (markdown spec) → *Apply* (AI codes per spec) → *Archive*
+- Multi-Tool-Support: 20+ AI assistants (Claude Code, Cursor, GitHub Copilot, ...)
+- Positioning: "lightweight spec layer so engineers agree on what to build before code"
+
+**Verhältnis zu apiq:**
+- OpenSpec sitzt am **Anfang** des Dev-Cycles: "schreib eine Spec, lass AI danach codieren"
+- apiq sitzt am **Ende** des Dev-Cycles: "review die Spec (egal woher), fix Issues, ship sauber"
+- **Sie sind komplementär**, nicht direkt-kompetierend
+- Möglicher Co-Use: "Use OpenSpec to drive AI development, use apiq to quality-gate the resulting OpenAPI spec"
+
+**Aber:** der **Name `openspec` ist verbrannt** — wir können nicht "OpenSpec" oder "openspec.ai" oder ähnlich heißen. Naming-Suche muss um diese Marke herum laufen.
+
+### speccheck.ai als Naming-Idee
+
+Search ergab keine direkten Treffer für "speccheck.ai" als bestehendes Produkt — der Name könnte verfügbar sein. Aber:
+- **`speccheck`** als Begriff existiert in nicht-API-Kontexten (z. B. spec-check für Verträge, für Bauwesen) → keine starke API-Konnotation
+- **`.ai`** als TLD ist 2026 immer noch teurer als `.com`/`.dev` (~$60-100/Jahr)
+- **Domain-Verfügbarkeit muss geprüft werden** — Search ist nicht zuverlässig dafür; Domain-Registrar checken
+
+Andere Namens-Richtungen, die zur agnostischen Positionierung passen:
+- **specgate** — nahe am "Quality Gate"-Konzept
+- **specsmith** — implies craftsmanship
+- **specsense** — Quality-Wahrnehmung
+- **specreview** — direkt was es macht
+- **apiqual** / **apiq2** — wenn man vom alten Namen sanft wegkommen will
+- **openapi-doctor** — explicit, aber lang
+- **specreviewer.ai** — beschreibend, etwas generisch
+
+Naming-Workshop ist eigene Übung — sollten wir mit klarer Positionierung machen, nicht spekulativ vorab.
+
+### Refined Verdict
+
+**Du hast recht: agnostisch mit AI-implicit ist die richtige Balance.** Schließt niemanden aus, reitet trotzdem die AI-Wave im Marketing, und die Realität (jeder Workflow ist 2026 AI-touched) macht "AI-only-Positionierung" sowieso künstlich.
+
+Konkret für die Launch-PRD:
+
+- **Primary Positioning:** *"The quality gate for your OpenAPI specs. Wherever they came from."*
+- **Implicit AI-tailwind:** Demo-Story + Marketing-Hooks zentriert auf AI-Use-Case (HN-friendly, time-relevant), aber Landing-Page + Onboarding agnostisch.
+- **Audience-TAM:** maximalisiert — alle Workflows die OpenAPI emittieren, ~80-90% des API-Marktes
+- **Differentiation gegen OpenSpec/Spectral/etc.:** klar (apiq = quality-gate at end of cycle, OpenSpec = spec-as-driver at start, Spectral = rule-linter without LLM-narration)
+
+### Frage zurück (final)
+
+1. Bestätigst du die agnostisch-mit-AI-implicit-Positionierung als finalen Stand?
+2. PRD-Draft jetzt schreiben oder noch ein Punkt offen aus deiner ursprünglichen "weitere Dinge"-Liste?
+3. Naming-Workshop nach PRD oder parallel?
+
+Sources:
+- [OpenSpec by Fission-AI (GitHub)](https://github.com/Fission-AI/OpenSpec)
+- [OpenSpec — A lightweight spec-driven framework](https://openspec.dev/)
+- [GitHub Copilot vs Cursor 2026 Review](https://tech-insider.org/github-copilot-vs-cursor-2026/)
+- [Automate API Workflow with Bruno and Cursor AI](https://blog.usebruno.com/how-to-automate-your-api-workflow-with-bruno-and-cursor-ai)
