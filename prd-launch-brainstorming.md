@@ -1274,3 +1274,236 @@ Sources:
 - [OpenSpec — A lightweight spec-driven framework](https://openspec.dev/)
 - [GitHub Copilot vs Cursor 2026 Review](https://tech-insider.org/github-copilot-vs-cursor-2026/)
 - [Automate API Workflow with Bruno and Cursor AI](https://blog.usebruno.com/how-to-automate-your-api-workflow-with-bruno-and-cursor-ai)
+
+---
+
+## Synthesis & Self-Check: was wir jetzt klüger machen — und wo wir noch besser sein können (2026-05-03)
+
+User: *"hast du alles festgehalten was wir in den letzten prompts besprochen haben? welche neuausrichtung ergibt sich denn, jetzt da wir einen viel klareren durchblick haben? können wir noch cleverer bzw besser sein als ursprünglich gedacht? evaluiere kritisch."*
+
+Fair-and-honest pass. Erst was wir schon haben, dann was noch fehlt.
+
+### Tagline-Tightening (Q1)
+
+Du hast recht: *"The quality gate for your OpenAPI specs."* — punkt. Ohne *"Wherever they came from"*. Begründung:
+- *"Wherever they came from"* ist defensiv, nicht selbstbewusst — beantwortet eine Frage, die niemand gestellt hat
+- Kürzere Tagline = stärkeres Brand
+- Engineers mögen Direktheit, kein Marketing-Subtext
+
+**Final:** *"apiq — The quality gate for your OpenAPI specs."*
+
+### Was sich von der Original-PRD geändert hat (Bilanz)
+
+| Dimension | Original PRD (`prd.md`) | Stand nach Brainstorming |
+|---|---|---|
+| Positioning | *"Design partner, not rule checker"* — fuzzy | *"Quality gate for your OpenAPI specs"* — sharp |
+| Tagline | *"Understand your APIs like the LLM does — and improve them in one click."* | *"The quality gate for your OpenAPI specs."* |
+| Audience | Backend / API-Platform-Engineers an Startups | Jeder OpenAPI-User, agnostisch zu Workflow-Origin |
+| Audience-TAM-Schätzung | ~10-30k addressable | ~80-90% des API-Marktes |
+| AI-Aware? | Nicht explicit | Implicit-tailwind (im Marketing, nicht im Pitch) |
+| Killer-Feature | LLM-Narration + Apply-Loop | + Apply-All-Critical + Live-Preview |
+| Try-It-Out | Nicht vorhanden | Stoplight Elements + Prism (Pre-Launch) |
+| Capability-Gap-Generation | v0.2 Landscape (vague) | Klar definiert mit Erfolgs-Wahrscheinlichkeit + Spike-Plan |
+| Workflow-Source | Implicit Spec-First | Agnostisch — Hand / Framework / AI / TypeSpec |
+| Anti-Big-AI-Threat-Story | Nicht artikuliert | 4 Punkte (deterministisch / preview-fähig / Quality-Score / systematic Gap-Detection) |
+
+**Verdict: deutlich klarer als Original.** Aber auch ehrlich: das war Brainstorming-Arbeit, nicht zauberhafte Insights — die meisten Verbesserungen sind klassisches *Re-Scoping* mit Markt-Daten.
+
+### Wo wir noch *cleverer* sein können — kritische Evaluation
+
+Hier ist was noch nicht voll ausgeschöpft ist. Ehrlich, nicht enthusiastisch.
+
+#### (A) MCP Server — high-leverage, low effort
+
+**Was:** [Model Context Protocol](https://modelcontextprotocol.io/) ist Anthropics 2024-Standard, mit dem AI-Agents externe Tools als first-class-Citizens nutzen. Wenn apiq einen MCP-Server bereitstellt, dann:
+
+- Claude Code kann apiq direkt während Code-Generation aufrufen: *"After generating the OpenAPI spec, run apiq quality-check"*
+- Cursor (mit MCP-Support) integriert nahtlos
+- Custom AI-Agents können apiq als Sub-Tool nutzen
+- Apiq distribuiert sich **in die AI-Tools, die unsere User schon nutzen** — passt perfekt zur agnostisch-mit-AI-tailwind Positionierung
+
+**Aufwand:** ~1-2 Tage für einen Basic-MCP-Server, der die existierenden Server-Actions als MCP-Tools exposed (`analyze_spec`, `apply_critical`, `get_findings`).
+
+**Wert:** sehr hoch. Das ist eine echte Distribution-Strategie statt Marketing-Hoping. Engineers, die Claude-Code/Cursor nutzen, würden apiq als "tool that just appears in my AI session" entdecken — viel niedrigere Adoption-Hürde als "go to website, sign up".
+
+**Strategischer Twist:** das ist auch unsere Antwort auf die Big-AI-Lab-Threat. Statt zu konkurrieren mit Anthropic / OpenAI / Google, **integrieren wir uns in deren Workflows**. Wenn Claude einen apiq-MCP-Tool-Call macht, sind wir Teil von Claudes Stack, nicht Konkurrent.
+
+**Empfehlung:** **Pre-Launch must-have.** 2 Tage Engineering, riesiger Hebel.
+
+#### (B) CLI als primäre Distribution-Channel — nicht nur Convenience
+
+**Was wir vorher dachten:** CLI = "Convenience für Engineers, die das Web-UI nicht wollen" → Post-Launch.
+
+**Was 2026 stattdessen wahr ist:** CLI ist die *primäre* Integration für AI-Tools. `npx apiq check ./openapi.yaml` ist:
+- Aufrufbar von Cursor / Claude-Code-Sessions als Subprocess
+- Distributable via npm (kostenlos)
+- Composable mit anderen CLI-Tools (z. B. `openapi-generator` Pipeline)
+- Suchbar via "openapi quality cli" — eigene SEO-Surface
+- Listable auf [openapi.tools](https://openapi.tools/) und awesome-openapi
+
+**Aufwand:** ~2 Tage für einen Basic-CLI mit `apiq check <spec>` + `apiq apply <spec> --critical-only` + JSON-Output für AI-Konsumption.
+
+**Wert:** mittel-hoch. Adressiert den ~30% der User, die nie ein Web-UI öffnen würden, plus die AI-Workflow-Integration (überlappt mit MCP).
+
+**Empfehlung:** **Pre-Launch should-have.** Nicht als Critical, aber als starkes Komplement zum MCP-Server. Nice synergy: CLI + MCP-Server teilen 80% der Logik.
+
+#### (C) No-Signup-Demo + Public-Share-Link + Quality-Score-public
+
+**Was:** drei zusammenhängende Mechanismen, die alle aus der "Round 5"-Diskussion oben hervorgehen, aber bisher nicht zusammen gedacht wurden:
+
+1. **Anonymous Demo** — `/try` Route ohne Signup, paste spec → siehe Analysis. Zwingt zur Conversion erst beim Apply.
+2. **Public-Share-Link** — User klickt "share analysis", bekommt `/share/<token>` URL, andere können die Analyse sehen ohne Account.
+3. **Quality-Score viral** — Public-Share zeigt prominent den Score. *"GitHub's API: apiq Quality Score 73/100"* ist tweet-bait + memetic.
+
+Diese drei zusammen schaffen einen **viral loop ohne Engineering-Mehrarbeit über das hinaus, was wir schon geplant haben:**
+
+- User analyzes spec → likes the score reveal
+- Shares public link → friends see *"oh, my company's API would also score X"*
+- Friends click → land on apiq → conversion
+
+**Aufwand:** ~2-3 Tage zusammen (anonymous demo + share-link + score-display). Schon im Plan, aber nicht als zusammenhängendes "viral loop"-Feature gerahmt.
+
+**Wert:** hoch. Distribution ohne Marketing-Spend.
+
+**Empfehlung:** **Pre-Launch must-have.** Diese drei zusammen explicit als "viral loop" denken, nicht als drei separate Features.
+
+#### (D) Live-Preview als der "Magic Moment"
+
+**Was wir vorher dachten:** Stoplight Elements + Prism = "nice Try-It-Out feature".
+
+**Was wir aufwerten könnten:** das ist *der* Differentiator gegen Spectral et al. Im Rest der Wettbewerbslandschaft (`openapi.tools`-Liste hat ~60 Linter, Editor, Mock-Tools) ist nichts integriert. apiq's Loop "analyze → apply → see-it-running-live" ist 2026 einzigartig.
+
+Marketing-Implikation: das **Hero-Demo-Video** auf der Landing-Page sollte nicht *Apply-Click → Spec-Diff* zeigen — es sollte **Apply-Click → Live-Mock-Server-Response** zeigen. Das ist viscerally beeindruckend.
+
+**Aufwand:** kein zusätzliches Engineering — schon im Plan. Aber **Marketing-Framing ändern**: Live-Preview ist der Star, nicht ein Subtab.
+
+**Empfehlung:** Kein Build-Change, aber **Re-Prioritisierung in Marketing/Demo/Onboarding-Reihenfolge**. Im Empty-State / Onboarding-Tour: Apply → Live-Preview als zentrale Demo, nicht Apply → Findings.
+
+#### (E) Privacy-Architecture — könnte Differentiator werden
+
+**Bisher übersehen:** OpenAPI-Specs enthalten oft **interne Endpoints, Auth-Schemas, sensible Metadaten**. Aktuell senden wir den ganzen Spec an OpenRouter / Anthropic. Das ist **legitimer Data-Privacy-Concern** für jeden seriösen Engineering-Team.
+
+Was wir tun könnten — und sollten — vor dem Launch:
+
+1. **Klare Privacy-Promise:** "We never log spec contents. Analysis is ephemeral. Spec data is encrypted at rest in your workspace."
+2. **Optional: Self-Hosted Mode** — Docker-Image, in dem User ihre eigene OpenRouter-Key nutzen, kein Cloud-Persist. Würde Enterprise-Audience erschließen.
+3. **Optional: BYOK (Bring Your Own Key)** — User-eigene OpenRouter-Account, apiq als Web-UI auf top.
+
+**Privacy-Promise** kostet ~1 Tag (Privacy-Page-Content + Backend-Audit + Disclosure-Page).
+**Self-Hosted-Mode** ist ~1 Woche extra.
+**BYOK** ist ~3 Tage.
+
+**Empfehlung:** Privacy-Promise ist **must-have** (sowieso für Privacy/ToS-Page nötig). Self-Hosted und BYOK sind v1.1+ — können aber ein einfacher Differentiator-Pitch sein gegen "send to Anthropic via apiq's account."
+
+#### (F) Quality-Score als Brand-Asset (analog zum Credit-Score)
+
+**Was bisher unterschätzt:** der Quality-Score (0-100) ist ein **Brand-Asset, das wir kaum nutzen**. Andere Tools (Spectral et al.) haben keinen Score. Wir könnten:
+
+- **Public Spec Gallery** mit Quality-Score-Ranking (*"Highest-rated public APIs"*) — direkt aus Round 5
+- **Score-Badges für GitHub-Repos** — `<img src="https://apiq.dev/badge/<workspace>/<spec>" />` zeigt den aktuellen Score, embed-ready in README. Setzt apiq direkt ins Engineer-Lifeblood (GitHub-Repo). Free Distribution.
+- **"Improvement-Trend"** — Score über Zeit, "your spec went from 32 to 78 in 3 weeks." Visuelles Story-Element.
+
+**Aufwand für Score-Badges:** ~1 Tag (SVG-Endpoint + Cache-Layer + Embedding-Doc).
+
+**Wert:** hoch. Score-Badges sind Self-Marketing — jeder Repo, der das Badge embeded, advertised apiq passiv. Wie Codecov / Coveralls für API-Quality.
+
+**Empfehlung:** **Score-Badges sind Pre-Launch should-have.** 1 Tag, hochlevel-Distribution-Mechanism.
+
+### Triage-Tabelle: was kommt rein, was nicht
+
+| Idee | Aufwand | Wert | Pre/Post-Launch |
+|---|---|---|---|
+| Tagline-Tightening | 0 (Marketing) | hoch | **Pre** (Done) |
+| MCP-Server | 1-2 Tage | sehr hoch | **Pre must-have** (NEU) |
+| CLI-Distribution | 2 Tage | mittel-hoch | **Pre should-have** (NEU) |
+| No-Signup + Share-Link + Score-public (viral loop) | 2-3 Tage | hoch | **Pre must-have** (gehoben aus Round 5) |
+| Live-Preview als Marketing-Star | 0 (Re-Framing) | mittel | **Pre Re-Prioritisierung** |
+| Privacy-Promise + Disclosure | 1 Tag | hoch (Pflicht) | **Pre must-have** |
+| Score-Badges (GitHub-embed) | 1 Tag | hoch | **Pre should-have** (NEU) |
+| Self-Hosted Mode | 1 Woche | mittel | Post |
+| BYOK | 3 Tage | mittel | Post |
+| Capability-Gap-Generation Spike | 5 Tage | hoch (wenn klappt) | conditional Pre (Spike-staged) |
+
+### Aktualisierter Aufwand-Snapshot
+
+Nach Synthesis stehen wir bei:
+
+**Spike-Phase (~5-12 Tage):**
+- Big-Spec-Architecture-Spike: 3-5 Tage
+- Capability-Gap-Generation Spike: 5 Tage (conditional)
+
+**Pre-Launch Engineering (~14-19 Tage):**
+- 3 Pre-Launch Spec-Fixes (Re-Validate / Re-Bundle / Cycle-Marker): 1-2 Tage
+- Apply-All-Critical: 1 Tag
+- Stoplight Elements + Prism: 4-5 Tage
+- Paste/Upload-Mode: half day
+- Markdown-Findings-Export: half day
+- **MCP-Server: 1-2 Tage (NEU)**
+- **CLI: 2 Tage (NEU)**
+- **No-Signup-Demo + Share-Link + Score-public: 2-3 Tage**
+- **Score-Badges: 1 Tag (NEU)**
+- Privacy-Promise + Page-Content: 1 Tag
+- Auth-Recovery (Email-Verify + Forgot-PW): 2-3 Tage
+- Sentry-Integration: 2 Stunden
+- Naming + UI-Redesign: ~2-3 Tage UI + parallel zur Naming-Arbeit
+- Vercel/Supabase-Prod-Setup + DNS: 2 Tage
+
+**Total: ~5-7 Wochen Kalenderzeit** je nach Spike-Conditional-Phasen und Parallelisierung.
+
+Das ist mehr als die ursprünglichen 3 Wochen — aber das Produkt ist **substantially better positioniert** für einen Public-Launch der wirklich zünden kann.
+
+### Naming-Evaluation (Q3)
+
+Du hast vorgeschlagen: **aiapi**, **aipi**, **openapi-doctor**, **api-doctor**, **apicheck**.
+
+Mein kritisches Take pro Vorschlag:
+
+**aiapi / aipi** — schwach. *"a-i-a-p-i"* ist schwer zu sagen, schwer zu spellen, gefährlich nahe an "API" selbst (verwechslungsrisiko in Search). Auch: das `ai` im Namen widerspricht der "agnostisch mit AI-implicit"-Positionierung — wenn der Name selbst AI im Vordergrund hat, predigen wir AI, was wir gerade entschieden haben nicht zu tun. **Nicht empfohlen.**
+
+**openapi-doctor** — beschreibend, aber:
+- Lang (14 Zeichen)
+- Doctor-Metapher ist überstrapaziert (db-doctor, json-doctor, etc. existieren)
+- Spelling-Friction: "openapi" mit Bindestrich oder ohne?
+- Domain `openapi-doctor.dev` oder `openapidoctor.com` — erforderlich Check
+- *"Was tut das?"* aus dem Namen klar → gut
+- Kann limitierend wirken, wenn apiq eines Tages nicht-OpenAPI-Specs (AsyncAPI, GraphQL) addressiert
+
+**api-doctor** — etwas besser:
+- Kürzer (10 Zeichen)
+- Breitere Scope (nicht nur OpenAPI)
+- Aber: "Doctor"-Metapher ist immer noch zahnlos
+
+**apicheck** — bester der vier:
+- Kurz (8 Zeichen), verb-form ("check")
+- Klar was es tut
+- Wenig Brand-Friction
+- Aber: zu generisch? *"apicheck"* ist quasi ein Common-Noun, nicht ein Brand. Trademark-Suche kritisch — wahrscheinlich existiert irgendwer mit dem Namen schon.
+
+**Meine kritischen Picks** (nicht zwingend deine):
+
+- **specgate** — Quality-Gate-Konzept-aligned, technisch klingend, kurz (8 Zeichen), brandable. Domain-Status zu prüfen, aber `specgate.dev` / `specgate.io` realistisch erreichbar.
+- **specgrade** — Quality-Score-aligned. *"Get your spec graded."* Kurz, klar, brandable. Möglicherweise verfügbar.
+- **specprime** — kürzer noch, aber Bedeutung weniger klar.
+- **goodspec** — sympathisch, klein, evtl. zu casual für API-Engineering-Audience.
+- **apiqual** — wenn du "vom Vorgänger her ableiten" willst aber sanft wechseln. Domain wahrscheinlich verfügbar.
+
+**Ranking-Empfehlung:**
+
+1. **specgate** — wenn du auf "Quality Gate" als Brand-Anchor setzen willst
+2. **apicheck** — wenn du auf Direktheit + Cost-of-Confusion-Tolerance setzen willst (Trademark-Risiko)
+3. **specgrade** — wenn du auf Quality-Score als Brand-Anchor setzen willst
+4. **api-doctor** — wenn du auf breitere Scope setzen willst (AsyncAPI später)
+
+**Kritischer Punkt:** alle Namensentscheidungen brauchen:
+- Trademark-Search bei [USPTO](https://www.uspto.gov/) und [EUIPO](https://euipo.europa.eu/)
+- Domain-Verfügbarkeits-Check beim Registrar
+- GitHub-Org-Name + npm-Package-Name-Verfügbarkeits-Check
+
+Das ist ~1 Tag Naming-Workshop, eigene Übung — sollte parallel zur PRD-Arbeit laufen, nicht spekulativ vorab finalisieren.
+
+### Frage zurück (final, hoffe ich)
+
+1. Tagline-Tightening: ✅ confirmed.
+2. **Bestätigst du die Triage-Tabelle?** Insbesondere: MCP-Server + CLI + Score-Badges Pre-Launch reinnehmen (5-6 Tage extra)?
+3. **Naming**: Kommt als Workshop nach PRD-Draft? Oder willst du jetzt eine engere Shortlist (3-5 Namen mit Domain/Trademark-Status)?
+4. **Bereit für PRD-Draft**, oder noch ein Punkt offen, den ich missed habe?
