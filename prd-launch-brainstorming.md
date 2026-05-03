@@ -552,3 +552,185 @@ Alle drei sind **fixbar in 1-2 Tagen Engineering** (zusammen). Das sollte die er
 - OK mit den 1-2 Tagen Pre-Launch-Engineering, um die drei Gaps (Re-Validate / Re-Bundle / Cycle-Marker) zu schließen?
 - Soll der Naming + UI-Redesign + Big-Spec-Spike *nach* diesen Gaps kommen, oder parallelisieren wir?
 - Spec-First-Positioning explizit kommunizieren ("apiq is for spec-first / design-first API teams") oder breit lassen und die Audience implizit selbst-selektieren lassen?
+
+---
+
+## Scope-Eröffnung: was heißt "verbessern" — wie weit kann apiq gehen? (2026-05-03)
+
+User: *"momentan braucht der user ja schon specs um apiq überhaupt nutzen zu können oder? und dann 'verbessert' apiq diese specs per knopfdruck, gibt es auch zb einen knopf für alle endpoints verbessern und oder direkt umsetzen?, aber was heißt verbessern hier genau? sowohl die funktionalität, also technisch?, als auch die doku? aber kann apiq sogar noch weiter gehen und das 'business' der api endpoints verbessern? vielleicht potentiell ungenutzte oder noch nicht implementierte aber nützliche endpoints 'erzeugen' ... usw?"*
+
+Vier Fragen in einer. Geh ich der Reihe nach durch.
+
+### Frage 1: User braucht heute eine Spec, um apiq zu nutzen — bleibt das so?
+
+**Heute: ja, harte Voraussetzung.** Apiq's gesamter Workflow startet mit "import OpenAPI 3.x".
+
+**Mögliche Erweiterungen (sortiert nach Aufwand):**
+
+| Pfad | Was | Aufwand | Wert |
+|---|---|---|---|
+| **Paste/Upload** statt URL-only | Spec-Input ohne Public-Hosting | ~3 h | Hoch — Friction-Reducer |
+| **Multi-File-Upload** (modulare Specs mit `$ref`s) | User uploadet `openapi.yaml` + alle `components/*.yaml` als ZIP | ~1 Tag | Mittel — Spec-First-Teams arbeiten oft modular |
+| **Generation aus Beschreibung** | "Beschreibe deine API in Prosa, apiq generiert OpenAPI" — LLM-driven Greenfield | ~2-3 Wochen | Hoch — aber komplett anderes Produkt (= TypeSpec-ähnlich, konkurriert mit Cursor) |
+| **Generation aus Code** | Apiq scannt Code-Repo (FastAPI/Spring-Decorators), extrahiert Spec + reviewt | ~3-5 Wochen | Sehr hoch — würde Code-First-Audience erschließen |
+
+**Empfehlung für ersten Launch:** Paste/Upload ja (low-hanging-fruit), Multi-File optional. Greenfield-Generation aus Beschreibung ist ein anderes Produkt und gehört nicht in den Launch-Scope.
+
+### Frage 2: Bulk-Apply / "Verbessere alle Endpoints"-Knopf
+
+**Heute: nein.** Jedes Finding wird einzeln reviewt + Apply/Reject. Bewusste Entscheidung der v0.1-PRD weil "manche Findings könnten intentional design choices sein, die der User rejecten muss."
+
+**Realistische Bulk-Optionen:**
+
+| UX-Pattern | Was | Risiko | Aufwand |
+|---|---|---|---|
+| **"Apply all critical"** | Severity-`critical`-Bucket auf einmal applien | Niedrig — kritische Findings sind selten "intentional" | ~1 Tag |
+| **"Apply all clarity"** | Documentation-Improvements gesamtbatch | Niedrig — kosmetisch, nicht-breaking | ~1 Tag |
+| **"Apply all"** | Wirklich alle Findings | Hoch — Konflikt-Risiko zwischen Patches; manche Findings sollte User explicit reviewen | ~3-5 Tage (mit Konflikt-Detection) |
+| **"Apply per Endpoint"** | "Verbessere alles unter `/orders/*` auf einmal" | Mittel | ~2 Tage |
+| **"Auto-apply on import"** | Findings nicht zeigen, sofort applien, Output ist die improved Spec | Sehr hoch — User verliert Lerneffekt + Kontrolle | ~half day technisch, aber kannibalisiert das aktuelle Produkt |
+
+**Engineering-Komplikation bei Bulk:** Patches sind state-dependent. Finding A's Patch ändert die Spec; danach sind manche Findings stale (ihre Patches greifen nicht mehr). Bulk-Apply muss in einer korrekten Reihenfolge applien + zwischendurch re-validieren + skipped-due-to-stale-Reporting machen.
+
+**Empfehlung:** "Apply all critical" als ersten Bulk-Knopf. Cheap, low-risk, hochwertvoll für Engineers mit 14+ Findings, die nicht jeden einzeln reviewen wollen. **"Apply all" generell** ist gefährlicher und sollte v0.2+ sein.
+
+### Frage 3: Was heißt "verbessern" konkret? Technisch + Doku + ...?
+
+Apiq's heutige drei Finding-Kategorien (per Epic 00 Spike kalibriert):
+
+**(a) Clarity — Dokumentations-Qualität**
+- Beispiele: missing `description` Felder, fehlende `operationId`, inkonsistente Naming-Konventionen, fehlende `examples` in Schemas, unklare Parameter-Descriptions
+- Output: Doc-Patches, keine semantischen API-Änderungen
+- Risiko: niedrig (kosmetisch, nicht-breaking)
+- Anteil typischer Findings: ~40%
+
+**(b) Design — Technische / Architektur-Qualität**
+- Beispiele: Pagination-Pattern fehlt, inkonsistente Error-Schemas, nicht-RESTful Verbs, fehlende Idempotency, falsche Status-Codes, inkonsistente Response-Envelope
+- Output: API-strukturändernde Patches (oft breaking changes)
+- Risiko: mittel (breaking changes wenn Endpoint schon im Production)
+- Anteil typischer Findings: ~40%
+
+**(c) Risk — Pattern-Level Sicherheit/Governance**
+- Beispiele: sensitive Felder ohne Auth-Schema, BOLA-shape (Object-Level-Authz fehlt), missing Rate-Limit-Hints, zu permissive Schemas
+- Output: Schema-Härtungen, Security-Schema-Additions
+- Risiko: niedrig-mittel
+- Anteil typischer Findings: ~20%
+
+**Was apiq heute *nicht* abdeckt:**
+
+- ❌ **Performance-Optimierung:** keine Analyse von "Response-Shape ist gross / N+1-Query-anfällig / unnötig nested"
+- ❌ **Versionierung / Migration:** keine Vorschläge "diese 5 Endpoints solltest du in v2 deprecaten"
+- ❌ **Cross-Endpoint-Konsistenz:** Pagination-Mismatch zwischen `/users` und `/orders` wird heute *nur* bemerkt, wenn beide im selben Single-Call-Spec sind und das LLM es zufällig sieht (v0.2 Cross-Spec-Findings würde das systematisch lösen)
+- ❌ **Business-Logik / Use-Case-Vollständigkeit:** "deine API macht X, aber typische User wollen auch Y machen — fehlender Endpoint" → das ist die "Generation"-Frage in (4)
+- ❌ **Implementation-Empfehlungen:** "für diese Pagination empfehle ich Cursor + tie-breaker, hier ist die Server-Code-Skizze" — das ist kein Spec-Edit, sondern Solution-Architect-Arbeit
+- ❌ **API-Lifecycle-Strategie:** "wann solltest du v2 launchen, wie deprecaten, wie communicaten" — würde Marketing-Layer-Wissen brauchen
+
+### Frage 4: Kann apiq weiter gehen — Business-Improvements + Endpoint-Generation?
+
+Die "wie weit kann apiq gehen?"-Frage. Hier wird's interessant — und riskanter.
+
+#### (i) Endpoint-Generation aus Capability-Gaps
+
+**Konzept:** apiq schaut den Spec an, erkennt Domain-Pattern (e-commerce, CRM, payment, …), und sagt:
+
+- *"Du hast `/orders` mit GET/POST, aber kein DELETE — intentional?"*
+- *"Subscription-APIs haben typischerweise `/customers/{id}/payment_methods`. Deins fehlt — Customers können Billing nicht updaten ohne Re-Auth."*
+- *"Du exposierst `/products` aber kein `/products/{id}/recommendations`. Standard-E-Commerce-Pattern."*
+
+**Implementation:** Neue Finding-Klasse `kind: 'gap_suggestion'`, anderer Prompt-Fokus ("look for capability gaps, not bugs"), Patch-Operations sind `add` für ganze neue Pfade.
+
+**Realistisches Quality-Risk:** **hoch.** "Suggested endpoint" ist *kreative* LLM-Arbeit — das Modell könnte Endpoints vorschlagen, die für dieses spezifische Business keinen Sinn machen. Z. B. "/users/{id}/social-graph"-Vorschlag bei einer Banking-API. Calibration deutlich schwerer als der aktuelle Review-Mode.
+
+**Aufwand:** ~2-3 Wochen incl. Spike-Phase (kann der LLM zuverlässig Domain-Patterns erkennen + Lücken identifizieren?).
+
+**Wert:** sehr hoch wenn's funktioniert. Das ist Solution-Architect-Arbeit, die normalerweise $300/h kostet.
+
+#### (ii) Business-Level-Improvements
+
+**Konzept:** apiq versteht die Business-Domäne und kommentiert auf strategischer Ebene:
+
+- *"Bulk-create fehlt für `/orders`. B2B-Integrationen werden das innerhalb von 6 Monaten brauchen."*
+- *"Pricing-Modell-Alignment: deine `/usage`-Endpoints exposen per-Call-Daten, aber wenn du monatlich abrechnen willst, brauchst du Aggregation-Endpoints."*
+- *"Webhooks haben `order.created` aber kein `order.status_changed`. Customers werden polling, was teuer und schlechte UX ist."*
+
+**Voraussetzung:** Business-Domain-Context. Heute kennt apiq nur den Spec. Für Business-Findings müsste der User Domain-Info inputen (per Onboarding-Frage: "What does your business do?").
+
+**Implementation:** Optional `Spec.businessContext` Feld + Domain-aware Prompt + neue Finding-Kategorie `business`.
+
+**Realistisches Quality-Risk:** **mittel-hoch.** Business-Context-Suggestions können hochwertvoll oder komplett-irrelevant sein. Ohne Calibration-Spike unmöglich vorherzusagen.
+
+**Aufwand:** ~1-2 Wochen incl. Spike (welche Business-Patterns kann das LLM zuverlässig erkennen?).
+
+**Wert:** *enormous* wenn's funktioniert. Das wäre eine genuine *AI-Consultant*-Position — von "Linter mit Narration" zu "Senior-API-Architekt-on-demand".
+
+**Risiko:** *enormous* wenn's nicht funktioniert. Falsche Business-Empfehlungen kosten Engineers echtes Geld in Form von gebauten-aber-unbrauchten Endpoints.
+
+#### (iii) Implementation-Hints (Solution-Architect-Mode)
+
+**Konzept:** apiq geht über den Spec hinaus und schlägt Implementation-Approaches vor:
+
+- *"Für `/orders/bulk-create` empfehle ich transaktionales Batching mit partial-success-Response. Hier ist die Response-Shape ..."*
+- *"Für `/products/recommendations` ist Collaborative Filtering der typische Ansatz. Implementation-Aufwand: ..."*
+
+**Realistisches Risk:** **sehr hoch.** Implementation-Vorschläge können in subtilen Wegen falsch sein, die echtes Geld kosten. Hier ist apiq sehr nahe an "Halluzinationen mit Konsequenzen."
+
+**Empfehlung:** **nicht für Launch.** Vielleicht v0.4+ wenn das Trust-Niveau in apiq's Output established ist.
+
+#### (iv) Versionierung / Refactoring-Strategie
+
+**Konzept:** apiq macht v1→v2-Migration-Vorschläge:
+
+- *"5 Deprecation-Kandidaten in `/paths/*` für v2-Removal."*
+- *"Inkonsistente Error-Schemas — hier ist ein v2-Clean-Error-Schema + Migration-Patches."*
+
+**Realistisches Quality-Risk:** **niedrig-mittel.** Strukturell ähnlich wie aktuelle Design-Findings, nur breiter.
+
+**Aufwand:** ~1 Woche.
+
+**Wert:** mittel — nützlich für Mature-API-Teams, weniger für Greenfield-APIs.
+
+### Strategische Implikation
+
+Hier ist die wichtige Beobachtung: jede dieser Erweiterungen verändert apiq's *Kategorie*:
+
+- **Heute:** "Linter mit LLM-Narration" → konkurriert mit Spectral, schmaler Moat
+- **+ Bulk-Apply:** "Productive Linter" → marginales Upgrade
+- **+ Endpoint-Generation:** "AI-API-Architect" → neues Kategorie, höherer TAM, Solution-Architect-Adjacent
+- **+ Business-Improvements:** "AI-API-Consultant" → genuine Consulting-Disruption, hoher Value, hohes Halluzinations-Risiko
+- **+ Implementation-Hints:** "AI-Solution-Architect" → konkurriert mit GitHub Copilot + Claude Code, gefährliches Territorium
+
+**Die Spec-First-Niche-Entscheidung von oben** kombiniert mit "wie weit gehen wir?" ist die wichtige Strategieentscheidung. Mögliche Kombinationen:
+
+| Apiq-Definition | Audience | Differentiator | Risiko |
+|---|---|---|---|
+| Spec-First-Linter mit Narration (heute) | 10-30k addressable | LLM-narration, Apply-Loop | Schmaler Moat |
+| + Capability-Gap-Generation | 10-30k mit deutlich höherem Engagement | Echte AI-Architect-Funktionalität | LLM-Quality-Risk hoch |
+| + Business-Context-Improvements | gleiches Audience-Volumen, deutlich höheres Pricing-Potential | AI-Consultant-Funktionalität | Quality + Pricing-Komplexität |
+| Full AI-API-Architect | weiter, aber unklar wie weit | Komplette Consulting-Disruption | Implementation-Halluzinations-Konsequenzen |
+
+### Empfehlung für die Launch-PRD
+
+**Pragmatisch:** für den ersten Launch bleibt apiq beim aktuellen Scope (Linter+Narration+Apply-Loop) plus *einer* Erweiterung als Differentiator-Multiplikator:
+
+**Best Pick: (i) Endpoint-Generation aus Capability-Gaps.**
+
+Warum:
+- Konkrete Erweiterung der bestehenden Pipeline (neuer Finding-Type, neuer Prompt-Section)
+- Spielt die "AI-Architect"-Differenzierung aus, ohne zu Implementation-Suggestions zu kippen
+- Demoable: in der Spec-Gallery aus Round 5 könnte man zeigen "Look at apiq's gap-suggestions for Stripe's API: <unexpected-gap>" — Tweet-bait
+- Quality-Risk handhabbar, weil's noch im Spec-Domain bleibt
+
+Aufwand: ~2-3 Wochen (incl. Spike). Würde den Launch-Plan auf ~5-6 Wochen total verschieben (vs. 3 Wochen ohne).
+
+**Alternative wenn Risiko-tolerant:** (i) + (ii) Business-Improvements.
+
+Aufwand dann ~4-5 Wochen extra. Würde apiq als "AI-API-Consultant" positionieren — sehr different als "Linter+". Wenn das funktioniert, ist der Markt 10× größer als der Spec-First-Linter-Markt.
+
+**Conservative Pick:** kein v0.2-Add, nur Spec-First-Niche mit der bestehenden Funktionalität + Pre-Launch-Fixes (Re-Validate / Re-Bundle / Cycle-Marker).
+
+### Frage zurück
+
+1. Bulk-Apply: starten wir mit "Apply all critical" als low-risk-Quick-Win? Oder skippen wir Bulk komplett?
+2. Capability-Gap-Generation (i): bauen wir die für den Launch ein? Wenn ja, brauchen wir den Spike *vor* dem Big-Spec-Spike (zwei separate Calibrations).
+3. Business-Improvements (ii): zu viel auf einmal für den ersten Launch, oder genau die Kategorie-Definition, die du willst?
+4. Wo zieht ihr die Grenze zwischen "noch apiq" und "neues Produkt" — wenn apiq Implementation-Hints gibt, ist es noch dasselbe Tool oder geht's in Cursor-Territorium?
