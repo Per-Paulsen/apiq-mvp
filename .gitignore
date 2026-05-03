@@ -52,3 +52,5 @@ coverage/
 
 # Research spike run outputs (large, frequently regenerated, contain LLM output)
 specs/research-spike-runs/
+
+.vercel

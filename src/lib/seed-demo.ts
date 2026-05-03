@@ -15,9 +15,12 @@
  * SpecVersions + Findings are wiped + re-seeded. LLMCall rows for the demo
  * workspace are also wiped (they accumulate when visitors trigger
  * Re-analyze).
+ *
+ * Not marked `'server-only'` because the CLI wrapper at scripts/seed-demo.ts
+ * needs to import it via tsx (Node context). Server-context safety is
+ * preserved by the bcrypt + node:fs imports below — they fail at client-bundle
+ * time anyway.
  */
-
-import 'server-only';
 
 import * as bcrypt from 'bcrypt';
 import * as fs from 'node:fs';
