@@ -2174,3 +2174,224 @@ Mit der vollständigen Liste:
 2. **Etwas vergessen?** Mit dieser konsolidierten Liste — fehlt aus deiner Sicht jetzt wirklich nichts mehr? Items aus früheren Brainstorming-Runden, die du noch nicht in der Tabelle siehst?
 
 3. **Ready für PRD-Draft?** Nach UI-Scope-Decision sollte ich `prd-launch.md` jetzt schreiben.
+
+---
+
+## UI-Direction Research + Konkreter Vorschlag (2026-05-03)
+
+User: *"kannst du dich nicht einfach erkunden was für eine art ui unsere typischen user von einem produkt wie unserem erwarten würden und wie dies aussehen sollte? was ist hier best practice und das passen wir dann einfach so an?"*
+
+OK. Recherchiert. Konkrete Empfehlung statt Optionsmatrix.
+
+### Was 2026-Engineer-Tool-Audiences erwarten — empirische Evidence
+
+**Density-First, nicht Whitespace-First.**
+
+> "Dashboard users are power users who want data, not breathing room, so prioritize information density over whitespace. This is particularly relevant for developer tools where users are spending extended periods interacting with the interface."
+
+Engineer-Tools wie Linear / Vercel / Stripe-Dashboard sind dicht — Information-per-Pixel hoch, jede UI-Element verdient seinen Platz. Das matched `prd-decisions.md` §"Density" — apiq hat das schon richtig konzeptioniert ("Dicht, nicht spärisch. Engineer-Tools optimieren auf Information-per-Pixel").
+
+**Sidebar 240-280 px expanded, 64 px collapsed.**
+
+> "The expanded state should be 240-280px (256px/16rem is the default), as below 240px nav labels start truncating awkwardly. The collapsed state should be 64px wide enough for a 24px icon with 20px padding on each side, and should always include icon-only mode with tooltips on hover."
+
+Apiq hat das schon — `Sidebar collapsible="icon"` mit shadcn-default-Width. Die Geometry passt; der Content fehlt.
+
+**Command Palette (Cmd+K) ist 2026 Standard.**
+
+> "Linear's command palette is the gold standard where every action in the product is accessible via Cmd+K — create issue, change assignee, set priority, navigate to team — with zero mouse required. Command palettes have become a standard expectation in any SaaS product with more than 10 features because menus don't scale."
+
+Apiq hat heute keine Command-Palette. Das ist eine echte Lücke gegenüber 2026-Engineer-Tool-Erwartungen.
+
+**Strategic Minimalism — jedes Element verdient seinen Platz.**
+
+> "Linear strips the project view to essentials — status, priority, assignee. Nothing else competes for attention."
+>
+> "Vercel's dashboard shows the right data with zero noise, and every element earns its place in the deployment overview."
+
+Function-forward. Kein Marketing-Fluff in der App-UI selbst (Marketing-Surfaces wie Landing sind eine andere Sache).
+
+**Dark Mode shipping by default = 82% User-Präferenz.**
+
+Apiq hat das schon (`defaultTheme="dark"` per next-themes). ✓
+
+### Was apiq's UI-Problem *wirklich* ist
+
+Du hattest *"schmale Cards übereinander gestaked"* gesagt. Schau ich mir den Sidebar-Code an: heute hat apiq nur **2 Sidebar-Items** (Specs, Settings) in einem 256-px-Sidebar. Das ist nicht "schmale Cards" als Layout-Problem — das ist ein **Sparsity-Problem**: der Sidebar hat zu wenig Inhalt für seine Geometrie.
+
+**Die richtige Antwort ist nicht ein anderes Layout. Es ist mehr Struktur im Sidebar.**
+
+### Konkreter UI-Vorschlag — Strukturiertes Surgical Redesign
+
+Statt zwei Optionen (Surgical vs Wholesale): **Strukturiertes Surgical Redesign mit konkreten neuen Sections + Components**. ~6-7 Tage Engineering, kein Figma-Mockup-Phase nötig (klare Best-Practice-Patterns).
+
+#### Sidebar-Restructure (1 Tag)
+
+Statt zwei lonely Items:
+
+```
+┌─────────────────────────────────┐
+│  apiq                  [≡]      │ ← Logo + collapse toggle
+├─────────────────────────────────┤
+│                                 │
+│  WORKSPACE                      │ ← Section header (uppercase, muted)
+│  ▸ Specs                  (12)  │ ← Count badge
+│    Recent                       │ ← Sub-item
+│    Shared                       │ ← Sub-item
+│                                 │
+│  TOOLS                          │
+│  ▸ CLI                          │ ← Links zu /cli docs
+│  ▸ MCP                          │ ← Links zu /mcp setup
+│  ▸ API                          │ ← Links zu /api/docs
+│                                 │
+│  RESOURCES                      │
+│  ▸ Documentation                │
+│  ▸ Status                       │ ← Status-Page-Link
+│  ▸ Pricing                      │
+│                                 │
+├─────────────────────────────────┤
+│  ⌘K  Command palette       [hint]│
+│  Per Paulsen                    │ ← User
+│  apiq-dev workspace             │ ← Workspace
+│  Settings · Sign out · Theme    │
+└─────────────────────────────────┘
+```
+
+3 Sections statt flach, Footer mit User-Menü + Cmd+K-Hint. Jetzt wirkt der 256-px-Raum begründet.
+
+#### Command Palette (Cmd+K) — neu (1.5 Tage)
+
+Linear-/Vercel-style. cmdk library (already shadcn-compatible). Aktionen:
+- *"Open spec ..."* (search by name)
+- *"Add new spec"*
+- *"Apply all critical"* (context-sensitive, only in spec-detail)
+- *"Re-analyze"* (context-sensitive)
+- *"Toggle theme"*
+- *"Open settings"*
+- *"Sign out"*
+- *"View MCP setup"*
+
+Engineer-Audience-erwartet, riesiger Productivity-Boost.
+
+#### Spec-Detail Three-Pane-Layout (1 Tag)
+
+Aktuell: Endpoint-List links + Findings-Right. Add:
+
+```
+┌──────────┬──────────────────┬─────────────────┐
+│ ENDPOINTS│   FINDINGS       │   PREVIEW       │
+│          │                  │  (Stoplight     │
+│ /pets    │  [QUALITY 32]    │   Elements +    │
+│ /users   │  Apply All Crit. │   Prism)        │
+│ /orders  │                  │                 │
+│   GET    │  Finding 1...    │  GET /pets      │
+│   POST   │  Finding 2...    │  Try It →       │
+│          │                  │                 │
+└──────────┴──────────────────┴─────────────────┘
+```
+
+Preview-Pane standardmäßig collapsed (Toggle in Header), expandiert bei "Magic Moment #3" automatisch nach Apply-Click.
+
+#### Quality-Score-Prominence (half day)
+
+Aktuell: kleine Badge im Header (z. B. `32` in roter Pille).
+
+Vorschlag — Score wird zum Hero:
+```
+┌────────────────────────────────┐
+│   ╭────────╮                   │
+│   │   32   │   3 critical      │ ← Big number + ring
+│   │ /100   │   5 high          │
+│   ╰────────╯   4 medium        │
+│              2 low              │
+│                                 │
+│   ▸ Apply all 3 critical fixes │ ← Prominent button
+└────────────────────────────────┘
+```
+
+Bigger number + color-coded SVG-Ring + severity-breakdown. Magic Moment #1 wird unmissable.
+
+#### Apply-All-Critical + Apply-All Buttons (half day jeder, total 1 Tag)
+
+User asked für *"Apply All total"-Button* — drauf:
+
+| Button | Behavior | Style |
+|---|---|---|
+| **Apply all 3 critical fixes** | One-click, applies all `severity: critical` open findings | Primary, red-tinted |
+| **Apply all** (secondary) | Confirm-dialog: *"This will apply 12 findings (3 critical, 5 high, 4 medium). Some are 'review recommended'. Continue?"* → applies in severity order, skips conflicts | Secondary, ghost |
+
+"Apply all" mit Confirm-Dialog statt sofort, weil **Design-Findings sind oft intentional**. Confirm + transparenter Plan reduziert das Risk-Profile.
+
+Aufwand: 1 Tag total für beide Buttons + Confirm-Dialog + Conflict-Skip-Logic.
+
+#### Empty-States Polish (half day)
+
+`prd-decisions.md` sagt schon: *"Engineer-tauglich, kein Illustration-Hero."* — also keine Marketing-Fluff. Aktueller Empty-State zeigt zwei CTAs ("Add spec" / "Try with sample"). Polish:
+- Bigger Try-with-sample-Button (das ist die Demo-Bait)
+- Sample-Spec-Picker statt fixed OpenWeatherMap (3-4 Optionen)
+- Sub-Headline mit Use-Case-Beschreibung
+
+#### General-Density-Pass (1 Tag)
+
+- Typography-Refinements (text-xs für sekundäre Info, text-sm für Body, text-base sparingly)
+- Spacing-Density (`gap-4` für Major-Stacks, `gap-2` für Inline-Groups, niemals `gap-12+` außer auf Marketing-Surfaces)
+- Findings-Card-Compaction (heute padding p-4 — kann auf p-3 runter ohne Lesbarkeit zu opfern)
+
+### Total UI-Effort
+
+| Sub-Item | Aufwand |
+|---|---|
+| Sidebar-Restructure (3 Sections + Footer-Menu) | 1 Tag |
+| Command Palette (cmd+k) | 1.5 Tage |
+| Spec-Detail Three-Pane mit Preview | 1 Tag |
+| Quality-Score-Hero | half day |
+| Apply-All + Apply-All-Critical Buttons | 1 Tag |
+| Empty-States Polish | half day |
+| General-Density-Pass | 1 Tag |
+| **TOTAL** | **~6.5 Tage** |
+
+Liegt zwischen Surgical (3-4) und Hybrid (4) und Wholesale (7-9). **Strukturiertes Surgical** trifft den Mittelpunkt — alle konkreten Pain-Points adressiert, keine Figma-Mockup-Phase, klare Best-Practice-Aligned.
+
+### Was wir bewusst nicht tun
+
+- **Kein wholesale-Re-Design** — die Bones (shadcn + violet/zinc + Geist + JetBrains-Mono) sind 2026-aligned per `prd-decisions.md`. Das nochmal aufzubrechen wäre Effort ohne Wert.
+- **Keine custom Illustrations / kein Hero-Image** — Engineer-Tools haben keine. `prd-decisions.md` §"Was wir NICHT übernehmen" ist explicit dazu.
+- **Keine "AI-style" UI-Elemente** (animated gradients, sparkle-Indicators, etc.) — passt nicht zu Engineer-Audience und widerspricht der agnostisch-mit-AI-implicit-Positionierung.
+
+### Dein "Apply All Total"-Item — eingearbeitet ✓
+
+Item #3 deiner letzten Frage (Apply-All-Total-Button) ist im UI-Vorschlag oben enthalten. Aufwand: 1 Tag (Apply-All-Critical + Apply-All-Total mit Confirm-Dialog).
+
+### Aktualisiertes Pre-Launch-Effort-Total mit konkretem UI-Scope
+
+Vorher (Round 11): ~36-52 Tage Range mit UI als 5-12 Tage Variable.
+
+Mit konkretem strukturierten-surgical-Vorschlag:
+- UI-Block fixiert auf **6.5 Tage**
+- Plus Naming + Logo: ~1-2 Tage post-PRD
+- Total bleibt bei **~36-42 Tage Engineering** = realistic ~7-8 Wochen Kalenderzeit
+
+### Ready für PRD?
+
+Ich denke ja. Mit dem UI-Direction-Lock-in haben wir alles auf dem Tisch:
+
+- Tagline + Positioning ✓
+- 4 Entry-Points + Core-Loop + Magic Moments ✓
+- Triage-Tabelle aller Pre-Launch-Features ✓
+- Anonymous-Demo + MCP-Setup + Score-Badge-Decisions ✓
+- Final Flow-Decisions (Loading-Hints / Demo-Limits / etc.) ✓
+- Critical-Gap-Check (Security/GDPR/Hygiene) ✓
+- Konsolidierte Build-Liste mit allen Items ✓
+- Konkreter UI-Vorschlag mit empirischer Evidence ✓
+- Apply-All-Critical + Apply-All eingearbeitet ✓
+
+Sources:
+- [Vercel's New Dashboard UX (Medium, 2026)](https://medium.com/design-bootcamp/vercels-new-dashboard-ux-what-it-teaches-us-about-developer-centric-design-93117215fe31)
+- [Dashboard Design Patterns 2026 (Art of Styleframe)](https://artofstyleframe.com/blog/dashboard-design-patterns-web-apps/)
+- [Sidebar Design for Web Apps 2026 (Alf Design Group)](https://www.alfdesigngroup.com/post/improve-your-sidebar-design-for-web-apps)
+- [Smart SaaS Dashboard Design Guide 2026 (F1Studioz)](https://f1studioz.com/blog/smart-saas-dashboard-design/)
+- [API Design Tool Comparison 2026 (Apidog)](https://apidog.com/api-documentation-tools/)
+
+### Frage zurück (jetzt wirklich-wirklich-final)
+
+OK mit dem strukturierten-surgical UI-Vorschlag (6.5 Tage)? Wenn ja, schreibe ich `prd-launch.md` jetzt. Sonst: was fehlt oder gefällt nicht?
