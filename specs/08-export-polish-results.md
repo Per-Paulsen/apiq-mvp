@@ -463,3 +463,109 @@ These are the gaps between "feature-complete v0.1" and "actually serviceable for
 
 > **Status:** Q4 closed for v0.1 (single sample is enough; expansion deferred). Q5 expanded into a launch-readiness brief — awaiting your call on (1) Petstore-as-2nd-sample (~30 min) and (2) friends-launch vs public-launch path for v0.1 deploy. Epic 08 code is final and committed at `5430fd6`.
 
+---
+
+## Round 4 — public-launch reality check (2026-05-03)
+
+User: "ich habe keine friends, die so etwas brauchen könnten also ist public launch die einzige möglichkeit. meinst du apiq lohnt sich für public launch? meinst du das würde wirklich jemand interessant finden und mal ausprobieren wollen? oder sollten wir vorher noch iwas cooles aus v0.2 implementieren? evaluiere kritisch."
+
+Honest critical evaluation, no cheerleading. This is a launch decision and the cost of soft-pedalling is wasting 1–4 weeks on something that doesn't get traction.
+
+### Lohnt sich apiq für einen Public Launch — heute?
+
+**Kurzversion: nein, nicht heute.** Mittelversion: nicht *bevor* zwei oder drei v0.2-Kacheln drinstecken, die das "mein erster Eindruck"-Spiel ändern. Lange Erklärung dazu unten.
+
+#### Was apiq sehr gut macht (echte Stärken)
+
+- **Findings sind narrationsstark und engineering-gerade.** Spectral / Stoplight / co. produzieren `error: no-pagination`. apiq produziert *"Cursor-based pagination on `created_at` plus a strict tie-breaker on `id` would fix this — without it Reporting consumers paging through the full list will see duplicate or missed records when orders are created mid-iteration."* Das ist ein echter Differentiator. Vor allem: kein anderes Tool im Markt narriert so.
+- **One-click-Patches sind real, nicht symbolisch.** Apply mutiert `currentJson`, neue SpecVersion wird angelegt, Versions-Drawer zeigt Historie, Undo funktioniert. Das ist eine Stunden-an-Engineering-Arbeit, die `apiq` per Klick ersetzt — genau die Demo, die in 60 s "wow" macht.
+- **Quality-Score zwingt Priorisierung auf.** "32 / 100, kritischer Befund: dein API-Key steht in der URL" sagt einem Engineer in 3 s, was er machen soll.
+- **Free-Demo ist eingebaut.** Empty-State → "Try with a sample spec" → OpenWeatherMap → 60 s später echte Findings. Das ist die richtige Form für eine Cold-Demo.
+
+#### Was gegen einen Public Launch *heute* spricht
+
+Ich versuche fair zu sein, nicht abschätzig:
+
+1. **Crowded market.** Spectral (Stoplight, Open-Source, viral in dev-Communities), 42Crunch (Enterprise, $-Capital), Postman (jeder kennt's), Optic, Bump.sh, Kong Insomnia, Rapid7 — alle besetzen Nachbar-Use-Cases. apiq hat einen guten Twist (LLM-narration), aber kein Distribution-Vehikel. Spectral hat GitHub Action, VS-Code-Extension, npm-CLI; apiq hat einen Web-Login.
+2. **Distribution-Problem.** "Ich habe einen OpenAPI-Spec und will eine knowledgeable second opinion" ist real — aber selten als Trigger. Engineers iterieren in IDEs, mit Lintern, in Pull-Requests. Aus diesem Workflow rausgehen, sich einloggen, eine URL pasten, wieder zurückgehen — das ist Reibung. Tools, die in den Workflow *kommen* (CI, GitHub Action, IDE-Extension), gewinnen.
+3. **Stickiness fehlt.** Ein User analysiert seinen Spec, applied 5 Findings, exportiert — und dann? Nichts bringt ihn nächste Woche zurück. Spec-Drift-Detection (v0.4 "Governance") wäre der Hook ("dein Spec hat sich geändert, hier sind die neuen Findings") — aber das ist v0.4. Heute = Single-Use-Tool.
+4. **Quality-Score-Skepsis.** Das Petstore-Spec, das jeder Engineer kennt, kriegt eine 32 / 100. Erfahrene API-Designer wissen: Petstore *ist* mittelmäßig, aber nicht 32-mässig — die Pagination ist OK, der Auth-Header ist OK, die Schemas sind OK. Engineers dismissen das schnell als "opinionated nag" statt "design partner". Unsere Severity-Calibration ist scharf — das ist ein Feature, aber muss mit Vertrauensaufbau gepaart werden.
+5. **Killer-Demo zündet noch nicht.** Die OpenWeatherMap-Demo ist OK, aber nicht "wow ich brauche das jetzt". Für echtes "wow" muss man die Demo auf dem *eigenen* Spec sehen — und der "ich logge mich ein und paste meinen Spec"-Schritt ist genau die Friction, die HN-Visitor verliert.
+6. **Monetarization-Vakuum.** $10/24h/Workspace heißt: 100 aktive User × 1 schlechter Tag = bis zu $1.000 OpenRouter-Kosten an dich, ohne Revenue. Du würdest Cash verbrennen, bevor du Product-Market-Fit-Signal hast.
+7. **Ein Schuss bei Public Launch.** Der erste Hacker-News-Post ist *der* Test. Wenn die Demo nicht überzeugt, kriegst du keine zweite Chance. "Hey ich habe das in 6 Wochen gebaut" zieht nicht, wenn der Klick-Test enttäuscht.
+
+#### Würde *irgendjemand* das ausprobieren wollen?
+
+Ja, eine sehr spezifische Niche:
+
+- **Backend / API-Platform Engineers an Startups / Scale-ups, die einen public-facing OpenAPI-Spec besitzen** und kurz vor einem Major-Release stehen, wo eine "Sanity-Check"-Anfrage tatsächlich zieht.
+- **API-Maintainers, die alleine arbeiten** und keinen Senior-Engineer im Team haben, der ihren Spec reviewen kann. Hier wäre apiq ein echter "knowledgeable second opinion".
+- **OpenAPI-Hobbyist-Designer / API-Studenten / Bootcamp-Lehrer** — die die LLM-narration als Lernhilfe schätzen würden ("warum ist mein Spec 32 / 100? — *aha, weil…*").
+
+Größe der Zielgruppe global: würde ich auf 10-50K Engineers schätzen, die mindestens einmal "I want a knowledgeable second opinion on my OpenAPI spec" denken. Davon werden vielleicht 5-10% das aktiv suchen, davon 1-5% via Hacker-News / Reddit / DevTwitter erreicht. Realistisches Adressable bei einem starken Public Launch: **500-2.000 Visitors in 48 h, 100-300 Sign-ups, 30-100 echte Analysen, 5-15 Wiederkehrer**.
+
+Das reicht für *Validierung*, nicht für *Geschäft*.
+
+#### Sollten wir vorher noch was cooles aus v0.2 implementieren?
+
+Ja. Drei Pull-Requests, die das "Public-Launch ist es wert"-Spiel ändern:
+
+**(I) Public-Demo ohne Signup** — ~1-2 Tage. HN-Visitor klickt "Try apiq on a sample spec", landet direkt auf `/demo/openweathermap`, sieht Findings, ohne ein Konto anzulegen. Dann: "Like this? Sign up to analyze your own spec." Conversion-Funnel statt Conversion-Cliff. Heute springen 80% der Visitors am Signup-Schritt ab.
+
+**(II) Public-Share-Link für analysierte Specs** — ~1 Tag. Nach einer Analyse kann der User einen Read-only-Link teilen: `/share/<token>` zeigt das Spec-Detail-Screen ohne Auth. *Virales Mechanismus, das nichts kostet*: ein User postet "Look at apiq's analysis of my API: <link>" — jeder, der drauf klickt, sieht den Pitch. Auch für deinen eigenen Launch: "Look at apiq's analysis of GitHub's API: <link>" als Tweet / HN-Body.
+
+**(III) GitHub Action / CI mode** — ~1 Tag für eine simple Version. `npx apiq-cli check ./openapi.yaml` produziert einen Markdown-Report. Tweet-able / blog-able: "Ich habe apiq in CI verdrahtet und so sah der Diff aus." Bringt apiq in den Workflow rein, statt User aus dem Workflow rauszuziehen.
+
+Optional **(IV) Stripe-metered mit großzügigem Free Tier** — ~2 Wochen. Wenn der Public Launch klappt, brauchst du *sofort* Bezahlung, sonst verbrennst du Geld. Free Tier: 5 Analysen/Monat. Paid: $5/Monat unlimited. Filter Bad-Actors raus + Revenue-Signal.
+
+**Mein Vorschlag:** (I) + (II) sind Multiplikatoren mit minimalem Risiko (~3 Tage zusammen). Beide ändern, *wer* die Demo sehen kann und *wie viral* sie sein kann. (III) ist als Folge-PR sinnvoll, falls (I)+(II) Traction zeigen. (IV) lass weg, bis du Signal hast, dass User wiederkehren — Stripe vor Product-Market-Fit ist Premature.
+
+Plus die Real-User-Lücken aus Round 3 §(e): Email-Verifizierung, Forgot-Password, Sentry, Privacy/ToS, Account-Deletion. Davon ist **Privacy+ToS Pflicht** (legal, nicht verhandelbar), Email+Forgot+Sentry **stark empfohlen** (sonst verlierst du jeden, der vergisst oder einen Bug trifft). Das sind 2-3 Tage.
+
+**Realistischer Pfad zu einem Public Launch, der fair sein kann:** ~6-8 Werktage Engineering = 2 Wochen Kalenderzeit + Infrastruktur-Setup.
+
+Aufschlüsselung:
+- Tag 1-2: Public-Demo ohne Signup + Public-Share-Link
+- Tag 3-4: Email-Verifizierung + Forgot-Password
+- Tag 5: Sentry-Integration + Privacy/ToS-Seiten
+- Tag 6: Vercel + Supabase Prod + Domain-Setup + DNS
+- Tag 7: GitHub Action / CLI (optional, falls Energie da)
+- Tag 8: Smoke-Tests, Demo-Content (HN-Post-Body schreiben, Tweet-Thread, Loom-Video)
+
+Danach hast du ein Tool, das (a) Visitors zeigen kannst ohne Signup-Cliff, (b) Engineers in den Workflow lässt (Share-Link), (c) Stripe-ready ist falls Traction kommt.
+
+#### Was passiert *realistisch*, wenn wir trotzdem heute pushen?
+
+**Best Case** (Hacker News front-page für 6 h): 1.500 Visitors → 200 Signups → 60 Analysen → 8 enthusiastic Mails ("kannst du das auf Stripe-OpenAPI laufen lassen?") → $400-800 OpenRouter-Kosten. Dann Decay nach 48 h, weil die Stickiness-Lücke (siehe oben) zuschlägt. Du hast 8 Email-Adressen + ein Hacker-News-Post-Mortem.
+
+**Middle Case** (Niche-Communities, kein HN): 100 Visitors → 20 Signups → 5 Analysen → 1 Mail. $50 Kosten, kein Signal.
+
+**Worst Case** (Bot-Traffic, Spam-Signups): 30 Bots → 30 Workspaces × $10/Tag-Cap → bis zu $300 verschwendet, Null Echte-User-Signal.
+
+**Welches der drei?** Hängt 80% an der Demo-Qualität und an der Conversation-Hook. (I) + (II) verschieben das Mittel deutlich Richtung Best Case.
+
+#### Q4 für Public Launch: reicht der einzelne Sample?
+
+**Ja, der OpenWeatherMap-Sample ist genug — mit *einem* zusätzlichen Move:** der oben erwähnte **(I) Public-Demo ohne Signup**. Der Single-Sample selbst ist nicht das Bottleneck — es ist die *Reibung vor dem Sample*. Ein HN-Visitor, der "apiq" zum ersten Mal sieht, ist nicht bereit, sich einzuloggen, *bevor* er weiß ob das Tool taugt. Lass ihn die Sample-Demo *ohne* Konto sehen. Dann ist der Single-Sample mehr als genug.
+
+Mehr Samples (Petstore, Stripe, etc.) hinzuzufügen ist weniger wichtig als die Anonymous-Access-Geste. Erst (I), dann irgendwann (Petstore + 2-3 mehr).
+
+#### Konkrete Empfehlung
+
+Ich würde nicht heute pushen. Ich würde **2 Wochen in 4 Pull-Requests investieren**:
+
+1. **`/spec_ind 09 public-demo "anonymous /demo/<sampleId> route + /share/<token> read-only spec view"`** (~3 Tage)
+2. **`/spec_ind 10 auth-recovery "email verification + forgot-password flow"`** (~2 Tage)
+3. **`/spec_ind 11 production-prep "sentry + privacy/tos + vercel/supabase prod setup"`** (~2 Tage)
+4. **`/spec_ind 12 cli "apiq-cli analyze command + GitHub Action"`** (~1 Tag, optional)
+
+Dann Public Launch. Dann sehen, was passiert. Wenn Traction da ist: Stripe + Spec-Drift-Detection als nächstes (= v0.4 Governance, der erste echte Stickiness-Hook).
+
+Wenn keine Traction da ist (was real möglich ist): du hast 2 Wochen verloren, aber ein Codebase, das du zeigen kannst und das in deinem Portfolio steht. Das ist nicht null.
+
+**Frage an dich:** willst du diesen Plan? Oder eine alternative Cut der Reihenfolge? Oder doch heute pushen mit dem Wissen über die Trade-offs?
+
+---
+
+> **Status:** Round 4 ist eine kritische Bewertung — keine Code-Änderungen. Empfehlung: 2 Wochen / 4 Folge-Epics vor Public Launch. Awaiting your call on whether you agree with the assessment or want to push today anyway.
+
