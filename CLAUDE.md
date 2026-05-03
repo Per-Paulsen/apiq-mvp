@@ -2,9 +2,11 @@
 
 Guidance for Claude Code (claude.ai/code) when working with this repository.
 
-> **Status:** v0.1 implementation complete (Epics 00–08). v1 launch in planning.
+> **Status:** v0.1 implementation complete (Epics 00–08). v1 launch specs in place (Epics 09 + 14–28). Conditional Spike-Epics 10–13 NOT yet spec'd.
 > **Done:** Epic 00 (Research Spike) → Epic 08 (Export + Polish). 298 tests pass, lint + build clean.
-> **Next:** v1 launch — operative PRD at `prd-launch.md`. Run `/spec prd-launch.md` to derive Epic 09+ specs.
+> **Next:** v1 launch implementation. Start with Epic 09 (Big-Spec Architecture Spike) via `/dev specs/09-big-spec-architecture-spike.md`.
+>
+> **Conditional epics 10–13 (Spike S1/S2/S3 + Capability-Gap-Implementation):** spec'd ON-DEMAND after each preceding spike's `*-results.md` Cancel-Decision. Workflow + cancel-thresholds in `specs/brainstorming-launch.md` §"Conditional Epic Trigger Workflow". Trigger via `/spec_ind <n> <slug> "<context-prompt>"`. Skipping is safe (those features auto-defer to v1.1+); the engineering-track 14→28 ships v1 either way.
 >
 > **Naming note:** the project may rebrand from "apiq" post-PRD (naming-workshop pending). On rebrand, search-and-replace `apiq` strings codebase-wide; package names and domain-references will need careful update.
 
@@ -33,6 +35,7 @@ cd scripts/spike && npx tsx run-prompt.ts <variant> <spec>
 | `prd.md` | Original v0.1 product vision (still valid as long-term direction) | Product context |
 | `prd-launch.md` | **Operative PRD for v1 public launch** — tagline, audience, build scope, spike strategy, distribution, success metrics | Any v1 launch work; input to `/spec` |
 | `prd-launch-brainstorming.md` | Full reasoning history that produced `prd-launch.md` (12 rounds of strategic discussion) | Edge cases / "why was X decided?" |
+| `specs/brainstorming-launch.md` | v1-launch brainstorming + epic-bundling decisions + Conditional Epic Trigger Workflow (10–13) | Before triggering any conditional spike-epic; for "why is epic X bundled this way?" |
 | `prd-decisions.md` | Design system (zinc + violet, Geist Sans + JetBrains Mono, layout, components) | Any UI epic |
 | `tech-stack.md` | Pinned stack/versions | Architectural decisions |
 | `specs/research-spike.md` | Final v4 prompt + zod schema (canonical, v0.1) | Epic 04, prompt changes |
