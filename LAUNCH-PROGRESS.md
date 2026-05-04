@@ -15,6 +15,25 @@ Pre-v1, the v0.1 build is deployed to Vercel as a portfolio-grade demo. The prod
 - **Production Supabase (`ouzznqiooklxdllhxgiu.eu-north-1`) keeps the v0.1 schema.** All v1 work runs migrations against a SEPARATE v1-dev Supabase project (URL in local `.env` after the user provisions it). NEVER `prisma migrate dev` against the production DB while on `v1-launch`.
 - **Cutover:** when v1 is ready, user explicitly approves: merge `v1-launch` → `main`, swap Vercel `DATABASE_URL` env to v1-DB (or run final migration on the production DB after backup), `vercel --prod` once. CV-URL transitions from v0.1 to v1.
 
+### Setup actions log
+
+Concrete steps taken so the policy doesn't read like "we'll set this up someday" — append-only, timestamped, what's been done.
+
+#### 2026-05-04 — branch freeze + v1-dev DB provisioning
+
+1. Updated `CLAUDE.md` header + this file's "Branch + DB policy" section to document the freeze + branch-isolation rules.
+2. Saved memory entry `~/.claude/projects/.../memory/project_v1_launch_branch_freeze.md` for cross-session persistence — every future Claude session in this repo now auto-loads the policy.
+3. Committed the freeze-policy docs on `main` as `fc02dd3` ("docs: freeze main at v0.1 portfolio state, add v1-launch branch policy") and pushed to GitHub.
+4. Created `v1-launch` branch from `main` (so `v1-launch` inherits the freeze-policy docs at base) and pushed to GitHub.
+5. User created a fresh Supabase project (project-ref `nmqnnmacvkygnilizzlf`, EU region) — the v1-dev DB.
+6. User updated local `.env` `DATABASE_URL` + `DIRECT_URL` to point at the new dev DB. Same pooled-connection-string for both vars (matches existing v0.1 pattern, simpler than separate transaction-pool/direct split).
+7. Pre-migrate safety check: extracted only the project-ref portion of `DATABASE_URL` (no password printed) and confirmed it's `nmqnnmacvkygnilizzlf`, NOT prod's `ouzznqiooklxdllhxgiu`.
+8. Ran `npx prisma migrate deploy` against v1-dev DB → 5 v0.1 migrations applied successfully.
+9. Ran `npm run seed-demo` against v1-dev DB → demo-workspace seeded with the Petstore fixture (Score 32, 14 findings).
+10. Currently checked out: `v1-launch`. Production Vercel + production Supabase: untouched. CV-URL stable.
+
+What's next: `/dev specs/09-big-spec-architecture-spike.md` (or `/refine_all_ind` first if spec-hardening preferred). Both run automatically on `v1-launch` + against v1-dev DB.
+
 ### Live state (relevant facts below stay valid through v1 dev)
 
 | Item | Value |
@@ -22,7 +41,8 @@ Pre-v1, the v0.1 build is deployed to Vercel as a portfolio-grade demo. The prod
 | Production URL | https://apiq-mvp.vercel.app |
 | GitHub repo | https://github.com/Per-Paulsen/apiq-mvp (private; can be flipped to public via `gh repo edit Per-Paulsen/apiq-mvp --visibility public --accept-visibility-change-consequences`) |
 | Vercel project | per-paulsens-projects/apiq-mvp · prj_NxMsbdfCjwdjAsJ73BIJ8tjUhlFy |
-| DB | Supabase EU-North-1, project `ouzznqiooklxdllhxgiu` — **dev + prod share the same DB** (workspace-scoped isolation; Demo-Workspace is one user out of many) |
+| Production DB | Supabase EU-North-1, project `ouzznqiooklxdllhxgiu` — drives `apiq-mvp.vercel.app` Demo-Workspace + Daily-Reset-Cron. Schema frozen at v0.1. |
+| v1-dev DB (local only) | Supabase project `nmqnnmacvkygnilizzlf` — drives all `v1-launch` branch work. Local `.env` `DATABASE_URL` + `DIRECT_URL` point here. v0.1 schema applied + Petstore-Demo seeded for local testing. |
 | Demo credentials | `demo@example.com` / `demo` — pre-seeded via `scripts/seed-demo.ts`, daily-reset cron at 03:00 UTC via `vercel.json` + `/api/cron/reset-demo` |
 | Demo content | 1 fixture: Swagger Petstore 3.0 (score 32, 14 findings, 19 endpoints) — committed at `scripts/seed-fixtures/swagger-petstore-openapi-3-0.json` |
 | Env-flag | `DEMO_MODE=true` — gates landing-page banner + auto-login button + reset-cron route |
