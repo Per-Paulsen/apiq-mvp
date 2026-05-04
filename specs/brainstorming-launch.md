@@ -518,3 +518,53 @@ Wenn v1 ships, ist das Marketing-Story-Telling:
 - **Primary** (HN, Twitter, Reddit-Lead): *"apiq — quality gate for your OpenAPI spec, in CI or your AI editor"*
 - **Demo-Loom**: zeigt CI-Gate-Failing-PR ZUERST, dann Agent-Tool-Flow in Cursor
 - **Conversion-Funnel**: CI-Setup ist 30s-Setup (Copy GitHub-Actions-yaml), MCP-Setup ist 30s-Setup (Copy Claude-Desktop-config-JSON) — beide niedrig-Schwelle.
+
+---
+
+## Tech-Stack-Audit 2026-05-04 — Edge → Fluid Compute + v1.1-Kandidaten
+
+### Auslöser
+
+User-Frage: *"haben wir noch das richtige Tech-Stack für das was wir vorhaben?"* — getriggert durch das Vercel-Knowledge-Update das pro Session auto-injectet wird (2026-02-27 stand).
+
+### Echte Korrekturen (in v1 gezogen)
+
+1. **Epic 18 (Live Preview) — Vercel Edge Function → Vercel Function (Node runtime, Fluid Compute).** Vercel-2026-Empfehlung explizit gegen Edge Functions ("not recommended"); Prism's Node-`fs` + native deps liefen auf Edge sowieso instabil. Spec-Sections "Prism mock as Vercel Edge Function" und "Domain terms" updated.
+2. **Epic 22 (Score Badges) — Edge route → Vercel Function.** Gleiche Begründung; Badge-SVG-Generation läuft fine auf Node.
+3. **`tech-stack.md` Backend-Section refresh** — explizit Fluid Compute / Node 24 / 300s-Timeout / Active-CPU-Pricing dokumentiert. Edge-Functions explicitly-avoided-Note hinzugefügt.
+
+### v1.1 tech-stack candidates
+
+Bundeln + bewerten, nicht für v1 ziehen:
+
+#### A. Vercel AI Gateway statt OpenRouter
+
+- **Was:** Unified API zu mehreren LLM-Providern, Provider-agnostic via plain `"provider/model"`-strings, Model-Fallback-Routing, Observability eingebaut, Zero-Data-Retention-Option.
+- **Warum nicht v1:** v0.1-Prompt v4 ist gegen OpenRouter (specifically Sonnet-4 via OpenRouter) getuned + spike-validiert. Pivot würde Prompt-Drift-Risk einführen kurz vor Launch.
+- **Warum v1.1:** passt natürlich zu BYOK-Feature in v1.1 (PRD §11). User können dann statt OpenRouter-Key beliebige Provider via AI-Gateway-Strings durchschicken. Kombiniert: BYOK + Multi-Provider in einem Bundle.
+- **Migrations-Effort:** ~1-2 Tage. Hauptarbeit: `src/lib/openrouter.ts` durch AI-Gateway-Client ersetzen + `src/lib/analysis/runAnalysis.ts` Cost-Tracking-Pfad anpassen.
+
+#### B. `vercel.json` → `vercel.ts`
+
+- **Was:** TypeScript-Config statt JSON, mit `routes.cacheControl()`-Helpers, env-Var-Access in Config, Type-Safety via `@vercel/config`.
+- **Warum nicht v1:** Single-Cron-Eintrag in current `vercel.json` läuft fine; Migration ohne Funktionsmehrwert für v1.
+- **Warum v1.1:** wenn Epic 26 mehrere Crons + Headers + Rewrites bündelt, lohnt sich der Type-Safety-Gewinn. Bei nächster Config-Erweiterung mitziehen.
+- **Migrations-Effort:** ~30 min, isoliert.
+
+#### C. Vercel BotID statt Cloudflare Turnstile
+
+- **Was:** Platform-native Bot-Detection + Verification, GA seit Juni 2025.
+- **Warum nicht v1:** Turnstile-Setup ist bereits abgeschlossen (Production-Keys gesetzt, Hostnames konfiguriert). Funktioniert. Switching kostet ohne klaren UX-Gewinn.
+- **Warum v1.1:** wenn Onboarding-Flow Turnstile als Friction-Point zeigt (User-Report o.ä.), oder wenn Epic 23 (Auth Hardening) noch zusätzliche Bot-Detection-Layers braucht. BotID ist enger ins Vercel-Stack integriert (no external dependency).
+- **Migrations-Effort:** ~1 Tag (Schema-mässig minimal: tausche 2 Env-Vars + 1 Component).
+
+#### D. Next.js 16 Cache Components (`cacheLife`, `cacheTag`, `updateTag`)
+
+- **Was:** Native Next.js-16-Caching mit Tag-basierter Invalidierung. Granulares Spec/Findings-Caching möglich.
+- **Warum nicht v1:** Aktuelle `Cache-Control`-Headers + Vercel-CDN-Caching reichen für v1's Cache-Bedürfnisse (Score-Badge 5min+SWR, Live-Preview 24h, Sample-Picker pre-baked). Cache Components add complexity ohne klar messbaren Mehrwert für v1.
+- **Warum v1.1:** wenn v1-Launch-Traffic-Patterns Cache-Hit-Rate-Probleme zeigen, oder wenn Epic 19's Anonymous-Demo + Public-Share heavier-als-erwartet werden. Cache Components erlauben dann surgical Tag-basierte Invalidierungen statt grobe Cache-Headers.
+- **Migrations-Effort:** ~2-3 Tage, weil betrifft mehrere Routes + dazu Test-Suite-Anpassungen.
+
+### Was 100% on-point bleibt für v1
+
+Next.js 16, React 19, TypeScript 5, Tailwind v4, shadcn 4.6, Prisma 7, Auth.js v5, Stoplight Elements, `@modelcontextprotocol/sdk`, Klaro Cookie-Consent, Sentry, PostHog, Resend, OpenRouter+OpenAI-SDK (für v1) — alle 2026-current.

@@ -10,7 +10,7 @@
 - New `Spec.badgeToken` column (nullable, unique, 22-char base62). Migration: `add_badge_token`.
 - Server action `enableBadgeAction({ specId })` generates token if not set; returns the badge URL.
 - Server action `disableBadgeAction({ specId })` sets `badgeToken = null`.
-- New Edge route `src/app/badge/[token]/route.ts`:
+- New route handler `src/app/badge/[token]/route.ts` with `runtime = 'nodejs'` (Vercel Function on Fluid Compute — same rationale as Epic 18: Edge Functions are deprecated in 2026, Fluid Compute is the default and supports full Node.js):
   - Looks up `Spec` by `badgeToken`. Returns 404 SVG fallback if not found.
   - Returns dynamic SVG with content-type `image/svg+xml`.
   - `Cache-Control: public, max-age=300, stale-while-revalidate=3600` (5 min edge + 1 h SWR per `brainstorming-launch.md`).
@@ -108,7 +108,7 @@ PatchOps wrapped in `<details>` / `<summary>` collapsed-by-default; works on Git
 
 1. `Spec.badgeToken` column added via migration.
 2. `enableBadgeAction`, `disableBadgeAction` server actions in place.
-3. Edge route `/badge/[token]/route.ts` returns:
+3. Route `/badge/[token]/route.ts` (`runtime = 'nodejs'`, Fluid Compute) returns:
    - Default codecov-shield style ~120×20 px when no `style` query param.
    - `?style=ring` returns ~80×80 px circular SVG.
    - 24 h-cached `[apiq | n/a]` grey SVG when token unknown.

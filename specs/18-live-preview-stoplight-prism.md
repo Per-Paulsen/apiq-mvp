@@ -1,6 +1,6 @@
 # Epic 18 — Live Preview — Stoplight Elements + Prism
 
-> Magic Moment #3: Stoplight Elements renders the improved spec interactively in the right pane of the Spec-Detail three-pane layout (Epic 17). Try-It buttons hit a stateless Prism mock per spec via a Vercel Edge Function, with a 24h edge-cached `currentJson` lookup acting as the "ephemeral 24h cleanup".
+> Magic Moment #3: Stoplight Elements renders the improved spec interactively in the right pane of the Spec-Detail three-pane layout (Epic 17). Try-It buttons hit a stateless Prism mock per spec via a Vercel Function (Node runtime, Fluid Compute default), with a 24h edge-cached `currentJson` lookup acting as the "ephemeral 24h cleanup".
 > **Order:** ships AFTER Epic 17. Right-pane shell exists; this epic fills it.
 > Upstream: [`prd-launch.md`](../prd-launch.md) §3 "Foundation block" row "Stoplight Elements + Prism Live Preview", §2 "Magic Moment #3", [`specs/brainstorming-launch.md`](./brainstorming-launch.md) §"Live Preview (Epic 13)".
 
@@ -18,18 +18,18 @@
 - Mounts inside the right pane shell from Epic 17. Pane width 30% default.
 - Disabled-state: if `Spec.endpointCount > 1000` OR `byteLength(currentJson) > 2_000_000` (2 MB) → render a muted card *"Preview not available for specs above 2 MB. Export and try locally."* (cap-threshold final-tunable post-Epic 09 spike result).
 
-### Prism mock as Vercel Edge Function
+### Prism mock as Vercel Function (Node runtime, Fluid Compute)
 
 - New route handler `src/app/api/mock/[specId]/[...path]/route.ts`:
-  - Runtime: `'edge'` (Vercel Edge).
+  - Runtime: `'nodejs'` (Vercel Function on Fluid Compute — the 2026 default; **NOT** Edge Functions, which are deprecated and Prism's Node-only `fs` + native dependencies don't run on Edge).
   - Loads `Spec.currentJson` for `specId` (workspace-scoped if Epic 19's anon path triggers a public-share-mock; the request carries either an authed session OR a public-share-token in query for `/share/<token>` previews).
-  - Cache headers: `'Cache-Control': 'public, max-age=86400, stale-while-revalidate=3600'` — Edge-cache acts as the "24h ephemeral cleanup".
+  - Cache headers: `'Cache-Control': 'public, max-age=86400, stale-while-revalidate=3600'` — Vercel's CDN caches the response for the de-facto "24h ephemeral cleanup".
   - Instantiates Prism in-process (`@stoplight/prism-http`) with the loaded spec.
   - Routes the request: `GET /api/mock/<specId>/<path>` → Prism processes against the spec → returns mock response.
   - Reuses the same `currentJson` already dereferenced + cycle-restored.
 - Public-share preview (Epic 19's `/share/<token>` page): preview pane uses `apiBase = /api/mock/share/<token>` → same handler resolved via the share-token, reusing the Spec-snapshot stored in the share-record (NOT the live Spec — share is frozen).
-- Per `brainstorming-launch.md` §"Live Preview" decision: Stateless Edge-Function. No long-running mock-server. No container. Cold-start 200-500 ms first hit, warm thereafter.
-- Vercel Edge-Function payload limit is 4 MB request/response. Specs >2 MB at-edge-load fail; the disabled-state in `<SpecPreviewPane>` catches this client-side before the request fires.
+- Per `brainstorming-launch.md` §"Live Preview" decision: Stateless function (Fluid Compute reuses instances across concurrent requests, so cold-start cost is amortised). No long-running mock-server. No container. Cold-start 200-500 ms first hit, warm thereafter.
+- Vercel-Function payload limit is 4.5 MB on Hobby / 100 MB on Pro. Specs >2 MB → `<SpecPreviewPane>` disabled-state catches client-side before the request fires (the disable threshold stays defensive even though Node-runtime limits are higher than Edge's 4 MB).
 
 ### Big-spec disable mechanism
 
@@ -58,7 +58,7 @@
 1. `@stoplight/elements` installed at a pinned version in `8.x` range.
 2. `<SpecPreviewPane>` exists at `src/components/spec-preview-pane.tsx`, dynamically imports Stoplight Elements (`ssr: false`), passes `currentJson` + `apiBase`.
 3. Dark-mode theming overrides Stoplight defaults to use zinc + violet from `prd-decisions.md`. Manual visual check passes.
-4. `/api/mock/[specId]/[...path]` Edge Route exists. Loads `Spec.currentJson`, instantiates Prism, returns mock response for the requested method+path.
+4. `/api/mock/[specId]/[...path]` route exists with `runtime = 'nodejs'` (Fluid Compute). Loads `Spec.currentJson`, instantiates Prism, returns mock response for the requested method+path.
 5. Cache header is `public, max-age=86400, stale-while-revalidate=3600`.
 6. Public-share-preview path (`apiBase = /api/mock/share/<token>`) resolves `Spec`-snapshot via share-token. Workspace-isolation enforced.
 7. Disabled-state shows for `endpointCount > 1000` OR `byteLength > 2_000_000`.
@@ -82,8 +82,8 @@
 ## Domain terms
 
 - **Stoplight Elements** — `@stoplight/elements` web-component library that renders an interactive OpenAPI explorer.
-- **Prism** — `@stoplight/prism-http` mock server library; instantiated in-process per Edge Function call.
-- **Edge-cached spec lookup** — the de-facto "24h ephemeral cleanup": the Edge Function caches `currentJson` lookups for 24 h; after that, a fresh DB hit re-warms the cache.
+- **Prism** — `@stoplight/prism-http` mock server library; instantiated in-process per Vercel-Function (Node runtime / Fluid Compute) invocation. Fluid Compute reuses warm instances across concurrent requests so amortised cold-start is low.
+- **Edge-cached spec response** — the de-facto "24h ephemeral cleanup": Vercel's CDN caches the route's response for 24 h via the `Cache-Control: max-age=86400` header. The function itself runs on Node, but the response is delivered from the edge cache after first hit per spec.
 - **Big-spec disable** — client-side gate that prevents loading Stoplight Elements for specs over the 1000-endpoint or 2 MB cap.
 - **Public-share preview** — preview pane on `/share/<token>` page (Epic 19); reads the share-snapshot, not live `Spec`.
 
@@ -93,4 +93,4 @@
 - Stoplight Elements has periodic breaking changes between minor versions; pin exact version + add to dependabot-ignore. Re-test on each manual upgrade.
 - Whether the public-share preview should rate-limit per-IP independently of the share-link rate-limit (separate `mock_view` action-key in `IpActionLog`). Recommendation: yes; mock-calls are heavier than HTML page-views. 200/IP/h on `mock_view`.
 - Try-It-button cold-start latency (first hit per spec): 200–500 ms — acceptable. If users complain, pre-warm by hitting `/api/mock/<specId>/` (root) on pane-mount.
-- Vercel Pro vs Hobby Edge-Function quota: 100 GB-hours/month on Hobby. Estimate: ~5k mock-calls/day at avg 50ms × 128 MB = ~30 GB-hours/month. Fits Hobby tier for v1; revisit at growth signal.
+- Vercel Function pricing on Fluid Compute uses Active CPU + memory + invocations (not wall-clock GB-seconds). Estimate ~5k mock-calls/day at avg 50ms active CPU stays well under Hobby thresholds for v1; revisit at growth signal.
