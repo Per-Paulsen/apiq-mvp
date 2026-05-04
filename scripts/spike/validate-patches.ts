@@ -72,17 +72,30 @@ function checkHallucination(
   specJson: unknown,
   patchOps: Operation[]
 ): HallucinationCheck {
+  // Progressive simulation: each op is checked against the spec state AFTER the
+  // previous ops in the same batch have been applied. This correctly handles
+  // multi-step patches where one op creates a parent block (e.g. an empty
+  // `/components/parameters/`) and a subsequent op references the new path.
+  // The earlier "immutable check against original spec" version flagged such
+  // patches as hallucinations even when they were semantically correct.
+  if (typeof structuredClone !== 'function') {
+    throw new Error(
+      'checkHallucination requires Node 17+ (structuredClone is not available)'
+    );
+  }
+  const sim = structuredClone(specJson);
+
   for (let i = 0; i < patchOps.length; i++) {
     const op = patchOps[i];
     const opLabel = `op[${i}] ${op.op} ${op.path}`;
 
     if (op.op === 'add') {
       const parent = parentPointer(op.path);
-      const res = resolvePointer(specJson, parent);
+      const res = resolvePointer(sim, parent);
       if (!res.found) {
         return {
           hallucinated: true,
-          details: `${opLabel}: parent path "${parent}" does not exist in spec`,
+          details: `${opLabel}: parent path "${parent}" does not exist (after ops 0..${i - 1} applied)`,
         };
       }
     } else if (op.op === 'move' || op.op === 'copy') {
@@ -93,23 +106,35 @@ function checkHallucination(
           details: `${opLabel}: missing "from" pointer`,
         };
       }
-      const fromRes = resolvePointer(specJson, from);
+      const fromRes = resolvePointer(sim, from);
       if (!fromRes.found) {
         return {
           hallucinated: true,
-          details: `${opLabel}: "from" path "${from}" does not exist in spec`,
+          details: `${opLabel}: "from" path "${from}" does not exist (after ops 0..${i - 1} applied)`,
         };
       }
       // Note: do NOT check op.path — it's the destination, created by the op.
     } else {
       // replace / remove / test: path IS the source.
-      const res = resolvePointer(specJson, op.path);
+      const res = resolvePointer(sim, op.path);
       if (!res.found) {
         return {
           hallucinated: true,
-          details: `${opLabel}: source path does not exist in spec`,
+          details: `${opLabel}: source path does not exist (after ops 0..${i - 1} applied)`,
         };
       }
+    }
+
+    // Simulate the op on the rolling clone so subsequent ops see the post-op state.
+    try {
+      jsonpatch.applyPatch(sim, [op], /*validateOperation*/ true, /*mutateDocument*/ true);
+    } catch (err) {
+      return {
+        hallucinated: true,
+        details: `${opLabel}: applyPatch failed during progressive simulation — ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      };
     }
   }
   return { hallucinated: false };

@@ -1,0 +1,101 @@
+[
+  {
+    "spec": "stripe-full",
+    "rawSizeBytes": 7753660,
+    "paths": 414,
+    "endpoints": 587,
+    "dereferencedChars": 3704576,
+    "cycleStrippedChars": 3704576,
+    "estimatedInputTokens": 926144,
+    "fitsIn1M": true,
+    "fitsIn2M": true,
+    "perModel": {
+      "gemini-2.5-pro": {
+        "fits": true,
+        "headroomTokens": 122432
+      },
+      "gemini-3-flash-preview": {
+        "fits": true,
+        "headroomTokens": 122432
+      },
+      "claude-sonnet-4.6": {
+        "fits": true,
+        "headroomTokens": 73856
+      },
+      "claude-opus-4.7": {
+        "fits": true,
+        "headroomTokens": 73856
+      },
+      "gemini-3.1-pro": {
+        "fits": true,
+        "headroomTokens": 1073856
+      }
+    }
+  },
+  {
+    "spec": "pagerduty-full",
+    "rawSizeBytes": 2518070,
+    "paths": 246,
+    "endpoints": 419,
+    "dereferencedChars": 1196568,
+    "cycleStrippedChars": 1196568,
+    "estimatedInputTokens": 299142,
+    "fitsIn1M": true,
+    "fitsIn2M": true,
+    "perModel": {
+      "gemini-2.5-pro": {
+        "fits": true,
+        "headroomTokens": 749434
+      },
+      "gemini-3-flash-preview": {
+        "fits": true,
+        "headroomTokens": 749434
+      },
+      "claude-sonnet-4.6": {
+        "fits": true,
+        "headroomTokens": 700858
+      },
+      "claude-opus-4.7": {
+        "fits": true,
+        "headroomTokens": 700858
+      },
+      "gemini-3.1-pro": {
+        "fits": true,
+        "headroomTokens": 1700858
+      }
+    }
+  },
+  {
+    "spec": "github-rest",
+    "rawSizeBytes": 12265037,
+    "paths": 758,
+    "endpoints": 1145,
+    "dereferencedChars": 6274989,
+    "cycleStrippedChars": 6274989,
+    "estimatedInputTokens": 1568748,
+    "fitsIn1M": false,
+    "fitsIn2M": true,
+    "perModel": {
+      "gemini-2.5-pro": {
+        "fits": false,
+        "headroomTokens": -520172
+      },
+      "gemini-3-flash-preview": {
+        "fits": false,
+        "headroomTokens": -520172
+      },
+      "claude-sonnet-4.6": {
+        "fits": false,
+        "headroomTokens": -568748
+      },
+      "claude-opus-4.7": {
+        "fits": false,
+        "headroomTokens": -568748
+      },
+      "gemini-3.1-pro": {
+        "fits": true,
+        "headroomTokens": 431252
+      }
+    }
+  }
+]

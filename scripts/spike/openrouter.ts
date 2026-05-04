@@ -99,6 +99,11 @@ export async function callLLM(args: CallLLMArgs): Promise<CallLLMResult> {
           { role: 'system', content: args.system },
           { role: 'user', content: args.user },
         ],
+        // Some providers (notably Grok 4.1 Fast on OpenRouter) default to a
+        // small max_completion_tokens cap and truncate JSON mid-stream, breaking
+        // the schema parse. Explicitly request 32K output so the schema-shaped
+        // findings array can complete.
+        max_tokens: 32000,
       });
       const durationMs = Date.now() - start;
       const raw = resp.choices?.[0]?.message?.content ?? '';

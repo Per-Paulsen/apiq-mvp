@@ -20,16 +20,22 @@ export const AffectedEndpointSchema = z.object({
 });
 
 export const FindingSchema = z.object({
-  title: z.string().min(1).max(120),
-  narration: z.string().min(200).max(1500),
-  // Relaxed from 100 in v3 — polish findings (typos, schema-naming) don't need 100-char rationale.
-  rationale: z.string().min(50).max(800),
+  title: z.string().min(1).max(200),
+  // Stage-3 relax (was 200..1500): some models (Grok 4.1 Fast) emit shorter narrations
+  // even with the prompt's 200-char floor. Lower bound keeps the field non-empty
+  // while allowing terser models to deliver structured output.
+  narration: z.string().min(50).max(2000),
+  // Stage-3 relax (was 50..800): same reasoning — Grok emits short rationales.
+  rationale: z.string().min(20).max(1000),
   category: z.enum(['clarity', 'design', 'risk']),
   severity: z.enum(['critical', 'high', 'medium', 'low']),
   scope: z.enum(['spec', 'endpoint']),
   affectedEndpoints: z.array(AffectedEndpointSchema),
   patchOps: z.array(PatchOpSchema),
-  patchSummary: z.string().min(1).max(120),
+  // Stage-3 relax (was 120): Sonnet 4.6 / Opus 4.7 frequently emit slightly-longer
+  // patchSummary phrases even with the prompt's 120-char floor. 200 is the
+  // practical compromise; UI rendering can truncate at display time if needed.
+  patchSummary: z.string().min(1).max(200),
 });
 
 export const OutputSchema = z.object({

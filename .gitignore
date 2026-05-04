@@ -52,3 +52,10 @@ coverage/
 
 # Research spike run outputs (large, frequently regenerated, contain LLM output)
 specs/research-spike-runs/
+
+# Big-spec spike (Epic 09) run outputs — same reasoning, plus some files exceed
+# GitHub's 100MB-per-file hard cap. The audit markdowns (_manual-coverage-audit*.md)
+# and the deterministic _precheck.json are committed; only the LLM-output JSONs
+# are ignored. Reproducible via `npx tsx scripts/spike/run-arch.ts ...`.
+specs/big-spec-runs/*.json
+!specs/big-spec-runs/_precheck.json

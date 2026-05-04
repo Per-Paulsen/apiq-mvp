@@ -107,6 +107,18 @@ Recommendation: option 1 (retire). The pre-seeded demo-account is a v0.1 stopgap
   - Triggered IN PARALLEL with Epic 11/12 (or after Epic 12), not after Epic 12: `/spec_ind 13 capability-gap-implementation "Implement spike-validated prompt + UI per specs/10-results.md"`
   - **Marketing dependency:** Epic 27 copy must NOT mention capability-gap-hero until this epic ships.
 
+### Pre-Foundation-Block follow-ups (must complete BEFORE Engineering track starts)
+
+- [ ] **PRD revision post-Spike-09** — `prd-launch.md` updates required from spike-output (`specs/big-spec-architecture-spike.md` §"Cost-sustainability" + §"Operational architecture"):
+  - §3 Foundation-Block: add **BYOK (Bring Your Own Anthropic Key)** as v1-must (1-2 days). Move from §5 v1.1-out-of-scope.
+  - §3 Operational: revise **Pricing-page** from "Free during beta" to "Free + Pro + BYOK" tier-design.
+  - §3 Foundation-Block: add **DB-migration** for `Finding.confidence` / `Finding.impact` / `category=correctness`.
+  - §3 Operational: raise **workspace-cost-cap** from $10/24h to $30-50/24h (calibrated for (C-i)-cost-realität).
+  - §3 Foundation-Block: add **Long-running-job async pattern** (kick-off → polling/SSE) — required for (C-i) on big specs (~34 min runtime).
+  - §3 Foundation-Block: add **Tier-0a/0b correctness-check** as MUST (reputation-protection for v1).
+  - §7 Success-Metrics: add "Cost per active user per month" with BYOK-segmentation.
+  - Affected Epics: 20 (MCP) + 21 (CLI) need async-API-contract; 17 (UI Redesign) needs findings-prioritisation-at-scale; 14+ get extended scope.
+
 ### Engineering track (always-run)
 
 - [ ] Epic 14 — Pre-Launch Spec-Fixes & Export-Hardening
