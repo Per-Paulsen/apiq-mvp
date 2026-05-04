@@ -5,7 +5,17 @@
 
 ## Production state — v0.1 portfolio deploy (live since 2026-05-03)
 
-Pre-v1, the v0.1 build is deployed to Vercel as a portfolio-grade demo. All v1 epic-implementation work happens against this live codebase — relevant cross-cutting touchpoints below.
+Pre-v1, the v0.1 build is deployed to Vercel as a portfolio-grade demo. The production URL `apiq-mvp.vercel.app` is **CV-relevant** for the user's job-application phase and must stay stable through v1 development.
+
+### Branch + DB policy (since 2026-05-04)
+
+- **`main` is FROZEN** at the v0.1 portfolio-deploy state. NO new commits unless they're freeze-strategy docs or critical v0.1 hotfixes that the user explicitly approves.
+- **All v1 epic-implementation work happens on the `v1-launch` branch.** Includes Epic 09 spike + Epics 14–28 + any conditional spike-epic specs.
+- **Production Vercel deploy is pinned to `main`.** NEVER run `npx vercel --prod` from `v1-launch`. Vercel auto-deploy from GitHub is NOT configured (the link attempt failed earlier), so production is only updated via explicit CLI deploy from `main`.
+- **Production Supabase (`ouzznqiooklxdllhxgiu.eu-north-1`) keeps the v0.1 schema.** All v1 work runs migrations against a SEPARATE v1-dev Supabase project (URL in local `.env` after the user provisions it). NEVER `prisma migrate dev` against the production DB while on `v1-launch`.
+- **Cutover:** when v1 is ready, user explicitly approves: merge `v1-launch` → `main`, swap Vercel `DATABASE_URL` env to v1-DB (or run final migration on the production DB after backup), `vercel --prod` once. CV-URL transitions from v0.1 to v1.
+
+### Live state (relevant facts below stay valid through v1 dev)
 
 | Item | Value |
 |---|---|
