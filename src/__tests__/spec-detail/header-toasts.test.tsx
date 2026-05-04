@@ -140,10 +140,13 @@ describe('SpecDetailHeader — toast wiring', () => {
 
   it('fires formatQuotaToast(...) when Re-pull is rate-limited', async () => {
     const user = userEvent.setup();
+    // The `mockResolvedValue` at line 117 narrowed the mock's return type to
+    // the success branch; cast through `never` so the failure-branch shape
+    // is accepted for this single override.
     repullSpecActionMock.mockResolvedValueOnce({
       success: false,
       error: { kind: 'rate_limited', retryAt: '2026-05-03T12:00:00Z' },
-    });
+    } as never);
     renderHeader(makeSpec());
 
     await user.click(screen.getByRole('button', { name: /Re-pull from URL/i }));

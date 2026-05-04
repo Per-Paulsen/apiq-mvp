@@ -39,7 +39,9 @@ cd scripts/spike && npx tsx run-prompt.ts <variant> <spec>
 | `prd.md` | Original v0.1 product vision (still valid as long-term direction) | Product context |
 | `prd-launch.md` | **Operative PRD for v1 public launch** — tagline, audience, build scope, spike strategy, distribution, success metrics | Any v1 launch work; input to `/spec` |
 | `prd-launch-brainstorming.md` | Full reasoning history that produced `prd-launch.md` (12 rounds of strategic discussion) | Edge cases / "why was X decided?" |
-| `specs/brainstorming-launch.md` | v1-launch brainstorming + epic-bundling decisions + Conditional Epic Trigger Workflow (10–13) | Before triggering any conditional spike-epic; for "why is epic X bundled this way?" |
+| `specs/brainstorming-launch.md` | v1-launch brainstorming + epic-bundling decisions + Conditional Epic Trigger Workflow (10–13) + 2026-05-03 CI-first/MCP-first repositioning | Before triggering any conditional spike-epic; for "why is epic X bundled this way?" |
+| `LAUNCH-PROGRESS.md` | Live launch checklist + branch + DB policy + setup-actions log | Always before non-trivial work — confirms which branch + DB you're operating on |
+| `DEPLOY-PORTFOLIO.md` | Portfolio-deploy runbook + file ownership map (which files are owned by the live demo) | Before any change that affects landing / login / cron / seed |
 | `prd-decisions.md` | Design system (zinc + violet, Geist Sans + JetBrains Mono, layout, components) | Any UI epic |
 | `tech-stack.md` | Pinned stack/versions | Architectural decisions |
 | `specs/research-spike.md` | Final v4 prompt + zod schema (canonical, v0.1) | Epic 04, prompt changes |
@@ -58,26 +60,36 @@ cd scripts/spike && npx tsx run-prompt.ts <variant> <spec>
 
 ```
 .
-├── prd.md, prd-decisions.md, tech-stack.md, README.md
+├── prd.md, prd-launch.md, prd-decisions.md, tech-stack.md, README.md
+├── LAUNCH-PROGRESS.md           # Live state + branch+DB policy + setup-actions log
+├── DEPLOY-PORTFOLIO.md          # Portfolio-deploy runbook
 ├── specs/                       # Per-epic specs + results + brainstorming + refinement records
+│   └── brainstorming-launch.md  # v1-launch decisions + repositioning history
 ├── openapi-examples/            # 4 real specs (openweathermap, stripe, pagerduty, dnd5eapi)
-├── scripts/spike/               # Epic 00 standalone harness (own package.json)
+├── scripts/
+│   ├── spike/                   # Epic 00 standalone harness (own package.json)
+│   ├── seed-fixtures/           # Pre-baked demo-data JSON, replayed by seed-demo + cron
+│   ├── capture-demo-fixtures.ts # CLI to refresh fixtures from dev DB
+│   ├── seed-demo.ts             # CLI to seed demo workspace (one-time post-deploy)
+│   └── verify-{spec-ingestion,llm-pipeline}.ts  # Permanent regression scripts
 ├── prisma/                      # schema.prisma (provider only) + migrations/
 ├── prisma.config.ts             # Datasource URL (loads .env via dotenv)
+├── vercel.json                  # Cron schedule (daily reset-demo)
 ├── src/
 │   ├── app/                     # Next.js App Router
 │   │   ├── layout.tsx           # ThemeProvider + fonts
 │   │   ├── globals.css          # Tailwind v4 + shadcn theme
 │   │   ├── (app)/layout.tsx     # Protected: SidebarProvider + Sidebar collapsible="icon"
 │   │   ├── (auth)/layout.tsx    # Centered max-w-sm card
-│   │   └── (public)/            # Landing/placeholder
+│   │   ├── (public)/            # Landing + demo-login-action (DEMO_MODE-gated)
+│   │   └── api/cron/reset-demo  # Daily seed-replay route, CRON_SECRET-protected
 │   ├── components/{theme-provider,ui/*}
 │   ├── hooks/use-mobile.ts      # shadcn-generated; eslint-disable at top (re-runs of `add sidebar` overwrite)
-│   ├── lib/{prisma,utils}.ts
+│   ├── lib/{prisma,utils,seed-demo}.ts
 │   ├── generated/prisma/        # gitignored — `npx prisma generate` regenerates
 │   └── __tests__/
 ├── docs/screenshots/            # Browser-verification screenshots
-└── .env / .env.example          # Real / template
+└── .env / .env.example / .env.production.example   # Real / dev-template / prod-template
 ```
 
 ## Skills
@@ -119,6 +131,6 @@ cd scripts/spike && npx tsx run-prompt.ts <variant> <spec>
 
 ## Pre-launch checklist
 
-Operator-side launch-day items are tracked in `prd-launch.md` §"Production setup block" and §"Open Questions for Implementation". Includes Supabase password rotation, AUTH_SECRET / INTERNAL_API_SECRET rotation, real Turnstile keys, OpenRouter pricing-table verification, and dev-DB Petstore-failed-spec cleanup.
+Most launch-day operator-side items are now resolved (production deploy live, Turnstile real-keys set, OpenRouter prod-key with $20-cap, AUTH/INTERNAL/CRON secrets rotated). Remaining for v1 cutover: Supabase production-project decision (current shared dev/prod DB vs separate v1-DB swap at cutover), final domain post-naming-workshop, real backup-verification drill. Tracked in `LAUNCH-PROGRESS.md` "Cutover" subsection.
 
-The 3 `{UUID}.png` design-reference renames were RESOLVED in Epic 08 (now `fillow-template-reference.png`, `design-reference-1.png`, `design-reference-2.png`).
+Resolved earlier: 3 `{UUID}.png` design-reference renames → `fillow-template-reference.png` + `design-reference-1.png` + `design-reference-2.png` (Epic 08); dev-DB Petstore-failed-spec cleanup (replaced by Petstore demo fixture now that portfolio-deploy uses it intentionally).

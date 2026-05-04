@@ -86,7 +86,9 @@ describe('getRequiredSession', () => {
   });
 
   it('no session — calls redirect("/login")', async () => {
-    vi.mocked(auth).mockResolvedValue(null);
+    // `auth` has overloaded signatures (NextMiddleware vs () => Promise<Session | null>);
+    // `vi.mocked()` picks the wrong overload, so cast through `never` to bypass.
+    vi.mocked(auth).mockResolvedValue(null as never);
 
     await expect(getRequiredSession()).rejects.toThrow('REDIRECT');
 
