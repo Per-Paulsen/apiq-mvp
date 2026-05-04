@@ -1,7 +1,7 @@
 # Epic 27 — Marketing Surfaces
 
-> Public-facing pages: landing-page redesign with hero + paste-textarea + sample-picker + below-fold value-props, marketing-copy across surfaces, smart-loading-hints catalog wired into analyzing-state UI, OG/Twitter card meta with edge-rendered preview images, sample-spec-allow-list expansion to OpenWeatherMap + Stripe (sliced) + Petstore.
-> Upstream: [`prd-launch.md`](../prd-launch.md) §3 "Marketing surfaces block", §6 "Distribution Strategy", [`specs/brainstorming-launch.md`](./brainstorming-launch.md) §"Marketing Surfaces", §"Resolved 2026-05-03" Q5.
+> Public-facing pages: landing-page redesign with hero + paste-textarea + sample-picker + below-fold value-props, marketing-copy across surfaces, smart-loading-hints catalog wired into analyzing-state UI, OG/Twitter card meta with edge-rendered preview images, sample-spec-allow-list expansion to OpenWeatherMap + Stripe (sliced) + Petstore. Plus the **2026-05-03 channel-repositioning**: MCP is messaged as the primary interactive channel for engineers in agentic CLIs (Claude Code / Cursor / Continue), and CLI is messaged as the **CI-quality-gate tool** (`apiq check` in GitHub Actions, etc.) — not as an interactive engineer-terminal tool.
+> Upstream: [`prd-launch.md`](../prd-launch.md) §3 "Marketing surfaces block", §6 "Distribution Strategy", [`specs/brainstorming-launch.md`](./brainstorming-launch.md) §"Marketing Surfaces", §"Resolved 2026-05-03" Q5, §"Repositioning 2026-05-03 — CI-first CLI, MCP-first interactive".
 
 ## Scope
 
@@ -57,6 +57,39 @@
   - YES: concrete, ehrlich, engineer-tone.
   - NO: marketing-fluff, "revolutionize", "empower", em-dash-heavy hyperbole.
 - Apply to: tagline, sub-tagline, sample-picker labels, CTA button copy, error toasts, success toasts, empty-states.
+- **Channel-positioning copy** (per `brainstorming-launch.md` §"Repositioning 2026-05-03"): every public surface that mentions distribution leads with **MCP for interactive use, CLI for CI**. No more "use apiq from your terminal" framing.
+  - Below-fold "How it integrates" section copy:
+    - **MCP** card: *"In Claude Code, Cursor, or Continue — apiq's MCP server registers as a tool. The agent calls it when you generate or edit OpenAPI specs."* (CTA: `Set up in 30 seconds → /mcp`)
+    - **CLI / CI** card: *"Add a one-line quality gate to your PR pipeline. Fail PRs that introduce critical findings."* (CTA: `Copy the GitHub Action → /cli`)
+    - **Web** card: *"Quick try without setup. Paste a spec or pick a sample."* (CTA: `Try it → /try`)
+
+### Channel doc-pages — `/mcp` and `/cli`
+
+Two dedicated doc pages, both must ship in this epic to support the repositioned messaging.
+
+- **`/mcp`** (page already in Epic 20's scope as a setup-doc page; this epic ensures the marketing-tone aligns):
+  - Hero: *"Use apiq inside your AI editor."*
+  - Sub-hero with the agent-flow diagram (User asks Claude → Claude calls `apiq.analyze` → structured findings → Claude offers `Apply critical?`)
+  - Copy-paste snippets for Claude Desktop, Cursor, Continue (per Epic 20 spec).
+  - Tool-reference table (6 tools).
+  - "Why MCP, not CLI?" — one-paragraph explainer pointing CI-users to `/cli` and interactive-users to `/mcp`.
+- **`/cli`** (NEW page in this epic):
+  - Hero: *"OpenAPI quality gate for your CI."*
+  - **GitHub Actions snippet** front-and-center (paste-ready, full yaml block per Epic 21's CI-Quality-Gate scope).
+  - Equivalent snippets for: GitLab CI, CircleCI, Jenkins, generic-Bash.
+  - "What it does" — 3 bullets: fail PR on new criticals · machine-readable JSON output · stable schema across versions.
+  - Command reference (all 7 `apiq` commands, terse).
+  - "Why CLI, not MCP?" — one-paragraph explainer pointing interactive-users to `/mcp`.
+
+### HN / Twitter / Reddit launch content
+
+Per `prd-launch.md` §6 + the 2026-05-03 repositioning:
+
+- **HN-Title primary:** *"Show HN: apiq — quality gate for your OpenAPI spec, in CI or in your AI editor"* (replaces the older *"…find what's wrong with your OpenAPI spec"* framing — leads with channel-fit).
+- **Tweet-thread anchor:** *"I added apiq to a GitHub Action. Now PRs fail when the OpenAPI spec drops below quality threshold. 30 seconds setup."* — followed by the GitHub Actions snippet as an image and a `/cli` link.
+- **Second tweet (interactive use case):** *"Or use it from inside Claude Code / Cursor — the agent calls apiq as a tool when it sees an OpenAPI spec. Setup → apiq.dev/mcp"*.
+- **Demo-loom video** (~60s) shows BOTH the CI-gate failing a PR AND the agent-tool flow inside Cursor, in that order.
+- Public-share-link of a famous-API analysis stays as supporting material, not lead.
 
 ### Smart-loading-hints catalog
 
@@ -124,6 +157,9 @@
 9. Dynamic OG via `@vercel/og` for /share/* and /anon/* routes.
 10. Static OG image `public/og-default.png` exists (~1200×630 PNG).
 11. Vitest tests in §"Tests" pass.
+13. **Channel-positioning copy applied** (per Scope §"Marketing copy + tone" + §"Repositioning 2026-05-03"): below-fold "How it integrates" cards (MCP / CLI / Web) live; HN-launch / Twitter / Reddit copy drafts in `specs/27-marketing-surfaces-results.md` reflect the CI-gate-led narrative; no public surface frames CLI as an interactive-engineer-terminal tool.
+14. **`/mcp` doc page** exists with hero, agent-flow diagram (or simple flow-diagram-style numbered list if SVG-budget tight), copy-paste setup snippets, tool-reference table, "Why MCP, not CLI?" explainer.
+15. **`/cli` doc page** exists with hero, **GitHub Actions snippet front-and-center**, equivalent snippets for GitLab CI / CircleCI / Jenkins / generic-Bash, command reference, "Why CLI, not MCP?" explainer cross-linking to `/mcp`.
 12. Browser smoke documented in results: landing page screenshot, share-OG-image preview in Twitter card validator.
 
 ## Out of scope

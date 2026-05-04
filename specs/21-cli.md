@@ -1,9 +1,42 @@
 # Epic 21 — CLI
 
-> `@apiq/cli` npm package — `apiq check / apply / preview / share / login / logout / whoami` commands. Auth via `~/.apiqrc` (shared with MCP server). Settings UI for API-key management at `/settings/api-keys`. Local Prism preview as optional dependency.
-> Upstream: [`prd-launch.md`](../prd-launch.md) §3 "Distribution & Viral block" row "CLI", §2 entry-point (2), [`specs/brainstorming-launch.md`](./brainstorming-launch.md) §"CLI".
+> `@apiq/cli` npm package — `apiq check / apply / preview / share / login / logout / whoami` commands. **Primary use case: CI-Quality-Gate (`apiq check` in GitHub Actions / GitLab CI / Jenkins fails the PR when a new critical finding is introduced).** Secondary: scripts + plain-editor users without an agentic CLI setup. Auth via `~/.apiqrc` (shared with MCP server). Settings UI for API-key management at `/settings/api-keys`. Local Prism preview as optional dependency.
+> Upstream: [`prd-launch.md`](../prd-launch.md) §3 "Distribution & Viral block" row "CLI", §2 entry-point (2), [`specs/brainstorming-launch.md`](./brainstorming-launch.md) §"CLI" + §"Repositioning 2026-05-03 — CI-first CLI, MCP-first interactive".
 
 ## Scope
+
+### CI-Quality-Gate as the killer use case
+
+Per the 2026-05-03 repositioning decision, `apiq check` is positioned **first and foremost as a CI quality-gate**, not as an interactive engineer-terminal tool (engineers in 2026 use agentic CLIs and reach apiq via MCP, not via raw `apiq check`). All CLI design decisions defer to CI-friendliness:
+
+- **Machine-readable output by default in CI:** detect `process.env.CI === "true"` → auto-switch to `--json` output, no spinners, no colors. Override with `--pretty`.
+- **Exit codes encode severity gate:**
+  - `0` = clean (no findings ≥ threshold)
+  - `1` = findings at/above the configured threshold (default: `critical`)
+  - `2` = tool error (network, auth, parse failure)
+  - non-zero `1` is the standard quality-gate failure mode for CI
+- **Stable JSON schema for CI consumers:** `apiq check --json` emits a versioned JSON object (`{ schema_version, score, severity_breakdown, findings[] }`) committed in the CLI's docs. v0.x reserves the right to additive changes only — no breaking changes within minor versions.
+- **`--severity=<x>` flag** controls the gate threshold (default: `critical`). Common pattern: `apiq check spec.yaml --severity=critical` for strict gates, `--severity=high` for tighter quality bars.
+- **Ready-to-paste GitHub Actions snippet** in the README + on `apiq.dev/cli` doc page:
+
+  ```yaml
+  # .github/workflows/openapi-quality.yml
+  name: OpenAPI Quality Gate
+  on: [pull_request]
+  jobs:
+    apiq:
+      runs-on: ubuntu-latest
+      steps:
+        - uses: actions/checkout@v4
+        - uses: actions/setup-node@v4
+          with: { node-version: 22 }
+        - run: npx -y @apiq/cli check ./openapi.yaml --severity=critical
+          env:
+            APIQ_API_KEY: ${{ secrets.APIQ_API_KEY }}
+  ```
+
+- **GitLab CI / Jenkins / CircleCI / generic-Bash** snippets also documented (one block each on the `/cli` doc page).
+- **No assumed interactive TTY:** all commands work non-interactively when stdin is not a TTY (no prompts, fail-fast on missing config).
 
 ### npm package `@apiq/cli`
 
@@ -155,6 +188,10 @@ Schema already added in Epic 20 (`ApiKey` model). This epic ships the UI:
 11. `npm pack` on `cli/` produces a tarball <1 MB (excluding optional Prism).
 12. Vitest tests pass.
 13. Smoke documented in `specs/21-cli-results.md`: full flow `apiq login → apiq check → apiq apply --critical-only → apiq share`.
+14. **CI-friendliness** (per Scope §"CI-Quality-Gate"): when `process.env.CI === "true"`, `apiq check` defaults to `--json` output, suppresses spinners + colors. `--pretty` flag forces interactive output. Vitest test simulates `CI=true` env and asserts JSON-only output.
+15. **Exit-code contract** (per Scope §"CI-Quality-Gate"): `apiq check` returns `0` (clean), `1` (findings ≥ threshold), `2` (tool error). Default threshold is `critical`; `--severity=<level>` override. Vitest tests cover all three exit-codes against fixture specs.
+16. **Stable JSON-output schema** (per Scope §"CI-Quality-Gate"): `apiq check --json` output matches a versioned schema `{ schema_version: "1", score, severity_breakdown, findings: [...] }` documented in `cli/JSON-SCHEMA.md`. Snapshot test in `cli/__tests__/json-schema.test.ts` ensures backward compatibility within the v1 line.
+17. **CI-integration documentation** (per Scope §"CI-Quality-Gate"): `apiq.dev/cli` doc page (Epic 27 marketing-doc territory) includes ready-to-paste snippets for GitHub Actions, GitLab CI, CircleCI, Jenkins, and a generic Bash example. README at the repo root cross-references the doc page.
 
 ## Out of scope
 

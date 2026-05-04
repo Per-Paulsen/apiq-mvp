@@ -460,3 +460,61 @@ Geht in Spec aktuell von Greenfield-Setup aus (neues Vercel-Project, neue Supaba
 Konkret: Epic 28's Acceptance-Criteria #1 ("Vercel production project provisioned") ist bereits erfüllt. Epic 28's #3 ("Supabase EU-Region") ebenfalls (eu-north-1). Epic 28 wird beim `/dev`-Run pragmatisch: was schon existiert, wird wiederverwendet, was fehlt (echter Domain, separate Prod-DB falls gewünscht, Production-grade Backup-Verify) wird ergänzt.
 
 Empfehlung beim Epic 28 Implementation-Start: erst `LAUNCH-PROGRESS.md` §"Production state" lesen, dann Spec-AC durchgehen + per-AC entscheiden "schon erfüllt" / "muss noch".
+
+---
+
+## Repositioning 2026-05-03 — CI-first CLI, MCP-first interactive
+
+### Auslöser
+
+User-Frage post-Phase-2: *"ist es realistisch, dass Engineers apiq über CLI benutzen? Engineers arbeiten 2026 in Claude Code / Cursor / Codex CLI. Würden sie dort apiq verwenden im Wissen dass apiq selbst eine Black-Box-LLM nutzt?"*
+
+Strategische Diskussion zwischen User und Claude (~3 Runden) führte zu folgender Erkenntnis:
+
+### Kern-Insight
+
+**CLI und MCP adressieren komplett verschiedene Audiences und Use-Cases — sie konkurrieren NICHT, sie ergänzen.** Aktuelle PRD-§6-Distribution-Story listete sie zu balanced-equally, was die 2026-Realität verfehlt:
+
+- **Engineers in agentischen CLIs (Claude Code / Cursor / Continue) erreichen apiq via MCP** — der Agent ruft `apiq.analyze` als Tool auf, User triggert nicht manuell. Apiq ist **spezialisiertes Backend** in der Tool-Belt des Agents (analog zu `tsc --noEmit` als Tool, nicht als User-Workflow).
+- **CI-Quality-Gate ist der Killer-Use-Case für CLI** — `apiq check spec.yaml --severity=critical` in GitHub-Actions / GitLab-CI / Jenkins lässt PRs failen wenn neuer Critical-Finding einkommt. **Spectral-Pattern, etabliert seit Jahren.** Keine Engineers tippen 2026 manuell `apiq check` im Terminal — aber tausende Teams werden's in CI-Pipelines packen.
+- **Web (`/try`, `/anon`, `/share`)** ist Marketing-Front-Door für Casual-Visitors und HN-Reddit-Twitter-Traffic.
+
+### Black-Box-LLM-Sorge
+
+Real, aber lösbar ohne BYOK. Drei Stufen Transparenz:
+
+1. **`"Powered by Claude Sonnet 4 via OpenRouter"` Display** im UI (Spec-Detail-Footer + MCP-Response-Field) — Standard 2026 für AI-Tools.
+2. **MCP-Tool-Response enthält `model_used` Field** — Agent kann's dem User zeigen wenn relevant.
+3. **BYOK in v1.1** (per PRD §11 Roadmap) — wer's wirklich nicht-Black-Box will, bringt eigenen OpenRouter-Key. **Bewusst v1.1**, weil Operational-Complexity (Key-Validation, Error-Mapping, Storage-Encryption, Settings-UI) ~3-5 Tage isst und nicht launch-blocking ist.
+
+Modell-Choice (Sonnet vs Opus vs Haiku) bleibt **gelockt auf Sonnet** für v1: der Spike-validierte Prompt v4 hängt davon ab, Modell-Drift würde die "engineering-grade narration"-Promise + den deterministischen Quality-Score brechen. Modell-Picker → v1.1 als Bundle mit BYOK.
+
+### Konkrete Spec-Änderungen (heute durchgezogen)
+
+Drei Dateien:
+
+- **`specs/21-cli.md`** — Scope-Reframe:
+  - Neuer Top-Section *"CI-Quality-Gate as the killer use case"* mit ready-to-paste GitHub-Actions-Snippet, CI-friendly Defaults (`process.env.CI === "true"` → JSON-Output, no spinners), Exit-Code-Vertrag (`0` clean / `1` findings ≥ threshold / `2` tool-error), versionierter JSON-Output-Schema.
+  - 4 neue ACs (#14-17) für CI-Friendliness, Exit-Codes, JSON-Schema-Stability, CI-Doc-Page.
+  - **Alle 7 Commands bleiben** (keine Spar-Option). User-Direktive: "sparen an falscher Stelle".
+- **`specs/27-marketing-surfaces.md`** — Marketing-Tone shift:
+  - Intro + Upstream-Refs note das Repositioning.
+  - Marketing-Copy-Section: neue *"Channel-positioning copy"*-Block mit "How it integrates"-Below-fold-Cards (MCP / CLI / Web).
+  - Neue Section *"Channel doc-pages — `/mcp` und `/cli`"* — beide Pages müssen in diesem Epic shippen, mit klaren Hero/CTA-Strukturen ("Use apiq inside your AI editor" für MCP, "OpenAPI quality gate for your CI" für CLI).
+  - Neue Section *"HN / Twitter / Reddit launch content"* mit konkreten Tweet-/HN-Titeln die mit CI-Gate-Story leaden, nicht mit "find what's wrong".
+  - 3 neue ACs (#13-15) für Channel-Copy, `/mcp` Doc-Page, `/cli` Doc-Page.
+- **`specs/brainstorming-launch.md`** — diese Section.
+
+### Was NICHT geändert wurde
+
+- **Epic 20 (MCP) bleibt unverändert.** Das war schon korrekt scopiert — User-Setup-Doku, 6 Tool-Surface, Local-Stdio-Pattern. Nur Marketing-Tone des Setup-Docs (in Epic 27 abgedeckt).
+- **PRD §6 "Distribution Strategy"** bleibt textuell unverändert (Workflow-Regel: Specs = single source of truth, PRD ist upstream-vision). Repositioning lebt in den abgeleiteten Epic-Specs + diesem Brainstorming-Eintrag.
+- **Epic 21 Effort-Estimate** bleibt **2 Tage** (User explizit: "nicht die Spar-Option"). Die zusätzlichen CI-Friendliness-ACs sind +0.5 d, das wird absorbiert in der bestehenden 2-Tages-Schätzung als Risk-Buffer.
+
+### v1-Launch-Day-Implikation
+
+Wenn v1 ships, ist das Marketing-Story-Telling:
+
+- **Primary** (HN, Twitter, Reddit-Lead): *"apiq — quality gate for your OpenAPI spec, in CI or your AI editor"*
+- **Demo-Loom**: zeigt CI-Gate-Failing-PR ZUERST, dann Agent-Tool-Flow in Cursor
+- **Conversion-Funnel**: CI-Setup ist 30s-Setup (Copy GitHub-Actions-yaml), MCP-Setup ist 30s-Setup (Copy Claude-Desktop-config-JSON) — beide niedrig-Schwelle.
