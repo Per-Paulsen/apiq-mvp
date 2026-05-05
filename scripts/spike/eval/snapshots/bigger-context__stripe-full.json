@@ -1,0 +1,37 @@
+{
+  "configName": "bigger-context__stripe-full",
+  "lockedAt": "2026-05-05T13:20:50.579Z",
+  "lockedBy": "4dbe81ff3e949652fe648022a41e3a83c3e8f63e",
+  "spec": "stripe-full",
+  "metrics": {
+    "findingCount": {
+      "mean": 12,
+      "std": 0
+    },
+    "costUSD": {
+      "mean": 1.27508875,
+      "std": 0
+    },
+    "durationMs": {
+      "mean": 140689,
+      "std": 0
+    },
+    "applyCleanRate": {
+      "mean": 0.9166666666666666,
+      "std": 0
+    },
+    "halluRate": {
+      "mean": 0.08333333333333333,
+      "std": 0
+    },
+    "repetitionRate": 0,
+    "uniqueClusters": 12,
+    "coverageRate": 0.1724137931034483,
+    "substantiveCoverageRate": 0.17391304347826086,
+    "knowledgeBackedCoverageRate": 0.14285714285714285,
+    "llmOnlyCoverageRate": 0,
+    "pureSpectralCoverageRate": 0.15,
+    "domainKnowledgeCoverageRate": 0.5
+  },
+  "notes": "Stage-3 historical run snapshot — bigger-context · google/gemini-2.5-pro · stripe-full · prompt=v4. Locked by bulk-sweep on 2026-05-05 to enable Stage-A-vs-baseline drift-diffing."
+}

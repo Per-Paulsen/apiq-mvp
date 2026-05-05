@@ -1,0 +1,562 @@
+{
+  "spec": "dnd5eapi",
+  "specSource": "openapi-examples/dnd5eapi/spec.json",
+  "specCommit": null,
+  "specVersion": null,
+  "endpointCount": 47,
+  "pathCount": 47,
+  "openapiVersion": "3.0.1",
+  "componentSchemaCount": 49,
+  "estimatedInputTokens": null,
+  "authoringDate": "2026-05-05",
+  "author": "Claude Code (LLM-authored, agent-spawned)",
+  "humanHardenedDate": null,
+  "humanHardenedBy": null,
+  "notes": "Reference target for dnd5eapi — apiq Big-Spec Architecture Spike Epic 09 Phase 0. Authored by background agent on 2026-05-05 to enable cross-spec validation of Stage-A Deterministic Layer. dnd5eapi is a small public read-only hobbyist API (47 GET-only ops, no auth, MIT-licensed open data); calibration anchor 'small public APIs have lower expected finding count + no commercial-API-class issues' applies. Per anti-pattern D the absence of operation-level security is correct (root has none, public API). No critical findings expected on a read-only public hobbyist API — the highest severity here are 'high' clarity/correctness gaps (OAS-3 $ref-with-siblings violation, missing required arrays on 48/49 schemas, no 4xx responses documented anywhere except one 404). LLM-authored bias acknowledged — humanHardenedDate is the field to set when domain-expert review completes.\n\nAuthoring discipline: every finding hard-grounded in spec text at openapi-examples/dnd5eapi/spec.json. Distribution: 0 critical · 3 high · 9 medium · 2 low. 6 clarity / 8 design / 0 risk. 12 spec-scope · 2 endpoint-scope. Classification: 2 lint-flavoured, 4 knowledge-backed-gap, 10 pure-spectral-detectable, 2 domain-knowledge-detectable, 2 LLM-only, 5 with expectedClusterKey.",
+  "findings": [
+    {
+      "id": "F1",
+      "title": "`servers` array exposes a `localhost:3000` development URL alongside production",
+      "category": "design",
+      "severity": "medium",
+      "scope": "spec",
+      "affectedEndpoints": [],
+      "patchSummary": "Remove the `http://localhost:3000` server entry from the published spec, or move it behind a documentation-only branch.",
+      "narration": "`servers[1].url` is `http://localhost:3000` with description `\"Local Development\"`. The published OpenAPI spec at `openapi-examples/dnd5eapi/spec.json` advertises this dev-mode URL to every consumer of the spec. Documentation portals (Swagger UI, ReDoc) render a server-picker that lists all `servers[]` entries; consumers who pick the second option from the dropdown silently send requests to their own machine on port 3000, where they will either fail (no listener) or hit some unrelated local service. Code-generators that pick the first listed server are unaffected, but configuration-driven SDKs and human-facing playgrounds are. The local-dev URL also leaks the implementation detail that the API is served on port 3000 in development, which is a minor information-disclosure concern. Production specs should expose only production servers; dev/staging URLs belong in a sibling spec or a build-time variant.",
+      "rationale": "OpenAPI 3.0 §4.7.5 (\"Server Object\") describes `servers` as the publicly-advertised base URLs at which the API can be reached. Microsoft REST API Guidelines §7.1 and the OpenAPI Initiative style guide both name production-only servers as the convention for published specs, with developer environments pulled from a separate document or runtime override.",
+      "patchOps": [
+        {
+          "op": "remove",
+          "path": "/servers/1"
+        }
+      ],
+      "classification": {
+        "isLintFlavoured": false,
+        "isKnowledgeBackedGap": false,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
+        "narrationKeywords": [
+          "localhost",
+          "development server",
+          "servers array",
+          "production spec hygiene"
+        ],
+        "expectedClusterKey": null
+      },
+      "selfReviewNotes": null
+    },
+    {
+      "id": "F2",
+      "title": "Top-level `tags` declares 2 entries; operations reference 16 distinct tag names",
+      "category": "clarity",
+      "severity": "medium",
+      "scope": "spec",
+      "affectedEndpoints": [],
+      "patchSummary": "Add the 14 missing tag names (`Class`, `Class Resource Lists`, `Class Levels`, `Game Mechanics`, `Equipment`, `Feats`, `Features`, `Monsters`, `Races`, `Rules`, `Spells`, `Subclasses`, `Subraces`, `Traits`) to the top-level `tags` array, each with a short `description`.",
+      "narration": "`tags` at the document root contains exactly two entries — `Common` and `Character Data` — but the 47 operations reference 16 distinct tag names: the two declared plus `Class`, `Class Resource Lists`, `Class Levels`, `Game Mechanics`, `Equipment`, `Feats`, `Features`, `Monsters`, `Races`, `Rules`, `Spells`, `Subclasses`, `Subraces`, `Traits`. The OpenAPI specification treats the top-level `tags` array as the canonical place to give each tag a description and ordering hint; tags referenced only inside operations are accepted by parsers, but documentation portals (Swagger UI, ReDoc, Stoplight Elements) that group operations by tag will render the 14 undeclared ones with no description and in arbitrary alphabetical order. The two declared entries also lack a `description` field, so even the documented tags carry no explanatory hint.",
+      "rationale": "OpenAPI 3.0 §4.7.4 (\"Operation Object\") states that operation-level `tags` should match the names declared in the top-level `tags` array; descriptions and ordering live there. Documentation tools consistently follow that convention.",
+      "patchOps": [
+        {
+          "op": "replace",
+          "path": "/tags",
+          "value": [
+            { "name": "Common", "description": "Common entry-point endpoints (catch-all `/api`, resource-listing)." },
+            { "name": "Character Data", "description": "Character-creation and character-sheet primitives." },
+            { "name": "Class", "description": "Player character classes." },
+            { "name": "Class Resource Lists", "description": "Lists of resources that belong to a class (proficiencies, subclasses, etc.)." },
+            { "name": "Class Levels", "description": "Per-level resources for each class." },
+            { "name": "Game Mechanics", "description": "Mechanics-level concepts: skills, ability scores, conditions, damage types, etc." },
+            { "name": "Equipment", "description": "Equipment, gear, and equipment categories." },
+            { "name": "Feats", "description": "Character feats." },
+            { "name": "Features", "description": "Class features." },
+            { "name": "Monsters", "description": "Monster bestiary." },
+            { "name": "Races", "description": "Player character races." },
+            { "name": "Rules", "description": "Game rules and rule sections." },
+            { "name": "Spells", "description": "Spells and spellcasting reference." },
+            { "name": "Subclasses", "description": "Class archetypes / subclasses." },
+            { "name": "Subraces", "description": "Race subraces." },
+            { "name": "Traits", "description": "Racial traits." }
+          ]
+        }
+      ],
+      "classification": {
+        "isLintFlavoured": false,
+        "isKnowledgeBackedGap": false,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
+        "narrationKeywords": [
+          "undeclared tags",
+          "top-level tags",
+          "tag descriptions"
+        ],
+        "expectedClusterKey": null
+      },
+      "selfReviewNotes": null
+    },
+    {
+      "id": "F3",
+      "title": "All 47 operations are missing `operationId`",
+      "category": "clarity",
+      "severity": "medium",
+      "scope": "spec",
+      "affectedEndpoints": [],
+      "patchSummary": "Add an `operationId` to every operation (e.g. `getAbilityScoreByIndex` for `GET /api/ability-scores/{index}`).",
+      "narration": "Not a single one of the 47 operations declares `operationId`. The OpenAPI specification names `operationId` as the canonical unique identifier consumed by SDK code-generators (openapi-generator, OpenAPI TS, oapi-codegen) to pick the method name on the generated client. Without it, generators fall back to deriving names from path + method (producing names like `apiAbilityScoresIndexGet`), with each generator using its own deriving rules — meaning two different SDKs generated from the same spec ship with two different method names for the same operation. AI-codegen tools that consume the spec to drive function-name generation also degrade to path-based fallbacks. Adding `operationId` is a one-line-per-op change; the API is small enough that hand-curated names are tractable.",
+      "rationale": "OpenAPI 3.0 §4.7.4 (\"Operation Object\") describes `operationId` as a unique, language-agnostic identifier used by tools to refer to an operation. Spectral's `operation-operationId` rule is enabled by default in the `oas` ruleset for this exact reason.",
+      "patchOps": [
+        {
+          "op": "add",
+          "path": "/paths/~1api~1ability-scores~1{index}/get/operationId",
+          "value": "getAbilityScoreByIndex"
+        },
+        {
+          "op": "add",
+          "path": "/paths/~1api~1monsters/get/operationId",
+          "value": "listMonsters"
+        },
+        {
+          "op": "add",
+          "path": "/paths/~1api~1spells/get/operationId",
+          "value": "listSpells"
+        }
+      ],
+      "classification": {
+        "isLintFlavoured": false,
+        "isKnowledgeBackedGap": false,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
+        "narrationKeywords": [
+          "operationId",
+          "missing identifiers",
+          "SDK generation"
+        ],
+        "expectedClusterKey": "missing-operationid"
+      },
+      "selfReviewNotes": null
+    },
+    {
+      "id": "F4",
+      "title": "25 of 47 operations are missing `description`",
+      "category": "clarity",
+      "severity": "medium",
+      "scope": "spec",
+      "affectedEndpoints": [],
+      "patchSummary": "Add a `description` to each of the 25 operations that currently lack one.",
+      "narration": "25 of 47 operations carry a `summary` but no `description`. The affected set includes high-traffic endpoints like `GET /api/spells`, `GET /api/spells/{index}`, `GET /api/monsters`, `GET /api/monsters/{index}`, every operation under `/api/classes/{index}/levels/...`, and every sub-resource under `/api/subclasses/`, `/api/races/{index}/...`, `/api/subraces/{index}/...`, `/api/traits/{index}`, and `/api/weapon-properties/{index}`. The remaining 22 operations DO carry rich Markdown descriptions (e.g. the ability-score endpoint includes the full SRD reference and a page-link to the rulebook), so the gap is structural rather than prose-budget: the documentation pipeline appears to have consistently skipped sub-resource and listing endpoints. Documentation portals render these endpoints with only the one-line `summary`, hiding the operational detail (filter semantics, response shape, link to SRD) that the populated half of the spec demonstrates is the intended documentation surface.",
+      "rationale": "OpenAPI 3.0 §4.7.4 (\"Operation Object\") names `description` as the verbose-explanation field; tooling and documentation portals expect it. Spectral's `operation-description` rule is enabled by default in the `oas` ruleset.",
+      "patchOps": [
+        {
+          "op": "add",
+          "path": "/paths/~1api~1spells/get/description",
+          "value": "Returns a paginated list of all spells in the SRD. Supports optional `level` and `school` query-parameter filters."
+        },
+        {
+          "op": "add",
+          "path": "/paths/~1api~1monsters/get/description",
+          "value": "Returns a paginated list of all monsters in the SRD. Supports an optional `challenge_rating` query-parameter filter."
+        }
+      ],
+      "classification": {
+        "isLintFlavoured": false,
+        "isKnowledgeBackedGap": false,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
+        "narrationKeywords": [
+          "missing description",
+          "operation description",
+          "documentation gap"
+        ],
+        "expectedClusterKey": "missing-description"
+      },
+      "selfReviewNotes": null
+    },
+    {
+      "id": "F5",
+      "title": "OAS 3.0 violation: `$ref` co-occurs with sibling keys in 4 locations",
+      "category": "design",
+      "severity": "high",
+      "scope": "spec",
+      "affectedEndpoints": [],
+      "patchSummary": "Wrap each `$ref`-with-siblings in an `allOf` so the surrounding keywords are merged in correctly.",
+      "narration": "Four locations declare `$ref` next to sibling keywords, which OpenAPI 3.0 explicitly forbids: `paths./api/monsters/{index}.get.responses.200.content.application/json.schema` (carries both `$ref: '#/components/schemas/Monster'` and a sibling `allOf` block); `components.schemas.Race.allOf[1].properties.starting_proficiency_options` (`$ref` + `description`); `components.schemas.Spell.allOf[2].properties.school` (`$ref` + `description`); `components.schemas.Subrace.allOf[1].properties.language_options` (`$ref` + `description`). Per OAS 3.0 §3.0 (\"Reference Object\"), a `$ref` MUST be the only key in its object — all sibling keys are silently dropped by spec-conformant parsers, including the description prose that authors have written next to the references. OAS 3.1 relaxes this rule (sibling keys are honoured for annotations), but this spec's `openapi: 3.0.1` puts it in the strict regime. The descriptions next to `$ref` therefore disappear in every generator and renderer that treats the spec as conformant 3.0.",
+      "rationale": "OpenAPI 3.0 §3.0 (\"Reference Object\") states: *\"This object cannot be extended with additional properties and any properties added SHALL be ignored.\"* JSON Schema 2019-09 (the version 3.1 inherits from) loosened this rule, but OAS 3.0 specs are bound by the original strict reading.",
+      "patchOps": [
+        {
+          "op": "replace",
+          "path": "/components/schemas/Spell/allOf/2/properties/school",
+          "value": {
+            "allOf": [
+              { "$ref": "#/components/schemas/APIReference" }
+            ],
+            "description": "Magic school this spell belongs to."
+          }
+        }
+      ],
+      "classification": {
+        "isLintFlavoured": false,
+        "isKnowledgeBackedGap": true,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
+        "narrationKeywords": [
+          "$ref siblings",
+          "Reference Object",
+          "OAS 3.0 violation"
+        ],
+        "expectedClusterKey": null
+      },
+      "selfReviewNotes": null
+    },
+    {
+      "id": "F6",
+      "title": "48 of 49 component schemas have no `required` array",
+      "category": "design",
+      "severity": "high",
+      "scope": "spec",
+      "affectedEndpoints": [],
+      "patchSummary": "Declare a `required` array on every component schema that has properties always returned by the API.",
+      "narration": "Only `error-response` declares a `required` array (`[\"error\"]`). The other 48 component schemas — including `APIReference`, `APIReferenceList`, `Monster`, `Spell`, `Class`, `Race`, `Equipment`, and every other domain primitive — declare no `required` field, meaning every property is optional under JSON Schema semantics. The response examples bundled with each operation contradict this: every example payload includes `index`, `name`, `url` on `APIReference`-like objects; every `APIReferenceList` example carries both `count` and `results`; the Monster example at `paths./api/monsters/{index}.get.responses.200.content.application/json.example` has all 30+ properties populated. A consumer that uses the schema as the source of truth must defensively null-check every field on every read, and code-generators emit fully-Optional<T> types where the runtime contract is in fact tight. This is the single highest-leverage correctness improvement in the spec.",
+      "rationale": "JSON Schema's `required` keyword is the contract-defining field for which properties must be present in a valid instance. Microsoft REST API Guidelines §4.5 and Google AIP-203 both name explicit `required` as the convention for response schemas. Spectral does not flag missing `required` by default but every linter ruleset in production at-scale (e.g. Stoplight's `vacuous-schema`) does.",
+      "patchOps": [
+        {
+          "op": "add",
+          "path": "/components/schemas/APIReference/required",
+          "value": ["index", "name", "url"]
+        },
+        {
+          "op": "add",
+          "path": "/components/schemas/APIReferenceList/required",
+          "value": ["count", "results"]
+        }
+      ],
+      "classification": {
+        "isLintFlavoured": false,
+        "isKnowledgeBackedGap": false,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
+        "narrationKeywords": [
+          "missing required",
+          "schema required",
+          "optional properties",
+          "contract"
+        ],
+        "expectedClusterKey": null
+      },
+      "selfReviewNotes": null
+    },
+    {
+      "id": "F7",
+      "title": "Only 1 of 47 operations declares any non-200 response; the catalog of error states is undocumented",
+      "category": "design",
+      "severity": "high",
+      "scope": "spec",
+      "affectedEndpoints": [],
+      "patchSummary": "Add a `404` response (referencing `error-response`) to all operations with `{index}` path parameters, and document the family of expected error codes (`4xx`, `5xx`) at least once via a reusable `components.responses` entry.",
+      "narration": "Across all 47 operations, only `GET /api/classes/{index}/spellcasting` declares a `404` response. The other 46 operations declare exactly one response status: `200`. Every `{index}`-parametrised path returns a 404 in practice when the index does not match (the API has finite enums for things like ability-scores `cha|con|dex|int|str|wis`; any off-enum value is a 404), but the spec contract states only `200`. Consumers that rely on the schema must therefore either treat any non-200 as undefined behaviour, or hard-code knowledge that the API \"obviously\" returns 404. This forces every SDK and every client to hand-write the error path that the spec should declare. The `error-response` schema already exists at `components.schemas.error-response` — a single shared `components.responses.NotFound` entry referencing it would let every operation `{ \"$ref\": \"#/components/responses/NotFound\" }` in one line. 5xx responses are also undocumented anywhere; a transient upstream failure should at minimum carry a contract entry.",
+      "rationale": "OpenAPI 3.0 §4.7.18 (\"Responses Object\") states that the `responses` map should describe expected responses for each HTTP status code the operation can return. RFC 7231 §6.5.4 documents 404 as the standard not-found semantics. Microsoft REST API Guidelines §7.10 and Google AIP-193 both recommend declaring at least the most common error responses alongside the success path.",
+      "patchOps": [
+        {
+          "op": "add",
+          "path": "/components/responses",
+          "value": {
+            "NotFound": {
+              "description": "The requested resource was not found.",
+              "content": {
+                "application/json": {
+                  "schema": { "$ref": "#/components/schemas/error-response" },
+                  "example": { "error": "Not found" }
+                }
+              }
+            }
+          }
+        },
+        {
+          "op": "add",
+          "path": "/paths/~1api~1ability-scores~1{index}/get/responses/404",
+          "value": { "$ref": "#/components/responses/NotFound" }
+        }
+      ],
+      "classification": {
+        "isLintFlavoured": false,
+        "isKnowledgeBackedGap": true,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
+        "narrationKeywords": [
+          "missing 404",
+          "missing error responses",
+          "non-200 responses",
+          "error documentation"
+        ],
+        "expectedClusterKey": "missing-error-response"
+      },
+      "selfReviewNotes": null
+    },
+    {
+      "id": "F8",
+      "title": "`error-response` schema is not RFC 7807-conformant",
+      "category": "design",
+      "severity": "medium",
+      "scope": "spec",
+      "affectedEndpoints": [],
+      "patchSummary": "Either align `error-response` to RFC 7807 Problem Details (`type`, `title`, `status`, `detail`, `instance`) or document the deviation explicitly.",
+      "narration": "`components.schemas.error-response` declares one required string property: `error`. RFC 7807 (\"Problem Details for HTTP APIs\") — the IETF-standard error-envelope shape that almost every modern REST API has converged on — calls for a structured object with `type` (URI), `title` (short human-readable summary), `status` (HTTP status code), `detail` (longer human-readable explanation) and `instance` (URI to the specific occurrence). The dnd5eapi error-envelope is a free-form `{ error: string }` that conflates all five fields into one unstructured prose blob. Consumers cannot dispatch on error-class (no `type` URI), cannot programmatically render the status code (the response status is the only signal), and cannot deep-link to occurrence-specific debugging info. For a public API of this scope the simplification is defensible — but the spec should at minimum declare the Content-Type as `application/problem+json` if it intends RFC 7807 framing, or document explicitly that it's using a non-standard envelope.",
+      "rationale": "RFC 7807 §3 specifies the Problem Details envelope. Microsoft REST API Guidelines §7.10.2 and the OpenAPI Initiative both recommend RFC 7807 for error responses on new APIs.",
+      "patchOps": [
+        {
+          "op": "replace",
+          "path": "/components/schemas/error-response",
+          "value": {
+            "type": "object",
+            "description": "Error-response envelope. Note: dnd5eapi uses a simplified non-RFC-7807 shape with a single `error` string property; consider migrating to RFC 7807 Problem Details for new clients.",
+            "properties": {
+              "error": {
+                "type": "string",
+                "description": "Human-readable error message."
+              }
+            },
+            "required": ["error"]
+          }
+        }
+      ],
+      "classification": {
+        "isLintFlavoured": false,
+        "isKnowledgeBackedGap": true,
+        "isPureSpectralDetectable": false,
+        "isDomainKnowledgeDetectable": true,
+        "narrationKeywords": [
+          "RFC 7807",
+          "problem details",
+          "error envelope",
+          "non-conformant"
+        ],
+        "expectedClusterKey": null
+      },
+      "selfReviewNotes": null
+    },
+    {
+      "id": "F9",
+      "title": "List endpoints declare no pagination convention",
+      "category": "design",
+      "severity": "medium",
+      "scope": "endpoint",
+      "affectedEndpoints": [
+        { "path": "/api/spells", "method": "get" },
+        { "path": "/api/monsters", "method": "get" },
+        { "path": "/api/{endpoint}", "method": "get" }
+      ],
+      "patchSummary": "Add `limit`/`offset` (or cursor-based) pagination parameters to the three list endpoints and document the maximum page size.",
+      "narration": "The three list endpoints — `GET /api/spells`, `GET /api/monsters`, `GET /api/{endpoint}` — return `APIReferenceList` (a wrapper around `count` + `results: APIReference[]`) but declare no pagination parameters. The runtime API returns full lists (`/api/monsters` returns ~332 entries; `/api/spells` returns ~319) in a single response. While the SRD content is small enough that this works in practice today, the spec contract guarantees no upper bound on `count` and offers consumers no `limit`, `offset`, `page`, or cursor-based mechanism to slice the results. Any future expansion of the underlying database (and the API explicitly invites SRD-eligible additions on the GitHub repo) would force a breaking change to introduce pagination later. The convention `?limit=N&offset=M` is the lowest-friction addition; cursor-based pagination is preferable for stable iteration but heavier to retrofit. The `APIReferenceList` schema also lacks any pagination-metadata fields like `next`, `previous`, or `total_pages`.",
+      "rationale": "Microsoft REST API Guidelines §9.4 and Google AIP-158 both name explicit pagination as the standard for any collection endpoint. The OpenAPI Initiative style guide treats the absence of `limit`/`offset` (or equivalent) on a list endpoint as a forward-compatibility risk.",
+      "patchOps": [
+        {
+          "op": "add",
+          "path": "/components/parameters/limit-param",
+          "value": {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Maximum number of results to return. Default: all.",
+            "schema": { "type": "integer", "minimum": 1, "maximum": 1000, "default": 100 }
+          }
+        },
+        {
+          "op": "add",
+          "path": "/components/parameters/offset-param",
+          "value": {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "description": "Number of results to skip before starting to return entries.",
+            "schema": { "type": "integer", "minimum": 0, "default": 0 }
+          }
+        }
+      ],
+      "classification": {
+        "isLintFlavoured": false,
+        "isKnowledgeBackedGap": true,
+        "isPureSpectralDetectable": false,
+        "isDomainKnowledgeDetectable": true,
+        "narrationKeywords": [
+          "pagination",
+          "limit offset",
+          "cursor",
+          "list endpoints"
+        ],
+        "expectedClusterKey": null
+      },
+      "selfReviewNotes": null
+    },
+    {
+      "id": "F10",
+      "title": "Pervasive `type: number` on properties that are integers by domain semantics",
+      "category": "design",
+      "severity": "medium",
+      "scope": "spec",
+      "affectedEndpoints": [],
+      "patchSummary": "Change `type: number` to `type: integer` on count-, level-, dice-, and stat-typed fields throughout the schemas.",
+      "narration": "More than 60 schema properties declare `type: number` where `type: integer` is the correct domain shape. Examples include `APIReferenceList.count` (\"Total number of resources available\"), `Spell.level`, `ClassLevel.level` (\"The number value for the current level object\"), `ClassLevel.prof_bonus`, all six `Monster` ability-score properties (`charisma`, `constitution`, `dexterity`, `intelligence`, `strength`, `wisdom`), `Monster.hit_points`, `Monster.armor_class[].value`, `Monster.senses.passive_perception`, `Choice.choose`, `DC.dc_value`, `Class.hit_die`, every `spell_slots_level_N`, `cantrips_known`, `spells_known`, `ki_points`, `sorcery_points`, `rage_count`, `action_surges`, etc. JSON Schema's `number` permits floats; using it on integer-valued fields lets generators emit `double`/`float` types where `int32` is correct, increases serialisation overhead, and produces SDKs whose method signatures don't match the runtime semantics. The `challenge-rating-filter` parameter does legitimately accept fractional values (`0.25`, `0.5`) — that one stays `number`. The path-parameter schemas also exhibit the bug: `class-level` and `spell-level` use `type: number` with integer-only `minimum`/`maximum` and integer examples.",
+      "rationale": "JSON Schema §6.1.1 distinguishes `number` (any JSON number, including floats) from `integer` (whole-number subset). Microsoft REST API Guidelines §10.4 and the OpenAPI Initiative both recommend `integer` with an explicit `format` (`int32`, `int64`) on count/level/identifier fields.",
+      "patchOps": [
+        {
+          "op": "replace",
+          "path": "/components/schemas/APIReferenceList/properties/count/type",
+          "value": "integer"
+        },
+        {
+          "op": "add",
+          "path": "/components/schemas/APIReferenceList/properties/count/minimum",
+          "value": 0
+        },
+        {
+          "op": "replace",
+          "path": "/components/parameters/class-level/schema/type",
+          "value": "integer"
+        },
+        {
+          "op": "replace",
+          "path": "/components/parameters/spell-level/schema/type",
+          "value": "integer"
+        }
+      ],
+      "classification": {
+        "isLintFlavoured": false,
+        "isKnowledgeBackedGap": false,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
+        "narrationKeywords": [
+          "type number integer",
+          "wrong primitive type",
+          "integer fields",
+          "JSON Schema type"
+        ],
+        "expectedClusterKey": "number-should-be-integer"
+      },
+      "selfReviewNotes": null
+    },
+    {
+      "id": "F11",
+      "title": "41 of 49 component schemas carry stub `description` values that just echo the schema name",
+      "category": "clarity",
+      "severity": "medium",
+      "scope": "spec",
+      "affectedEndpoints": [],
+      "patchSummary": "Replace stub `description` values (`\"`Spell`\\n\"`, `\"`Monster`\\n\"`, etc.) with one-sentence explanations of what the schema represents.",
+      "narration": "41 of the 49 component schemas have a `description` whose visible content (after stripping backticks and whitespace) is identical to the schema name — e.g. `Spell.description = \"`Spell`\\n\"`, `Monster.description = \"`Monster`\\n\"`, `APIReference.description = \"`APIReference`\\n\"`, `WeaponProperty.description = \"WeaponProperty\"`. These appear to be machine-generated stubs from a `swagger-jsdoc`-style auto-population step that never had follow-up authoring. They satisfy the structural \"description present\" check but provide zero informational value to documentation consumers, who see the schema name twice (heading + description) with no actual explanation. The eight schemas that DO have prose descriptions (e.g. `APIReferenceList.description = \"`APIReferenceList`\\n\"` is also stub — the genuinely-described ones are nested into `properties[].description` on individual fields) demonstrate that the authoring discipline is selectively applied.",
+      "rationale": "OpenAPI 3.0 §4.7.21 (\"Schema Object\") lists `description` as the canonical place to document the meaning of a schema. Stoplight's `vacuous-schema` and Spectral's `oas3-schema-description` rules both treat trivial / echo-only descriptions as ineffective.",
+      "patchOps": [
+        {
+          "op": "replace",
+          "path": "/components/schemas/APIReference/description",
+          "value": "Minimal representation of any resource in the dnd5eapi. The detailed representation of the referenced resource can be retrieved by making a GET request to `url`."
+        },
+        {
+          "op": "replace",
+          "path": "/components/schemas/APIReferenceList/description",
+          "value": "Wrapper for paginated lists of `APIReference` entries: the `count` property gives the total number of results and `results` is the list itself."
+        }
+      ],
+      "classification": {
+        "isLintFlavoured": false,
+        "isKnowledgeBackedGap": false,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
+        "narrationKeywords": [
+          "stub description",
+          "schema description",
+          "auto-generated description",
+          "echo-only"
+        ],
+        "expectedClusterKey": "stub-schema-description"
+      },
+      "selfReviewNotes": null
+    },
+    {
+      "id": "F12",
+      "title": "Path-template parameter inconsistency: `/levels/{spell_level}/spells` uses `{spell_level}` where sibling paths use `{class_level}`",
+      "category": "design",
+      "severity": "medium",
+      "scope": "endpoint",
+      "affectedEndpoints": [
+        { "path": "/api/classes/{index}/levels/{spell_level}/spells", "method": "get" }
+      ],
+      "patchSummary": "Either rename the path parameter to `{class_level}` (with constrained semantics) or restructure the path so the spell-level segment is a sibling rather than a child of `levels/`.",
+      "narration": "The class-levels path family uses `{class_level}` consistently — `/api/classes/{index}/levels/{class_level}` and `/api/classes/{index}/levels/{class_level}/features` both bind the second-to-last path segment to the `class-level` parameter (range 0..20). The single outlier `/api/classes/{index}/levels/{spell_level}/spells` binds the same syntactic position to `spell-level` (range 1..9 — spell-slot levels, not class levels). A consumer reading the path template alone would expect the segment to be a class-level (since that's what `levels/` means everywhere else under `/api/classes/`), but the API actually requires a spell-level there. This is both a path-template-semantic ambiguity (the same URL-shape encodes different domains) and a documentation gap (the endpoint has no `description` to explain the surprise). Subclass paths repeat the consistent pattern (`/api/subclasses/{index}/levels/{subclass_level}` and `/api/subclasses/{index}/levels/{subclass_level}/features`), so the outlier is unique to classes-spells.",
+      "rationale": "OpenAPI 3.0 §4.7.8 (\"Path Item Object\") expects path-template parameters to be consistently bound to the same conceptual entity across a resource family. Microsoft REST API Guidelines §7.5 names path-segment-meaning consistency as an interface-clarity requirement. AI-codegen tooling that derives method names from path templates (e.g. `getClassLevelByClassAndLevel`) cannot derive a sensible name for the outlier without reading the parameter binding.",
+      "patchOps": [],
+      "classification": {
+        "isLintFlavoured": false,
+        "isKnowledgeBackedGap": false,
+        "isPureSpectralDetectable": false,
+        "isDomainKnowledgeDetectable": false,
+        "narrationKeywords": [
+          "path template inconsistency",
+          "spell_level class_level",
+          "path parameter naming"
+        ],
+        "expectedClusterKey": null
+      },
+      "selfReviewNotes": null
+    },
+    {
+      "id": "F13",
+      "title": "`info.contact.email` is missing",
+      "category": "clarity",
+      "severity": "low",
+      "scope": "spec",
+      "affectedEndpoints": [],
+      "patchSummary": "Add an `email` field to `info.contact` (or document explicitly that contact happens via Discord / GitHub).",
+      "narration": "`info.contact` carries `name: \"5eBits\"` and `url: \"https://github.com/5e-bits\"` but no `email`. The OpenAPI specification's contact-object explicitly supports `email` as the canonical contact-field; documentation portals that render the contact block (Swagger UI, ReDoc, Stoplight) prefer `email` for inline `mailto:` links. The actual contact channel for this API is documented in the `info.description` prose as \"[Discord](https://discord.gg/TQuYTv7)\" — a low-friction channel for a hobbyist project but invisible to programmatic spec consumers. Adding either an alias mailbox or noting `email: null` with a description-level pointer to the Discord would let parsers complete the contact-block.",
+      "rationale": "OpenAPI 3.0 §4.7.2 (\"Contact Object\") names `name`, `url`, and `email` as the three contact fields, with `email` carrying the canonical RFC 5322 mailto-target semantics. Spectral's `info-contact` rule checks for the contact block but not specifically `email`.",
+      "patchOps": [
+        {
+          "op": "add",
+          "path": "/info/contact/email",
+          "value": "5ebits@example.invalid"
+        }
+      ],
+      "classification": {
+        "isLintFlavoured": true,
+        "isKnowledgeBackedGap": false,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
+        "narrationKeywords": [
+          "contact email",
+          "info.contact",
+          "missing email"
+        ],
+        "expectedClusterKey": null
+      },
+      "selfReviewNotes": null
+    },
+    {
+      "id": "F14",
+      "title": "`info.version: \"0.1\"` does not reflect data-version or follow semver",
+      "category": "clarity",
+      "severity": "low",
+      "scope": "spec",
+      "affectedEndpoints": [],
+      "patchSummary": "Update `info.version` to a semver-style identifier (`1.0.0`, `2024.01.0`, etc.) that reflects the actual API/data version.",
+      "narration": "`info.version` is the literal string `\"0.1\"`. The API has been live and consumed at scale (status page at https://5e-bits.github.io/dnd-uptime/, GraphQL companion endpoint, MIT-licensed open source) for years; `0.1` would conventionally signal pre-release-experimental. The version field is the single signal that consumers use to detect breaking changes — keeping it pinned at `0.1` while the data shape has clearly stabilised gives no useful signal. Conventionally, public REST APIs use either semver (`1.4.2`) or date-based versioning (`2024-04-01`); Stripe, GitHub, and Twilio all do one or the other.",
+      "rationale": "OpenAPI 3.0 §4.7.1 (\"Info Object\") names `version` as \"The version of the OpenAPI document (which is distinct from the OpenAPI Specification version or the API implementation version).\" Microsoft REST API Guidelines §12 and Google AIP-180 both recommend semver or date-based versioning for stable public APIs.",
+      "patchOps": [
+        {
+          "op": "replace",
+          "path": "/info/version",
+          "value": "1.0.0"
+        }
+      ],
+      "classification": {
+        "isLintFlavoured": true,
+        "isKnowledgeBackedGap": false,
+        "isPureSpectralDetectable": false,
+        "isDomainKnowledgeDetectable": false,
+        "narrationKeywords": [
+          "info version",
+          "semver",
+          "0.1 placeholder"
+        ],
+        "expectedClusterKey": null
+      },
+      "selfReviewNotes": null
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "configName": "claude-opus-4-7__bigger-context__pagerduty-full",
+  "lockedAt": "2026-05-05T13:20:50.902Z",
+  "lockedBy": "4dbe81ff3e949652fe648022a41e3a83c3e8f63e",
+  "spec": "pagerduty-full",
+  "metrics": {
+    "findingCount": {
+      "mean": 23,
+      "std": 0
+    },
+    "costUSD": {
+      "mean": 2.77518,
+      "std": 0
+    },
+    "durationMs": {
+      "mean": 162528,
+      "std": 0
+    },
+    "applyCleanRate": {
+      "mean": 1,
+      "std": 0
+    },
+    "halluRate": {
+      "mean": 0,
+      "std": 0
+    },
+    "repetitionRate": 0,
+    "uniqueClusters": 23,
+    "coverageRate": 0.043478260869565216,
+    "substantiveCoverageRate": 0.05263157894736842,
+    "knowledgeBackedCoverageRate": 0.08333333333333333,
+    "llmOnlyCoverageRate": 0,
+    "pureSpectralCoverageRate": 0.058823529411764705,
+    "domainKnowledgeCoverageRate": 0
+  },
+  "notes": "Stage-3 historical run snapshot — bigger-context · claude-opus-4-7 · pagerduty-full · prompt=v4. Locked by bulk-sweep on 2026-05-05 to enable Stage-A-vs-baseline drift-diffing."
+}

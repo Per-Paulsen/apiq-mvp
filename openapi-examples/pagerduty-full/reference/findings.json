@@ -1,0 +1,879 @@
+{
+  "spec": "pagerduty-full",
+  "specSource": "openapi-examples/pagerduty-full/spec.json",
+  "specCommit": null,
+  "specVersion": "2.0.0",
+  "endpointCount": 419,
+  "pathCount": 246,
+  "openapiVersion": "3.0.2",
+  "componentSchemaCount": 272,
+  "estimatedInputTokens": 360802,
+  "authoringDate": "2026-05-05",
+  "author": "Claude Code (LLM-authored, agent-spawned)",
+  "humanHardenedDate": null,
+  "humanHardenedBy": null,
+  "notes": "Reference target for PagerDuty FULL — apiq Big-Spec Architecture Spike Epic 09 Phase 0. Authored by background agent on 2026-05-05 to enable cross-spec validation of Stage-A Deterministic Layer. LLM-authored bias acknowledged (Critical-Review Punkt #1) — pending optional human-domain-expert hardening.\n\n23 findings. 0 critical · 6 high · 13 medium · 4 low. 16 spec-scope · 7 endpoint-scope. Categories: 13 clarity · 7 design · 3 risk · 0 correctness.\n\nNo critical findings: PagerDuty's published spec is polished (root-level `security`, 42 grouped tags, 100% summary+description coverage, real `examples` on 134 of 156 request bodies and 330 of 401 inline 2xx responses, separate webhook-vs-API response components, real OAuth-scope discipline in operation prose). The v0.1 spike's calibration anchor — \"On large polished specs, critical findings are RARE\" — applies here. Severity inflation on PagerDuty FULL would itself be a finding-quality bug.\n\nAuthoring discipline: every finding is hard-grounded against spec text at openapi-examples/pagerduty-full/spec.json. Counts (e.g. 234 ops with 429, 14 of 224 writes with From-header, 30 oneOf-without-discriminator, 363 of 419 ops with OAuth-scope prose) were enumerated empirically by walking the spec.",
+  "findings": [
+    {
+      "id": "F1",
+      "title": "Only one security scheme declared; OAuth2 path absent despite 363 operations referencing OAuth scopes in prose",
+      "category": "design",
+      "severity": "high",
+      "scope": "spec",
+      "affectedEndpoints": [],
+      "patchSummary": "Add an `oauth2` security scheme to `components.securitySchemes` and declare the OAuth scopes (`incidents.read`, `incidents.write`, `services.read`, etc.) so per-operation scope requirements can be machine-readable.",
+      "narration": "`components.securitySchemes` declares a single scheme `api_key` (apiKey, in header, name `Authorization`). The root `security: [{ api_key: [] }]` makes it the only declared auth path. However, 363 of 419 operations carry prose like `Scoped OAuth requires: incidents.write` or `For Scoped OAuth requests, this operation requires the following scopes: ...` in their `description`. PagerDuty's developer-portal documents an OAuth 2.0 authorization-code flow at `https://developer.pagerduty.com/docs/scoped-oauth`, with a documented scope vocabulary (`abilities.read`, `incidents.read`, `incidents.write`, `escalation_policies.read`, etc.). None of this is encoded in the spec — codegen tools cannot wire OAuth flows, scope-required-per-operation cannot be enforced at compile time, and the security model in the spec advertises only the legacy API-key path. The fix is to add an `oauth2` scheme alongside `api_key`, populate `scopes`, and either set the per-operation `security` to require the scopes or leave a top-level alternative `security: [{ oauth2: ['scope.list'] }, { api_key: [] }]` so consumers can choose either.",
+      "rationale": "OpenAPI 3.0 §4.7.27 (\"Security Scheme Object\") supports both `apiKey` and `oauth2`. Declaring two alternatives is the standard pattern when an API exposes both. The OpenAPI Initiative style guide and Microsoft REST API Guidelines §7.3 both treat the `security` block as the authoritative description of allowed auth modes; prose-only OAuth documentation hides the contract from tooling.",
+      "rationale": "OpenAPI 3.0 §4.7.27 supports `oauth2` schemes with declared scopes; documenting auth modes in prose only defeats the machine-readability that the spec is meant to provide.",
+      "patchOps": [
+        {
+          "op": "add",
+          "path": "/components/securitySchemes/oauth2",
+          "value": {
+            "type": "oauth2",
+            "description": "Scoped OAuth 2.0 — see https://developer.pagerduty.com/docs/scoped-oauth.",
+            "flows": {
+              "authorizationCode": {
+                "authorizationUrl": "https://identity.pagerduty.com/oauth/authorize",
+                "tokenUrl": "https://identity.pagerduty.com/oauth/token",
+                "scopes": {
+                  "incidents.read": "Read incidents.",
+                  "incidents.write": "Create, update, and resolve incidents.",
+                  "services.read": "Read services.",
+                  "services.write": "Create and update services.",
+                  "escalation_policies.read": "Read escalation policies.",
+                  "users.read": "Read users."
+                }
+              }
+            }
+          }
+        }
+      ],
+      "classification": {
+        "isLintFlavoured": false,
+        "isKnowledgeBackedGap": true,
+        "isPureSpectralDetectable": false,
+        "isDomainKnowledgeDetectable": true,
+        "narrationKeywords": [
+          "OAuth scope",
+          "Scoped OAuth",
+          "oauth2 security scheme",
+          "api_key only",
+          "scope vocabulary"
+        ],
+        "expectedClusterKey": null
+      },
+      "selfReviewNotes": null
+    },
+    {
+      "id": "F2",
+      "title": "`From` header is required for audit-trailed write operations but declared on only 14 of 224 write operations",
+      "category": "risk",
+      "severity": "high",
+      "scope": "spec",
+      "affectedEndpoints": [],
+      "patchSummary": "Declare the `From` header parameter (using existing `components.parameters.from_header` / `optional_from_header`) on every POST/PUT/DELETE that mutates user-attributable state.",
+      "narration": "PagerDuty's REST API requires the `From` header (the email address of a user in the account) on most write operations — the value drives audit-log attribution, on-call notifications, and incident-history records. The spec already defines `components.parameters.from_header` (required, format: email, description: \"The email address of a valid user associated with the account making the request\") and `components.parameters.optional_from_header`. Yet only 14 of 224 POST/PUT/DELETE operations actually reference either parameter — examples that do: `POST /incidents`, `PUT /incidents/{id}`, `POST /escalation_policies`. The vast majority of writes — `POST /services`, `POST /addons`, `POST /alert_grouping_settings`, every `POST /analytics/metrics/...`, etc. — silently omit the header. In runtime, calls without a valid `From` header on a write op fail with a 400; codegen tooling that reads the spec produces SDKs without typed support for the header, and consumers reading the spec cannot tell which writes need it without resort to PagerDuty's developer-portal docs. Either the spec should declare the header where it is required, or the runtime contract should be loosened to match the spec.",
+      "rationale": "PagerDuty's developer-portal documents the `From` header at `https://developer.pagerduty.com/docs/from-header` as required on write operations for user-attribution. The spec already models the parameter; the gap is wiring it to operations. OpenAPI 3.0 §4.7.10 names the parameter object as the contract surface for required headers; missing parameters are treated as optional by tooling.",
+      "patchOps": [
+        {
+          "op": "add",
+          "path": "/paths/~1services/post/parameters/-",
+          "value": {
+            "$ref": "#/components/parameters/from_header"
+          }
+        },
+        {
+          "op": "add",
+          "path": "/paths/~1addons/post/parameters/-",
+          "value": {
+            "$ref": "#/components/parameters/from_header"
+          }
+        }
+      ],
+      "classification": {
+        "isLintFlavoured": false,
+        "isKnowledgeBackedGap": true,
+        "isPureSpectralDetectable": false,
+        "isDomainKnowledgeDetectable": true,
+        "narrationKeywords": [
+          "From header",
+          "audit trail",
+          "user attribution",
+          "POST",
+          "PUT",
+          "missing header parameter"
+        ],
+        "expectedClusterKey": "missing-from-header"
+      },
+      "selfReviewNotes": null
+    },
+    {
+      "id": "F3",
+      "title": "All 24 `/v3/schedules*` operations carry a required `X-EARLY-ACCESS` header — production-unsafe path is not flagged at spec level",
+      "category": "design",
+      "severity": "high",
+      "scope": "spec",
+      "affectedEndpoints": [],
+      "patchSummary": "Either set `deprecated: true` (or a custom `x-pagerduty-stability: early-access` extension documented in `info.description`) on the 24 `/v3/schedules*` operations, or move the early-access subset behind a separate `servers[]` URL.",
+      "narration": "Twenty-four operations under `/v3/schedules`, `/v3/schedules/{id}/...`, `/v3/schedules/{id}/rotations`, `/v3/schedules/{id}/overrides`, and `/v3/schedules/{id}/custom_shifts` declare a `required: true` parameter `X-EARLY-ACCESS` (resolved via `components.parameters.schedule_v3_early_access`) with `default: \"flexible-schedules-early-access\"`. The header's own description states: *\"This header indicates that this API endpoint is __UNDER CONSTRUCTION__ and may change at any time. You __MUST__ pass in this header... Do not use this endpoint in production, as it may change!\"* Three additional `X-EARLY-ACCESS` variants — `early_access_analytics`, `early_access_bis`, `early_access_status_dashboards` — gate other endpoint groups (Status Dashboards, Business Impact, Analytics-v2). A consumer reading the spec sees these endpoints listed alongside the stable v1 surface with no machine-readable signal that they are unstable. Documentation portals (ReDoc / SwaggerUI) render them with no visual differentiation; codegen tools emit SDK methods for them as if they were stable. The right fix is either `deprecated: true` (which renders \"deprecated\" in tooling — the closest stock OAS3 mechanism for \"unstable\"), a custom `x-pagerduty-stability` vendor extension whose semantics are documented in `info.description`, or hosting the early-access subset under a separate `servers[]` entry like `https://api.pagerduty.com/early-access`.",
+      "rationale": "OpenAPI 3.0 §4.7.4 (\"Operation Object\") provides `deprecated` as the only stock stability signal. The OpenAPI Initiative Stability extension (https://github.com/OAI/OpenAPI-Specification/issues/2078) and Microsoft's REST API Guidelines §12.3 (\"API Lifecycle\") both recommend a machine-readable stability flag separate from `deprecated`. PagerDuty's runtime contract clearly distinguishes early-access from stable, but the spec exposes the distinction only via a coupled mandatory header.",
+      "patchOps": [],
+      "classification": {
+        "isLintFlavoured": false,
+        "isKnowledgeBackedGap": true,
+        "isPureSpectralDetectable": false,
+        "isDomainKnowledgeDetectable": true,
+        "narrationKeywords": [
+          "X-EARLY-ACCESS",
+          "early access",
+          "stability",
+          "deprecated",
+          "v3 schedules",
+          "production unsafe"
+        ],
+        "expectedClusterKey": null
+      },
+      "selfReviewNotes": null
+    },
+    {
+      "id": "F4",
+      "title": "234 operations declare a `429 Too Many Requests` response but no rate-limit response headers (`X-RateLimit-*`, `Retry-After`)",
+      "category": "design",
+      "severity": "high",
+      "scope": "spec",
+      "affectedEndpoints": [],
+      "patchSummary": "Add `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`, and `Retry-After` to `components.responses.TooManyRequests.headers` (and ideally to all 2xx responses).",
+      "narration": "234 of 419 operations reference `components.responses.TooManyRequests` for their `429` status. The shared component declares a `description` and an `application/json` body schema (a `$ref` chain into `Conflict.content.application/json.schema`) but no `headers` block. PagerDuty's documentation at `https://developer.pagerduty.com/docs/rest-api-rate-limits` describes its rate-limit policy and explicitly states that the API returns `Retry-After` on 429 responses. Three operation `description` fields (POST /incidents, PUT /incidents, POST /incidents/{id}/snooze) reference rate limits in prose: *\"This API operation has operation specific rate limits. See the Rate Limits page for more information.\"* Yet the response-header surface is empty, so a consumer that tries to implement back-pressure correctly cannot know from the spec what header to read for the retry delay. Codegen tooling that builds typed retry-decorators (e.g. exponential-backoff with `Retry-After` honoring) cannot do so from this spec — they fall back to a fixed-interval retry. This is also visible at successful 2xx responses, none of which expose `X-RateLimit-Remaining` to let clients pace themselves before a 429 strike.",
+      "rationale": "RFC 6585 §4 (\"429 Too Many Requests\") specifies that `Retry-After` *should* accompany the 429 response. RFC 7231 §7.1.3 standardises `Retry-After` syntax. The IETF draft `draft-ietf-httpapi-ratelimit-headers` standardises `RateLimit-Limit`, `RateLimit-Remaining`, `RateLimit-Reset`. GitHub, Twilio, Stripe, and Slack all expose rate-limit headers on every authenticated response — the industry baseline.",
+      "patchOps": [
+        {
+          "op": "add",
+          "path": "/components/responses/TooManyRequests/headers",
+          "value": {
+            "Retry-After": {
+              "description": "Number of seconds to wait before retrying the request. See https://developer.pagerduty.com/docs/rest-api-rate-limits.",
+              "schema": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "X-RateLimit-Limit": {
+              "description": "Maximum number of requests allowed in the current window.",
+              "schema": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "X-RateLimit-Remaining": {
+              "description": "Number of requests remaining in the current window.",
+              "schema": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "X-RateLimit-Reset": {
+              "description": "Unix-epoch timestamp at which the current rate-limit window resets.",
+              "schema": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        }
+      ],
+      "classification": {
+        "isLintFlavoured": false,
+        "isKnowledgeBackedGap": true,
+        "isPureSpectralDetectable": false,
+        "isDomainKnowledgeDetectable": true,
+        "narrationKeywords": [
+          "rate limit headers",
+          "Retry-After",
+          "X-RateLimit",
+          "429",
+          "back-pressure"
+        ],
+        "expectedClusterKey": null
+      },
+      "selfReviewNotes": null
+    },
+    {
+      "id": "F5",
+      "title": "Two divergent error-envelope shapes coexist: `V3ErrorResponse` (errors as object/map) vs the inline Conflict-derived schema (errors as array of strings)",
+      "category": "correctness",
+      "severity": "high",
+      "scope": "spec",
+      "affectedEndpoints": [],
+      "patchSummary": "Promote one error envelope (recommend `V3ErrorResponse`) to be the single canonical shape, refactor every error-response component to use it, and retire the inline schema.",
+      "narration": "The spec declares two structurally incompatible error envelopes:\n\n1. **`components.schemas.V3ErrorResponse`** — used by `components.responses.BadRequest` (13 op references). Shape: `{ error: { message: string, code: integer, errors: { [fieldPath: string]: string[] } } }` — `errors` is a **map** from field-path to validation messages.\n2. **`components.responses.Conflict.content.application/json.schema`** (inline) — referenced via `$ref` chain by `ArgumentError` (299), `Conflict` (21), `Forbidden` (381), `InternalServerError` (110), `NotAllowed` (27), `NotFound` (297), `TooManyRequests` (234), `PaymentRequired` (85), `Unauthorized` (349), `UnprocessableEntity` (24), `RequestEntityTooLarge` (2). Shape: `{ error: { message: string, code: integer, errors: string[] } }` — `errors` is an **array of strings**.\n\nA single API response from `POST /incidents` could trigger either shape depending on which response component the runtime maps to. Codegen tools that build a discriminated `Result<T, Error>` cannot model `error.errors` correctly — they either pick one (and break the other) or weaken the type to `unknown`. The fix is to pick one canonical shape (recommend the V3 form: it carries field-level validation, which is strictly more useful than a flat string array) and refactor every error-response component to reference it; the inline Conflict schema can stay as the schema-text but should be moved to `components.schemas` and used uniformly.",
+      "rationale": "JSON Schema §6.5 treats two schemas with different structural types for the same property name as distinct types. RFC 7807 (\"Problem Details for HTTP APIs\") recommends a single canonical error shape per API. Microsoft REST API Guidelines §7.10 (\"Errors\") and Google AIP-193 both treat the error envelope as an API-wide invariant.",
+      "patchOps": [
+        {
+          "op": "replace",
+          "path": "/components/responses/ArgumentError/content/application~1json/schema",
+          "value": {
+            "$ref": "#/components/schemas/V3ErrorResponse"
+          }
+        },
+        {
+          "op": "replace",
+          "path": "/components/responses/Forbidden/content/application~1json/schema",
+          "value": {
+            "$ref": "#/components/schemas/V3ErrorResponse"
+          }
+        },
+        {
+          "op": "replace",
+          "path": "/components/responses/NotFound/content/application~1json/schema",
+          "value": {
+            "$ref": "#/components/schemas/V3ErrorResponse"
+          }
+        },
+        {
+          "op": "replace",
+          "path": "/components/responses/TooManyRequests/content/application~1json/schema",
+          "value": {
+            "$ref": "#/components/schemas/V3ErrorResponse"
+          }
+        }
+      ],
+      "classification": {
+        "isLintFlavoured": false,
+        "isKnowledgeBackedGap": false,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
+        "narrationKeywords": [
+          "error envelope",
+          "V3ErrorResponse",
+          "Conflict schema",
+          "errors as map",
+          "errors as array",
+          "schema divergence"
+        ],
+        "expectedClusterKey": null
+      },
+      "selfReviewNotes": "PSpec=true: a generic walker can detect 'two distinct error schemas with the same role'. KGap=false: the divergence itself is structurally visible; no training-data knowledge needed to flag it."
+    },
+    {
+      "id": "F6",
+      "title": "The four `Webhook*` response components carry only a `description`, no `content`/`schema` — webhook error bodies are unparseable from the spec",
+      "category": "correctness",
+      "severity": "medium",
+      "scope": "spec",
+      "affectedEndpoints": [],
+      "patchSummary": "Add `content.application/json.schema` (referencing `V3ErrorResponse` or a webhook-specific envelope) to each of `WebhookBadRequest`, `WebhookUnauthorized`, `WebhookForbidden`, `WebhookNotFound`.",
+      "narration": "`components.responses.WebhookBadRequest`, `WebhookUnauthorized`, `WebhookForbidden`, and `WebhookNotFound` are referenced 7 + 12 + 12 + 8 = 39 times by the webhook-related operations. Each component declares only a `description` field — for example: `WebhookBadRequest` is `{ \"description\": \"Caller provided invalid arguments. Please review the response for error details. Retrying with the same arguments will *not* work.\" }`, with no `content`, no `schema`. By contrast the equivalent non-webhook responses (`BadRequest`, `Unauthorized`, `Forbidden`, `NotFound`) all have `content.application/json.schema` populated. A consumer reading the spec for webhook endpoints cannot generate typed deserialisers for webhook error bodies; documentation portals render the entry as just a status-code description with no payload structure. The runtime almost certainly returns a structured error body (the API is consistent in that respect), but the spec advertises an empty body. Either populate the content (likely the same V3ErrorResponse shape) or — if the API genuinely returns a body-less webhook error — document that the `description` ends with \"no body returned\" and add `content: {}` to make the absence explicit.",
+      "rationale": "OpenAPI 3.0 §4.7.18 (\"Response Object\") expects `content` whenever a response carries a body. Sibling response components in the same spec all declare `content`; the divergence is asymmetric within one API. The lack of schema is silent contract-loss for consumers who only read the spec.",
+      "patchOps": [
+        {
+          "op": "add",
+          "path": "/components/responses/WebhookBadRequest/content",
+          "value": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/V3ErrorResponse"
+              }
+            }
+          }
+        },
+        {
+          "op": "add",
+          "path": "/components/responses/WebhookUnauthorized/content",
+          "value": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/V3ErrorResponse"
+              }
+            }
+          }
+        },
+        {
+          "op": "add",
+          "path": "/components/responses/WebhookForbidden/content",
+          "value": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/V3ErrorResponse"
+              }
+            }
+          }
+        },
+        {
+          "op": "add",
+          "path": "/components/responses/WebhookNotFound/content",
+          "value": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/V3ErrorResponse"
+              }
+            }
+          }
+        }
+      ],
+      "classification": {
+        "isLintFlavoured": false,
+        "isKnowledgeBackedGap": false,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
+        "narrationKeywords": [
+          "Webhook response",
+          "missing content",
+          "missing schema",
+          "description-only response"
+        ],
+        "expectedClusterKey": null
+      },
+      "selfReviewNotes": null
+    },
+    {
+      "id": "F7",
+      "title": "`Content-Type: application/json` is declared as a required header parameter on every operation, redundant with `requestBody.content`",
+      "category": "design",
+      "severity": "medium",
+      "scope": "spec",
+      "affectedEndpoints": [],
+      "patchSummary": "Remove `header_Content-Type` from every operation; OpenAPI 3 derives the request `Content-Type` from `requestBody.content` keys.",
+      "narration": "`components.parameters.header_Content-Type` is declared as `{ name: \"Content-Type\", in: \"header\", required: true, schema: { type: \"string\", default: \"application/json\", enum: [\"application/json\"] } }` and referenced from operations alongside body parameters. This is a category error: in OpenAPI 3.0, the request body's `Content-Type` is determined by which key in `requestBody.content` the consumer chooses (e.g. `requestBody.content[\"application/json\"]`). Declaring `Content-Type` as a separate header parameter is a holdover from OpenAPI 2 / Swagger 2.0 where bodies and content-types were modeled separately. Concrete consequences: (1) OpenAPI 3 codegens (openapi-generator, OpenAPI TypeScript) double-declare the header and emit awkward setter code; (2) ReDoc renders `Content-Type` as a documented header parameter when it is implicit; (3) Spectral's `oas3-host-not-example` rule and similar walkers warn. Even GET operations, which have no request body, carry the `Content-Type` parameter — making it doubly out of place. The fix is mechanical: drop `header_Content-Type` from all operation parameter lists; the body content-type is implicit from `requestBody.content`.",
+      "rationale": "OpenAPI 3.0 §4.7.13 (\"Request Body Object\") states the `content` keys define the supported request media types. The OpenAPI 3 changelog explicitly removed the OpenAPI-2 pattern of declaring `consumes`/`Content-Type` as an operation property. ReDoc, Swagger UI, and Stoplight Elements all render the body-content-type from `requestBody.content`; declaring it again as a header parameter is double-counting.",
+      "patchOps": [],
+      "classification": {
+        "isLintFlavoured": false,
+        "isKnowledgeBackedGap": true,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
+        "narrationKeywords": [
+          "Content-Type header parameter",
+          "redundant",
+          "OpenAPI 3 vs 2",
+          "requestBody.content"
+        ],
+        "expectedClusterKey": null
+      },
+      "selfReviewNotes": null
+    },
+    {
+      "id": "F8",
+      "title": "`Accept` header documents versioning via `application/vnd.pagerduty+json;version=2` but the schema is unconstrained string with no other versions enumerated",
+      "category": "clarity",
+      "severity": "medium",
+      "scope": "spec",
+      "affectedEndpoints": [],
+      "patchSummary": "Either pin `header_Accept.schema.enum` to the supported version-vendor-types or move version negotiation into a typed `info.x-versioning` block plus an `enum`.",
+      "narration": "`components.parameters.header_Accept` is declared as `{ name: \"Accept\", description: \"The Accept header is used as a versioning header.\", in: \"header\", required: true, schema: { type: \"string\", default: \"application/vnd.pagerduty+json;version=2\" } }`. Two issues: (1) the schema has no `enum`, so any string passes validation — a consumer could send `application/vnd.pagerduty+json;version=99` and the spec would not flag it; (2) the spec does not enumerate which versions are supported (is `version=1` deprecated? does `version=3` exist on early-access endpoints? is it the same vocabulary as the `X-EARLY-ACCESS` header?). Vendor-Content-Type versioning (`application/vnd.<org>+json;version=<n>`) is a legitimate pattern (GitHub, GitLab use it), but the contract surface needs to be enumerated. Otherwise codegen emits a free-form string for what should be a versioned constant; consumers reading the spec cannot tell what a valid value space is.",
+      "rationale": "RFC 6838 (\"Media Type Specifications\") standardises vendor content types. The OpenAPI Initiative versioning guidance and Microsoft REST API Guidelines §12.1 (\"Versioning\") recommend the version vocabulary be enumerated in `enum` so codegen and lint can validate it. Microsoft REST §7.6 names version-negotiation as a first-class spec concern.",
+      "patchOps": [
+        {
+          "op": "add",
+          "path": "/components/parameters/header_Accept/schema/enum",
+          "value": [
+            "application/vnd.pagerduty+json;version=2"
+          ]
+        }
+      ],
+      "classification": {
+        "isLintFlavoured": false,
+        "isKnowledgeBackedGap": true,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
+        "narrationKeywords": [
+          "Accept header",
+          "versioning",
+          "vnd.pagerduty",
+          "enum constraint",
+          "version negotiation"
+        ],
+        "expectedClusterKey": null
+      },
+      "selfReviewNotes": null
+    },
+    {
+      "id": "F9",
+      "title": "`sre_memories_limit.schema.default` is the string `\"20 - incident_summary\"` on an integer-typed schema",
+      "category": "correctness",
+      "severity": "high",
+      "scope": "spec",
+      "affectedEndpoints": [],
+      "patchSummary": "Replace the string default with a numeric default (e.g. `20`) and capture the conditional behavior in `description`.",
+      "narration": "`components.parameters.sre_memories_limit` declares: `{ schema: { type: \"integer\", minimum: 1, maximum: 100, default: \"20 - incident_summary\" } }`. The `default` value is the **string** `\"20 - incident_summary\"`, but the schema is `type: integer`. JSON Schema §6.2 (and OpenAPI 3.0 §3.7) require a `default` value to validate against its own schema. A string against an integer type fails validation. Codegen tools that parse this with strict-mode JSON Schema (Ajv with `strict: true`, openapi-generator's validation pass) fail to generate the parameter; tools that read it leniently pick the literal string and either (a) coerce to `NaN` at request time, or (b) emit broken TypeScript like `let limit: number = \"20 - incident_summary\"`. Reading the surrounding context, the author probably intended *\"the default depends on the incident_summary parameter — 20 if absent, otherwise <something>\"*. The right encoding: numeric default `20`, plus a `description` paragraph explaining the conditional behavior.",
+      "rationale": "JSON Schema §6.2 (`default`) requires the default to match the schema. OpenAPI 3.0 §3.7 inherits the constraint. Every JSON Schema validator (Ajv, JSON Schema for Java, Python jsonschema) treats this as an invariant.",
+      "patchOps": [
+        {
+          "op": "replace",
+          "path": "/components/parameters/sre_memories_limit/schema/default",
+          "value": 20
+        },
+        {
+          "op": "add",
+          "path": "/components/parameters/sre_memories_limit/description",
+          "value": "The number of results to return per page. When `incident_summary` is also requested, the effective limit is reduced to accommodate the summary cost."
+        }
+      ],
+      "classification": {
+        "isLintFlavoured": false,
+        "isKnowledgeBackedGap": false,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
+        "narrationKeywords": [
+          "default type mismatch",
+          "string default integer schema",
+          "JSON Schema violation",
+          "sre_memories_limit"
+        ],
+        "expectedClusterKey": null
+      },
+      "selfReviewNotes": null
+    },
+    {
+      "id": "F10",
+      "title": "Pagination paradigm split: 37 list-GETs use offset+limit, 14 use cursor — single API, two pagination models",
+      "category": "design",
+      "severity": "medium",
+      "scope": "spec",
+      "affectedEndpoints": [],
+      "patchSummary": "Pick one pagination paradigm (recommend cursor-based for new endpoints, mark offset-based as legacy) and document the split in `info.description`.",
+      "narration": "Walking the spec, 37 GET-list operations carry the legacy `offset_limit` + `offset` parameters (offset-based); 14 carry the newer `cursor_limit` + `cursor_cursor` parameters (cursor-based). Examples: `GET /incidents` is offset-based, `GET /audit/records` is cursor-based. PagerDuty's own developer-portal documents both styles but does not flag in the spec which is preferred for new integrations or whether the offset-based ones are stable. SDK consumers (and AI codegen tools) cannot generate a uniform iterator abstraction — they must dispatch on parameter shape per endpoint. Cursor-based pagination is the industry preferred pattern for large datasets (Stripe-cursor, Slack-cursor, GitHub-cursor) because it is consistent under inserts; offset-based pagination silently skips or repeats items if the underlying list mutates during traversal. The spec should at minimum document the split (in `info.description`) so consumers know what they are getting; ideally add `deprecated: true` to the offset-based ops where a cursor-based equivalent exists, and align future endpoints on cursor.",
+      "rationale": "Microsoft REST API Guidelines §9.10 and Google AIP-158 (\"Pagination\") both recommend a single pagination paradigm per API. RFC 5988 (\"Web Linking\") and the standard `Link` header pattern are the canonical wire-protocol for cursor-based pagination. Internal-consistency lint rules (Spectral) typically check pagination uniformity.",
+      "patchOps": [],
+      "classification": {
+        "isLintFlavoured": false,
+        "isKnowledgeBackedGap": true,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
+        "narrationKeywords": [
+          "pagination split",
+          "offset-based",
+          "cursor-based",
+          "limit offset",
+          "internal consistency"
+        ],
+        "expectedClusterKey": null
+      },
+      "selfReviewNotes": null
+    },
+    {
+      "id": "F11",
+      "title": "Most `limit` query parameters lack `minimum` / `maximum` constraints; one declares the maximum in prose only",
+      "category": "design",
+      "severity": "medium",
+      "scope": "spec",
+      "affectedEndpoints": [],
+      "patchSummary": "Add `minimum: 1` and `maximum: <bound>` to all six `limit` parameter variants based on PagerDuty's documented bounds.",
+      "narration": "Of the seven `limit` query-parameter variants in `components.parameters`, only three carry numeric bounds:\n\n- `past_incidents_limit`: minimum 1, maximum 999, default 5\n- `schedule_v3_limit`: minimum 1, maximum 100, default 25\n- `schedule_v3_limit_schedules`: minimum 1, maximum 1000, default 100\n\nThe other four — `offset_limit`, `incident_list_limit`, `cursor_limit`, `sre_memories_limit` (the last is also broken per F9) — declare `{ type: \"integer\" }` with no bounds. `incident_list_limit` is the most blatant: its `description` reads *\"The number of results per page. Maximum of 100.\"* but `schema.maximum` is unset, making the constraint prose-only. A consumer hitting `GET /incidents?limit=10000` will get a runtime 400 with no spec-side hint; codegen tooling that builds typed pagination iterators cannot emit input-validation. Add the bounds (PagerDuty's developer-portal documents the per-endpoint maxes).",
+      "rationale": "JSON Schema §6.4 (`minimum` / `maximum`) is the standard mechanism for numeric bounds. OpenAPI 3.0 §3.7 inherits it. Microsoft REST API Guidelines §7.4 names input-bound declaration as a baseline expectation. Prose-only bounds are invisible to codegen and to client-side validation.",
+      "patchOps": [
+        {
+          "op": "add",
+          "path": "/components/parameters/incident_list_limit/schema/minimum",
+          "value": 1
+        },
+        {
+          "op": "add",
+          "path": "/components/parameters/incident_list_limit/schema/maximum",
+          "value": 100
+        },
+        {
+          "op": "add",
+          "path": "/components/parameters/offset_limit/schema/minimum",
+          "value": 1
+        },
+        {
+          "op": "add",
+          "path": "/components/parameters/offset_limit/schema/maximum",
+          "value": 100
+        },
+        {
+          "op": "add",
+          "path": "/components/parameters/cursor_limit/schema/minimum",
+          "value": 1
+        },
+        {
+          "op": "add",
+          "path": "/components/parameters/cursor_limit/schema/maximum",
+          "value": 100
+        }
+      ],
+      "classification": {
+        "isLintFlavoured": false,
+        "isKnowledgeBackedGap": false,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
+        "narrationKeywords": [
+          "limit bounds",
+          "minimum maximum",
+          "prose-only constraint",
+          "pagination bounds"
+        ],
+        "expectedClusterKey": "limit-no-range"
+      },
+      "selfReviewNotes": null
+    },
+    {
+      "id": "F12",
+      "title": "63 cross-resource reference fields (`*_id`) typed as plain `string` with no `$ref` to the referenced resource",
+      "category": "design",
+      "severity": "medium",
+      "scope": "spec",
+      "affectedEndpoints": [],
+      "patchSummary": "Either type each `*_id` field as `{ type: string, format: \"pagerduty-id\", pattern: \"^P[A-Z0-9]{6}$\" }` and document the format in `info.description`, or define a `ResourceId` reusable schema and `$ref` each `*_id` field through it.",
+      "narration": "Walking `components.schemas`, 63 fields named with the convention `*_id` or `*_ids` are typed as bare `{ type: \"string\" }` with no `format` and no `$ref`. Examples: `AnalyticsIncidentMetrics.service_id`, `AnalyticsIncidentMetricsEscalationPolicy.escalation_policy_id`, `AnalyticsRawIncident.incident_type_id`, `AnalyticsRawIncident.priority_id`, `AnalyticsRawIncident.resolved_by_user_id`. These are foreign keys to other PagerDuty resources whose own `id` fields share the same shape (a 7-character ID like `P` + 6 alphanumerics — `PT4KHLK`, `PI55X45`). Codegen tools cannot generate typed cross-resource navigation (e.g. `incident.resolvedBy` returning `User`); consumers must hand-stitch joins. The fix has two flavors: (a) introduce a `format: \"pagerduty-id\"` plus `pattern: \"^P[A-Z0-9]{6}$\"` so codegen at least gets a typed primitive, or (b) define a `ResourceId` reusable schema and `$ref` it everywhere. (b) is more invasive but more correct.",
+      "rationale": "JSON Schema §7.3 supports custom `format` values for typed primitives; OpenAPI 3.0 §3.7.1 names `format` as the natural extension point for non-standard types. The OpenAPI Initiative reusable-schema pattern (https://swagger.io/docs/specification/data-models/) names `$ref` as the canonical mechanism for typed cross-resource references. Stripe's spec uses `$ref` for cross-resource reference fields; GitHub's spec uses typed `format: int64` for foreign keys.",
+      "patchOps": [],
+      "classification": {
+        "isLintFlavoured": false,
+        "isKnowledgeBackedGap": true,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
+        "narrationKeywords": [
+          "foreign key",
+          "cross-resource reference",
+          "*_id",
+          "untyped reference",
+          "$ref"
+        ],
+        "expectedClusterKey": "untyped-cross-reference"
+      },
+      "selfReviewNotes": null
+    },
+    {
+      "id": "F13",
+      "title": "Tag `Apps` is declared at top level with empty description but is attached to zero operations",
+      "category": "clarity",
+      "severity": "low",
+      "scope": "spec",
+      "affectedEndpoints": [],
+      "patchSummary": "Either remove `Apps` from the top-level `tags` array or attach it to the operations it was meant to group.",
+      "narration": "The top-level `tags` array (42 entries) includes `{ \"name\": \"Apps\", \"description\": \"\" }`. Walking all 419 operations, zero of them carry `Apps` in their `tags` array. The `Apps` entry also has an empty description (every other tag has a one-paragraph description of the resource family). This is a dead tag entry — likely the remnant of a planned PagerDuty Apps surface that has not yet shipped, or one whose endpoints were renamed or moved to a different group. Consumers and documentation portals show an empty group with no operations under it. The fix is a single deletion; or, if `Apps` is intentional and points at the App-store-related endpoints under another tag, retag the relevant ops.",
+      "rationale": "OpenAPI 3.0 §4.7.4 names `tags` as the operation grouping signal. An empty group is purely cosmetic noise — Spectral's `oas3-tag-no-empty-description` rule would flag the empty description; a custom `tag-no-orphan` rule would flag the zero-operation group. The OpenAPI Initiative style guide treats top-level tags without operation-coverage as cleanup work.",
+      "patchOps": [],
+      "classification": {
+        "isLintFlavoured": true,
+        "isKnowledgeBackedGap": false,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
+        "narrationKeywords": [
+          "orphan tag",
+          "Apps tag",
+          "zero operations",
+          "empty description"
+        ],
+        "expectedClusterKey": null
+      },
+      "selfReviewNotes": "patchOps left empty: removing a tag-array entry by index is fragile (other tag entries shift); a safe patch requires the user to confirm intent (delete vs. retag)."
+    },
+    {
+      "id": "F14",
+      "title": "30 polymorphic schemas use `oneOf` without a `discriminator` — runtime probing required for deserialisation",
+      "category": "design",
+      "severity": "medium",
+      "scope": "spec",
+      "affectedEndpoints": [],
+      "patchSummary": "Add `discriminator` blocks to each of the 30 `oneOf` schemas that lack one — the variant-distinguishing field is already present in each variant.",
+      "narration": "30 schemas in `components.schemas` declare a `oneOf` array without a `discriminator` block. Examples include `AutomationActionsAbstractAction.last_run_by` (`oneOf` length 3 — User-reference / API-token / Workflow-trigger), `AutomationActionsInvocation.metadata.agent` (`oneOf` length 4), `AutomationActionsInvocation.action_snapshot.action_data_reference` (`oneOf` length 2). In each case the variants carry a `type` field (e.g. `\"user_reference\"`, `\"workflow_trigger_reference\"`) that could serve as the discriminator. Without a declared `discriminator`, codegen tools must emit \"try-each-variant\" deserialisers — slower at runtime and prone to picking the wrong variant when shapes overlap. Adding `discriminator: { propertyName: \"type\", mapping: { ... } }` is mechanical and converts the polymorphism into machine-readable form.",
+      "rationale": "OpenAPI 3.0 §4.7.25 (\"Discriminator Object\") names the discriminator as the canonical mechanism for `oneOf` deserialisation. Strongly-typed code generators (openapi-generator with java/csharp/typescript-fetch templates) require it for sane variant deserialisation; without it they generate union-types that consumers must narrow at runtime.",
+      "patchOps": [],
+      "classification": {
+        "isLintFlavoured": false,
+        "isKnowledgeBackedGap": true,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
+        "narrationKeywords": [
+          "oneOf",
+          "discriminator",
+          "polymorphism",
+          "variant deserialisation"
+        ],
+        "expectedClusterKey": "missing-discriminator"
+      },
+      "selfReviewNotes": null
+    },
+    {
+      "id": "F15",
+      "title": "Three operations describe deprecation status in prose only without setting `deprecated: true`",
+      "category": "clarity",
+      "severity": "medium",
+      "scope": "endpoint",
+      "affectedEndpoints": [
+        {
+          "path": "/users/{id}/oauth_delegations",
+          "method": "get"
+        },
+        {
+          "path": "/users/{id}/oauth_delegations/{delegation_id}",
+          "method": "get"
+        },
+        {
+          "path": "/schedules/{id}/overrides",
+          "method": "post"
+        }
+      ],
+      "patchSummary": "Audit the three operations that mention deprecation in prose; either set `deprecated: true` on the deprecated successor's predecessor or remove the prose if the operation is the active one.",
+      "narration": "Three operation `description` fields contain deprecation language but the operations themselves are not marked `deprecated: true`. The first two — `GET /users/{id}/oauth_delegations` and `GET /users/{id}/oauth_delegations/{delegation_id}` — both contain the phrase *\"This endpoint replaces the deprecated `/users/{id}/sessions` endpoint.\"* The implication is that `/users/{id}/sessions` (the old endpoint) is deprecated, but searching the spec for `~1users~1{id}~1sessions` returns... nothing — the deprecated predecessor is not in the spec at all. So the prose is forward-pointing rather than self-pointing. Action: either remove the prose (the spec doesn't model `/users/{id}/sessions` so the breadcrumb is dead) or restore `/users/{id}/sessions` with `deprecated: true` for migration documentation. The third — `POST /schedules/{id}/overrides` — contains *\"the last created override will have priority\"* which is not deprecation, it's last-wins semantics; on closer reading this is a false-positive of my regex (legacy-keyword), not an actual deprecation. So really only two of the three matter.",
+      "rationale": "OpenAPI 3.0 §4.7.4 defines `deprecated` as the machine-readable signal. Microsoft REST API Guidelines §12.4 names deprecation handling as a contract surface. Forward-pointing breadcrumbs to operations not modeled in the spec confuse documentation consumers.",
+      "patchOps": [],
+      "classification": {
+        "isLintFlavoured": false,
+        "isKnowledgeBackedGap": false,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
+        "narrationKeywords": [
+          "deprecated",
+          "prose-only deprecation",
+          "OAuth delegations",
+          "sessions endpoint"
+        ],
+        "expectedClusterKey": null
+      },
+      "selfReviewNotes": "Self-correction: only 2 of the 3 hits are real deprecation prose (the schedules/overrides hit is the regex-bait term \"priority\"). Severity stays medium because the OAuth-delegations hits point at predecessor-not-in-spec, which is its own kind of contract gap."
+    },
+    {
+      "id": "F16",
+      "title": "76% of component schemas (206 of 272) carry no `description`",
+      "category": "clarity",
+      "severity": "medium",
+      "scope": "spec",
+      "affectedEndpoints": [],
+      "patchSummary": "Add a one-sentence `description` to each schema in `components.schemas` that lacks one — at minimum on the user-facing top-level resources (`Incident`, `Service`, `EscalationPolicy`, `User`, etc.).",
+      "narration": "Walking `components.schemas` (272 entries), 206 carry no top-level `description` field. Stripe's spec was 79% empty schema descriptions (a pattern flagged in its reference); PagerDuty is 76%. The fields *inside* the schemas are well-described — most properties carry their own `description` — but the schema-level description is absent. The consequence: documentation portals render the type's name but no headline explanation of what the resource is for; codegen tools that generate type-jsdoc can only attach the per-field comments. Top-level resource schemas — `Incident`, `Service`, `EscalationPolicy`, `User`, `Team` — should each have a one-paragraph headline. Many of the unnamed schemas are internal sub-types (e.g. `AnalyticsIncidentMetrics`) where the absence is more forgivable, but the user-facing top-levels are the high-value fix.",
+      "rationale": "OpenAPI 3.0 §4.7.25 (\"Schema Object\") supports `description` as a top-level field. The OpenAPI Initiative style guide and Microsoft REST API Guidelines §3.5 treat schema-level descriptions as required for any consumer-facing API. ReDoc and SwaggerUI render them prominently.",
+      "patchOps": [],
+      "classification": {
+        "isLintFlavoured": false,
+        "isKnowledgeBackedGap": false,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
+        "narrationKeywords": [
+          "schema description",
+          "missing description",
+          "empty description",
+          "type documentation"
+        ],
+        "expectedClusterKey": "empty-schema-description"
+      },
+      "selfReviewNotes": null
+    },
+    {
+      "id": "F17",
+      "title": "`info` block is missing `license` and `termsOfService`",
+      "category": "clarity",
+      "severity": "low",
+      "scope": "spec",
+      "affectedEndpoints": [],
+      "patchSummary": "Add `info.license` (PagerDuty's spec is published at github.com/PagerDuty/api-schema with a license file) and `info.termsOfService` (https://www.pagerduty.com/legal/terms-of-service/).",
+      "narration": "`info` declares `description`, `contact`, `title`, and `version: \"2.0.0\"`, but neither `license` nor `termsOfService`. PagerDuty's API has both legally available and prominently linked: `https://www.pagerduty.com/legal/terms-of-service/` and the api-schema repository at `https://github.com/PagerDuty/api-schema` (referenced from `info.description` itself!) has a license. Spec consumers — particularly enterprises that audit third-party API specs before SDK generation — read `info.license` and `info.termsOfService` to decide whether to consume the spec. Missing fields in the public spec mean those audits stall. Mechanical fix: add both fields with the publicly-available URLs.",
+      "rationale": "OpenAPI 3.0 §4.7.2 (\"Info Object\") supports both `license` and `termsOfService` as optional but recommended. The OpenAPI Initiative style guide treats them as mandatory for public APIs. Spectral's `oas3-info-license` and `oas3-info-tos` are default rules.",
+      "patchOps": [
+        {
+          "op": "add",
+          "path": "/info/termsOfService",
+          "value": "https://www.pagerduty.com/legal/terms-of-service/"
+        },
+        {
+          "op": "add",
+          "path": "/info/license",
+          "value": {
+            "name": "PagerDuty API Schema License",
+            "url": "https://github.com/PagerDuty/api-schema/blob/main/LICENSE"
+          }
+        }
+      ],
+      "classification": {
+        "isLintFlavoured": true,
+        "isKnowledgeBackedGap": false,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
+        "narrationKeywords": [
+          "info.license",
+          "info.termsOfService",
+          "missing license",
+          "spec metadata"
+        ],
+        "expectedClusterKey": null
+      },
+      "selfReviewNotes": null
+    },
+    {
+      "id": "F18",
+      "title": "Error `code` field typed as integer but the codespace (`2001`, `2100`, ...) is undocumented",
+      "category": "clarity",
+      "severity": "medium",
+      "scope": "spec",
+      "affectedEndpoints": [],
+      "patchSummary": "Either enumerate the error codespace in `V3ErrorResponse.error.code.enum` (or attach a description with a link to PagerDuty's error-code reference), or replace the integer codespace with a typed string enum.",
+      "narration": "Both error envelopes (`V3ErrorResponse` and the inline Conflict-derived schema, see F5) declare `error.code: integer`. The examples in the spec show concrete values: `2001` (\"Invalid Request\"), `2100` (\"Not Found\"). PagerDuty's developer-portal documents the codespace at `https://developer.pagerduty.com/docs/errors`, with codes ranging from 2000 (validation) through 2200 (auth) through 2300 (resource conflict) and beyond — a structured numeric vocabulary. None of this is in the spec. A consumer reading `code: integer` cannot tell whether `42` is a valid code or a deliberate sentinel; codegen tools that generate typed error-handling cannot dispatch on `code`. Fix: either populate `enum` (200+ values, ideally generated from the developer portal) or attach a `description` with a link to the canonical reference. The latter is lower-effort and the more realistic delivery.",
+      "rationale": "RFC 7807 §3.1 (\"Problem Details\") names the `type` URI as a stable identifier for the error class — PagerDuty's `code` field is the equivalent. JSON Schema §6.1.2 (`enum`) is the canonical machine-readable enumeration. Microsoft REST API Guidelines §7.10 names the error-code vocabulary as part of the API contract.",
+      "patchOps": [
+        {
+          "op": "replace",
+          "path": "/components/schemas/V3ErrorResponse/properties/error/properties/code/description",
+          "value": "PagerDuty error code. The codespace is documented at https://developer.pagerduty.com/docs/errors — codes 2xxx are for validation/auth/resource errors; 3xxx are for orchestration errors."
+        }
+      ],
+      "classification": {
+        "isLintFlavoured": false,
+        "isKnowledgeBackedGap": true,
+        "isPureSpectralDetectable": false,
+        "isDomainKnowledgeDetectable": true,
+        "narrationKeywords": [
+          "error code",
+          "codespace",
+          "undocumented enum",
+          "PagerDuty error reference"
+        ],
+        "expectedClusterKey": null
+      },
+      "selfReviewNotes": null
+    },
+    {
+      "id": "F19",
+      "title": "`additionalProperties` is omitted on 518 of 520 object schemas — strict-vs-lax serialisation policy is ambiguous",
+      "category": "design",
+      "severity": "medium",
+      "scope": "spec",
+      "affectedEndpoints": [],
+      "patchSummary": "Set a spec-wide `additionalProperties` policy — either `false` (strict, recommended for response shapes) or document the lax-default in `info.description`.",
+      "narration": "Walking the spec recursively for object schemas, 518 of 520 declare neither `additionalProperties: true` nor `additionalProperties: false` nor an `additionalProperties: { type: ... }` schema. Per JSON Schema §8.2.3, the default when `additionalProperties` is absent is `true` (extra properties allowed). However, OpenAPI codegens diverge: openapi-generator's TypeScript-fetch template treats absence as strict (extra properties drop), while openapi-generator's Java template treats it as lax (extra properties preserved as a `Map<String, Object>` field). The spec-default is therefore consumed differently by different SDK generators — one generated SDK silently drops fields the API adds in a future version; another preserves them. Consumers reading the spec cannot tell which behavior is intended. Fix: document the policy at `info.description` (e.g. \"Forward-compatibility: response shapes may include additional properties not modeled here; clients should preserve unknown properties\") and explicitly set `additionalProperties: false` on input schemas where strictness is intended.",
+      "rationale": "JSON Schema §8.2.3 specifies the default; OpenAPI codegen tooling is inconsistent in how it consumes the absence. Microsoft REST API Guidelines §6 and Stripe's spec both make the policy explicit. The OpenAPI Initiative style guide recommends being explicit because the implicit default is invisible.",
+      "patchOps": [
+        {
+          "op": "replace",
+          "path": "/info/description",
+          "value": "This document describes the PagerDuty REST APIs.\n\nFor guides and examples please visit our [Documentation.](https://developer.pagerduty.com/docs/get-started/getting-started/)\n\nOur REST APIs are defined in OpenAPI v3.x. You can view the schema at [github.com/PagerDuty/api-schema](https://github.com/PagerDuty/api-schema).\n\nNote that properties in some schemas have fields not shown by default such as `readOnly`, `format`, and `default`. Hover your cursor over the right column that looks like `optional+1` to see the full list of fields.\n\n**Forward-compatibility:** Response shapes may include additional properties not modeled in this spec. Clients should preserve unknown properties. Request shapes do not validate against `additionalProperties: false` strictness; unknown request properties are ignored by the server.\n"
+        }
+      ],
+      "classification": {
+        "isLintFlavoured": false,
+        "isKnowledgeBackedGap": true,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
+        "narrationKeywords": [
+          "additionalProperties",
+          "strict serialisation",
+          "lax serialisation",
+          "forward compatibility"
+        ],
+        "expectedClusterKey": null
+      },
+      "selfReviewNotes": null
+    },
+    {
+      "id": "F20",
+      "title": "Conditional-validation rules (\"Required when X\", \"mutually exclusive with Y\") encoded in prose only on at least 8 schema fields",
+      "category": "clarity",
+      "severity": "medium",
+      "scope": "spec",
+      "affectedEndpoints": [],
+      "patchSummary": "Encode conditional-required and mutual-exclusion rules using JSON Schema `if`/`then`/`else` or `oneOf` rather than prose-only descriptions.",
+      "narration": "Searching schema property `description` fields for prose conditional-validation triggers (`required when`, `required if`, `only valid when`, `must be set when`, `cannot be combined with`, `mutually exclusive`), at least 8 hits surface:\n\n- `IncidentWorkflowTrigger.allOf[1].properties.condition`: *\"Required if trigger_type is ...\"*\n- `MatchPredicate.properties.matcher`: *\"Required if the type is `contains`, `exactly` or `regex`.\"*\n- `MatchPredicate.properties.part`: *\"...Required if the type is `contains`, `exactly` or `regex`.\"*\n- `ShiftMember.properties.user_id`: *\"The ID of the user. Required when type is `user_member`.\"*\n- `OverrideShift.properties.rotation_id`: *\"ID of the rotation whose shift is being overridden (mutually exclusive with custom_shift_id)\"*\n- ... (3 more)\n\nThese are real validation rules — a consumer that submits `MatchPredicate { type: \"contains\" }` without `matcher` will get a runtime 400 — but the rules are invisible to JSON-Schema-based validators. JSON Schema 2020-12 (`if`/`then`/`else`) and OpenAPI 3.0 (which inherits enough of the validation vocabulary via Schema Object) both support encoding these rules. Codegen tools that emit input-validation can leverage the encoded rules; prose-only rules are invisible.\n\nThis pattern is the apiq differentiator class — Stripe's reference flagged the same gap as F21.",
+      "rationale": "JSON Schema 2019-09 / 2020-12 §10.2 (`if`/`then`/`else`) is the standard mechanism for conditional schemas. OpenAPI 3.1 inherits the full vocabulary; OpenAPI 3.0 supports the subset via `oneOf` / `allOf` discriminator-coupled encodings. Microsoft REST API Guidelines §6.4 and the OpenAPI Initiative style guide both recommend machine-readable conditional-validation.",
+      "patchOps": [],
+      "classification": {
+        "isLintFlavoured": false,
+        "isKnowledgeBackedGap": true,
+        "isPureSpectralDetectable": false,
+        "isDomainKnowledgeDetectable": false,
+        "narrationKeywords": [
+          "conditional required",
+          "mutually exclusive",
+          "if-then-else",
+          "prose-only validation",
+          "parameter relationship"
+        ],
+        "expectedClusterKey": null
+      },
+      "selfReviewNotes": "LLM-only finding (PSpec=false AND DomK=false): NLP detection of phrases like 'required when X' inside a description field. The differentiator class."
+    },
+    {
+      "id": "F21",
+      "title": "`UnprocessableEntity` (422) is wired to a 400 status on `PUT /standards/{id}` — status-code semantic mismatch",
+      "category": "correctness",
+      "severity": "medium",
+      "scope": "endpoint",
+      "affectedEndpoints": [
+        {
+          "path": "/standards/{id}",
+          "method": "put"
+        }
+      ],
+      "patchSummary": "Either move the `UnprocessableEntity` response from status 400 to status 422 on `PUT /standards/{id}`, or replace it with `ArgumentError` to match the spec's other write operations.",
+      "narration": "`PUT /standards/{id}` declares `responses['400']: { $ref: \"#/components/responses/UnprocessableEntity\" }`. The component name `UnprocessableEntity` corresponds to RFC 4918 §11.2 status code **422**, not 400. Every other write operation in the spec correctly uses `ArgumentError` (defined as `description: \"Caller provided invalid arguments...\"`) for its 400 response. The mismatch is a copy-paste error — the operation also declares its own `responses['422']: { $ref: \"#/components/responses/UnprocessableEntity\" }` in 23 other places — so the component is being reused at the wrong status here. A consumer who reads the spec sees a 400 Bad Request whose body schema and `description` (\"The request was well-formed but contains semantic errors\") describe a 422. Codegen tools that build typed error dispatch will mis-categorise. Fix: either move the response to status 422 and add `ArgumentError` at status 400, or accept the reused-component pattern and rename.",
+      "rationale": "RFC 9110 §15.5.21 (formerly RFC 4918 §11.2) defines 422 as \"Unprocessable Content\" — the request was well-formed but semantically invalid. RFC 9110 §15.5.1 defines 400 as \"Bad Request\" — the request itself is malformed. The two are distinct status codes; using one's name at the other's slot is a contract bug.",
+      "patchOps": [
+        {
+          "op": "replace",
+          "path": "/paths/~1standards~1{id}/put/responses/400",
+          "value": {
+            "$ref": "#/components/responses/ArgumentError"
+          }
+        }
+      ],
+      "classification": {
+        "isLintFlavoured": false,
+        "isKnowledgeBackedGap": false,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
+        "narrationKeywords": [
+          "status code mismatch",
+          "422",
+          "400",
+          "UnprocessableEntity",
+          "wrong status"
+        ],
+        "expectedClusterKey": null
+      },
+      "selfReviewNotes": null
+    },
+    {
+      "id": "F22",
+      "title": "Most response components used 5000+ times share a `$ref` chain into `Conflict.content.application~1json.schema`, creating a fragile schema topology",
+      "category": "design",
+      "severity": "low",
+      "scope": "spec",
+      "affectedEndpoints": [],
+      "patchSummary": "Extract the inline error schema currently inside `Conflict` into `components.schemas.LegacyErrorResponse` (or unify with `V3ErrorResponse` per F5) and `$ref` it from each error response component.",
+      "narration": "`components.responses.ArgumentError`, `Forbidden`, `InternalServerError`, `NotAllowed`, `NotFound`, `TooManyRequests`, `PaymentRequired`, `Unauthorized`, `UnprocessableEntity`, and `RequestEntityTooLarge` all declare their `application/json.schema` as `{ $ref: \"#/components/responses/Conflict/content/application~1json/schema\" }`. That is, the canonical schema lives inline inside the `Conflict` response component, and every other error component reaches into it via JSON-pointer. Total references across the spec: ~1800+ (sum of usage counts across `ArgumentError` 299 + `Forbidden` 381 + `NotFound` 297 + `TooManyRequests` 234 + `Unauthorized` 349 + others). If `components.responses.Conflict` is renamed, removed, or refactored, every other error component breaks. The fix is mechanical: lift the inline schema out to `components.schemas.LegacyErrorResponse` and have each response component `$ref` the schema directly (a more conventional topology). This is the lower-cost path; the higher-value alternative is unification with `V3ErrorResponse` per F5.",
+      "rationale": "OpenAPI 3.0 best-practice is to keep reusable schemas in `components.schemas` and `$ref` them from response/request components. Cross-references into a different component-type's inline definition (response→inline-schema-inside-another-response) work but are brittle — IDE tooling, JSON-pointer walkers, and OpenAPI lint rules expect the canonical-location-in-components.schemas convention.",
+      "patchOps": [],
+      "classification": {
+        "isLintFlavoured": true,
+        "isKnowledgeBackedGap": false,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
+        "narrationKeywords": [
+          "$ref chain",
+          "inline schema reuse",
+          "topology fragility",
+          "components.schemas"
+        ],
+        "expectedClusterKey": null
+      },
+      "selfReviewNotes": "Severity low: the topology is unusual but not currently broken. Fix is preventive maintenance."
+    },
+    {
+      "id": "F23",
+      "title": "Operation summaries are short enough but 19 of 272 schemas carry `example` (7%); request/response examples are far better-covered (134 of 156 requests, 330 of 401 inline 2xx responses)",
+      "category": "clarity",
+      "severity": "low",
+      "scope": "spec",
+      "affectedEndpoints": [],
+      "patchSummary": "Add at least one `example` to each top-level resource schema (Incident, Service, EscalationPolicy, User, Team) so codegen test-fixtures and documentation portals have type-level examples.",
+      "narration": "Walking `components.schemas`, only 19 of 272 schemas (7%) carry a top-level `example`. Per-property descriptions often include `example` markers, and request-body content blocks are example-rich (134 of 156 requestBodies have an `examples` map; 330 of 401 inline 2xx response bodies have one or more examples). The schema-level absence affects two things: (1) ReDoc / SwaggerUI render the type in the side panel without an example, falling back to property-level walks; (2) codegen tools that build test fixtures from the spec (e.g. msw, prism) cannot stub a typed instance from the schema alone. The high-value fix is to add a representative `example` to the top-level resource schemas — `Incident`, `Service`, `EscalationPolicy`, `User`, `Team` — at minimum. The 134-of-156 request-body coverage is genuinely strong; this is a residual gap rather than a systemic issue. Severity is low.",
+      "rationale": "OpenAPI 3.0 §4.7.25 supports schema-level `example`. The OpenAPI Initiative style guide recommends at minimum one per top-level resource. Stripe's spec was flagged for the same pattern (~zero requestBody examples there), but PagerDuty's request-body coverage is far better — only the schema-level coverage is thin.",
+      "patchOps": [],
+      "classification": {
+        "isLintFlavoured": true,
+        "isKnowledgeBackedGap": false,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
+        "narrationKeywords": [
+          "schema example",
+          "top-level example",
+          "test fixture",
+          "documentation"
+        ],
+        "expectedClusterKey": null
+      },
+      "selfReviewNotes": null
+    }
+  ]
+}

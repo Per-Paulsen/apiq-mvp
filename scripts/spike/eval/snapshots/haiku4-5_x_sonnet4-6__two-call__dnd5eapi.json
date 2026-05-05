@@ -1,0 +1,37 @@
+{
+  "configName": "haiku4-5_x_sonnet4-6__two-call__dnd5eapi",
+  "lockedAt": "2026-05-05T13:20:51.581Z",
+  "lockedBy": "4dbe81ff3e949652fe648022a41e3a83c3e8f63e",
+  "spec": "dnd5eapi",
+  "metrics": {
+    "findingCount": {
+      "mean": 135,
+      "std": 0
+    },
+    "costUSD": {
+      "mean": 0.627827,
+      "std": 0
+    },
+    "durationMs": {
+      "mean": 199492,
+      "std": 0
+    },
+    "applyCleanRate": {
+      "mean": 0.9925925925925926,
+      "std": 0
+    },
+    "halluRate": {
+      "mean": 0.007407407407407408,
+      "std": 0
+    },
+    "repetitionRate": 0.274074074074074,
+    "uniqueClusters": 98,
+    "coverageRate": 0.2857142857142857,
+    "substantiveCoverageRate": 0.3333333333333333,
+    "knowledgeBackedCoverageRate": 0.25,
+    "llmOnlyCoverageRate": 0.5,
+    "pureSpectralCoverageRate": 0.2,
+    "domainKnowledgeCoverageRate": 0.5
+  },
+  "notes": "Stage-3 historical run snapshot — two-call · anthropic/claude-sonnet-4.6 + anthropic/claude-sonnet-4.6 · dnd5eapi · prompt=v5. Locked by bulk-sweep on 2026-05-05 to enable Stage-A-vs-baseline drift-diffing."
+}

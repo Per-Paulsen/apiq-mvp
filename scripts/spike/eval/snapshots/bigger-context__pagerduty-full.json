@@ -1,0 +1,37 @@
+{
+  "configName": "bigger-context__pagerduty-full",
+  "lockedAt": "2026-05-05T13:20:49.969Z",
+  "lockedBy": "4dbe81ff3e949652fe648022a41e3a83c3e8f63e",
+  "spec": "pagerduty-full",
+  "metrics": {
+    "findingCount": {
+      "mean": 20,
+      "std": 0
+    },
+    "costUSD": {
+      "mean": 1.176516,
+      "std": 0
+    },
+    "durationMs": {
+      "mean": 132138,
+      "std": 0
+    },
+    "applyCleanRate": {
+      "mean": 0.95,
+      "std": 0
+    },
+    "halluRate": {
+      "mean": 0.05,
+      "std": 0
+    },
+    "repetitionRate": 0,
+    "uniqueClusters": 20,
+    "coverageRate": 0.043478260869565216,
+    "substantiveCoverageRate": 0.05263157894736842,
+    "knowledgeBackedCoverageRate": 0,
+    "llmOnlyCoverageRate": 0,
+    "pureSpectralCoverageRate": 0.058823529411764705,
+    "domainKnowledgeCoverageRate": 0
+  },
+  "notes": "Stage-3 historical run snapshot — bigger-context · anthropic/claude-sonnet-4.6 · pagerduty-full · prompt=v4. Locked by bulk-sweep on 2026-05-05 to enable Stage-A-vs-baseline drift-diffing."
+}

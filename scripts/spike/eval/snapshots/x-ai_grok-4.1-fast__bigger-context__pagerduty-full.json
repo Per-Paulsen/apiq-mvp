@@ -1,0 +1,37 @@
+{
+  "configName": "x-ai_grok-4.1-fast__bigger-context__pagerduty-full",
+  "lockedAt": "2026-05-05T13:20:59.436Z",
+  "lockedBy": "4dbe81ff3e949652fe648022a41e3a83c3e8f63e",
+  "spec": "pagerduty-full",
+  "metrics": {
+    "findingCount": {
+      "mean": 19,
+      "std": 0
+    },
+    "costUSD": {
+      "mean": 0.05968010000000001,
+      "std": 0
+    },
+    "durationMs": {
+      "mean": 57580,
+      "std": 0
+    },
+    "applyCleanRate": {
+      "mean": 0.8947368421052632,
+      "std": 0
+    },
+    "halluRate": {
+      "mean": 0.10526315789473684,
+      "std": 0
+    },
+    "repetitionRate": 0,
+    "uniqueClusters": 19,
+    "coverageRate": 0,
+    "substantiveCoverageRate": 0,
+    "knowledgeBackedCoverageRate": 0,
+    "llmOnlyCoverageRate": 0,
+    "pureSpectralCoverageRate": 0,
+    "domainKnowledgeCoverageRate": 0
+  },
+  "notes": "Stage-3 historical run snapshot — bigger-context · x-ai/grok-4.1-fast · pagerduty-full · prompt=v4. Locked by bulk-sweep on 2026-05-05 to enable Stage-A-vs-baseline drift-diffing."
+}

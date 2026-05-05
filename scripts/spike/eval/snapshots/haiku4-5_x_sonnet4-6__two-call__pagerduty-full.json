@@ -1,0 +1,37 @@
+{
+  "configName": "haiku4-5_x_sonnet4-6__two-call__pagerduty-full",
+  "lockedAt": "2026-05-05T13:20:54.796Z",
+  "lockedBy": "4dbe81ff3e949652fe648022a41e3a83c3e8f63e",
+  "spec": "pagerduty-full",
+  "metrics": {
+    "findingCount": {
+      "mean": 623,
+      "std": 0
+    },
+    "costUSD": {
+      "mean": 3.8782769999999998,
+      "std": 0
+    },
+    "durationMs": {
+      "mean": 816307,
+      "std": 0
+    },
+    "applyCleanRate": {
+      "mean": 0.9887640449438202,
+      "std": 0
+    },
+    "halluRate": {
+      "mean": 0.011235955056179775,
+      "std": 0
+    },
+    "repetitionRate": 0.2985553772070626,
+    "uniqueClusters": 437,
+    "coverageRate": 0.21739130434782608,
+    "substantiveCoverageRate": 0.2631578947368421,
+    "knowledgeBackedCoverageRate": 0.25,
+    "llmOnlyCoverageRate": 1,
+    "pureSpectralCoverageRate": 0.17647058823529413,
+    "domainKnowledgeCoverageRate": 0.2
+  },
+  "notes": "Stage-3 historical run snapshot — two-call · anthropic/claude-sonnet-4.6 + anthropic/claude-sonnet-4.6 · pagerduty-full · prompt=v5. Locked by bulk-sweep on 2026-05-05 to enable Stage-A-vs-baseline drift-diffing."
+}

@@ -1,0 +1,37 @@
+{
+  "configName": "haiku4-5_x_sonnet4-6__two-call__github-rest",
+  "lockedAt": "2026-05-05T13:20:53.574Z",
+  "lockedBy": "4dbe81ff3e949652fe648022a41e3a83c3e8f63e",
+  "spec": "github-rest",
+  "metrics": {
+    "findingCount": {
+      "mean": 902,
+      "std": 0
+    },
+    "costUSD": {
+      "mean": 4.726398,
+      "std": 0
+    },
+    "durationMs": {
+      "mean": 1763733,
+      "std": 0
+    },
+    "applyCleanRate": {
+      "mean": 0.9966740576496674,
+      "std": 0
+    },
+    "halluRate": {
+      "mean": 0.0033259423503325942,
+      "std": 0
+    },
+    "repetitionRate": 0.20509977827050996,
+    "uniqueClusters": 717,
+    "coverageRate": 0.12903225806451613,
+    "substantiveCoverageRate": 0.08333333333333333,
+    "knowledgeBackedCoverageRate": 0.16666666666666666,
+    "llmOnlyCoverageRate": 0,
+    "pureSpectralCoverageRate": 0.15384615384615385,
+    "domainKnowledgeCoverageRate": 0
+  },
+  "notes": "Stage-3 historical run snapshot — two-call · anthropic/claude-sonnet-4.6 + anthropic/claude-sonnet-4.6 · github-rest · prompt=v5. Locked by bulk-sweep on 2026-05-05 to enable Stage-A-vs-baseline drift-diffing."
+}

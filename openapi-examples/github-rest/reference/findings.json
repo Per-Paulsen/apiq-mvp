@@ -1,0 +1,1063 @@
+{
+  "spec": "github-rest",
+  "specSource": "openapi-examples/github-rest/spec.json",
+  "specCommit": "d3a3c2a50bb45b5f437bdfd8e0c700091bb1fb7b",
+  "specVersion": "1.1.4",
+  "endpointCount": 1145,
+  "pathCount": 758,
+  "openapiVersion": "3.0.3",
+  "componentSchemaCount": 923,
+  "estimatedInputTokens": 1500000,
+  "authoringDate": "2026-05-05",
+  "author": "Claude Code (LLM-authored, agent-spawned)",
+  "humanHardenedDate": null,
+  "humanHardenedBy": null,
+  "notes": "Reference target for GitHub REST API — apiq Big-Spec Architecture Spike Epic 09 Phase 0. Authored by background agent 2026-05-05 to enable cross-spec validation of Stage-A Deterministic Layer. GitHub REST is the largest + most heavily-reviewed spec in our test set (1145 ops, 758 paths, 923 component schemas, 11.7 MB raw / 5.98 MB cycle-stripped); calibration anchor 'low expected critical-finding count even at 1145 ops on polished APIs' applies. Knowledge-backed-gap detection is especially high-value here because GitHub has rich documented operational conventions (Link-header pagination, conditional requests via ETag/If-None-Match, X-RateLimit response headers, Sunset/Deprecation headers per RFC 8594, X-GitHub-Api-Version pinning, vendor media-types `application/vnd.github+json` and `application/vnd.github.diff` etc., GitHub Apps installation tokens) that are easy to MISS in spec encoding. The spec's defining property is *consistency of structure with under-specification of operational expectations* — the inverse of Stripe's profile. Distribution: 31 findings; 0 critical · 7 high · 17 medium · 7 low. Empirical counters used in narrations were measured against spec.json at commit d3a3c2a5 directly (see scripts/spike eval-tooling for repeatability). LLM-authored bias acknowledged — humanHardenedDate is the field to set when domain-expert review completes.",
+  "findings": [
+    {
+      "id": "F1",
+      "title": "No `securitySchemes` declared and no `security` requirement at any level",
+      "category": "correctness",
+      "severity": "high",
+      "scope": "spec",
+      "affectedEndpoints": [],
+      "patchSummary": "Add `components.securitySchemes` with `bearerAuth` (PAT / fine-grained PAT) and `oauth2` flows; add a top-level `security` block.",
+      "narration": "The spec declares no `components.securitySchemes` (the entire field is absent), no top-level `security` requirement, and no per-operation `security` on any of its 1145 operations — all four are zero. Yet GitHub's REST API requires authentication on the overwhelming majority of endpoints: Personal Access Tokens (classic and fine-grained), OAuth-app tokens, GitHub-App installation tokens, all sent via `Authorization: Bearer <token>`. A consumer reading only the spec cannot discover the auth model at all; codegen tools (openapi-generator, openapi-typescript-codegen, OpenAPI Tools) emit SDKs without an auth-header parameter on any operation; OpenAPI security-scanning tooling (42Crunch, Checkov) reports the spec as authentication-free. Note this is structurally distinct from the common 'operations inherit root security' anti-pattern: in this spec there *is no root security to inherit*, and no `securitySchemes` to reference. The fix is to declare the bearer/OAuth schemes in `components.securitySchemes` and either set a top-level `security` (with explicit `security: []` overrides on the few public endpoints — `/`, `/zen`, `/octocat`, `/emojis`, `/codes_of_conduct`, etc.) or set per-operation `security` everywhere.",
+      "rationale": "OpenAPI 3.0 §4.7 (\"Security Requirement Object\") and §4.7.27 (\"Security Scheme Object\") are the only spec-level mechanism for documenting auth. Microsoft REST API Guidelines §8 and the OpenAPI Initiative API Design Guide both name the security block as required. RFC 6749 (OAuth 2.0) and RFC 6750 (Bearer Token Usage) are the IETF baselines GitHub implements.",
+      "patchOps": [
+        {
+          "op": "add",
+          "path": "/components/securitySchemes",
+          "value": {
+            "bearerAuth": {
+              "type": "http",
+              "scheme": "bearer",
+              "description": "GitHub Personal Access Token (classic or fine-grained), OAuth app token, or GitHub App installation token."
+            }
+          }
+        },
+        {
+          "op": "add",
+          "path": "/security",
+          "value": [
+            {
+              "bearerAuth": []
+            }
+          ]
+        }
+      ],
+      "classification": {
+        "isLintFlavoured": false,
+        "isKnowledgeBackedGap": true,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
+        "narrationKeywords": [
+          "securitySchemes",
+          "no auth declared",
+          "bearerAuth missing",
+          "OAuth2 flows"
+        ],
+        "expectedClusterKey": null
+      },
+      "selfReviewNotes": "Structurally a 'top-level missing' finding rather than a per-op finding. NOT the anti-pattern-D forbidden 'op-level security missing' flag — the spec has no root-level security to inherit either. PSpec=true because a generic walker can detect zero security schemes; KGap=true because knowing GitHub uses bearerAuth + OAuth2 is training-data."
+    },
+    {
+      "id": "F2",
+      "title": "`X-GitHub-Api-Version` request header not declared on any operation",
+      "category": "design",
+      "severity": "high",
+      "scope": "spec",
+      "affectedEndpoints": [],
+      "patchSummary": "Declare `X-GitHub-Api-Version` as a common header parameter and reference it on every operation.",
+      "narration": "GitHub publishes a versioned REST API; consumers pin a specific calendar-versioned schema by sending `X-GitHub-Api-Version: 2026-03-10` (or earlier) on every request. The header is documented at https://docs.github.com/rest/overview/api-versions and is the canonical way to opt into a specific schema rather than the rolling default. The spec declares **0 occurrences** of an `X-GitHub-Api-Version` parameter across all 1145 operations and `components.parameters`. SDKs generated from the spec ship without typed support; consumers building forward-compatible clients must hard-code the header outside the SDK abstraction. Twenty-one operations carry an `x-github-breaking-changes` extension documenting per-version diffs (`{\"version\": \"2026-03-10\", \"patch\": ...}`), so the spec's own metadata acknowledges the version axis — yet the header that selects between versions is invisible. Add it to `components.parameters` and reference it spec-wide.",
+      "rationale": "OpenAPI 3.0 §4.7.10 (\"Parameter Object\") supports header parameters as first-class. Microsoft REST API Guidelines §7.6 (\"Versioning\") names version-negotiation headers as a primary spec concern. Headers that are part of the documented contract belong in the spec; otherwise codegen tools cannot expose them.",
+      "patchOps": [
+        {
+          "op": "add",
+          "path": "/components/parameters/api-version",
+          "value": {
+            "name": "X-GitHub-Api-Version",
+            "in": "header",
+            "required": false,
+            "description": "Pin the API version. See https://docs.github.com/rest/overview/api-versions.",
+            "schema": {
+              "type": "string",
+              "example": "2026-03-10"
+            }
+          }
+        }
+      ],
+      "classification": {
+        "isLintFlavoured": false,
+        "isKnowledgeBackedGap": true,
+        "isPureSpectralDetectable": false,
+        "isDomainKnowledgeDetectable": true,
+        "narrationKeywords": [
+          "X-GitHub-Api-Version",
+          "version pinning",
+          "api version header"
+        ],
+        "expectedClusterKey": null
+      },
+      "selfReviewNotes": "Direct parallel to Stripe F12 (Stripe-Account / Stripe-Version). DomK because the catalog 'GitHub publishes versioned APIs via X-GitHub-Api-Version' is GitHub-family knowledge."
+    },
+    {
+      "id": "F3",
+      "title": "ETag and Last-Modified response headers not declared on any operation",
+      "category": "design",
+      "severity": "high",
+      "scope": "spec",
+      "affectedEndpoints": [],
+      "patchSummary": "Declare `ETag` and `Last-Modified` headers in `components.headers`; reference on `200` responses for every GET operation.",
+      "narration": "**158 operations** declare a `304 Not Modified` response, indicating that the API supports HTTP conditional requests. Yet the spec contains **0 declarations** of an `ETag` response header and **0 declarations** of a `Last-Modified` response header anywhere — `components.headers` exposes `link`, `content-type`, `x-common-marker-version`, `x-rate-limit-limit`, `x-rate-limit-remaining`, `x-rate-limit-reset`, `location`, but not `ETag`. The `not_modified` shared response (`components.responses.not_modified`) consists of just `{\"description\": \"Not modified\"}` — no headers, no schema. Consumers reading only the spec see `304` listed as a possible response without any indication of how to trigger it: there's no documented `If-None-Match` request header, no documented `ETag` response header, no documentation that the server emits validators. RFC 7232 (\"Conditional Requests\") governs the entire mechanism; the spec gives the consumer no surface to engage with it.",
+      "rationale": "RFC 7232 §2.3 (\"ETag\") and §2.2 (\"Last-Modified\") are the IETF foundation for HTTP conditional requests. OpenAPI 3.0 §4.7.18 (\"Responses Object\") supports a typed `headers` field per response specifically for documenting validator-emission. A spec that documents `304` without documenting validators is structurally incomplete.",
+      "patchOps": [
+        {
+          "op": "add",
+          "path": "/components/headers/etag",
+          "value": {
+            "schema": {
+              "type": "string"
+            },
+            "description": "Entity tag — opaque validator for conditional-request use. See RFC 7232 §2.3.",
+            "example": "W/\"abc123\""
+          }
+        },
+        {
+          "op": "add",
+          "path": "/components/headers/last-modified",
+          "value": {
+            "schema": {
+              "type": "string",
+              "format": "http-date"
+            },
+            "description": "Last-Modified validator. See RFC 7232 §2.2."
+          }
+        }
+      ],
+      "classification": {
+        "isLintFlavoured": false,
+        "isKnowledgeBackedGap": true,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
+        "narrationKeywords": [
+          "ETag",
+          "Last-Modified",
+          "validator headers",
+          "conditional requests",
+          "RFC 7232"
+        ],
+        "expectedClusterKey": null
+      },
+      "selfReviewNotes": "Companion to F4. PSpec=true (heuristic: ops with 304 + missing ETag header on the corresponding 200 = walkable). KGap=true (RFC 7232 knowledge: 304 implies the server emits validators)."
+    },
+    {
+      "id": "F4",
+      "title": "`If-None-Match` and `If-Modified-Since` request headers not declared on any operation",
+      "category": "design",
+      "severity": "high",
+      "scope": "spec",
+      "affectedEndpoints": [],
+      "patchSummary": "Add `components.parameters.if-none-match` (and `if-modified-since`) and reference on the 158 operations that document `304` responses.",
+      "narration": "**158 operations** document a `304 Not Modified` response. The HTTP semantics of `304` per RFC 7232 require the client to send `If-None-Match` (matching an earlier `ETag`) or `If-Modified-Since` (matching an earlier `Last-Modified`) — without one of these conditional request headers, the server has no basis to return `304`. The spec declares **0 occurrences** of `If-None-Match` and **0 occurrences** of `If-Modified-Since` as request parameters — neither in `components.parameters` nor on any of the 1145 operations directly. SDK consumers see `304` documented as a response but no documented way to elicit it; codegen tools emit no typed conditional-request affordance; AI agents inspecting the spec have to import RFC 7232 knowledge externally to reason about the conditional-fetch flow at all. This finding is the request-side counterpart of F3 (ETag missing on responses); together the two leave the entire conditional-request contract undocumented.",
+      "rationale": "RFC 7232 §3.2 (\"If-None-Match\") and §3.3 (\"If-Modified-Since\") are the IETF foundation for client-driven cache validation. OpenAPI 3.0 §4.7.10 supports header parameters as first-class. Documenting 304 without the conditional-request headers is half a contract.",
+      "patchOps": [
+        {
+          "op": "add",
+          "path": "/components/parameters/if-none-match",
+          "value": {
+            "name": "If-None-Match",
+            "in": "header",
+            "required": false,
+            "description": "Conditional request: return 304 if the resource matches the given ETag. See RFC 7232 §3.2.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        }
+      ],
+      "classification": {
+        "isLintFlavoured": false,
+        "isKnowledgeBackedGap": true,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
+        "narrationKeywords": [
+          "If-None-Match",
+          "If-Modified-Since",
+          "conditional requests",
+          "304 documented but not elicitable",
+          "RFC 7232"
+        ],
+        "expectedClusterKey": null
+      },
+      "selfReviewNotes": "Twin of F3. PSpec=true: detector is 'op declares 304 + lacks If-None-Match parameter' — pure spec-walk. KGap=true: RFC 7232 semantics."
+    },
+    {
+      "id": "F5",
+      "title": "X-RateLimit response headers defined in `components.headers` but referenced by zero operations",
+      "category": "design",
+      "severity": "high",
+      "scope": "spec",
+      "affectedEndpoints": [],
+      "patchSummary": "Reference `x-rate-limit-limit`, `x-rate-limit-remaining`, `x-rate-limit-reset` on every operation's `200` (and `403` / `429`) responses.",
+      "narration": "GitHub's REST API returns `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset` (and `X-RateLimit-Used`, `X-RateLimit-Resource`) on every response — documented at https://docs.github.com/rest/overview/rate-limits-for-the-rest-api. The spec acknowledges this in `components.headers` by defining `x-rate-limit-limit`, `x-rate-limit-remaining`, `x-rate-limit-reset` as reusable header objects. **Yet not a single operation references any of them** — the headers are defined and never used. Across all 1145 operations × all responses, the count is zero. Codegen tools that produce typed response objects (e.g. `Response<Repo, RateLimitHeaders>`) drop the rate-limit metadata entirely. SDK consumers writing back-pressure logic must hard-code header names from external GitHub docs. The fix is a mechanical pipeline change: emit `headers: { 'X-RateLimit-Limit': { '$ref': '#/components/headers/x-rate-limit-limit' } }` on every operation's success responses.",
+      "rationale": "OpenAPI 3.0 §4.7.18.1 (\"Response Object\") supports `headers`. The IETF doesn't standardise X-RateLimit-* (the closest is `RateLimit` per draft-ietf-httpapi-ratelimit-headers), but it is GitHub's documented convention and the de-facto standard adopted by Twitter, Stripe (`Stripe-Should-Retry`), Discord, and Cloudflare. Defining headers in `components.headers` but not referencing them is dead-code in the spec.",
+      "patchOps": [],
+      "classification": {
+        "isLintFlavoured": false,
+        "isKnowledgeBackedGap": true,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": true,
+        "narrationKeywords": [
+          "X-RateLimit-Limit",
+          "X-RateLimit-Remaining",
+          "X-RateLimit-Reset",
+          "rate-limit headers",
+          "defined but unreferenced"
+        ],
+        "expectedClusterKey": null
+      },
+      "selfReviewNotes": "Same shape as Stripe F28 but stronger: GitHub *defines* the headers but never uses them. Both PSpec (dead-code lint: components.headers declared but zero `$ref` to it anywhere) AND DomK (knowing rate-limit-headers are a GitHub-documented convention)."
+    },
+    {
+      "id": "F6",
+      "title": "Sunset and Deprecation response headers not declared on any of 31 deprecated operations",
+      "category": "design",
+      "severity": "medium",
+      "scope": "endpoint",
+      "affectedEndpoints": [
+        {
+          "path": "/teams/{team_id}",
+          "method": "get"
+        },
+        {
+          "path": "/teams/{team_id}",
+          "method": "patch"
+        },
+        {
+          "path": "/teams/{team_id}",
+          "method": "delete"
+        },
+        {
+          "path": "/repos/{owner}/{repo}/import",
+          "method": "put"
+        },
+        {
+          "path": "/orgs/{org}/codespaces/access",
+          "method": "put"
+        }
+      ],
+      "patchSummary": "Add `Sunset` and `Deprecation` response headers (per RFC 8594 / draft-ietf-deprecation-header) on every operation flagged `deprecated: true`.",
+      "narration": "Thirty-one operations are flagged `deprecated: true` (the legacy `/teams/{team_id}/...` family, the `/repos/{owner}/{repo}/import/...` import-from-other-VCS family, parts of `/orgs/{org}/codespaces/access`, parts of `/orgs/{org}/security-managers`). RFC 8594 (\"The Sunset HTTP Header Field\") and `draft-ietf-httpapi-deprecation-header` define `Sunset` and `Deprecation` as the standard machine-readable signals an HTTP API uses to communicate the timeline of a deprecated endpoint. The spec declares **0 occurrences** of either header across all responses on the 31 deprecated operations. SDKs derived from the spec emit `@deprecated` type annotations from the `deprecated: true` flag (good) but ship without runtime metadata about *when* the endpoint will stop responding (gap). Twenty-one of the 31 operations carry `x-github-breaking-changes` extensions describing version-pinned removals — exactly the timeline information that belongs in `Sunset`. The fix is to declare the two headers (in `components.headers`) and reference them on the deprecated operations' responses with example values.",
+      "rationale": "RFC 8594 §3 specifies `Sunset` as an HTTP-date indicating when the resource will stop serving. `draft-ietf-httpapi-deprecation-header` (Internet-Draft, widely adopted) specifies `Deprecation` as a parallel signal for current-deprecation. Both are designed for OpenAPI-style declarative exposure. Microsoft REST API Guidelines §12.4 and Google AIP-180 (\"Backwards compatibility\") name machine-readable deprecation signals as a contract.",
+      "patchOps": [
+        {
+          "op": "add",
+          "path": "/components/headers/sunset",
+          "value": {
+            "schema": {
+              "type": "string",
+              "format": "http-date"
+            },
+            "description": "RFC 8594: timestamp at which this resource will become unavailable.",
+            "example": "Wed, 01 Jan 2027 00:00:00 GMT"
+          }
+        },
+        {
+          "op": "add",
+          "path": "/components/headers/deprecation",
+          "value": {
+            "schema": {
+              "type": "string"
+            },
+            "description": "draft-ietf-httpapi-deprecation-header: signal that this resource is deprecated.",
+            "example": "true"
+          }
+        }
+      ],
+      "classification": {
+        "isLintFlavoured": false,
+        "isKnowledgeBackedGap": true,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
+        "narrationKeywords": [
+          "Sunset",
+          "Deprecation header",
+          "RFC 8594",
+          "deprecation timeline"
+        ],
+        "expectedClusterKey": null
+      },
+      "selfReviewNotes": "PSpec because the detector is 'deprecated:true op + missing Sunset header' (spec-walkable). KGap=true (RFC 8594 + GitHub-domain knowledge that the breaking-change metadata exists in x-github-breaking-changes already)."
+    },
+    {
+      "id": "F7",
+      "title": "`Accept` header parameter not declared on operations that respond with multiple media-types",
+      "category": "design",
+      "severity": "high",
+      "scope": "endpoint",
+      "affectedEndpoints": [
+        {
+          "path": "/repos/{owner}/{repo}/commits/{ref}",
+          "method": "get"
+        },
+        {
+          "path": "/repos/{owner}/{repo}/compare/{basehead}",
+          "method": "get"
+        },
+        {
+          "path": "/repos/{owner}/{repo}/contents/{path}",
+          "method": "get"
+        },
+        {
+          "path": "/repos/{owner}/{repo}/code-scanning/analyses/{analysis_id}",
+          "method": "get"
+        },
+        {
+          "path": "/user/starred",
+          "method": "get"
+        }
+      ],
+      "patchSummary": "Add an `Accept` header parameter to operations whose response declares more than one content-type, so consumers can negotiate.",
+      "narration": "Five operations declare multiple content-types on their `200` response. `GET /repos/{owner}/{repo}/commits/{ref}` lists `application/json`, `application/vnd.github.diff`, `application/vnd.github.patch`, `application/vnd.github.sha` — four distinct payloads, selectable only by sending the appropriate `Accept` header. The spec declares **0 occurrences** of an `Accept` header parameter on any of these operations (or anywhere in the spec). Consumers reading only the spec see four content-types listed but no documented way to choose between them; codegen tools (openapi-generator) typically default to the first content-type and silently drop the others; AI agents extracting curl examples from the spec cannot parameterise media-type-negotiation. GitHub also publishes vendor media-types as a general convention (`application/vnd.github+json` is the documented default; preview features have used `application/vnd.github.<feature>-preview+json`); none of this surface is encoded as a typed `Accept` parameter anywhere in the 1145 operations.",
+      "rationale": "OpenAPI 3.0 §4.7.13 (\"Request Body Object\") and §4.7.18 (\"Responses Object\") allow per-operation content-type variation; HTTP §5.3.2 (RFC 7231) governs the `Accept` header as the negotiation mechanism. When an operation offers multiple content-types, the spec must document how to select between them. Twilio, Slack, and Stripe all use typed `Accept` parameters when they offer multiple representations.",
+      "patchOps": [
+        {
+          "op": "add",
+          "path": "/components/parameters/accept",
+          "value": {
+            "name": "Accept",
+            "in": "header",
+            "required": false,
+            "description": "Media-type negotiation. Default: `application/vnd.github+json`. Some endpoints support `.diff`, `.patch`, `.sha`, `.sarif+json`. See https://docs.github.com/rest/overview/media-types.",
+            "schema": {
+              "type": "string",
+              "default": "application/vnd.github+json"
+            }
+          }
+        }
+      ],
+      "classification": {
+        "isLintFlavoured": false,
+        "isKnowledgeBackedGap": true,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
+        "narrationKeywords": [
+          "Accept header",
+          "vnd.github",
+          "media-type negotiation",
+          "content negotiation"
+        ],
+        "expectedClusterKey": null
+      },
+      "selfReviewNotes": "PSpec because the detector is 'op declares multiple response content-types + lacks Accept header param' — pure spec walk. KGap because RFC 7231 + GitHub-vendor-mediatype knowledge."
+    },
+    {
+      "id": "F8",
+      "title": "`Link` header missing on 81 list operations and 33 list operations that take `page` parameters",
+      "category": "design",
+      "severity": "medium",
+      "scope": "spec",
+      "affectedEndpoints": [],
+      "patchSummary": "Reference `components.headers.link` on the `200` response of every list endpoint that supports pagination.",
+      "narration": "GitHub's REST pagination is signalled exclusively via the `Link` response header (RFC 5988) — the JSON body is a flat array, and `Link: <next-url>; rel=\"next\", <last-url>; rel=\"last\"` carries cursor URLs. Of the 219 list-shaped GET operations (200 response is a JSON array):\n\n- **138 declare a `Link` header** on the 200 response (correct).\n- **33 declare `page` and `per_page` parameters but NO `Link` header** on the response — the request side advertises pagination but the response side documents no cursor.\n- **81 declare neither `page` parameter nor `Link` header** despite returning an array (some are bounded resources where pagination doesn't apply, e.g. `/codes_of_conduct`, `/gitignore/templates`; others such as `/orgs/{org}/code-security/configurations` are unbounded list endpoints that *should* paginate).\n\nThe inconsistency is the load-bearing problem: a consumer cannot tell from the spec which endpoints paginate. Codegen tools that auto-generate paginator helpers can't pattern-match a stable shape. The fix is twofold: reference `components.headers.link` on all list-endpoints' 200 responses; for genuinely-bounded resources, add a `description` note explaining why pagination doesn't apply.",
+      "rationale": "RFC 5988 (\"Web Linking\") defines the `Link` header. OpenAPI 3.0 §4.7.18.1 supports per-response headers. Internal consistency across resource families is the lever for usable pagination — a 60% coverage rate on declared list endpoints leaves consumers guessing.",
+      "patchOps": [],
+      "classification": {
+        "isLintFlavoured": false,
+        "isKnowledgeBackedGap": true,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
+        "narrationKeywords": [
+          "Link header",
+          "pagination",
+          "RFC 5988",
+          "missing on list endpoints"
+        ],
+        "expectedClusterKey": "missing-pagination-link-header"
+      },
+      "selfReviewNotes": "PSpec=true: walker detects 'GET op + 200=array + no Link header'. KGap=true: GitHub's choice of Link-header-based pagination over the more common cursor/offset response-body-based patterns is GitHub-domain knowledge. Cluster-key set because LLMs likely emit one finding per missing endpoint rather than the rollup."
+    },
+    {
+      "id": "F9",
+      "title": "Webhook event catalog hidden under non-standard `x-webhooks` extension instead of OpenAPI 3.1 `webhooks`",
+      "category": "design",
+      "severity": "medium",
+      "scope": "spec",
+      "affectedEndpoints": [],
+      "patchSummary": "Migrate spec to OpenAPI 3.1 and rename `x-webhooks` to the native `webhooks` field, exposing 267 webhook events as first-class.",
+      "narration": "The spec declares `openapi: 3.0.3` but uses a top-level `x-webhooks` vendor extension to catalog **267 webhook events** — `branch-protection-rule-created`, `check-run-completed`, `commit-comment-created`, `deployment-status-created`, `installation-created`, `issue-comment-created`, `pull-request-opened`, `push`, `release-published`, `repository-dispatch`, `workflow-run-completed`, and 256 others. Each entry has the same shape as a path-item: `{ post: { description, requestBody, responses } }`. This is exactly what the OpenAPI 3.1 native `webhooks` field is designed to express (3.1 added `webhooks` as a sibling of `paths` in §4.7.2). The spec uses 3.0.3 syntax and pushes webhooks under `x-` to work around 3.0's inability to express them. Consequences: codegen tools that read `x-` extensions leniently produce no webhook bindings; documentation portals (ReDoc, SwaggerUI) hide the entire webhook catalog (267 events) from the rendered docs because they don't know to look for `x-webhooks`. AI agents reading the spec see no webhook surface unless they happen to inspect every `x-` extension. The migration to OpenAPI 3.1 is mechanical — `openapi: 3.1.0`, rename `x-webhooks` to `webhooks` — and unlocks the entire webhook contract.",
+      "rationale": "OpenAPI 3.1 §4.7.2 (\"OpenAPI Object\") adds `webhooks` as a top-level map of webhook event names to PathItem objects. The 267-entry `x-webhooks` block in this spec is the same shape, just under a vendor-extension key. The spec is hiding contract that 3.1 would surface natively.",
+      "patchOps": [
+        {
+          "op": "replace",
+          "path": "/openapi",
+          "value": "3.1.0"
+        }
+      ],
+      "classification": {
+        "isLintFlavoured": false,
+        "isKnowledgeBackedGap": true,
+        "isPureSpectralDetectable": false,
+        "isDomainKnowledgeDetectable": false,
+        "narrationKeywords": [
+          "x-webhooks",
+          "OpenAPI 3.1 webhooks",
+          "webhook catalog hidden",
+          "267 events"
+        ],
+        "expectedClusterKey": null
+      },
+      "selfReviewNotes": "LLM-only: the detector here is semantic — recognising that x-webhooks is the same shape as 3.1's webhooks. PSpec walker would just see 'unknown extension'."
+    },
+    {
+      "id": "F10",
+      "title": "`info.description` is a 22-character placeholder despite a 1145-operation API",
+      "category": "clarity",
+      "severity": "medium",
+      "scope": "spec",
+      "affectedEndpoints": [],
+      "patchSummary": "Replace `info.description: \"GitHub's v3 REST API.\"` with a substantive overview covering auth, base URL, versioning, rate limits, and pagination conventions.",
+      "narration": "`info.description` reads `\"GitHub's v3 REST API.\"` — 22 characters, no information beyond what the title already says. Documentation portals (ReDoc, SwaggerUI, Stoplight Elements) use `info.description` as the landing-page introduction; consumers opening the rendered docs see a one-sentence stub. This contrasts sharply with the spec's actual size (1145 operations, 758 paths, 923 component schemas) and richness (267 webhook events, 48 tags, 198 reusable parameters). The spec carries operational context that *belongs* in info.description — auth model (PAT / fine-grained PAT / OAuth-app / GitHub-App installation tokens), base URL convention (`api.github.com` for GitHub.com, `{HOSTNAME}/api/v3` for GitHub Enterprise Server), version-pinning via `X-GitHub-Api-Version`, rate-limiting via `X-RateLimit-*`, pagination via `Link` header, error envelope shape — none of which appears anywhere structured in the spec.",
+      "rationale": "OpenAPI 3.0 §4.7.3 (\"Info Object\") names `description` as the spec's overview surface. Microsoft REST API Guidelines §3.5 and Google AIP-192 treat the API-level overview as required for any consumer-facing API.",
+      "patchOps": [
+        {
+          "op": "replace",
+          "path": "/info/description",
+          "value": "GitHub's REST API. Auth: send `Authorization: Bearer <token>` where `<token>` is a Personal Access Token, OAuth-app token, or GitHub-App installation token. Pin a schema version with `X-GitHub-Api-Version`. Pagination: page-based via `?page=&per_page=` with `Link` response header (RFC 5988). Rate limits: `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`. Errors: see the `basic-error` and `validation-error` schemas. Base URL on GitHub.com: `https://api.github.com`. On GitHub Enterprise Server: `https://{hostname}/api/v3`."
+        }
+      ],
+      "classification": {
+        "isLintFlavoured": false,
+        "isKnowledgeBackedGap": false,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
+        "narrationKeywords": [
+          "info.description",
+          "placeholder",
+          "API overview missing"
+        ],
+        "expectedClusterKey": null
+      },
+      "selfReviewNotes": "PSpec=true: trivially detectable (description length < threshold). KGap=false: detection is purely structural even if the suggested replacement uses domain knowledge."
+    },
+    {
+      "id": "F11",
+      "title": "Single `servers` entry, no `description`, no Enterprise-Server variant",
+      "category": "clarity",
+      "severity": "medium",
+      "scope": "spec",
+      "affectedEndpoints": [],
+      "patchSummary": "Add a `description` to `servers[0]`; consider adding a templated `servers` entry for GitHub Enterprise Server.",
+      "narration": "`servers` is `[{ \"url\": \"https://api.github.com\" }]` — a single entry with no `description`. GitHub publishes the same REST API in three deployment shapes: GitHub.com (`api.github.com`), GitHub Enterprise Cloud (still `api.github.com` with org-scoped tokens), and GitHub Enterprise Server (`https://{hostname}/api/v3`, where `{hostname}` is the customer's own DNS). The upstream spec repository (`github/rest-api-description`) ships separate spec files per deployment, but a spec with a templated `{hostname}` server variable would be more useful — codegen tools could emit a single SDK that takes the hostname at runtime, and the spec would advertise its multi-deployment nature explicitly. At minimum, `servers[0].description: \"GitHub.com REST API\"` is a one-character-cost improvement.",
+      "rationale": "OpenAPI 3.0 §4.7.5 (\"Server Object\") supports `description` per server entry and `variables` for templated URLs. Multi-deployment APIs are explicitly the use case the `variables` field exists for.",
+      "patchOps": [
+        {
+          "op": "add",
+          "path": "/servers/0/description",
+          "value": "GitHub.com REST API"
+        }
+      ],
+      "classification": {
+        "isLintFlavoured": true,
+        "isKnowledgeBackedGap": false,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
+        "narrationKeywords": [
+          "servers",
+          "missing description",
+          "Enterprise Server"
+        ],
+        "expectedClusterKey": null
+      },
+      "selfReviewNotes": "Lint-flavoured. Easy auto-detect."
+    },
+    {
+      "id": "F12",
+      "title": "`basic-error` schema declares no `required` properties",
+      "category": "design",
+      "severity": "high",
+      "scope": "spec",
+      "affectedEndpoints": [],
+      "patchSummary": "Set `required: [\"message\", \"documentation_url\"]` on `components.schemas.basic-error`.",
+      "narration": "`components.schemas.basic-error` is the error-envelope used by `not_found`, `forbidden`, `requires_authentication`, `bad_request`, and most other shared error responses (referenced from the bulk of the 4xx responses across the 1145 operations). It declares `properties: { message, documentation_url, url, status }` but no `required` array — every property is optional. Yet GitHub's runtime always returns `message` and `documentation_url` on every error response (this is verifiable: hit any error, e.g. `curl https://api.github.com/repos/nonexistent/nonexistent`, and observe `{\"message\": \"Not Found\", \"documentation_url\": ...}`). The companion schema `validation-error` correctly declares `required: [\"message\", \"documentation_url\"]` — so the spec's authors know the convention; `basic-error` is the outlier. Codegen tools that read `required` to drive non-null typing emit overly-defensive types (`message?: string` instead of `message: string`); consumers must add runtime null-checks for fields that are guaranteed at runtime.",
+      "rationale": "OpenAPI 3.0 §4.7.21 (\"Schema Object\") inherits JSON Schema's `required` as the contract for guaranteed-present fields. Microsoft REST §7.10 (\"Error Handling\") and RFC 7807 §3.1 both name the human-readable error message as required.",
+      "patchOps": [
+        {
+          "op": "add",
+          "path": "/components/schemas/basic-error/required",
+          "value": [
+            "message",
+            "documentation_url"
+          ]
+        }
+      ],
+      "classification": {
+        "isLintFlavoured": false,
+        "isKnowledgeBackedGap": false,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
+        "narrationKeywords": [
+          "basic-error",
+          "required",
+          "no required fields",
+          "error envelope"
+        ],
+        "expectedClusterKey": null
+      },
+      "selfReviewNotes": "Direct parallel to Stripe F5. Easy PSpec walker target. KGap=false: no domain knowledge required if you cross-check against the validation-error schema in the same spec."
+    },
+    {
+      "id": "F13",
+      "title": "`components.responses.not_modified` has no headers and no schema",
+      "category": "clarity",
+      "severity": "medium",
+      "scope": "spec",
+      "affectedEndpoints": [],
+      "patchSummary": "Add `headers: { ETag: { $ref ... }, Last-Modified: { $ref ... } }` to `components.responses.not_modified`.",
+      "narration": "The shared response `components.responses.not_modified` is `{ \"description\": \"Not modified\" }` — two-character description, no headers, no schema, nothing more. It is referenced from every operation that documents a 304 (158 ops). HTTP semantics per RFC 7232 §4.1 require that a `304 Not Modified` response *must* include `ETag` and *should* include `Last-Modified` (if the corresponding 200 sets them) — the response is meaningless without the validators it confirms. The shared response should declare those headers; doing so once at `components.responses.not_modified` propagates to all 158 ops. As-shipped, the response is the HTTP-spec equivalent of a header-less `304`, which is operationally useless.",
+      "rationale": "RFC 7232 §4.1 (\"304 Not Modified\") names the headers a 304 must carry. OpenAPI 3.0 §4.7.18 supports `headers` per Response object. Sharing the response definition AND the header references is the canonical pattern.",
+      "patchOps": [
+        {
+          "op": "add",
+          "path": "/components/responses/not_modified/headers",
+          "value": {
+            "ETag": {
+              "$ref": "#/components/headers/etag"
+            },
+            "Last-Modified": {
+              "$ref": "#/components/headers/last-modified"
+            }
+          }
+        }
+      ],
+      "classification": {
+        "isLintFlavoured": false,
+        "isKnowledgeBackedGap": true,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
+        "narrationKeywords": [
+          "not_modified",
+          "304 response",
+          "no headers",
+          "RFC 7232 §4.1"
+        ],
+        "expectedClusterKey": null
+      },
+      "selfReviewNotes": "Companion to F3 / F4. Detector is one-shot: 'shared response 304 has zero headers'."
+    },
+    {
+      "id": "F14",
+      "title": "Zero operations declare `429 Too Many Requests` despite documented rate-limiting",
+      "category": "design",
+      "severity": "medium",
+      "scope": "spec",
+      "affectedEndpoints": [],
+      "patchSummary": "Add a `429` response (with `Retry-After` header and `basic-error` body) to every authenticated operation; add a shared `components.responses.too_many_requests`.",
+      "narration": "GitHub publishes rate limits — 5000 requests/hour for authenticated users, 60/hour unauthenticated, with secondary limits on abuse — at https://docs.github.com/rest/overview/rate-limits-for-the-rest-api. Yet across all 1145 operations, **only 2 declare a `429 Too Many Requests` response**: `actions/delete-actions-cache-by-key` and `actions/delete-actions-cache-by-id`. The other 1143 operations document `403 Forbidden` (which is the actual GitHub rate-limit status code in practice — GitHub returns `403` with a body explaining rate-limit-exceeded, rather than the conventional `429`) but do not document the `429`-as-secondary-limit case. Either way, the spec under-documents the rate-limit response shape: there is no shared `components.responses.too_many_requests`, no documented `Retry-After` header, and the dual-status convention (`403` for primary limits, `429` for secondary/abuse limits) is invisible. SDK consumers building back-pressure logic must derive the contract from external GitHub docs.",
+      "rationale": "RFC 6585 §4 (\"429 Too Many Requests\") and RFC 7231 §7.1.3 (\"Retry-After\") are the IETF-standard signals for rate-limit responses. Microsoft REST API Guidelines §10.1 (\"Throttling\") names `429 + Retry-After` as the canonical pattern.",
+      "patchOps": [
+        {
+          "op": "add",
+          "path": "/components/responses/too_many_requests",
+          "value": {
+            "description": "Rate limit exceeded. See https://docs.github.com/rest/overview/rate-limits-for-the-rest-api.",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                },
+                "description": "Seconds until the rate limit resets."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/basic-error"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "classification": {
+        "isLintFlavoured": false,
+        "isKnowledgeBackedGap": true,
+        "isPureSpectralDetectable": false,
+        "isDomainKnowledgeDetectable": true,
+        "narrationKeywords": [
+          "429",
+          "Too Many Requests",
+          "Retry-After",
+          "rate-limit response"
+        ],
+        "expectedClusterKey": null
+      },
+      "selfReviewNotes": "DomK because the catalog 'GitHub uses 403 for primary rate-limits + 429 for secondary' is GitHub-specific. PSpec=false: a generic walker can detect '0 ops declare 429' but the recommendation 'add 429 + Retry-After' requires GitHub-knowledge."
+    },
+    {
+      "id": "F15",
+      "title": "Idempotency-Key not declared on any of 371 POST/PUT/PATCH operations",
+      "category": "risk",
+      "severity": "medium",
+      "scope": "spec",
+      "affectedEndpoints": [],
+      "patchSummary": "Add `Idempotency-Key` as a header parameter on state-changing operations (or document explicitly that retries are not idempotency-safe).",
+      "narration": "Across 1145 operations, 371 are state-changing (181 POST, 127 PUT, 63 PATCH). None declare an `Idempotency-Key` header parameter. Unlike Stripe, GitHub does not document `Idempotency-Key` as a first-class API surface for most endpoints — but several legitimately-non-idempotent operations would benefit from it: `POST /repos/{owner}/{repo}/pulls` (creates a PR; client-side retry on a flaky network can produce duplicate PRs), `POST /repos/{owner}/{repo}/issues` (same shape with comments), `POST /orgs/{org}/repos` (repo creation). The omission is less a knowledge-backed gap (GitHub doesn't publicly document an Idempotency-Key contract) and more a *design* gap relative to industry-best-practice (Stripe, Square, PayPal all expose it). The lighter fix is documentation: an `info.description` paragraph stating that POST/PUT/PATCH operations are not idempotent and consumers must guard retries with their own deduplication. The richer fix is to add the header.",
+      "rationale": "RFC 7231 §4.2.2 (\"Idempotent Methods\") names POST as not inherently idempotent; the `Idempotency-Key` convention pioneered by Stripe is the de-facto industry pattern. IETF draft-ietf-httpapi-idempotency-key-header is the standardisation work.",
+      "patchOps": [],
+      "classification": {
+        "isLintFlavoured": false,
+        "isKnowledgeBackedGap": true,
+        "isPureSpectralDetectable": false,
+        "isDomainKnowledgeDetectable": true,
+        "narrationKeywords": [
+          "Idempotency-Key",
+          "idempotency",
+          "POST retry-safe"
+        ],
+        "expectedClusterKey": null
+      },
+      "selfReviewNotes": "DomK: the 'industry expects Idempotency-Key on POST' library is domain-agnostic best-practice, but GitHub specifically doesn't document it — so the recommendation is genuinely advisory rather than 'fix to match GitHub docs'. Lower severity than Stripe-F7 because GitHub's runtime doesn't actually support the header."
+    },
+    {
+      "id": "F16",
+      "title": "Pagination convention undocumented spec-level despite consistent `page`/`per_page` usage",
+      "category": "clarity",
+      "severity": "medium",
+      "scope": "spec",
+      "affectedEndpoints": [],
+      "patchSummary": "Document the page-based pagination convention in `info.description` and link to the per-endpoint behavior.",
+      "narration": "GitHub's REST pagination is page-based: 158 list endpoints take `page` (default 1) and `per_page` (default 30, max 100) query parameters. Two non-list endpoints (`GET /enterprises/{enterprise}/dependabot/alerts`, parts of `/repositories`) use cursor-based via `?per_page&before&after` (`components.parameters.pagination-before` / `pagination-after`). One uses opaque `cursor` (`components.parameters.cursor`). The mix of three pagination strategies across the spec is not documented anywhere structurally — `info.description` says nothing, no top-level `tags` entry mentions pagination, no `externalDocs` links to the pagination guide (which exists at https://docs.github.com/rest/using-the-rest-api/using-pagination-in-the-rest-api). Consumers must read the per-parameter `description` strings to discover that pagination strategy varies. This is the same finding-shape as Stripe F16 (search-vs-list pagination divergence) but applied to a richer divergence.",
+      "rationale": "OpenAPI 3.0 has no built-in pagination construct; `info.description` and `tags` are the only places to document API-wide conventions. Internal consistency of pagination strategy is the lever (Microsoft REST §10.5, Google AIP-158).",
+      "patchOps": [],
+      "classification": {
+        "isLintFlavoured": false,
+        "isKnowledgeBackedGap": true,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
+        "narrationKeywords": [
+          "pagination convention",
+          "page-based",
+          "cursor-based",
+          "documentation"
+        ],
+        "expectedClusterKey": null
+      },
+      "selfReviewNotes": "PSpec=true: walker can detect the multi-strategy mix. KGap=true: knowledge that pagination conventions matter for spec-consumers."
+    },
+    {
+      "id": "F17",
+      "title": "`additionalProperties` not set on 792 of 814 object schemas (97%)",
+      "category": "design",
+      "severity": "medium",
+      "scope": "spec",
+      "affectedEndpoints": [],
+      "patchSummary": "Set `additionalProperties: false` on response schemas where the field-set is closed; leave `true` (or unset) only where the API genuinely returns unspecified fields.",
+      "narration": "Of the 814 object-typed component schemas, 792 (97.3%) leave `additionalProperties` unset (which JSON Schema treats as `true` — anything goes), while only 22 set it to `false`. Codegen tools that emit strict TypeScript / Rust types use `additionalProperties: false` as the signal to emit closed types (no index signature on TypeScript types, no `#[serde(deny_unknown_fields)]` on Rust structs). The 97% unset rate means generated SDKs ship with open types throughout — consumers can't get compile-time errors when typo'ing a property name. Some schemas (`pull-request`, `issue`, `repository`) have stable, closed shapes where `additionalProperties: false` is correct; others (extension-point schemas like webhook event payloads) genuinely accept unknown fields and should stay loose. The fix is per-schema review with a default-strict policy.",
+      "rationale": "JSON Schema §6.5.6 (\"additionalProperties\") and OpenAPI 3.0 §4.7.21 inherit this. Microsoft REST §6.3 and Google AIP-141 recommend explicit `additionalProperties: false` on response schemas where the field-set is closed.",
+      "patchOps": [],
+      "classification": {
+        "isLintFlavoured": false,
+        "isKnowledgeBackedGap": false,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
+        "narrationKeywords": [
+          "additionalProperties",
+          "open types",
+          "closed schemas",
+          "97% unset"
+        ],
+        "expectedClusterKey": null
+      },
+      "selfReviewNotes": "PSpec=true: count and threshold."
+    },
+    {
+      "id": "F18",
+      "title": "8017 of 8037 string properties (99.8%) have no `maxLength`",
+      "category": "design",
+      "severity": "medium",
+      "scope": "spec",
+      "affectedEndpoints": [],
+      "patchSummary": "Add `maxLength` to string properties where the API enforces a bound (usernames ≤ 39, repo names ≤ 100, refs ≤ 255, etc.).",
+      "narration": "Across all component schemas, 8037 string properties exist (excluding enum / format-typed strings); only 20 of them carry a `maxLength`. GitHub enforces real bounds on many of these — usernames are ≤ 39 characters, repository names are ≤ 100 characters, branch / tag refs are ≤ 255 bytes (Git constraint), commit messages are practically bounded (~7 KB by Git tooling), `bio`, `name`, `email` follow product conventions. None of those are encoded. The pattern parallels Stripe F24 (universal `maxLength: 5000`) but stronger in the wrong direction: GitHub uses *no* default at all, so the contract is fully open. SDKs emit unbounded strings; form-builders can't size inputs; AI-codegen producing test fixtures generates arbitrary-length strings.",
+      "rationale": "OpenAPI 3.0 §4.7.21 inherits JSON Schema's `maxLength`. Microsoft REST §6.3 and Google AIP-141 name field-appropriate length bounds as a contract concern.",
+      "patchOps": [],
+      "classification": {
+        "isLintFlavoured": false,
+        "isKnowledgeBackedGap": false,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
+        "narrationKeywords": [
+          "maxLength missing",
+          "string bounds",
+          "unbounded strings"
+        ],
+        "expectedClusterKey": "no-string-maxlength"
+      },
+      "selfReviewNotes": "Cluster-key set: LLMs likely emit per-field findings rather than the rollup."
+    },
+    {
+      "id": "F19",
+      "title": "2828 integer properties have no `minimum`/`maximum` constraints",
+      "category": "design",
+      "severity": "medium",
+      "scope": "spec",
+      "affectedEndpoints": [],
+      "patchSummary": "Add `minimum: 0` to count / id / size fields; `maximum` to bounded fields like `per_page` (already capped at 100 server-side).",
+      "narration": "Across all component schemas, 2828 integer properties (and 60 number properties) carry no `minimum` or `maximum` constraint. Examples: `repository.size` (KB, always ≥ 0); `pull_request.commits` / `additions` / `deletions` / `changed_files` (always ≥ 0); `repository.stargazers_count` / `forks_count` / `watchers_count` (always ≥ 0); `per_page` query parameter (server-capped at 100). The `per_page` parameter explicitly says in description *\"max 100\"* but the schema is `{\"type\": \"integer\", \"default\": 30}` with no `maximum: 100`. SDKs ship without compile-time bounds; form builders can't size number inputs; clients submitting `per_page=1000` discover the cap only at runtime. Same shape as Stripe F25 (zero range constraints across 455 numeric properties); GitHub is larger surface (2828) and shares the property of internally-known bounds documented in prose only.",
+      "rationale": "JSON Schema §6.2 (\"Validation Keywords for Numeric Instances\") and OpenAPI 3.0 §4.7.21 expect `minimum`/`maximum` for bounded numeric fields. Per Microsoft REST §6.3 and Google AIP-141, unbounded numeric fields are a contract gap.",
+      "patchOps": [
+        {
+          "op": "add",
+          "path": "/components/parameters/per-page/schema/maximum",
+          "value": 100
+        },
+        {
+          "op": "add",
+          "path": "/components/parameters/per-page/schema/minimum",
+          "value": 1
+        }
+      ],
+      "classification": {
+        "isLintFlavoured": false,
+        "isKnowledgeBackedGap": false,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
+        "narrationKeywords": [
+          "minimum",
+          "maximum",
+          "integer no bounds",
+          "per_page"
+        ],
+        "expectedClusterKey": "limit-no-range"
+      },
+      "selfReviewNotes": "Direct parallel to Stripe F25. Cluster-key 'limit-no-range' matches Stripe to enable cross-spec aggregation."
+    },
+    {
+      "id": "F20",
+      "title": "388 of 923 component schemas (42%) have no `description`",
+      "category": "clarity",
+      "severity": "low",
+      "scope": "spec",
+      "affectedEndpoints": [],
+      "patchSummary": "Add a one-line `description` to each component schema.",
+      "narration": "Of the 923 component schemas, 388 (42%) declare no `description` field at all. The pattern is heavier on inner / compositional schemas than on top-level resources — `pull-request`, `issue`, `repository`, `user`, `commit` all have descriptions; nested types like `pull-request.head.repo.permissions`, `issue.assignee.plan`, etc. inherit absence. Documentation portals render the field doc-block as empty space; codegen tools emit empty doc-comments. A spec of this scale benefits enormously from per-schema descriptions because nested types are exactly the schemas SDK consumers must understand to build correct request shapes. Note: distinct from Stripe F29 (Stripe is `description: \"\"` — empty-string; GitHub is field-absent — neither is rendered, but tooling distinguishes the two).",
+      "rationale": "OpenAPI 3.0 §4.7.21 (\"Schema Object\") names `description` as the documentation surface. JSON Schema §10.1.1 makes it an annotation keyword.",
+      "patchOps": [],
+      "classification": {
+        "isLintFlavoured": true,
+        "isKnowledgeBackedGap": false,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
+        "narrationKeywords": [
+          "missing schema description",
+          "component schemas",
+          "42%"
+        ],
+        "expectedClusterKey": "missing-schema-description"
+      },
+      "selfReviewNotes": "Lint-flavoured. PSpec trivial."
+    },
+    {
+      "id": "F21",
+      "title": "28 of 1145 operations missing `description`",
+      "category": "clarity",
+      "severity": "low",
+      "scope": "spec",
+      "affectedEndpoints": [],
+      "patchSummary": "Add a `description` paragraph to the 28 operations that have only a `summary`.",
+      "narration": "All 1145 operations carry a `summary`, an `operationId`, and `tags`; 1117 (97.6%) also carry a multi-paragraph `description`. The remaining 28 operations have only a `summary` — typically a 5-10-word title. Documentation portals render the operation page with the heading and parameter list but no in-depth body; AI-codegen tools that synthesise SDK doc-comments from `description` fall back to the summary alone. Consistent with the spec's overall high quality; a small in-place gap.",
+      "rationale": "OpenAPI 3.0 §4.7.4 names `description` as the place for in-depth per-operation documentation. Microsoft REST §3.5 treats it as required for any consumer-facing API.",
+      "patchOps": [],
+      "classification": {
+        "isLintFlavoured": true,
+        "isKnowledgeBackedGap": false,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
+        "narrationKeywords": [
+          "missing description",
+          "operation description",
+          "28 operations"
+        ],
+        "expectedClusterKey": "missing-description"
+      },
+      "selfReviewNotes": "Cluster-key parallels Stripe F14 / F15."
+    },
+    {
+      "id": "F22",
+      "title": "Foreign-key string fields lack `format` or `pattern` constraints",
+      "category": "design",
+      "severity": "medium",
+      "scope": "spec",
+      "affectedEndpoints": [],
+      "patchSummary": "Annotate cross-resource ID fields with `format: \"uri\"` (for `*_url`), `pattern` for SHAs / node-IDs, or `$ref` to the linked schema.",
+      "narration": "GitHub uses three resource-identifier flavours: numeric IDs (`id: integer`), opaque global node IDs (`node_id: string`, base64-encoded GraphQL relay IDs), and Git SHAs (`sha: string`, 40-character hex). Sampled across `pull-request`, `issue`, `repository`, `team`, `commit`, and other top schemas, 17 fields match the foreign-reference shape (description: *\"ID of the …\"*) but carry only `{\"type\": \"string\"}` — no `pattern`, no `format`, no `$ref`. Specific examples: `commit.sha` (40-char hex) carries no `pattern: \"^[0-9a-f]{40}$\"`; `pull-request.node_id` (base64 GraphQL node ID) carries no `format: \"node-id\"` or `pattern`; URL fields like `pull-request.url`, `repository.html_url` are typed as plain `string` rather than `format: \"uri\"`. Codegen tools emit these as raw strings, losing the typed-relationship information that a `$ref` would convey. Same shape as Stripe F23 (cross-resource-reference asymmetry) — the pattern is industry-systemic.",
+      "rationale": "OpenAPI 3.0 §4.7.21 inherits JSON Schema's `format`, `pattern`, and `$ref`. Microsoft REST §6.2 (\"References to other resources\") and Google AIP-202 (\"Resource references\") explicitly prescribe link-relation typing. Git SHA-1 has a documented format; URL fields have a standard `format: \"uri\"`.",
+      "patchOps": [
+        {
+          "op": "add",
+          "path": "/components/schemas/commit/properties/sha/pattern",
+          "value": "^[0-9a-f]{40}$"
+        }
+      ],
+      "classification": {
+        "isLintFlavoured": false,
+        "isKnowledgeBackedGap": true,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
+        "narrationKeywords": [
+          "cross-resource reference",
+          "node_id",
+          "sha pattern",
+          "url format",
+          "foreign key"
+        ],
+        "expectedClusterKey": null
+      },
+      "selfReviewNotes": "Direct parallel to Stripe F23. PSpec=true via the FK-name heuristic."
+    },
+    {
+      "id": "F23",
+      "title": "All 1145 operations carry an undocumented `x-github` extension",
+      "category": "clarity",
+      "severity": "low",
+      "scope": "spec",
+      "affectedEndpoints": [],
+      "patchSummary": "Document the `x-github` extension's schema in `info.description` (or strip from the published spec).",
+      "narration": "Every one of the 1145 operations carries `x-github: { githubCloudOnly: boolean, enabledForGitHubApps: boolean, category: string, subcategory: string }`. The values are operationally meaningful — `githubCloudOnly: true` means the endpoint is GitHub.com-only (not available on GHES); `enabledForGitHubApps: true` means a GitHub App can call this endpoint with an installation token; `category` / `subcategory` provide finer-grained grouping than `tags` (48 distinct categories, 135 distinct subcategories). But the extension itself is undocumented anywhere in the spec — `info.description` doesn't mention it; no `externalDocs` points at its schema. Consumers reading the spec see `x-github` on every operation with no contract for what it means. Codegen tools either ignore it (information loss) or guess at its semantics. The fix is a one-paragraph `info.description` addition documenting the four fields; alternatively strip the extension before publishing if it's internal-only.",
+      "rationale": "OpenAPI 3.0 §3.4 (\"Specification Extensions\") permits `x-` extensions but expects either documented semantics or context-evident meaning. A spec-wide undocumented extension is a contract gap.",
+      "patchOps": [],
+      "classification": {
+        "isLintFlavoured": false,
+        "isKnowledgeBackedGap": false,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": true,
+        "narrationKeywords": [
+          "x-github",
+          "vendor extension",
+          "undocumented",
+          "githubCloudOnly",
+          "enabledForGitHubApps"
+        ],
+        "expectedClusterKey": null
+      },
+      "selfReviewNotes": "Same shape as Stripe F9 (x-stripeBypassValidation). PSpec=true: walker detects 100% spec-wide use of an undocumented `x-` extension. DomK=true because the recommendation requires GitHub-knowledge of what the four fields mean."
+    },
+    {
+      "id": "F24",
+      "title": "`tags` array uses 48 entries but operations carry only 1 tag each, defeating multi-faceted grouping",
+      "category": "design",
+      "severity": "low",
+      "scope": "spec",
+      "affectedEndpoints": [],
+      "patchSummary": "Either narrow `tags` to single-tag-per-op convention (current behavior, document it) or expand to multi-tag where ops cross categories.",
+      "narration": "The spec declares 48 top-level tags (`actions`, `apps`, `billing`, `checks`, `code-scanning`, `codespaces`, `dependabot`, `gists`, `git`, `issues`, `migrations`, `oidc`, `orgs`, `packages`, `pulls`, `repos`, `secret-scanning`, `teams`, `users`, etc.) and assigns exactly **one** tag to every operation. This is internally consistent but underuses the `tags`-array shape: an operation that crosses categories (e.g. `POST /repos/{owner}/{repo}/dependabot/alerts/{alert_number}` arguably belongs to both `dependabot` and `repos`) is only discoverable via one tag. Single-tag-per-op is a valid choice; the spec just doesn't document that convention. The `x-github.subcategory` extension (135 distinct values) provides finer grouping — an alternative would be to surface those subcategories as additional tags rather than under `x-github`. Lint-class but worth noting.",
+      "rationale": "OpenAPI 3.0 §4.7.4 names `tags` as a per-operation array — multi-tag is supported. The choice between one-tag-per-op and multi-tag is a design lever; whichever is chosen should be documented.",
+      "patchOps": [],
+      "classification": {
+        "isLintFlavoured": true,
+        "isKnowledgeBackedGap": false,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
+        "narrationKeywords": [
+          "tags",
+          "single tag",
+          "subcategory"
+        ],
+        "expectedClusterKey": null
+      },
+      "selfReviewNotes": "Lint-flavoured."
+    },
+    {
+      "id": "F25",
+      "title": "Spec uses OpenAPI 3.0.3 which lacks native `webhooks` and `pathItems` reuse",
+      "category": "design",
+      "severity": "low",
+      "scope": "spec",
+      "affectedEndpoints": [],
+      "patchSummary": "Migrate to OpenAPI 3.1 to expose the 267 webhook events natively (see also F9) and to enable `pathItems` deduplication.",
+      "narration": "The spec declares `openapi: 3.0.3`, released March 2024. OpenAPI 3.1 (released February 2026) introduces native `webhooks` (which would unlock the 267 events currently buried under `x-webhooks` — see F9), full JSON-Schema-2020-12 alignment (which fixes the `nullable: true` vs `type: [\"null\", \"string\"]` workaround the spec uses in places), and `components.pathItems` for path-item reuse. Migrating from 3.0.3 to 3.1 is a one-line change in `openapi:` plus rename of `x-webhooks` → `webhooks` and a few `nullable: true` rewrites. The migration unlocks substantial new contract surface that the spec already implicitly carries. This is the parent finding of F9.",
+      "rationale": "OpenAPI 3.1 §4.7.2 (\"OpenAPI Object\") adds `webhooks` and `components.pathItems`. JSON Schema 2020-12 alignment removes the `nullable` workaround. The migration is mechanical and well-documented at https://openapi-map.apihandyman.io/.",
+      "patchOps": [],
+      "classification": {
+        "isLintFlavoured": true,
+        "isKnowledgeBackedGap": true,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
+        "narrationKeywords": [
+          "OpenAPI 3.1",
+          "version migration",
+          "3.0.3 limits"
+        ],
+        "expectedClusterKey": null
+      },
+      "selfReviewNotes": "Parent of F9. Lint-flavoured because version-bump is structurally simple, but knowledge-backed (knowing what 3.1 buys you)."
+    },
+    {
+      "id": "F26",
+      "title": "`scim-error` and `validation-error` are not unified into a single error envelope discriminator",
+      "category": "design",
+      "severity": "low",
+      "scope": "spec",
+      "affectedEndpoints": [],
+      "patchSummary": "Unify `basic-error`, `validation-error`, `validation-error-simple`, `scim-error`, and `repository-rule-violation-error` under a `oneOf` with a `discriminator`.",
+      "narration": "The spec declares six error-envelope schemas: `basic-error` (default), `validation-error` (with structured `errors[]` array), `validation-error-simple` (lightweight variant), `scim-error` (RFC-7644 SCIM-style `{schemas, detail, status, scimType}`), `codeowners-errors`, and `repository-rule-violation-error`. Each is referenced from different operations; a consumer building a typed error-handler must dispatch on which schema appeared by inspecting the body shape, not by a discriminator. JSON Schema's `oneOf` + `discriminator` is the canonical way to express \"this response can be one of N typed error shapes\". The fix is to define an `error-envelope` `oneOf` and reference it consistently. Cosmetic but improves codegen ergonomics meaningfully.",
+      "rationale": "OpenAPI 3.0 §4.7.25 (\"Discriminator Object\") and JSON Schema §10.2.1.3 (\"oneOf\") are designed for tagged-union error shapes. RFC 7807 (\"Problem Details for HTTP APIs\") encourages a unified envelope.",
+      "patchOps": [],
+      "classification": {
+        "isLintFlavoured": false,
+        "isKnowledgeBackedGap": false,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
+        "narrationKeywords": [
+          "error envelope",
+          "discriminator",
+          "scim-error",
+          "validation-error"
+        ],
+        "expectedClusterKey": null
+      },
+      "selfReviewNotes": "PSpec=true: walker detects multiple error schemas + no discriminator."
+    },
+    {
+      "id": "F27",
+      "title": "320 of 320 operations with request bodies have only `application/json` content-type, blocking `multipart/form-data` for endpoints that need it",
+      "category": "design",
+      "severity": "low",
+      "scope": "endpoint",
+      "affectedEndpoints": [
+        {
+          "path": "/repos/{owner}/{repo}/releases/{release_id}/assets",
+          "method": "post"
+        }
+      ],
+      "patchSummary": "Add `application/octet-stream` and `multipart/form-data` content-types where binary upload is supported (e.g. release-asset upload).",
+      "narration": "All 320 operations with a `requestBody` declare exactly one content-type — typically `application/json`. The `POST /repos/{owner}/{repo}/releases/{release_id}/assets` operation is the canonical exception that proves the rule: it accepts a binary file upload (release artifacts can be tens of MB), and consumers must send the file as `application/octet-stream` (per GitHub's docs at https://docs.github.com/rest/releases/assets#upload-a-release-asset) — but the spec declares only `application/json`. Codegen tools emit this op as `body: object` rather than `body: Buffer`. The fix is per-operation: identify the file-upload ops and add the binary content-type. (Note: only 1 op of the 320 is multi-content; this finding flags the *missing* multi-content where it would be appropriate.)",
+      "rationale": "OpenAPI 3.0 §4.7.13 (\"Request Body Object\") supports multiple content-types per operation specifically so APIs can document text + binary uploads. RFC 7233 (\"Range Requests\") and RFC 1867 (\"multipart/form-data\") are the IETF baselines.",
+      "patchOps": [],
+      "classification": {
+        "isLintFlavoured": false,
+        "isKnowledgeBackedGap": true,
+        "isPureSpectralDetectable": false,
+        "isDomainKnowledgeDetectable": false,
+        "narrationKeywords": [
+          "binary upload",
+          "octet-stream",
+          "release asset",
+          "content-type"
+        ],
+        "expectedClusterKey": null
+      },
+      "selfReviewNotes": "LLM-only because identifying *which* ops should support binary upload requires NLP on the operation description. PSpec walker can flag 'all 320 ops are single-content' but can't pick out the binary-upload ones."
+    },
+    {
+      "id": "F28",
+      "title": "Repeated string parameters (`labels`, `assignees`) lack `style` / `explode` declarations",
+      "category": "correctness",
+      "severity": "medium",
+      "scope": "spec",
+      "affectedEndpoints": [],
+      "patchSummary": "Set `style: \"form\", explode: true` (or `style: \"simple\", explode: false`) explicitly on array query parameters that GitHub serialises specifically.",
+      "narration": "Several list-filter query parameters take comma-separated string values: `?labels=bug,help-wanted` on `GET /repos/{owner}/{repo}/issues`; `?assignees=alice,bob`; the `dependabot-alert-comma-separated-*` family in `components.parameters` (8 entries — `dependabot-alert-comma-separated-classifications`, `-states`, `-severities`, `-ecosystems`, etc.). These are typed as `{\"type\": \"string\"}` (a single comma-separated string) rather than `{\"type\": \"array\", \"items\": {\"type\": \"string\"}, \"style\": \"form\", \"explode\": false}` (a typed array with comma-delimited serialisation). The single-string typing means SDK consumers receive `string` and must hand-split; codegen tools can't emit `string[]` with auto-serialisation. Convention-wise GitHub uses comma-form (`?labels=a,b`) consistently — so the fix is encodable as `style: \"form\", explode: false`.",
+      "rationale": "OpenAPI 3.0 §4.7.10.1 (\"Style Values\") defines `form` + `explode: false` as comma-serialisation for arrays. JSON Schema typed-array is the canonical shape; comma-string-as-string is a workaround.",
+      "patchOps": [],
+      "classification": {
+        "isLintFlavoured": false,
+        "isKnowledgeBackedGap": false,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
+        "narrationKeywords": [
+          "comma-separated",
+          "style form",
+          "explode",
+          "array parameters"
+        ],
+        "expectedClusterKey": null
+      },
+      "selfReviewNotes": "PSpec=true: walker detects parameter named `*comma-separated*` or with description containing 'comma-separated' but typed as plain string."
+    },
+    {
+      "id": "F29",
+      "title": "Sample request body and response examples present (514 component examples) but not bound to operations consistently",
+      "category": "clarity",
+      "severity": "low",
+      "scope": "spec",
+      "affectedEndpoints": [],
+      "patchSummary": "Audit `components.examples` (514 entries) usage; remove unreferenced entries or wire them onto the corresponding operations' `requestBody`/`response` `examples`.",
+      "narration": "`components.examples` declares 514 reusable example objects — `full-repository-default-response`, `pull-request-create-request-example`, `issue-list-default-response`, etc. Sampling: most are referenced from the operations they document (`GET /repos/{owner}/{repo}` references `full-repository-default-response` from its 200 response). The spec is in fact the strongest in this dimension among our reference set — Stripe declares zero `requestBody` examples (Stripe F27); GitHub binds examples comprehensively. The minor gap: a small number of `components.examples` entries appear unreferenced (orphan examples), and the binding is not 100%. This is cosmetic / cleanup-class; the spec's example coverage is otherwise excellent.",
+      "rationale": "OpenAPI 3.0 §4.7.20 (\"Example Object\") supports inline + reusable examples. Reusable examples that are never referenced are dead-code in the spec.",
+      "patchOps": [],
+      "classification": {
+        "isLintFlavoured": true,
+        "isKnowledgeBackedGap": false,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
+        "narrationKeywords": [
+          "components.examples",
+          "orphan examples",
+          "514 examples"
+        ],
+        "expectedClusterKey": null
+      },
+      "selfReviewNotes": "Lint-flavoured. Worth flagging because most strong-spec audits compare example-coverage; GitHub does well here vs. Stripe."
+    },
+    {
+      "id": "F30",
+      "title": "`x-github-breaking-changes` extension declares 21 versioned diffs but is not surfaced in operation responses",
+      "category": "clarity",
+      "severity": "medium",
+      "scope": "spec",
+      "affectedEndpoints": [],
+      "patchSummary": "Either lift `x-github-breaking-changes` into typed schemas (per-version operation overrides) or document the extension's semantics in `info.description`.",
+      "narration": "Twenty-one operations carry `x-github-breaking-changes` — an array describing changesets keyed by version, e.g. `[{ \"changeset\": \"change_delete_installation_success_status\", \"patch\": { \"responses\": { \"202\": ..., \"204\": null } }, \"version\": \"2026-03-10\" }]`. The shape is meaningful: each entry expresses 'in this API version, these specific shape-changes apply'. But the extension is undocumented and untyped — consumers can't predict what the schema looks like; codegen tools have no way to interpret it; AI agents reading the spec see arrays of opaque objects. The richest fix would be to teach OpenAPI tooling about per-version overlays (an active OAS 3.x discussion); the simpler fix is to document `x-github-breaking-changes` in `info.description` and link to the version-pin doc page.",
+      "rationale": "OpenAPI 3.0 §3.4 (\"Specification Extensions\") permits `x-` extensions but expects documented semantics. The breaking-changes catalog is precisely the contract that downstream consumers (SDK maintainers, version-pinning libraries) most need.",
+      "patchOps": [],
+      "classification": {
+        "isLintFlavoured": false,
+        "isKnowledgeBackedGap": true,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": true,
+        "narrationKeywords": [
+          "x-github-breaking-changes",
+          "vendor extension",
+          "version overlay",
+          "21 ops"
+        ],
+        "expectedClusterKey": null
+      },
+      "selfReviewNotes": "PSpec=true: walker detects `x-github-breaking-changes` usage. DomK=true: knowing what the extension means is GitHub-domain. Companion to F23."
+    },
+    {
+      "id": "F31",
+      "title": "`/markdown/raw` content-type declared as `text/x-markdown` (vendor) and `text/plain` but no `Accept` negotiation",
+      "category": "design",
+      "severity": "low",
+      "scope": "endpoint",
+      "affectedEndpoints": [
+        {
+          "path": "/markdown/raw",
+          "method": "post"
+        }
+      ],
+      "patchSummary": "Add `Accept` header parameter and clarify which content-types can be requested vs. returned.",
+      "narration": "`POST /markdown/raw` accepts a Markdown document and returns the rendered HTML. The request body declares `text/plain` and `text/x-markdown` (the latter a non-IANA-registered media-type; the canonical IANA-registered Markdown media-type is `text/markdown` per RFC 7763). The response declares `text/html` — straightforward. The minor frictions: `text/x-markdown` is non-standard (RFC 7763 deprecated `text/x-markdown` in favour of `text/markdown`); the request side has no `Accept` parameter for negotiation; the rendered HTML response is a single content-type so Accept-negotiation matters less here. Still a small correctness issue — replacing `text/x-markdown` with `text/markdown` aligns with the IETF registry.",
+      "rationale": "RFC 7763 (\"The text/markdown Media Type\") registers `text/markdown` as the canonical Markdown media-type. IANA's media-type registry is the authoritative source.",
+      "patchOps": [],
+      "classification": {
+        "isLintFlavoured": true,
+        "isKnowledgeBackedGap": true,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
+        "narrationKeywords": [
+          "text/x-markdown",
+          "text/markdown",
+          "RFC 7763",
+          "IANA media-type"
+        ],
+        "expectedClusterKey": null
+      },
+      "selfReviewNotes": "Detector: 'media-type begins with text/x-' (Spectral-class). KGap because RFC 7763 alignment is training-data."
+    }
+  ]
+}
