@@ -34,7 +34,8 @@
       "classification": {
         "isLintFlavoured": true,
         "isKnowledgeBackedGap": false,
-        "isDeterministicallyDetectable": true,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
         "narrationKeywords": [
           "trailing slash",
           "server url",
@@ -86,7 +87,8 @@
       "classification": {
         "isLintFlavoured": false,
         "isKnowledgeBackedGap": false,
-        "isDeterministicallyDetectable": true,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
         "narrationKeywords": [
           "tags",
           "untagged",
@@ -111,7 +113,8 @@
       "classification": {
         "isLintFlavoured": false,
         "isKnowledgeBackedGap": true,
-        "isDeterministicallyDetectable": true,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
         "narrationKeywords": [
           "HTML markup",
           "CommonMark",
@@ -142,7 +145,8 @@
       "classification": {
         "isLintFlavoured": true,
         "isKnowledgeBackedGap": false,
-        "isDeterministicallyDetectable": true,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
         "narrationKeywords": [
           "bearerFormat",
           "JWT",
@@ -175,7 +179,8 @@
       "classification": {
         "isLintFlavoured": false,
         "isKnowledgeBackedGap": false,
-        "isDeterministicallyDetectable": true,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
         "narrationKeywords": [
           "required",
           "api_errors.message",
@@ -199,7 +204,8 @@
       "classification": {
         "isLintFlavoured": false,
         "isKnowledgeBackedGap": true,
-        "isDeterministicallyDetectable": true,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
         "narrationKeywords": [
           "default response",
           "4xx",
@@ -242,7 +248,8 @@
       "classification": {
         "isLintFlavoured": false,
         "isKnowledgeBackedGap": true,
-        "isDeterministicallyDetectable": true,
+        "isPureSpectralDetectable": false,
+        "isDomainKnowledgeDetectable": true,
         "narrationKeywords": [
           "Idempotency-Key",
           "idempotency",
@@ -268,7 +275,8 @@
       "classification": {
         "isLintFlavoured": false,
         "isKnowledgeBackedGap": true,
-        "isDeterministicallyDetectable": true,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
         "narrationKeywords": [
           "x-www-form-urlencoded",
           "JSON content-type",
@@ -298,7 +306,8 @@
       "classification": {
         "isLintFlavoured": false,
         "isKnowledgeBackedGap": true,
-        "isDeterministicallyDetectable": true,
+        "isPureSpectralDetectable": false,
+        "isDomainKnowledgeDetectable": true,
         "narrationKeywords": [
           "x-stripeBypassValidation",
           "vendor extension",
@@ -323,7 +332,8 @@
       "classification": {
         "isLintFlavoured": false,
         "isKnowledgeBackedGap": true,
-        "isDeterministicallyDetectable": true,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
         "narrationKeywords": [
           "deepObject",
           "expand",
@@ -375,7 +385,8 @@
       "classification": {
         "isLintFlavoured": false,
         "isKnowledgeBackedGap": false,
-        "isDeterministicallyDetectable": true,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
         "narrationKeywords": [
           "unix-time",
           "format",
@@ -427,7 +438,8 @@
       "classification": {
         "isLintFlavoured": false,
         "isKnowledgeBackedGap": true,
-        "isDeterministicallyDetectable": false,
+        "isPureSpectralDetectable": false,
+        "isDomainKnowledgeDetectable": true,
         "narrationKeywords": [
           "Stripe-Account",
           "Stripe-Version",
@@ -481,7 +493,8 @@
       "classification": {
         "isLintFlavoured": false,
         "isKnowledgeBackedGap": false,
-        "isDeterministicallyDetectable": true,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
         "narrationKeywords": [
           "deprecated",
           "prose-only deprecation"
@@ -536,7 +549,8 @@
       "classification": {
         "isLintFlavoured": true,
         "isKnowledgeBackedGap": false,
-        "isDeterministicallyDetectable": true,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
         "narrationKeywords": [
           "missing description",
           "operation description"
@@ -621,7 +635,8 @@
       "classification": {
         "isLintFlavoured": true,
         "isKnowledgeBackedGap": false,
-        "isDeterministicallyDetectable": true,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
         "narrationKeywords": [
           "missing summary"
         ],
@@ -678,7 +693,8 @@
       "classification": {
         "isLintFlavoured": false,
         "isKnowledgeBackedGap": true,
-        "isDeterministicallyDetectable": true,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
         "narrationKeywords": [
           "pagination",
           "page-based",
@@ -703,7 +719,8 @@
       "classification": {
         "isLintFlavoured": false,
         "isKnowledgeBackedGap": true,
-        "isDeterministicallyDetectable": false,
+        "isPureSpectralDetectable": false,
+        "isDomainKnowledgeDetectable": false,
         "narrationKeywords": [
           "api_errors.code",
           "enum",
@@ -738,7 +755,8 @@
       "classification": {
         "isLintFlavoured": false,
         "isKnowledgeBackedGap": true,
-        "isDeterministicallyDetectable": false,
+        "isPureSpectralDetectable": false,
+        "isDomainKnowledgeDetectable": false,
         "narrationKeywords": [
           "error payload",
           "nested PaymentIntent",
@@ -834,7 +852,8 @@
       "classification": {
         "isLintFlavoured": false,
         "isKnowledgeBackedGap": false,
-        "isDeterministicallyDetectable": true,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
         "narrationKeywords": [
           "deprecation",
           "inconsistent",
@@ -875,7 +894,8 @@
       "classification": {
         "isLintFlavoured": true,
         "isKnowledgeBackedGap": false,
-        "isDeterministicallyDetectable": false,
+        "isPureSpectralDetectable": false,
+        "isDomainKnowledgeDetectable": false,
         "narrationKeywords": [
           "wrong summary",
           "create a card",
@@ -899,7 +919,8 @@
       "classification": {
         "isLintFlavoured": false,
         "isKnowledgeBackedGap": true,
-        "isDeterministicallyDetectable": false,
+        "isPureSpectralDetectable": false,
+        "isDomainKnowledgeDetectable": false,
         "narrationKeywords": [
           "parameter-relationship",
           "mutually exclusive",
@@ -941,7 +962,8 @@
       "classification": {
         "isLintFlavoured": false,
         "isKnowledgeBackedGap": true,
-        "isDeterministicallyDetectable": false,
+        "isPureSpectralDetectable": false,
+        "isDomainKnowledgeDetectable": false,
         "narrationKeywords": [
           "customer",
           "customer_account",
@@ -972,7 +994,8 @@
       "classification": {
         "isLintFlavoured": false,
         "isKnowledgeBackedGap": true,
-        "isDeterministicallyDetectable": true,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
         "narrationKeywords": [
           "cross-resource reference",
           "plain string",
@@ -997,7 +1020,8 @@
       "classification": {
         "isLintFlavoured": false,
         "isKnowledgeBackedGap": false,
-        "isDeterministicallyDetectable": true,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
         "narrationKeywords": [
           "maxLength",
           "5000",
@@ -1022,7 +1046,8 @@
       "classification": {
         "isLintFlavoured": false,
         "isKnowledgeBackedGap": false,
-        "isDeterministicallyDetectable": true,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
         "narrationKeywords": [
           "range constraints",
           "minimum",
@@ -1048,7 +1073,8 @@
       "classification": {
         "isLintFlavoured": true,
         "isKnowledgeBackedGap": false,
-        "isDeterministicallyDetectable": true,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
         "narrationKeywords": [
           "operationId",
           "verbose",
@@ -1072,7 +1098,8 @@
       "classification": {
         "isLintFlavoured": false,
         "isKnowledgeBackedGap": false,
-        "isDeterministicallyDetectable": true,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
         "narrationKeywords": [
           "requestBody examples",
           "no examples",
@@ -1096,7 +1123,8 @@
       "classification": {
         "isLintFlavoured": false,
         "isKnowledgeBackedGap": true,
-        "isDeterministicallyDetectable": true,
+        "isPureSpectralDetectable": false,
+        "isDomainKnowledgeDetectable": true,
         "narrationKeywords": [
           "rate-limit",
           "X-RateLimit-Remaining",
@@ -1121,7 +1149,8 @@
       "classification": {
         "isLintFlavoured": false,
         "isKnowledgeBackedGap": false,
-        "isDeterministicallyDetectable": true,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
         "narrationKeywords": [
           "empty description",
           "component schemas",

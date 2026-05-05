@@ -1,7 +1,7 @@
 {
   "configName": "c-i-baseline-stripe",
-  "lockedAt": "2026-05-05T11:34:18.942Z",
-  "lockedBy": "562d10ce80ae800e7ed5a0b97eab77fae95775fd",
+  "lockedAt": "2026-05-05T12:01:07.191Z",
+  "lockedBy": "98ec13ab86d7f0d64130a56a9f2bda64a39b6962",
   "spec": "stripe-full",
   "metrics": {
     "findingCount": {
@@ -37,8 +37,11 @@
     "coverageRate": 0.3793103448275862,
     "substantiveCoverageRate": 0.30434782608695654,
     "knowledgeBackedCoverageRate": 0.2857142857142857,
+    "llmOnlyCoverageRate": 0.4,
+    "pureSpectralCoverageRate": 0.45,
+    "domainKnowledgeCoverageRate": 0,
     "repetitionRate": 0.3070976809557273,
     "uniqueClusters": 986
   },
-  "notes": "Phase 0 baseline lock: pre-Stage-4 (C-i) Sonnet+Sonnet Two-Call v5 prompt, no pre/post-processing, no caching. Replay of Stage-3 stripe-full Sonnet+Sonnet run."
+  "notes": "Phase 0 baseline lock (post-tag-split): pre-Stage-4 (C-i) Sonnet+Sonnet Two-Call v5 prompt. Tags split into pure-spectral (20/29) + domain-knowledge (4/29) + LLM-only (5/29). Pure-spectral coverage 45%, domain-knowledge 0%, LLM-only 40%, knowledge-backed 28.6%."
 }

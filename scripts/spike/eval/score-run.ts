@@ -57,6 +57,8 @@ export interface ScoredAggregate {
   substantiveCoverageRate: StatSummary | null;
   knowledgeBackedCoverageRate: StatSummary | null;
   llmOnlyCoverageRate: StatSummary | null;
+  pureSpectralCoverageRate: StatSummary | null;
+  domainKnowledgeCoverageRate: StatSummary | null;
 
   /** Cluster stats (always present). */
   uniqueClusters: StatSummary;
@@ -185,6 +187,12 @@ function scoreAggregated(
     llmOnlyCoverageRate: haveJaccard
       ? summarise(perRun.map((p) => p.jaccard!.llmOnlyCoverageRate))
       : null,
+    pureSpectralCoverageRate: haveJaccard
+      ? summarise(perRun.map((p) => p.jaccard!.pureSpectralCoverageRate))
+      : null,
+    domainKnowledgeCoverageRate: haveJaccard
+      ? summarise(perRun.map((p) => p.jaccard!.domainKnowledgeCoverageRate))
+      : null,
     uniqueClusters: summarise(perRun.map((p) => p.repetitionCluster.uniqueClusters)),
     repetitionRate: summarise(perRun.map((p) => p.repetitionCluster.repetitionRate)),
     largestClusterSize: summarise(perRun.map((p) => p.repetitionCluster.largestClusterSize)),
@@ -259,8 +267,10 @@ function printSummary(out: ScoredRunnerOutput): void {
     if (agg.scored.aggregate.coverageRate) {
       console.log(`  Coverage (total):                ${fmtPct(agg.scored.aggregate.coverageRate)}`);
       console.log(`  Coverage (substantive):          ${fmtPct(agg.scored.aggregate.substantiveCoverageRate)}`);
-      console.log(`  Coverage (LLM-only / non-det):   ${fmtPct(agg.scored.aggregate.llmOnlyCoverageRate)}`);
+      console.log(`  Coverage (LLM-only / pure-NLP):  ${fmtPct(agg.scored.aggregate.llmOnlyCoverageRate)}  ← what only LLM can`);
       console.log(`  Coverage (knowledge-backed):     ${fmtPct(agg.scored.aggregate.knowledgeBackedCoverageRate)}  ← differentiator class`);
+      console.log(`  Coverage (pure-spectral):        ${fmtPct(agg.scored.aggregate.pureSpectralCoverageRate)}  ← Stage-A pure-spectral layer scope`);
+      console.log(`  Coverage (domain-knowledge):     ${fmtPct(agg.scored.aggregate.domainKnowledgeCoverageRate)}  ← Stage-A domain-knowledge layer scope`);
     }
     console.log('');
   }

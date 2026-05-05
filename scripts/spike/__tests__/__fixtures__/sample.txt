@@ -1,0 +1,1 @@
+This is a placeholder file with an unsupported extension for loader-error tests.

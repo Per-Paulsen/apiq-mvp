@@ -1,0 +1,28 @@
+{
+  "_provenance": "HYPOTHETICAL VISION — these numbers are NOT measured. They represent the Stage-4 target the team is aiming for (Deterministic Layer + v6 prompt + prompt-caching + concurrency tuning). Used solely to demonstrate the comparison reporter's output shape and to anchor team discussions about what 'good enough' looks like. DO NOT use these for any decision-making — the real Stage-4 numbers will be measured in Phase B and may differ.",
+  "_warning": "If this file gets passed to a real comparison-vs-snapshot diff, the numbers will look like dramatic improvements over baseline. That is by design (vision = aspirational), not a sign that Stage 4 has succeeded.",
+  "label": "v6 + det-layer + cache (Stage 4 VISION — hypothetical, not measured)",
+  "spec": "stripe-full",
+  "runMeta": {
+    "architecture": "C-i Two-Call + Deterministic Layer + Cache",
+    "perEndpointModel": "anthropic/claude-sonnet-4.6",
+    "aggregatorModel": "anthropic/claude-sonnet-4.6",
+    "promptVariant": "v6-comprehensive",
+    "runs": 3
+  },
+  "metrics": {
+    "findingCount": 612,
+    "uniqueClusters": 480,
+    "repetitionRate": 0.13,
+    "coverageRate": 0.55,
+    "substantiveCoverageRate": 0.65,
+    "knowledgeBackedCoverageRate": 0.65,
+    "llmOnlyCoverageRate": 0.60,
+    "pureSpectralCoverageRate": 1.0,
+    "domainKnowledgeCoverageRate": 0.75,
+    "applyCleanRate": 0.998,
+    "halluRate": 0.002,
+    "costUSD": 2.10,
+    "durationMs": 900000
+  }
+}

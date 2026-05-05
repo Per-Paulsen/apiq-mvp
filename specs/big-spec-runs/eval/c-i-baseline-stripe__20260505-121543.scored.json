@@ -1,8 +1,8 @@
 {
   "configName": "c-i-baseline-stripe",
   "configFile": "../../eval-configs/c-i-baseline-stripe.yaml",
-  "startedAt": "2026-05-05T11:32:26.269Z",
-  "totalDurationMs": 2157,
+  "startedAt": "2026-05-05T12:15:43.216Z",
+  "totalDurationMs": 1962,
   "perSpec": {
     "stripe-full": {
       "config": {
@@ -41987,9 +41987,15 @@
               "substantiveTotalRefs": 23,
               "substantiveCoveredRefs": 7,
               "substantiveCoverageRate": 0.30434782608695654,
-              "llmOnlyTotalRefs": 6,
+              "llmOnlyTotalRefs": 5,
               "llmOnlyCoveredRefs": 2,
-              "llmOnlyCoverageRate": 0.3333333333333333,
+              "llmOnlyCoverageRate": 0.4,
+              "pureSpectralTotalRefs": 20,
+              "pureSpectralCoveredRefs": 9,
+              "pureSpectralCoverageRate": 0.45,
+              "domainKnowledgeTotalRefs": 4,
+              "domainKnowledgeCoveredRefs": 0,
+              "domainKnowledgeCoverageRate": 0,
               "knowledgeBackedTotalRefs": 14,
               "knowledgeBackedCoveredRefs": 4,
               "knowledgeBackedCoverageRate": 0.2857142857142857,
@@ -50082,9 +50088,21 @@
             "std": 0
           },
           "llmOnlyCoverageRate": {
-            "mean": 0.3333333333333333,
-            "p50": 0.3333333333333333,
-            "p95": 0.3333333333333333,
+            "mean": 0.4,
+            "p50": 0.4,
+            "p95": 0.4,
+            "std": 0
+          },
+          "pureSpectralCoverageRate": {
+            "mean": 0.45,
+            "p50": 0.45,
+            "p95": 0.45,
+            "std": 0
+          },
+          "domainKnowledgeCoverageRate": {
+            "mean": 0,
+            "p50": 0,
+            "p95": 0,
             "std": 0
           },
           "uniqueClusters": {

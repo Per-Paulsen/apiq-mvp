@@ -76,7 +76,8 @@ function parseMarkdownLegacy(md: string, specName: string): ReferenceTarget {
         classification: {
           isLintFlavoured: false,
           isKnowledgeBackedGap: false,
-          isDeterministicallyDetectable: false,
+          isPureSpectralDetectable: false,
+          isDomainKnowledgeDetectable: false,
           narrationKeywords: [],
           expectedClusterKey: null,
         },

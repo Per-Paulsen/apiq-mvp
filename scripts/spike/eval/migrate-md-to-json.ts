@@ -216,109 +216,159 @@ function parseMarkdownReference(md: string): ParsedFinding[] {
 // User reviews after migration. Keys: F-id, value: classification tags.
 // =============================================================================
 
+/**
+ * Tag-split rationale (post-iteration-3 critical-review item #2):
+ *   - isPureSpectralDetectable: pure spec-walk + standard rules. Spectral-OAS3
+ *     defaults class. No domain knowledge needed. Catches the obvious half.
+ *   - isDomainKnowledgeDetectable: spec-walk + hardcoded API-family knowledge
+ *     (e.g. "if Stripe-API → expect Idempotency-Key on POST"). Walkable
+ *     pattern, but the pattern-LIBRARY is API-family-specific and non-trivial
+ *     to maintain. This is a meaningfully different engineering effort.
+ *   - Both false → only an LLM with broad training can catch this (NLP-level
+ *     pattern, semantic reasoning, cross-resource inference, etc.).
+ *
+ * For Stripe FULL: 20 pure-spectral · 4 domain-knowledge · 5 LLM-only.
+ * Foundational decision Stage A must answer: do we ship one detector layer
+ * (pure-spectral only) or two (pure + domain-knowledge)? The 4 domain-only
+ * findings are the load-bearing differentiator-test for the second layer.
+ */
 const STRIPE_CLASSIFICATIONS: Record<string, FindingClassification> = {
-  // Surface design issues — Spectral-class
-  F1: { isLintFlavoured: true, isKnowledgeBackedGap: false, isDeterministicallyDetectable: true,
+  // Surface design issues — Spectral-class (pure spec-walk catches all)
+  F1: { isLintFlavoured: true, isKnowledgeBackedGap: false,
+        isPureSpectralDetectable: true, isDomainKnowledgeDetectable: false,
         narrationKeywords: ['trailing slash', 'server url', 'url normalization', 'OpenAPI 3.0 §4.7.5'],
         expectedClusterKey: null },
-  F2: { isLintFlavoured: false, isKnowledgeBackedGap: false, isDeterministicallyDetectable: true,
+  F2: { isLintFlavoured: false, isKnowledgeBackedGap: false,
+        isPureSpectralDetectable: true, isDomainKnowledgeDetectable: false,
         narrationKeywords: ['tags', 'untagged', 'operation grouping', 'navigation'],
         expectedClusterKey: null },
-  F3: { isLintFlavoured: false, isKnowledgeBackedGap: true, isDeterministicallyDetectable: true,
+  F3: { isLintFlavoured: false, isKnowledgeBackedGap: true,
+        isPureSpectralDetectable: true, isDomainKnowledgeDetectable: false,
         narrationKeywords: ['HTML markup', 'CommonMark', 'description', 'markdown'],
         expectedClusterKey: null },
-  F4: { isLintFlavoured: true, isKnowledgeBackedGap: false, isDeterministicallyDetectable: true,
+  F4: { isLintFlavoured: true, isKnowledgeBackedGap: false,
+        isPureSpectralDetectable: true, isDomainKnowledgeDetectable: false,
         narrationKeywords: ['bearerFormat', 'JWT', 'auth header'],
         expectedClusterKey: null },
-  F5: { isLintFlavoured: false, isKnowledgeBackedGap: false, isDeterministicallyDetectable: true,
+  F5: { isLintFlavoured: false, isKnowledgeBackedGap: false,
+        isPureSpectralDetectable: true, isDomainKnowledgeDetectable: false,
         narrationKeywords: ['required', 'api_errors.message', 'error envelope'],
         expectedClusterKey: null },
 
-  // Default-response missing — knowledge of HTTP status semantics
-  F6: { isLintFlavoured: false, isKnowledgeBackedGap: true, isDeterministicallyDetectable: true,
+  // Default-response missing — pure-spectral catches it via "no per-status response"
+  F6: { isLintFlavoured: false, isKnowledgeBackedGap: true,
+        isPureSpectralDetectable: true, isDomainKnowledgeDetectable: false,
         narrationKeywords: ['default response', '4xx', '5xx', 'status codes', 'no per-status differentiation'],
         expectedClusterKey: 'missing-error-response' },
 
-  // The headline knowledge-backed-gap class
-  F7: { isLintFlavoured: false, isKnowledgeBackedGap: true, isDeterministicallyDetectable: true,
+  // Domain-knowledge: requires API-family-specific expectations
+  F7: { isLintFlavoured: false, isKnowledgeBackedGap: true,
+        isPureSpectralDetectable: false, isDomainKnowledgeDetectable: true,
         narrationKeywords: ['Idempotency-Key', 'idempotency', 'POST', 'retry-safe', 'Stripe docs'],
         expectedClusterKey: null },
-  F8: { isLintFlavoured: false, isKnowledgeBackedGap: true, isDeterministicallyDetectable: true,
+  F8: { isLintFlavoured: false, isKnowledgeBackedGap: true,
+        isPureSpectralDetectable: true, isDomainKnowledgeDetectable: false,
         narrationKeywords: ['x-www-form-urlencoded', 'JSON content-type', 'application/json'],
         expectedClusterKey: null },
-  F9: { isLintFlavoured: false, isKnowledgeBackedGap: true, isDeterministicallyDetectable: true,
+  F9: { isLintFlavoured: false, isKnowledgeBackedGap: true,
+        isPureSpectralDetectable: false, isDomainKnowledgeDetectable: true,
         narrationKeywords: ['x-stripeBypassValidation', 'vendor extension', 'enum', 'non-authoritative'],
         expectedClusterKey: null },
 
   // OpenAPI semantic-correctness violation (deepObject + array)
-  F10: { isLintFlavoured: false, isKnowledgeBackedGap: true, isDeterministicallyDetectable: true,
+  F10: { isLintFlavoured: false, isKnowledgeBackedGap: true,
+         isPureSpectralDetectable: true, isDomainKnowledgeDetectable: false,
          narrationKeywords: ['deepObject', 'expand', 'array', 'OAS 3.0 §4.7.10.1', 'style'],
          expectedClusterKey: null },
 
-  F11: { isLintFlavoured: false, isKnowledgeBackedGap: false, isDeterministicallyDetectable: true,
+  F11: { isLintFlavoured: false, isKnowledgeBackedGap: false,
+         isPureSpectralDetectable: true, isDomainKnowledgeDetectable: false,
          narrationKeywords: ['unix-time', 'format', 'epoch', 'integer'],
          expectedClusterKey: null },
 
-  // Operational headers — Stripe-specific knowledge
-  F12: { isLintFlavoured: false, isKnowledgeBackedGap: true, isDeterministicallyDetectable: false,
+  // Domain-knowledge: Stripe-specific operational headers
+  F12: { isLintFlavoured: false, isKnowledgeBackedGap: true,
+         isPureSpectralDetectable: false, isDomainKnowledgeDetectable: true,
          narrationKeywords: ['Stripe-Account', 'Stripe-Version', 'multi-tenant', 'version pinning'],
          expectedClusterKey: null },
 
-  F13: { isLintFlavoured: false, isKnowledgeBackedGap: false, isDeterministicallyDetectable: true,
+  F13: { isLintFlavoured: false, isKnowledgeBackedGap: false,
+         isPureSpectralDetectable: true, isDomainKnowledgeDetectable: false,
          narrationKeywords: ['deprecated', 'prose-only deprecation'],
          expectedClusterKey: null },
-  F14: { isLintFlavoured: true, isKnowledgeBackedGap: false, isDeterministicallyDetectable: true,
+  F14: { isLintFlavoured: true, isKnowledgeBackedGap: false,
+         isPureSpectralDetectable: true, isDomainKnowledgeDetectable: false,
          narrationKeywords: ['missing description', 'operation description'],
          expectedClusterKey: 'missing-description' },
-  F15: { isLintFlavoured: true, isKnowledgeBackedGap: false, isDeterministicallyDetectable: true,
+  F15: { isLintFlavoured: true, isKnowledgeBackedGap: false,
+         isPureSpectralDetectable: true, isDomainKnowledgeDetectable: false,
          narrationKeywords: ['missing summary'],
          expectedClusterKey: 'missing-summary' },
 
-  F16: { isLintFlavoured: false, isKnowledgeBackedGap: true, isDeterministicallyDetectable: true,
+  F16: { isLintFlavoured: false, isKnowledgeBackedGap: true,
+         isPureSpectralDetectable: true, isDomainKnowledgeDetectable: false,
          narrationKeywords: ['pagination', 'page-based', 'cursor-based', 'consistency'],
          expectedClusterKey: null },
-  F17: { isLintFlavoured: false, isKnowledgeBackedGap: true, isDeterministicallyDetectable: false,
+
+  // LLM-only: NLP / semantic reasoning required
+  F17: { isLintFlavoured: false, isKnowledgeBackedGap: true,
+         isPureSpectralDetectable: false, isDomainKnowledgeDetectable: false,
          narrationKeywords: ['api_errors.code', 'enum', 'free-form string', 'typed error'],
          expectedClusterKey: null },
-  F18: { isLintFlavoured: false, isKnowledgeBackedGap: true, isDeterministicallyDetectable: false,
+  F18: { isLintFlavoured: false, isKnowledgeBackedGap: true,
+         isPureSpectralDetectable: false, isDomainKnowledgeDetectable: false,
          narrationKeywords: ['error payload', 'nested PaymentIntent', 'leak schemas'],
          expectedClusterKey: null },
-  F19: { isLintFlavoured: false, isKnowledgeBackedGap: false, isDeterministicallyDetectable: true,
+
+  F19: { isLintFlavoured: false, isKnowledgeBackedGap: false,
+         isPureSpectralDetectable: true, isDomainKnowledgeDetectable: false,
          narrationKeywords: ['deprecation', 'inconsistent', 'cards', 'bank_accounts'],
          expectedClusterKey: null },
-  F20: { isLintFlavoured: true, isKnowledgeBackedGap: false, isDeterministicallyDetectable: false,
+
+  // LLM-only
+  F20: { isLintFlavoured: true, isKnowledgeBackedGap: false,
+         isPureSpectralDetectable: false, isDomainKnowledgeDetectable: false,
          narrationKeywords: ['wrong summary', 'create a card', 'bank_accounts'],
          expectedClusterKey: null },
 
-  // The differentiator F-class
-  F21: { isLintFlavoured: false, isKnowledgeBackedGap: true, isDeterministicallyDetectable: false,
+  // The differentiator F-class — LLM-only (NLP-level)
+  F21: { isLintFlavoured: false, isKnowledgeBackedGap: true,
+         isPureSpectralDetectable: false, isDomainKnowledgeDetectable: false,
          narrationKeywords: ['parameter-relationship', 'mutually exclusive', 'conditional required', 'oneOf', 'prose only'],
          expectedClusterKey: null },
-  F22: { isLintFlavoured: false, isKnowledgeBackedGap: true, isDeterministicallyDetectable: false,
+  F22: { isLintFlavoured: false, isKnowledgeBackedGap: true,
+         isPureSpectralDetectable: false, isDomainKnowledgeDetectable: false,
          narrationKeywords: ['customer', 'customer_account', 'ambiguous', 'billing_portal/sessions'],
          expectedClusterKey: null },
-  F23: { isLintFlavoured: false, isKnowledgeBackedGap: true, isDeterministicallyDetectable: true,
+  F23: { isLintFlavoured: false, isKnowledgeBackedGap: true,
+         isPureSpectralDetectable: true, isDomainKnowledgeDetectable: false,
          narrationKeywords: ['cross-resource reference', 'plain string', 'foreign key', 'no $ref'],
          expectedClusterKey: null },
 
-  F24: { isLintFlavoured: false, isKnowledgeBackedGap: false, isDeterministicallyDetectable: true,
+  F24: { isLintFlavoured: false, isKnowledgeBackedGap: false,
+         isPureSpectralDetectable: true, isDomainKnowledgeDetectable: false,
          narrationKeywords: ['maxLength', '5000', 'default everywhere', 'string properties'],
          expectedClusterKey: null },
-  F25: { isLintFlavoured: false, isKnowledgeBackedGap: false, isDeterministicallyDetectable: true,
+  F25: { isLintFlavoured: false, isKnowledgeBackedGap: false,
+         isPureSpectralDetectable: true, isDomainKnowledgeDetectable: false,
          narrationKeywords: ['range constraints', 'minimum', 'maximum', 'integer', 'number'],
          expectedClusterKey: 'limit-no-range' },
-  F26: { isLintFlavoured: true, isKnowledgeBackedGap: false, isDeterministicallyDetectable: true,
+  F26: { isLintFlavoured: true, isKnowledgeBackedGap: false,
+         isPureSpectralDetectable: true, isDomainKnowledgeDetectable: false,
          narrationKeywords: ['operationId', 'verbose', 'machine-generated'],
          expectedClusterKey: null },
-  F27: { isLintFlavoured: false, isKnowledgeBackedGap: false, isDeterministicallyDetectable: true,
+  F27: { isLintFlavoured: false, isKnowledgeBackedGap: false,
+         isPureSpectralDetectable: true, isDomainKnowledgeDetectable: false,
          narrationKeywords: ['requestBody examples', 'no examples', 'codegen'],
          expectedClusterKey: null },
 
-  // Operational headers — RFC + industry knowledge
-  F28: { isLintFlavoured: false, isKnowledgeBackedGap: true, isDeterministicallyDetectable: true,
+  // Domain-knowledge: rate-limit headers (industry-best-practice but not OAS-mandated)
+  F28: { isLintFlavoured: false, isKnowledgeBackedGap: true,
+         isPureSpectralDetectable: false, isDomainKnowledgeDetectable: true,
          narrationKeywords: ['rate-limit', 'X-RateLimit-Remaining', 'Retry-After', 'response headers'],
          expectedClusterKey: null },
-  F29: { isLintFlavoured: false, isKnowledgeBackedGap: false, isDeterministicallyDetectable: true,
+  F29: { isLintFlavoured: false, isKnowledgeBackedGap: false,
+         isPureSpectralDetectable: true, isDomainKnowledgeDetectable: false,
          narrationKeywords: ['empty description', 'component schemas', '79%'],
          expectedClusterKey: 'empty-schema-description' },
 };
@@ -408,7 +458,11 @@ function main() {
   // Summary stats.
   const lintCount = validated.findings.filter((f) => f.classification.isLintFlavoured).length;
   const knowledgeCount = validated.findings.filter((f) => f.classification.isKnowledgeBackedGap).length;
-  const detCount = validated.findings.filter((f) => f.classification.isDeterministicallyDetectable).length;
+  const spectralCount = validated.findings.filter((f) => f.classification.isPureSpectralDetectable).length;
+  const domainCount = validated.findings.filter((f) => f.classification.isDomainKnowledgeDetectable).length;
+  const llmOnlyCount = validated.findings.filter(
+    (f) => !f.classification.isPureSpectralDetectable && !f.classification.isDomainKnowledgeDetectable
+  ).length;
   const clusterKeys = new Set(
     validated.findings.map((f) => f.classification.expectedClusterKey).filter((k): k is string => !!k)
   );
@@ -416,7 +470,9 @@ function main() {
   console.log(`\nClassification summary:`);
   console.log(`  isLintFlavoured:               ${lintCount}/29`);
   console.log(`  isKnowledgeBackedGap:          ${knowledgeCount}/29  ← differentiator class`);
-  console.log(`  isDeterministicallyDetectable: ${detCount}/29  ← Stage 4 Deterministic Layer scope`);
+  console.log(`  isPureSpectralDetectable:      ${spectralCount}/29  ← Stage-A pure-spectral layer scope`);
+  console.log(`  isDomainKnowledgeDetectable:   ${domainCount}/29  ← Stage-A domain-knowledge layer scope`);
+  console.log(`  LLM-only (neither det-tag):    ${llmOnlyCount}/29  ← only LLM can find these`);
   console.log(`  expectedClusterKey set:        ${clusterKeys.size} unique cluster keys`);
   console.log(`  Substantive (non-lint):        ${29 - lintCount}/29`);
 }

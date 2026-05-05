@@ -1,5 +1,6 @@
 {
-  "label": "v5-baseline (Stage 3 actual)",
+  "_provenance": "REAL — derived from specs/big-spec-runs/haiku4-5_x_sonnet4-6__two-call__stripe-full.json (Stage 3, 2026-05-04). Used by tests/demos as the locked baseline values. Numbers reproduce when running `npx tsx scripts/spike/eval/runner.ts eval-configs/c-i-baseline-stripe.yaml` followed by score-run.ts.",
+  "label": "v5-baseline-stripe (Stage 3 — real, locked)",
   "spec": "stripe-full",
   "runMeta": {
     "architecture": "C-i Two-Call",
@@ -15,6 +16,9 @@
     "coverageRate": 0.3793,
     "substantiveCoverageRate": 0.3043,
     "knowledgeBackedCoverageRate": 0.2857,
+    "llmOnlyCoverageRate": 0.40,
+    "pureSpectralCoverageRate": 0.45,
+    "domainKnowledgeCoverageRate": 0.0,
     "applyCleanRate": 0.9930,
     "halluRate": 0.0070,
     "costUSD": 5.8630,

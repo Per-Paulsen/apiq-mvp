@@ -1,8 +1,8 @@
 {
   "configName": "c-i-baseline-stripe",
   "configFile": "../../eval-configs/c-i-baseline-stripe.yaml",
-  "startedAt": "2026-05-05T11:32:26.269Z",
-  "totalDurationMs": 2157,
+  "startedAt": "2026-05-05T12:15:43.216Z",
+  "totalDurationMs": 1962,
   "perSpec": {
     "stripe-full": {
       "config": {

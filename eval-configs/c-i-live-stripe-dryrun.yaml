@@ -1,0 +1,23 @@
+# Dry-run validation for the live-mode wiring (Phase 0 Task #12).
+#
+# This config exercises the live-mode call-arg resolution path WITHOUT
+# making any LLM call. The runner sees `dry_run: true`, prints the resolved
+# arguments (architecture, models, prompt, spec-source-path, would-be output
+# path) and exits 0 without writing a runner-output JSON.
+#
+# Flip `dry_run: false` to perform a real (paid) Sonnet+Sonnet two-call run
+# on Stripe FULL. Requires OPENROUTER_API_KEY and ANTHROPIC_API_KEY.
+
+name: c-i-live-stripe-dryrun
+description: Dry-run live-mode validation — does NOT call LLM, only verifies wiring.
+architecture: two-call
+per_endpoint_model: anthropic/claude-sonnet-4.6
+aggregator_model: anthropic/claude-sonnet-4.6
+prompt_variant: v5
+pre_pass: null
+post_pass: null
+prompt_caching: false
+runs: 1
+dry_run: true
+specs:
+  - stripe-full

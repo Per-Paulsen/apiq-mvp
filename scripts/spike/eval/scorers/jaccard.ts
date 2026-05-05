@@ -143,11 +143,24 @@ export interface JaccardResult {
   substantiveCoveredRefs: number;
   substantiveCoverageRate: number;
 
-  /** LLM-only coverage: drop refs where classification.isDeterministicallyDetectable
-   *  (these belong to Stage-4 Deterministic Layer, not the LLM under test). */
+  /** LLM-only coverage: drop refs where classification.isPureSpectralDetectable OR
+   *  classification.isDomainKnowledgeDetectable (both belong to Stage-4 Deterministic
+   *  Layer in their respective tier, not the LLM under test). */
   llmOnlyTotalRefs: number;
   llmOnlyCoveredRefs: number;
   llmOnlyCoverageRate: number;
+
+  /** Pure-spectral coverage: subset where classification.isPureSpectralDetectable.
+   *  These are the findings the cheap Spectral-class layer should catch. */
+  pureSpectralTotalRefs: number;
+  pureSpectralCoveredRefs: number;
+  pureSpectralCoverageRate: number;
+
+  /** Domain-knowledge coverage: subset where classification.isDomainKnowledgeDetectable.
+   *  These need API-family-specific pattern libraries. */
+  domainKnowledgeTotalRefs: number;
+  domainKnowledgeCoveredRefs: number;
+  domainKnowledgeCoverageRate: number;
 
   /** Knowledge-backed-gap coverage: subset where classification.isKnowledgeBackedGap.
    *  Differentiator-class metric. */
@@ -198,12 +211,20 @@ export const JaccardScorer: Scorer<JaccardResult> = {
     const isMatched = (id: string) => matchedById.get(id) === true;
 
     const substantiveRefs = refs.filter((r) => !r.classification.isLintFlavoured);
-    const llmOnlyRefs = refs.filter((r) => !r.classification.isDeterministicallyDetectable);
+    const llmOnlyRefs = refs.filter(
+      (r) =>
+        !r.classification.isPureSpectralDetectable &&
+        !r.classification.isDomainKnowledgeDetectable
+    );
+    const pureSpectralRefs = refs.filter((r) => r.classification.isPureSpectralDetectable);
+    const domainKnowledgeRefs = refs.filter((r) => r.classification.isDomainKnowledgeDetectable);
     const knowledgeRefs = refs.filter((r) => r.classification.isKnowledgeBackedGap);
 
     const coveredCount = perRef.filter((p) => p.matched).length;
     const substantiveCovered = substantiveRefs.filter((r) => isMatched(r.id)).length;
     const llmOnlyCovered = llmOnlyRefs.filter((r) => isMatched(r.id)).length;
+    const pureSpectralCovered = pureSpectralRefs.filter((r) => isMatched(r.id)).length;
+    const domainKnowledgeCovered = domainKnowledgeRefs.filter((r) => isMatched(r.id)).length;
     const knowledgeCovered = knowledgeRefs.filter((r) => isMatched(r.id)).length;
 
     const safeRate = (n: number, d: number) => (d === 0 ? 0 : n / d);
@@ -221,6 +242,14 @@ export const JaccardScorer: Scorer<JaccardResult> = {
       llmOnlyTotalRefs: llmOnlyRefs.length,
       llmOnlyCoveredRefs: llmOnlyCovered,
       llmOnlyCoverageRate: safeRate(llmOnlyCovered, llmOnlyRefs.length),
+
+      pureSpectralTotalRefs: pureSpectralRefs.length,
+      pureSpectralCoveredRefs: pureSpectralCovered,
+      pureSpectralCoverageRate: safeRate(pureSpectralCovered, pureSpectralRefs.length),
+
+      domainKnowledgeTotalRefs: domainKnowledgeRefs.length,
+      domainKnowledgeCoveredRefs: domainKnowledgeCovered,
+      domainKnowledgeCoverageRate: safeRate(domainKnowledgeCovered, domainKnowledgeRefs.length),
 
       knowledgeBackedTotalRefs: knowledgeRefs.length,
       knowledgeBackedCoveredRefs: knowledgeCovered,

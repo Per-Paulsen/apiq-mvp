@@ -17,9 +17,25 @@
  *      run outputs. With N=3 the same JSON gets loaded 3 times (zero variance,
  *      but exercises the aggregation code-path end-to-end).
  *
- *   2. LIVE (Phase B, real LLM calls — NOT yet wired up):
+ *   2. LIVE (Phase B, wired since Phase-0 Task #12):
  *      When a spec has no `replay_from`, the runner imports `runArch` from
- *      `run-arch.ts` and invokes it. This path currently throws — Phase B work.
+ *      `run-arch.ts` and invokes it. The result is mapped back into the same
+ *      RecordedRun shape the replay-loader understands so aggregation +
+ *      output-writing are unchanged. Live runs require:
+ *        - `OPENROUTER_API_KEY` (Phase 1 of two-call; bigger-context default
+ *          provider)
+ *        - `ANTHROPIC_API_KEY` (Phase 2 aggregator of two-call;
+ *          bigger-context with `--provider=anthropic-direct` — currently the
+ *          eval-runner always uses the default OpenRouter provider for
+ *          bigger-context, but Anthropic-direct may be added later)
+ *      and will refuse to start if either is missing (unless `dry_run: true`).
+ *
+ *   3. DRY-RUN (safety net for development):
+ *      When the YAML has `dry_run: true`, the runner resolves all call-args
+ *      (architecture, models, prompt-variant, spec-source-path, would-be
+ *      output-path) and prints them, then exits 0 without invoking the LLM
+ *      and without writing a runner-output JSON. Use this to validate config
+ *      files and the wiring path before flipping to a real (paid) run.
  *
  * CLI:
  *   npx tsx eval/runner.ts <config-yaml-path> [--replay]
@@ -29,6 +45,7 @@
  *
  * Output:
  *   specs/big-spec-runs/eval/<config-name>__<timestamp>.json
+ *   (dry-run skips this write)
  */
 
 import 'dotenv/config';
@@ -39,6 +56,7 @@ import YAML from 'yaml';
 import { z } from 'zod';
 
 import type { Finding } from '../schema.js';
+import { runArch, type Arch, type RunArchResult } from '../run-arch.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -83,6 +101,14 @@ const EvalConfigSchema = z.object({
    * (zero variance, exercises aggregation only). Phase 0 testing path.
    */
   replay_from: z.record(z.string(), z.string()).default({}),
+
+  /**
+   * If true, the runner resolves the call-args and prints them, then exits
+   * cleanly without making any LLM call and without writing a runner-output
+   * JSON. Use this to validate config files + the live-mode wiring before
+   * flipping to a real (paid) run. Default false.
+   */
+  dry_run: z.boolean().default(false),
 });
 
 export type EvalConfig = z.infer<typeof EvalConfigSchema>;
@@ -278,19 +304,209 @@ function loadRecordedRun(filepath: string, runIndex: number): PerRunMetrics {
 }
 
 // =============================================================================
-// Live-mode stub
+// Live-mode (calls runArch from ../run-arch.ts)
 // =============================================================================
 
 /**
- * Live-mode entrypoint. Will dispatch to the existing run-arch.ts machinery
- * when wired up in Phase B. For Phase 0, all runs go through replay mode.
+ * Convert a `RunArchResult` into the `PerRunMetrics` shape the aggregation
+ * pipeline expects. The two-call branch and the bigger-context branch have
+ * slightly different result shapes, so we normalise here:
+ *   - findings:        flat Finding[] (post-dedup for two-call)
+ *   - costUSD:         total USD across all phases
+ *   - durationMs:      wall-clock total
+ *   - applyCleanRate:  fraction of findings whose patchOps applied cleanly
+ *   - halluRate:       fraction of findings flagged as hallucinated
+ */
+function archResultToMetrics(
+  archRes: RunArchResult,
+  runIndex: number
+): PerRunMetrics {
+  if (archRes.kind === 'two-call') {
+    const r = archRes.result;
+    return {
+      runIndex,
+      findingCount: r.findings.length,
+      costUSD: r.costUSD,
+      durationMs: r.totalDurationMs,
+      applyCleanRate: r.summary.applyCleanRate,
+      halluRate: r.summary.hallucinatedRate,
+      findings: r.findings,
+    };
+  }
+
+  // bigger-context
+  const r = archRes.result;
+  return {
+    runIndex,
+    findingCount: r.findings.length,
+    costUSD: r.costUSD ?? 0,
+    durationMs: r.durationMs,
+    applyCleanRate: r.summary.applyCleanRate,
+    halluRate: r.summary.hallucinatedRate,
+    findings: r.findings,
+  };
+}
+
+/**
+ * Live-mode entrypoint. Dispatches into `runArch()` from `../run-arch.ts` with
+ * the YAML-config fields mapped onto `RunArchArgs`.
+ *
+ * Pre-flight env-var checks are done by the caller before this is invoked
+ * (so we can fail fast for ALL specs at once rather than once per run).
  */
 async function runLive(
-  _config: EvalConfig,
-  _spec: string,
-  _runIndex: number
+  config: EvalConfig,
+  spec: string,
+  runIndex: number
 ): Promise<PerRunMetrics> {
-  throw new Error('live mode not yet wired up — Phase B work');
+  process.stderr.write(
+    `[runner]   live run ${runIndex + 1}: arch=${config.architecture} ` +
+      `perEndpoint=${config.per_endpoint_model} aggregator=${config.aggregator_model} ` +
+      `prompt=${config.prompt_variant} spec=${spec}\n`
+  );
+
+  const archRes = await runArch({
+    arch: config.architecture as Arch,
+    specName: spec,
+    perEndpointModel: config.per_endpoint_model,
+    aggregatorModel: config.aggregator_model,
+    promptVariant: config.prompt_variant,
+    // Provider routing is currently driven by run-arch.ts defaults
+    // (two-call always uses OpenRouter for phase 1 + Anthropic-direct for
+    // phase 2; bigger-context defaults to OpenRouter). The YAML config has
+    // no `provider` field by design — add one if Phase B needs it.
+  });
+
+  return archResultToMetrics(archRes, runIndex);
+}
+
+// =============================================================================
+// Live-mode preflight (env-vars, dry-run resolution)
+// =============================================================================
+
+/**
+ * Resolve the spec source-path that `runArch()` will load. Mirrors the
+ * candidates list in `run-arch.ts:loadSpecFile()` so the dry-run output
+ * matches what live-mode would actually open.
+ */
+function resolveSpecSourcePath(spec: string): string | null {
+  const baseDir = path.join(REPO_ROOT, 'openapi-examples', spec);
+  for (const c of ['spec.json', 'spec.yaml', 'spec.yml']) {
+    const p = path.join(baseDir, c);
+    if (fs.existsSync(p)) return p;
+  }
+  return null;
+}
+
+/**
+ * Predicted output filename for a CLI `run-arch.ts` invocation. The eval
+ * runner does NOT actually write this file (it writes its own aggregated
+ * output to `specs/big-spec-runs/eval/<config>__<timestamp>.json`), but it's
+ * shown in dry-run output for traceability — i.e. "what would `run-arch.ts`
+ * have written if invoked standalone with these args".
+ */
+function predictRunArchOutputPath(arch: Arch, spec: string): string {
+  if (arch === 'two-call') {
+    return path.join(RUNS_DIR, `haiku4-5_x_sonnet4-6__two-call__${spec}.json`);
+  }
+  // bigger-context — model-tag depends on the actual returned model, not
+  // knowable up front. Show a placeholder.
+  return path.join(RUNS_DIR, `<model-tag>__${arch}__${spec}.json`);
+}
+
+interface DryRunPlan {
+  spec: string;
+  architecture: Arch;
+  perEndpointModel: string;
+  aggregatorModel: string;
+  promptVariant: string;
+  specSourcePath: string | null;
+  wouldWriteRunnerOutputTo: string;
+  predictedRunArchOutputPath: string;
+}
+
+function buildDryRunPlan(
+  config: EvalConfig,
+  spec: string,
+  wouldWriteRunnerOutputTo: string
+): DryRunPlan {
+  return {
+    spec,
+    architecture: config.architecture as Arch,
+    perEndpointModel: config.per_endpoint_model,
+    aggregatorModel: config.aggregator_model,
+    promptVariant: config.prompt_variant,
+    specSourcePath: resolveSpecSourcePath(spec),
+    wouldWriteRunnerOutputTo,
+    predictedRunArchOutputPath: predictRunArchOutputPath(
+      config.architecture as Arch,
+      spec
+    ),
+  };
+}
+
+function printDryRunPlan(config: EvalConfig, plans: DryRunPlan[]): void {
+  // eslint-disable-next-line no-console
+  console.log('\n=== Eval Runner DRY-RUN ===');
+  // eslint-disable-next-line no-console
+  console.log(`config:        ${config.name}`);
+  // eslint-disable-next-line no-console
+  console.log(`description:   ${config.description.trim() || '(none)'}`);
+  // eslint-disable-next-line no-console
+  console.log(`architecture:  ${config.architecture}`);
+  // eslint-disable-next-line no-console
+  console.log(`per_endpoint:  ${config.per_endpoint_model}`);
+  // eslint-disable-next-line no-console
+  console.log(`aggregator:    ${config.aggregator_model}`);
+  // eslint-disable-next-line no-console
+  console.log(`prompt:        ${config.prompt_variant}`);
+  // eslint-disable-next-line no-console
+  console.log(`pre_pass:      ${config.pre_pass ?? '(none)'}`);
+  // eslint-disable-next-line no-console
+  console.log(`post_pass:     ${config.post_pass ?? '(none)'}`);
+  // eslint-disable-next-line no-console
+  console.log(`prompt_cache:  ${config.prompt_caching}`);
+  // eslint-disable-next-line no-console
+  console.log(`runs:          ${config.runs}`);
+  // eslint-disable-next-line no-console
+  console.log(`specs:         [${config.specs.join(', ')}]`);
+  // eslint-disable-next-line no-console
+  console.log('');
+  for (const p of plans) {
+    // eslint-disable-next-line no-console
+    console.log(`  spec: ${p.spec}`);
+    // eslint-disable-next-line no-console
+    console.log(`    spec source:                 ${p.specSourcePath ?? '(NOT FOUND under openapi-examples/)'}`);
+    // eslint-disable-next-line no-console
+    console.log(`    runner-output (would skip):  ${path.relative(REPO_ROOT, p.wouldWriteRunnerOutputTo)}`);
+    // eslint-disable-next-line no-console
+    console.log(`    run-arch CLI would write to: ${path.relative(REPO_ROOT, p.predictedRunArchOutputPath)}`);
+  }
+  // eslint-disable-next-line no-console
+  console.log('');
+  // eslint-disable-next-line no-console
+  console.log('dry_run=true → exiting WITHOUT calling LLM and WITHOUT writing runner output JSON.');
+}
+
+/**
+ * Verify env-vars required for the live (non-dry) path. Two-call needs both
+ * OpenRouter (phase 1) and Anthropic-direct (phase 2); bigger-context needs
+ * just OpenRouter (provider routing is currently always OpenRouter from the
+ * eval-runner; bigger-context with --provider=anthropic-direct is CLI-only).
+ */
+function preflightLiveEnvVars(config: EvalConfig): void {
+  const missing: string[] = [];
+  if (!process.env.OPENROUTER_API_KEY) missing.push('OPENROUTER_API_KEY');
+  if (config.architecture === 'two-call' && !process.env.ANTHROPIC_API_KEY) {
+    missing.push('ANTHROPIC_API_KEY');
+  }
+  if (missing.length > 0) {
+    fail(
+      `Live-mode (no replay_from for at least one spec) requires env-vars: ${missing.join(', ')}.\n` +
+        `Set them in scripts/spike/.env or your shell, OR set "dry_run: true" in the config to ` +
+        `skip the LLM call.`
+    );
+  }
 }
 
 // =============================================================================
@@ -502,8 +718,55 @@ async function main(): Promise<void> {
   const startedAt = new Date(startMs).toISOString();
 
   process.stderr.write(
-    `[runner] config="${config.name}" runs=${config.runs} specs=[${config.specs.join(', ')}] replayFlag=${replayFlag}\n`
+    `[runner] config="${config.name}" runs=${config.runs} specs=[${config.specs.join(', ')}] ` +
+      `replayFlag=${replayFlag} dry_run=${config.dry_run}\n`
   );
+
+  // Determine which specs would go through live-mode (no replay_from entry).
+  const liveSpecs = config.specs.filter((s) => !(s in config.replay_from));
+
+  // -------------------------------------------------------------------------
+  // DRY-RUN: resolve call-args, print the plan, exit 0 — no LLM calls, no
+  // runner-output JSON written.
+  // -------------------------------------------------------------------------
+  if (config.dry_run) {
+    const stamp = timestampForFilename(new Date(startMs));
+    const wouldWriteRunnerOutputTo = path.join(
+      EVAL_OUT_DIR,
+      `${config.name}__${stamp}.json`
+    );
+    const plans = liveSpecs.map((spec) =>
+      buildDryRunPlan(config, spec, wouldWriteRunnerOutputTo)
+    );
+    printDryRunPlan(config, plans);
+
+    // Surface any spec where the source file isn't found — operator should
+    // know before flipping dry_run to false and burning real credits.
+    const missing = plans.filter((p) => p.specSourcePath === null);
+    if (missing.length > 0) {
+      process.stderr.write(
+        `\n[runner] WARN: ${missing.length} spec(s) have no source file under openapi-examples/: ` +
+          `${missing.map((m) => m.spec).join(', ')}\n`
+      );
+    }
+
+    if (Object.keys(config.replay_from).length > 0) {
+      // eslint-disable-next-line no-console
+      console.log(
+        `\nNote: ${Object.keys(config.replay_from).length} spec(s) have replay_from entries; ` +
+          `dry-run does not load these either (no I/O at all in dry-run mode).`
+      );
+    }
+    return;
+  }
+
+  // -------------------------------------------------------------------------
+  // LIVE / REPLAY path. If any spec lacks replay_from, preflight env-vars
+  // before doing any work.
+  // -------------------------------------------------------------------------
+  if (liveSpecs.length > 0) {
+    preflightLiveEnvVars(config);
+  }
 
   const perSpec: Record<string, AggregatedRun> = {};
 
@@ -520,7 +783,7 @@ async function main(): Promise<void> {
         const absReplayPath = resolveReplayPath(replayMapEntry);
         metrics = loadRecordedRun(absReplayPath, i);
       } else {
-        // Live mode — currently throws "Phase B work".
+        // Live mode — calls runArch from ../run-arch.ts.
         metrics = await runLive(config, spec, i);
       }
       process.stderr.write(

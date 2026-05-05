@@ -1,0 +1,9 @@
+{
+  "spec": "test-malformed",
+  "specSource": "test-fixtures/malformed.json",
+  "endpointCount": -1,
+  "authoringDate": "2026-05-05",
+  "author": "Test Fixture",
+  "notes": "Intentionally malformed: endpointCount must be nonnegative; findings array missing.",
+  "findings": []
+}

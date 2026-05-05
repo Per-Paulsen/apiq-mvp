@@ -34,11 +34,27 @@ export const FindingClassificationSchema = z.object({
   isKnowledgeBackedGap: z.boolean(),
 
   /**
-   * Deterministically detectable via static spec walk + simple conditions.
-   * No LLM required. Stage 4 Deterministic Layer scope. Used to compute
-   * "LLM-only coverage" by removing these from the LLM-target set.
+   * Detectable via PURE spec-walk + standard / domain-agnostic rules — i.e.
+   * Spectral-OAS3-defaults class. Examples: server URL trailing slash,
+   * missing operationId, type/format inconsistency, path-template-parameter
+   * mismatch. NO domain knowledge required.
+   *
+   * This is the "pure linter" Stage-4 layer.
    */
-  isDeterministicallyDetectable: z.boolean(),
+  isPureSpectralDetectable: z.boolean(),
+
+  /**
+   * Detectable via spec-walk + HARDCODED domain knowledge — e.g. "if spec is
+   * a Stripe API → expect Idempotency-Key on POST/PUT/PATCH", "if spec is a
+   * paginated list endpoint → expect cursor-based pagination convention".
+   * Pattern is structurally walkable, but the pattern-LIBRARY is API-family
+   * specific and non-trivial to maintain.
+   *
+   * This is the "domain-knowledge-augmented detector" Stage-4 layer — a
+   * meaningfully different engineering effort from `isPureSpectralDetectable`.
+   * Foundational decision: do we ship one detector-class or two?
+   */
+  isDomainKnowledgeDetectable: z.boolean(),
 
   /**
    * Keywords for embedding-similarity-search (Day-2 scorer). Used to bridge

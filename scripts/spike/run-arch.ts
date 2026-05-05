@@ -2,12 +2,21 @@
 /**
  * apiq Big-Spec Architecture Spike harness (Epic 09).
  *
- * Usage:
+ * Usage (CLI):
  *   npx tsx run-arch.ts --arch=<bigger-context|chunking|two-call> <spec-name> [--model=<id>]
  *
  * Examples:
  *   npx tsx run-arch.ts --arch=bigger-context stripe-full
  *   npx tsx run-arch.ts --arch=bigger-context pagerduty-full --model=anthropic/claude-sonnet-4.6
+ *
+ * Programmatic API (since Phase-0 Task #12, eval-runner live-mode wiring):
+ *   import { runArch } from './run-arch.js';
+ *   const r = await runArch({ arch: 'two-call', specName: 'stripe-full', ... });
+ *   // returns { kind: 'two-call', result: TwoCallRunResult, coverage } or
+ *   //         { kind: 'bigger-context', result: RunResult }
+ *   // Library callers receive the full result object — no file write, no
+ *   // stdout summary. The CLI `main()` is a thin wrapper that calls runArch()
+ *   // then handles disk + console output.
  *
  * - architecture variant resolves to the dispatcher in this file
  * - spec-name resolves to ../../openapi-examples/<spec-name>/spec.{json,yaml,yml}
@@ -15,7 +24,7 @@
  *   adaptation in this baseline scaffold (chunking and two-call architectures
  *   would each get their own prompts in their own dispatcher files).
  *
- * Output: ../../specs/big-spec-runs/<arch>__<spec-name>.json
+ * Output (CLI only): ../../specs/big-spec-runs/<arch>__<spec-name>.json
  *
  * Cost-discipline: this script is the entry point that actually spends LLM money.
  * Always token-count-precheck a spec first via `tsx token-count-precheck.ts` and
@@ -45,10 +54,10 @@ const REPO_ROOT = path.resolve(SPIKE_DIR, '..', '..');
 const EXAMPLES_DIR = path.join(REPO_ROOT, 'openapi-examples');
 const RUNS_DIR = path.join(REPO_ROOT, 'specs', 'big-spec-runs');
 
-type Arch = 'bigger-context' | 'chunking' | 'two-call';
+export type Arch = 'bigger-context' | 'chunking' | 'two-call';
 const ALL_ARCHS: ReadonlyArray<Arch> = ['bigger-context', 'chunking', 'two-call'];
 
-type Provider = 'openrouter' | 'anthropic-direct';
+export type Provider = 'openrouter' | 'anthropic-direct';
 const ALL_PROVIDERS: ReadonlyArray<Provider> = ['openrouter', 'anthropic-direct'];
 
 // Per-token rates for current OpenRouter long-context models (USD per token).
@@ -80,7 +89,7 @@ interface PerFindingValidation extends PatchValidationResult {
   findingIndex: number;
 }
 
-interface RunResult {
+export interface RunResult {
   arch: Arch;
   specName: string;
   promptVariant: string;
@@ -101,6 +110,45 @@ interface RunResult {
     coverageRate: number | null;
   };
 }
+
+/**
+ * Programmatic args for `runArch()`. Mirrors the CLI flags but as an object so
+ * the eval-runner (and other library callers) can pass through YAML-config-driven
+ * configuration without touching `process.argv` or env-var hacks.
+ *
+ * - `arch: 'two-call' | 'bigger-context'` — `'chunking'` is rejected with the same
+ *   error message as the CLI path.
+ * - `perEndpointModel` — used only for `arch === 'two-call'` (Phase 1 model).
+ *   Falls back to `TWO_CALL_PER_ENDPOINT_MODEL` env then `'anthropic/claude-haiku-4-5'`.
+ * - `aggregatorModel` — for two-call this is Phase 2's model; for bigger-context
+ *   this is the single model. Both default to env-fallbacks if omitted.
+ * - `promptVariant` — passed to `loadPromptModule()` for bigger-context.
+ *   Two-call uses v5-per-endpoint + v5-aggregator; this field is ignored there
+ *   but is recorded in the result for traceability.
+ * - `provider` — only relevant for bigger-context (two-call has hardcoded
+ *   provider routing in two-call-dispatcher.ts: phase 1 = OpenRouter, phase 2 =
+ *   Anthropic-direct).
+ * - `concurrency` — two-call only.
+ */
+export interface RunArchArgs {
+  arch: Arch;
+  specName: string;
+  perEndpointModel?: string;
+  aggregatorModel?: string;
+  promptVariant?: string;
+  provider?: Provider;
+  concurrency?: number;
+}
+
+/**
+ * Unified return shape for `runArch()`. The discriminated union reflects which
+ * dispatcher actually ran. The eval-runner uses `applyCleanRate`, `halluRate`,
+ * `costUSD`, `totalDurationMs`, and `findings` — all present in both branches
+ * (just at different paths).
+ */
+export type RunArchResult =
+  | { kind: 'two-call'; result: TwoCallRunResult; coverage: CoverageResult | null }
+  | { kind: 'bigger-context'; result: RunResult };
 
 function fail(msg: string): never {
   // eslint-disable-next-line no-console
@@ -296,28 +344,40 @@ function ensureDir(p: string): void {
   fs.mkdirSync(p, { recursive: true });
 }
 
-async function main(): Promise<void> {
-  const { arch, specName, modelOverride, promptVariant, provider } = parseArgs();
+/**
+ * Programmatic entry point for the architecture dispatcher. Equivalent to the
+ * CLI flow but returns the result object instead of writing to disk + stdout.
+ *
+ * Use this from library callers (e.g. `eval/runner.ts`); use the CLI `main()`
+ * for ad-hoc runs from the shell.
+ */
+export async function runArch(args: RunArchArgs): Promise<RunArchResult> {
+  const { arch, specName, promptVariant = 'v4', provider = 'openrouter' } = args;
 
   if (arch === 'chunking') {
-    fail(
-      `Architecture "chunking" not implemented — superseded by --arch=two-call which is the ` +
+    throw new Error(
+      `Architecture "chunking" not implemented — superseded by arch="two-call" which is the ` +
         `better-designed multi-call architecture for big specs (PRD §4 Architecture (C)).`
     );
   }
 
   if (arch === 'two-call') {
-    // Architecture (C) Two-Call: separate dispatcher; doesn't use prompts/v4.ts.
     const { specJson } = loadSpecFile(specName);
     process.stderr.write(`[run-arch] dereferencing ${specName} ...\n`);
     const derefSpec = await dereferenceSpec(specJson);
     const cycleStripped = cycleStripSpec(derefSpec) as object;
 
-    const perEndpointModel = process.env.TWO_CALL_PER_ENDPOINT_MODEL || 'anthropic/claude-haiku-4-5';
-    const aggregatorModel = modelOverride || process.env.TWO_CALL_AGGREGATOR_MODEL || 'anthropic/claude-sonnet-4.6';
-    const concurrency = process.env.TWO_CALL_CONCURRENCY
-      ? parseInt(process.env.TWO_CALL_CONCURRENCY, 10)
-      : 10;
+    const perEndpointModel =
+      args.perEndpointModel ||
+      process.env.TWO_CALL_PER_ENDPOINT_MODEL ||
+      'anthropic/claude-haiku-4-5';
+    const aggregatorModel =
+      args.aggregatorModel ||
+      process.env.TWO_CALL_AGGREGATOR_MODEL ||
+      'anthropic/claude-sonnet-4.6';
+    const concurrency =
+      args.concurrency ??
+      (process.env.TWO_CALL_CONCURRENCY ? parseInt(process.env.TWO_CALL_CONCURRENCY, 10) : 10);
 
     process.stderr.write(
       `[run-arch] arch=two-call spec=${specName} perEndpoint=${perEndpointModel} aggregator=${aggregatorModel} concurrency=${concurrency}\n`
@@ -344,50 +404,21 @@ async function main(): Promise<void> {
       }
     }
 
-    ensureDir(RUNS_DIR);
-    const modelTag = `haiku4-5_x_sonnet4-6`;
-    const outPath = path.join(RUNS_DIR, `${modelTag}__two-call__${specName}.json`);
-    const output = { ...result, coverage };
-    fs.writeFileSync(outPath, JSON.stringify(output, null, 2), 'utf8');
-
-    // Stdout summary
-    // eslint-disable-next-line no-console
-    console.log(`arch:           two-call`);
-    // eslint-disable-next-line no-console
-    console.log(`spec:           ${result.specName}`);
-    // eslint-disable-next-line no-console
-    console.log(`per-endpoint:   ${result.perEndpointModel}`);
-    // eslint-disable-next-line no-console
-    console.log(`aggregator:     ${result.aggregatorModel}`);
-    // eslint-disable-next-line no-console
-    console.log(`phase1:         ${result.phase1.slicesOk}/${result.phase1.slicesTotal} ok, $${result.phase1.costUSD.toFixed(4)}`);
-    // eslint-disable-next-line no-console
-    console.log(`phase2:         ${result.specLevelFindings.length} spec-level findings, $${result.phase2.costUSD.toFixed(4)}`);
-    // eslint-disable-next-line no-console
-    console.log(`total findings: ${result.summary.totalFindings} (per-endpoint ${result.summary.perEndpointCount} + spec-level ${result.summary.specLevelCount}, after dedup)`);
-    // eslint-disable-next-line no-console
-    console.log(`apply-clean:    ${(result.summary.applyCleanRate * 100).toFixed(1)}%`);
-    // eslint-disable-next-line no-console
-    console.log(`hallucinated:   ${result.summary.hallucinatedCount} (${(result.summary.hallucinatedRate * 100).toFixed(1)}%)`);
-    if (coverage) {
-      // eslint-disable-next-line no-console
-      console.log(`coverage:       ${coverage.coveredCount}/${coverage.totalCount} (${(coverage.coverageRate * 100).toFixed(1)}%)`);
-    }
-    // eslint-disable-next-line no-console
-    console.log(`costUSD:        $${result.costUSD.toFixed(4)}`);
-    // eslint-disable-next-line no-console
-    console.log(`durationMs:     ${result.totalDurationMs}`);
-    // eslint-disable-next-line no-console
-    console.log(`\nWritten: ${path.relative(REPO_ROOT, outPath)}`);
-    return;
+    return { kind: 'two-call', result, coverage };
   }
 
+  // Architecture (A) Bigger-Context.
   const promptMod = await loadPromptModule(promptVariant);
   const { specJson } = loadSpecFile(specName);
 
   process.stderr.write(`[run-arch] dereferencing ${specName} ...\n`);
   const derefSpec = await dereferenceSpec(specJson);
   const specForAnalysis = cycleStripSpec(derefSpec) as object;
+
+  // For bigger-context, `aggregatorModel` is the (single) model used for the
+  // call. Falls back to env-vars / built-in default inside runBiggerContext via
+  // OPENROUTER_MODEL when no override is set.
+  const modelOverride = args.aggregatorModel ?? null;
 
   const startedAt = new Date().toISOString();
   process.stderr.write(
@@ -444,10 +475,67 @@ async function main(): Promise<void> {
     summary,
   };
 
+  return { kind: 'bigger-context', result };
+}
+
+async function main(): Promise<void> {
+  const { arch, specName, modelOverride, promptVariant, provider } = parseArgs();
+
+  const archResult = await runArch({
+    arch,
+    specName,
+    promptVariant,
+    provider,
+    // For two-call CLI, --model targets the aggregator. Phase-1 model is set
+    // via TWO_CALL_PER_ENDPOINT_MODEL env or default.
+    aggregatorModel: modelOverride ?? undefined,
+  });
+
   ensureDir(RUNS_DIR);
+
+  if (archResult.kind === 'two-call') {
+    const { result, coverage } = archResult;
+    const modelTag = `haiku4-5_x_sonnet4-6`;
+    const outPath = path.join(RUNS_DIR, `${modelTag}__two-call__${specName}.json`);
+    const output = { ...result, coverage };
+    fs.writeFileSync(outPath, JSON.stringify(output, null, 2), 'utf8');
+
+    // Stdout summary
+    // eslint-disable-next-line no-console
+    console.log(`arch:           two-call`);
+    // eslint-disable-next-line no-console
+    console.log(`spec:           ${result.specName}`);
+    // eslint-disable-next-line no-console
+    console.log(`per-endpoint:   ${result.perEndpointModel}`);
+    // eslint-disable-next-line no-console
+    console.log(`aggregator:     ${result.aggregatorModel}`);
+    // eslint-disable-next-line no-console
+    console.log(`phase1:         ${result.phase1.slicesOk}/${result.phase1.slicesTotal} ok, $${result.phase1.costUSD.toFixed(4)}`);
+    // eslint-disable-next-line no-console
+    console.log(`phase2:         ${result.specLevelFindings.length} spec-level findings, $${result.phase2.costUSD.toFixed(4)}`);
+    // eslint-disable-next-line no-console
+    console.log(`total findings: ${result.summary.totalFindings} (per-endpoint ${result.summary.perEndpointCount} + spec-level ${result.summary.specLevelCount}, after dedup)`);
+    // eslint-disable-next-line no-console
+    console.log(`apply-clean:    ${(result.summary.applyCleanRate * 100).toFixed(1)}%`);
+    // eslint-disable-next-line no-console
+    console.log(`hallucinated:   ${result.summary.hallucinatedCount} (${(result.summary.hallucinatedRate * 100).toFixed(1)}%)`);
+    if (coverage) {
+      // eslint-disable-next-line no-console
+      console.log(`coverage:       ${coverage.coveredCount}/${coverage.totalCount} (${(coverage.coverageRate * 100).toFixed(1)}%)`);
+    }
+    // eslint-disable-next-line no-console
+    console.log(`costUSD:        $${result.costUSD.toFixed(4)}`);
+    // eslint-disable-next-line no-console
+    console.log(`durationMs:     ${result.totalDurationMs}`);
+    // eslint-disable-next-line no-console
+    console.log(`\nWritten: ${path.relative(REPO_ROOT, outPath)}`);
+    return;
+  }
+
+  const { result } = archResult;
   // Include a sanitized model identifier in the output filename so different
   // models on the same arch+spec don't overwrite each other.
-  const modelTag = callResult.model.replace(/[^a-zA-Z0-9.-]+/g, '_');
+  const modelTag = result.model.replace(/[^a-zA-Z0-9.-]+/g, '_');
   const outPath = path.join(RUNS_DIR, `${modelTag}__${arch}__${specName}.json`);
   fs.writeFileSync(outPath, JSON.stringify(result, null, 2), 'utf8');
 
@@ -457,31 +545,44 @@ async function main(): Promise<void> {
   // eslint-disable-next-line no-console
   console.log(`spec:           ${specName}`);
   // eslint-disable-next-line no-console
-  console.log(`model:          ${callResult.model}`);
+  console.log(`model:          ${result.model}`);
   // eslint-disable-next-line no-console
-  console.log(`tokensIn:       ${callResult.tokensIn}`);
+  console.log(`tokensIn:       ${result.tokensIn}`);
   // eslint-disable-next-line no-console
-  console.log(`tokensOut:      ${callResult.tokensOut}`);
+  console.log(`tokensOut:      ${result.tokensOut}`);
   // eslint-disable-next-line no-console
   console.log(`costUSD:        $${result.costUSD?.toFixed(4) ?? 'unknown'}`);
   // eslint-disable-next-line no-console
-  console.log(`durationMs:     ${callResult.durationMs}`);
+  console.log(`durationMs:     ${result.durationMs}`);
   // eslint-disable-next-line no-console
-  console.log(`total findings: ${summary.totalFindings}`);
+  console.log(`total findings: ${result.summary.totalFindings}`);
   // eslint-disable-next-line no-console
-  console.log(`apply-clean:    ${(summary.applyCleanRate * 100).toFixed(1)}%`);
+  console.log(`apply-clean:    ${(result.summary.applyCleanRate * 100).toFixed(1)}%`);
   // eslint-disable-next-line no-console
-  console.log(`hallucinated:   ${summary.hallucinatedCount} (${(summary.hallucinatedRate * 100).toFixed(1)}%)`);
-  if (coverage) {
+  console.log(`hallucinated:   ${result.summary.hallucinatedCount} (${(result.summary.hallucinatedRate * 100).toFixed(1)}%)`);
+  if (result.coverage) {
     // eslint-disable-next-line no-console
-    console.log(`coverage:       ${coverage.coveredCount}/${coverage.totalCount} (${(coverage.coverageRate * 100).toFixed(1)}%)`);
+    console.log(`coverage:       ${result.coverage.coveredCount}/${result.coverage.totalCount} (${(result.coverage.coverageRate * 100).toFixed(1)}%)`);
   }
   // eslint-disable-next-line no-console
   console.log(`\nWritten: ${path.relative(REPO_ROOT, outPath)}`);
 }
 
-main().catch((err) => {
-  // eslint-disable-next-line no-console
-  console.error(err instanceof Error ? err.stack ?? err.message : String(err));
-  process.exit(1);
-});
+/**
+ * Run main() only when this file is invoked directly as a script (not when
+ * imported as a library — e.g. by `eval/runner.ts`'s live-mode path).
+ *
+ * On Windows, `process.argv[1]` is a regular path while `import.meta.url` is a
+ * `file://` URL — `pathToFileURL` normalises the comparison.
+ */
+const invokedAsScript =
+  process.argv[1] !== undefined &&
+  import.meta.url === pathToFileURL(process.argv[1]).href;
+
+if (invokedAsScript) {
+  main().catch((err) => {
+    // eslint-disable-next-line no-console
+    console.error(err instanceof Error ? err.stack ?? err.message : String(err));
+    process.exit(1);
+  });
+}

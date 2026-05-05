@@ -49,6 +49,9 @@ export interface Snapshot {
     coverageRate?: number;
     substantiveCoverageRate?: number;
     knowledgeBackedCoverageRate?: number;
+    llmOnlyCoverageRate?: number;
+    pureSpectralCoverageRate?: number;
+    domainKnowledgeCoverageRate?: number;
     repetitionRate?: number;
     uniqueClusters?: number;
   };
@@ -96,6 +99,9 @@ const DEFAULT_TOLERANCES: Record<keyof Snapshot['metrics'], number> = {
   coverageRate: 0.10,
   substantiveCoverageRate: 0.10,
   knowledgeBackedCoverageRate: 0.10,
+  llmOnlyCoverageRate: 0.10,
+  pureSpectralCoverageRate: 0.10,
+  domainKnowledgeCoverageRate: 0.10,
   repetitionRate: 0.10,
   uniqueClusters: 0.10,
 };
@@ -118,6 +124,9 @@ const METRIC_DIRECTIONS: Record<keyof Snapshot['metrics'], Direction> = {
   coverageRate: 'higher-better',
   substantiveCoverageRate: 'higher-better',
   knowledgeBackedCoverageRate: 'higher-better',
+  llmOnlyCoverageRate: 'higher-better',
+  pureSpectralCoverageRate: 'higher-better',
+  domainKnowledgeCoverageRate: 'higher-better',
   repetitionRate: 'lower-better',
   uniqueClusters: 'neutral',
 };
@@ -130,6 +139,9 @@ const METRIC_ORDER: Array<keyof Snapshot['metrics']> = [
   'coverageRate',
   'substantiveCoverageRate',
   'knowledgeBackedCoverageRate',
+  'pureSpectralCoverageRate',
+  'domainKnowledgeCoverageRate',
+  'llmOnlyCoverageRate',
   'applyCleanRate',
   'halluRate',
   'costUSD',
@@ -486,7 +498,7 @@ function metricsFromRunnerOutput(
 
   /** Resolve a scoring metric: prefer `aggregate.<key>` flat or `scored.aggregate.<key>.mean`. */
   const scoreMean = (key: string): number | undefined => {
-    const flat = (a as Record<string, unknown>)[key];
+    const flat = (a as unknown as Record<string, unknown>)[key];
     if (typeof flat === 'number') return flat;
     const scored = entry.scored?.aggregate?.[key];
     if (scored !== undefined) {
@@ -507,6 +519,9 @@ function metricsFromRunnerOutput(
     coverageRate: scoreMean('coverageRate'),
     substantiveCoverageRate: scoreMean('substantiveCoverageRate'),
     knowledgeBackedCoverageRate: scoreMean('knowledgeBackedCoverageRate'),
+    llmOnlyCoverageRate: scoreMean('llmOnlyCoverageRate'),
+    pureSpectralCoverageRate: scoreMean('pureSpectralCoverageRate'),
+    domainKnowledgeCoverageRate: scoreMean('domainKnowledgeCoverageRate'),
     repetitionRate: scoreMean('repetitionRate'),
     uniqueClusters: scoreMean('uniqueClusters'),
   };

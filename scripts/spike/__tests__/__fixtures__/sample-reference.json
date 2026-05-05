@@ -1,0 +1,62 @@
+{
+  "spec": "test-spec",
+  "specSource": "test-fixtures/sample.json",
+  "specCommit": null,
+  "specVersion": "1.0.0",
+  "endpointCount": 5,
+  "pathCount": 3,
+  "openapiVersion": "3.0.0",
+  "componentSchemaCount": 10,
+  "estimatedInputTokens": 5000,
+  "authoringDate": "2026-05-05",
+  "author": "Test Fixture",
+  "humanHardenedDate": null,
+  "humanHardenedBy": null,
+  "notes": "Minimal 2-finding fixture for unit-tests of loadReferenceTarget.",
+  "findings": [
+    {
+      "id": "F1",
+      "title": "Server URL has trailing slash",
+      "category": "design",
+      "severity": "low",
+      "scope": "spec",
+      "affectedEndpoints": [],
+      "patchSummary": "Remove trailing slash from servers[0].url.",
+      "narration": "The server URL ends with a slash; this can cause double-slash URL composition in some clients and breaks RFC 3986 normalization expectations across tooling chains.",
+      "rationale": "OpenAPI 3.0 §4.7.5 says SHOULD NOT include trailing slash.",
+      "patchOps": [
+        { "op": "replace", "path": "/servers/0/url", "value": "https://api.test.com" }
+      ],
+      "classification": {
+        "isLintFlavoured": true,
+        "isKnowledgeBackedGap": false,
+        "isPureSpectralDetectable": true,
+        "isDomainKnowledgeDetectable": false,
+        "narrationKeywords": ["trailing slash", "server url"],
+        "expectedClusterKey": null
+      },
+      "selfReviewNotes": null
+    },
+    {
+      "id": "F2",
+      "title": "Missing 429 response definition",
+      "category": "risk",
+      "severity": "high",
+      "scope": "spec",
+      "affectedEndpoints": [],
+      "patchSummary": "Document a 429 (Too Many Requests) response with Retry-After header.",
+      "narration": "The spec is missing 429 response definitions; clients have no way to detect rate-limiting deterministically and cannot implement backoff against a documented contract.",
+      "rationale": "RFC 6585 §4 defines 429 specifically for rate-limiting communication.",
+      "patchOps": [],
+      "classification": {
+        "isLintFlavoured": false,
+        "isKnowledgeBackedGap": true,
+        "isPureSpectralDetectable": false,
+        "isDomainKnowledgeDetectable": true,
+        "narrationKeywords": ["rate limit", "429", "too many requests", "retry-after"],
+        "expectedClusterKey": "missing 429 response"
+      },
+      "selfReviewNotes": "Cluster-key set: LLMs typically emit one finding per endpoint, so we match a cluster."
+    }
+  ]
+}
