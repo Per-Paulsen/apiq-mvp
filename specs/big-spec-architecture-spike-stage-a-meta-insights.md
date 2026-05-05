@@ -290,3 +290,222 @@ Statt Lens-Klassifikation: Funktional-Klassifikation. Ein API-Linter kann nur:
 **Effort:** ~5-6 Subagents in worktrees parallel, ~30-60 min Wall-Clock + Konsolidierung. Total: ~1-1.5h.
 
 **ROI:** wenn Round-1 bestätigt hat, dass Mining substantielle Lücken aufdeckt — und Round-1 nur "Spectral-Universum" + "Linter-Defaults" + "Style-Guides" abgedeckt hat — dann sind die Lens-1/2/3 Bereiche (Security / Standards / Evolution) wahrscheinlich noch substantieller weil dort die Coverage in Round-1 thin war.
+
+---
+
+## Mining-Round-2 Validation (2026-05-05)
+
+> **Status update.** Round-2 Phases A–F completed 2026-05-05. The 5-lens framework expanded to **10 lenses**; the `Stakeholder × Lifecycle × Defect-Class` cube was validated; the 8 functional detector classes survived with **3 new architectural elements** identified.
+> Append-only update; existing content above unchanged.
+
+### Lens-Framework Final: 10 Lenses
+
+| # | Lens | Defining-question | Primary Stakeholder | Primary Lifecycle Phase | Primary Defect-Class | Sources confirming | apiq-Differentiator? |
+|---|---|---|---|---|---|---|---|
+| 1 | Threat-Modeling | "How can an attacker exploit?" | Security/Compliance | Runtime — edge | Norm + Over-specification | OWASP API1..10, 42Crunch, RFC 9700, GitHub/Stripe webhook docs | N (Vacuum/Redocly cover; apiq must match) |
+| 2 | Standards-Compliance | "Does this spec follow HTTP/IETF/IANA standards?" | Multiple (clients + codegen + agents) | Runtime — happy + Build | Norm | RFC 9110/9111/9112 + 7807/9457 + 6838 + 6648 + 22 RFCs | N (mature linters cover most; apiq must match RFC 9457 + RFC 9700) |
+| 3 | Evolution-Friction | "Can this API evolve without breaking changes?" | Spec-author (future) + clients | Evolution-time | Over-specification + Incomplete | OASDIFF + OPTIC + Stripe + GitHub + MS-AZ + Zalando | **Y** — single-spec breaking-prediction not in mature linters |
+| 4 | Client-Friction | "How painful is this spec for SDK-users?" | Client-dev | Runtime — happy + Build | Ergonomic | openapi-generator + openapi-typescript + ReDoc + Swagger-UI + Speakeasy + Postman 2025 | Partial (Vacuum/Redocly cover ergonomics; cross-op clustering + per-target metadata = apiq-differentiator) |
+| 5 | Style-Coherence | "Is the style consistent within the spec?" | Client-dev + codegen | Authoring + Documentation | Semantic + Ergonomic | JSON:API + HAL + Siren + OData + Google AIPs + Microsoft Guidelines + Fielding + DOLAR | **Y** — style-classifier-architecture not in mature linters |
+| 6 | Privacy / Data-Classification (NEW Round-2 Phase A) | "Does the spec leak PII / regulatory-classified data?" | Compliance + end-user | Runtime — edge | Privacy-leakage + Norm (GDPR) | OWASP API3 + OAI #2190 + Cloudflare PII-redaction + TruffleHog/Gitleaks | **Y** — name-pattern-driven PII-detection not in mature linters |
+| 7 | Operations / HTTP-protocol-Performance (NEW Round-2 Phase B) | "Does the spec enable cache/conditional/rate-limit?" | SRE + clients | Runtime — at scale | Incomplete | RFC 7232/9110 + 7234/9111 + 7233 + 6585 + draft-ratelimit | N (mature linters cover individually; apiq's deep-mechanics-pairings = apiq-differentiator) |
+| 8 | Internal-Consistency (NEW Round-2 Phase B) | "Are cross-op invariants preserved within the spec?" | Spec-author + clients | Authoring + Validation | Semantic | RFC 9457 §4 + apiq existing G-SP-5 / M7 / O3 / D1 | **Y** — cross-response invariants (RFC2-5 type-URI-uniqueness, hash-duplicate, response-shape) = apiq-USP cluster |
+| 9 | AI-Agent-Consumability (NEW Round-2 Phase D — apiq-strategic-fit) | "Can an AI agent compose multi-call sequences from this spec?" | AI-agent + tool-call platform | Runtime — happy | Ergonomic + Incomplete | Postman 2025 + Speakeasy + Fern + OpenAI function-calling + MCP + Arazzo + LLM-friendly-API agentic-patterns | **Y** — strategic-fit; emerging area; not in mature linters yet |
+| 10 | Operational-Metadata-Coverage (NEW Round-2 Phase F) | "Does the spec carry machine-readable SLA / quota / deprecation metadata?" | SRE + clients | Runtime — at scale | Operational-metadata-missing + Incomplete | MAP (Zimmermann) + SLA4OAI + TM Forum + OpenAI/Stripe/GitHub rate-limit conventions + FAPI-deprecation | **Y** — Lens-10 + positive-marker `info`-tier are apiq-novel |
+
+**4 of 10 lenses are explicit apiq-differentiators**: Lens 3 (Evolution single-spec prediction), Lens 5 (Style-classifier), Lens 8 (Internal-Consistency cross-response), Lens 9 (AI-Agent-Consumability). Plus partial in Lens 4 (cross-op clustering + per-target). Plus emerging Lens 6 (PII-detection) + Lens 10 (operational-metadata) — these are early-mover-advantage, not architectural moats.
+
+### Stakeholder × Lifecycle × Defect-Class Cube — VALIDATED (Phase F)
+
+The cube proposed in Iteration-1 was speculative; **Round-2 validated it by predicting where the new lenses would land**. Each new Round-2 lens occupies a previously-empty cube-cell:
+
+| New Lens | Empty cube-cell occupied |
+|---|---|
+| Lens 6 (Privacy) | `Compliance × Runtime-edge × Privacy-leakage` (newly-named defect-class) |
+| Lens 9 (AI-Agent) | `AI-agent × Runtime-happy × Ergonomic` (newly-named stakeholder) |
+| Lens 10 (Operational-Metadata) | `SRE × Runtime-at-scale × Operational-metadata-missing` (newly-named defect-class) |
+
+**Refined cube (Round-2 final):**
+
+**Axis 1 — Stakeholders (9 values):** Spec-author / Spec-consumer-human-dev / **AI-agent** (NEW Round-2) / End-user-of-client-app / Operations-SRE / Security-Compliance / Code-generator-tool / Documentation-renderer / Self-API-itself.
+
+**Axis 2 — Lifecycle (9 values):** Authoring-time / Build-time / Validation-time / Deploy-time / Runtime-happy / Runtime-edge / Runtime-at-scale / Evolution-time / Documentation-time.
+
+**Axis 3 — Defect-Classes (8 values):** Syntax / Semantic / Norm / Ergonomic / Incomplete / Over-specification / **Privacy-leakage** (NEW Round-2 Phase A) / **Operational-metadata-missing** (NEW Round-2 Phase F).
+
+**Coverage analysis** (from Phase F Stakeholder × Lifecycle × Defect-Class table):
+- Every existing apiq-rule maps to ≥1 cube-cell.
+- Empty cell remaining: `Documentation-time × Documentation-renderer × Ergonomic` — apiq has thin coverage (description-substantive, no-html-markup); not strong enough for a Lens 11.
+- All other previously-empty cells are now filled by Lenses 6/9/10.
+
+**The cube is the OPERATIONAL meta-axis.** Use cases:
+1. Severity-justification: `Security × Runtime-edge × Norm-violation` ⇒ always warn-or-error.
+2. Output-grouping: lifecycle-axis maps to "when does this matter?" (CI-blocking / runtime-bites / next-version-bites).
+3. Coverage-gap detection: empty cells = where to mine next.
+4. Industry-canonical alignment: aligns with ISO/IEC 25010 (see secondary axis below).
+
+### ISO/IEC 25010 — Secondary Axis (NEW Round-2)
+
+Mapping 10 lenses → 9 ISO product-quality-characteristics (from Phase F):
+
+| ISO Characteristic | apiq Lens(es) |
+|---|---|
+| Functional Suitability | Lens 8 (Internal-Consistency) |
+| Performance Efficiency | Lens 7 (Operations) |
+| Compatibility | Lens 2 (Standards), Lens 5 (Style), Lens 9 (AI-Agent) |
+| Usability | Lens 4 (Client-Friction) primary; Lens 5 (Style) secondary |
+| Reliability | Lens 7 (Operations), Lens 10 (Operational-Metadata SLAs) |
+| Security | Lens 1 (Threat), Lens 6 (Privacy) |
+| Maintainability | Lens 3 (Evolution) primary; Lens 8 (Internal-Consistency) secondary |
+| Portability | Lens 2 (Standards) partial |
+| Safety (2023 added) | Out-of-scope at spec level |
+
+**Coverage is essentially complete in both directions.** Every ISO characteristic maps to ≥1 lens; every lens maps to ≥1 ISO characteristic.
+
+**Use cases for ISO secondary axis:**
+- **Severity-justification**: industry-canonical importance per characteristic.
+- **Marketing**: "apiq covers ISO/IEC 25010 §X" is publishable.
+- **Springer Delphi alignment**: arXiv 2108.00033 explicitly maps REST design rules → ISO/IEC 25010; ready-made bridge to academic-canonical rule-importance ranking.
+- **Recommendation**: every rule's metadata carries `iso25010` tag in `{functional-suitability, performance-efficiency, compatibility, usability, reliability, security, maintainability, portability}`.
+
+### 8 Functional Rule-Classes + 3 Architectural Elements (Phase F refactor)
+
+**Original 8 functional classes survive at the rule-level**:
+1. Spec-Schema Validators (Spectral oas3 / AJV / A1-A14)
+2. Anti-Pattern Detectors (custom-rules / walkers)
+3. Missing-Best-Practice Detectors (examples-coverage / tag-required / Lens-10 SLA)
+4. Internal-Inconsistency Detectors (hash-duplicates / pagination-walker / cross-op)
+5. Standards-Conformance Detectors (RFC 7807 problem-json / IANA media-type / FAPI scheme)
+6. Consumer-Friction Detectors (casing-mix-walker / bare-array / Lens-9 AI-friendly)
+7. Evolutionary-Friction Detectors (additionalProperties / oneOf-discriminator / required-stability)
+8. Security-Risk Detectors (OWASP / mass-assignment / token-in-URL / PII-leakage)
+
+**3 NEW architectural elements above the rule-level** (made explicit by Phase F; were implicit in apiq):
+
+#### Architectural Element A — **Classifiers**
+First-classify-then-conditionally-fire. Examples:
+- **Style-classifier** (Phase E) — `{RPC, REST-L2, REST-L3, JSON:API, HAL, Siren, OData, AIP, Custom, Mixed}` → conditionally fires SCF-1..17.
+- **JSON-Schema-draft-version-detector** (Phase B) — `{Draft-04, Draft-06, Draft-07, 2019-09, 2020-12}` → conditionally fires draft-specific rules (RFC2-84..89).
+- **OAuth2-flow-classifier** (Phase B) — classify flow-types declared, then run flow-conditional rules (RFC2-60..65).
+- **Media-type-IANA-classifier** (Phase B) — classify by IANA-registry-presence + structured-suffix.
+
+These are **meta-detectors** that gate other detectors. New shape; doesn't fit the 8 classes.
+
+#### Architectural Element B — **Statistical Aggregators**
+The 12 walkers compute spec-wide statistics first, then flag outliers. Different shape from "match-pattern, emit-finding" rules. Already in apiq but not formally separated. Examples: casing-mix-walker (G1/G2), description-coverage-walker (W2), pagination-style-inconsistency-walker (W10), examples-coverage-walker (W4), HTML-prevalence-walker, vendor-extension-overuse-walker.
+
+These emit **fact-class findings** (e.g. "70% snake_case + 30% camelCase = inconsistent"), not pattern-violation findings.
+
+#### Architectural Element C — **Multi-Pattern Deep-Mechanic Modules**
+Round-2 introduced **8 deep-mechanic modules** that span multiple rule-classes:
+1. `secret-scanner.ts` (TruffleHog/Gitleaks regex; Lens-1 + Lens-6)
+2. `http-protocol-pairings.ts` (param↔header / status↔header / scheme↔challenge declarative-table; Lens-2 + Lens-7)
+3. `problem-json-validator.ts` (RFC 9457 cross-response invariants incl. USP RFC2-5; Lens-2 + Lens-8)
+4. `oauth2-flow-validator.ts` (RFC 9700 BCP-240 wrapper; Lens-1 + Lens-2)
+5. `media-type-iana-validator.ts` (RFC 6838 + IANA registry snapshot; Lens-2)
+6. `json-schema-draft-version-detector.ts` (extends existing X1-X5; Lens-2 + Lens-3)
+7. `style-classifier.ts` + `per-style-coherence-checker.ts` (Phase E architecture; Lens-5)
+8. `webhook-signature-detector.ts` (TM-A50 dedicated; Lens-1 + Lens-2)
+
+Each is a **sub-system** of multiple detectors. Treating as monolithic OR as flat-collection-of-single-class-detectors is misleading; treating as **multi-pattern modules with multi-lens output** is correct.
+
+#### Net change vs original 8
+
+| | Before Round-2 | After Round-2 |
+|---|---|---|
+| Rule-level classes | 8 | 8 (unchanged) |
+| Architectural elements above rule-level | 0 (implicit) | 3 (explicit) |
+| Implementation-architecture: codebase directory | Flat `scripts/spike/deterministic/` | **Possible refactor target post-spike-lock**: `classifiers/` + `aggregators/` + `modules/` + `rules/` |
+
+### Severity-Schema Final (NEW Round-2)
+
+Definitive doc with all extensions surfaced across Round-2:
+
+```yaml
+severity:
+  enum: [error, warn, hint, info]    # info = NEW Round-2 (Phase F positive-markers like SLA4OAI-presence)
+direction:
+  enum: [tighten, loosen, drift]     # NEW Round-2 (Phase C); applies primarily to Lens-3
+lens:
+  type: array
+  items: {enum: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}    # NEW Round-2: 10-lens framework; multi-tag allowed
+  minItems: 1
+source-type:
+  enum: [rfc, bcp, iso-25010, iana-registry, vendor, owasp-cheat, codegen-issue, paper, style-guide, draft-ietf]
+source-id:
+  type: string                       # e.g. "rfc-9700-bcp-240", "rfc-9110-section-15.5.6", "iso-25010-2023"
+source-verbatim:
+  type: string                       # NEW Round-2 (Source-Quality-Fix): the verbatim RFC-2119 wording
+source-verified-at:
+  type: string                       # NEW Round-2: ISO-8601 timestamp + URL of last gh-api-raw verification
+codegen-targets:                     # NEW Round-2 (Phase D)
+  type: array
+  items: {enum: ['*', 'java', 'go', 'python', 'typescript', 'rust', 'csharp', 'kotlin']}
+  default: ['*']
+iso25010:                            # NEW Round-2 (Phase F)
+  enum: [functional-suitability, performance-efficiency, compatibility, usability, reliability, security, maintainability, portability]
+stakeholder:                         # NEW Round-2 (Phase F validated)
+  enum: [spec-author, human-client-dev, ai-agent, end-user, sre, security-compliance, codegen-tool, doc-renderer, self-api]
+lifecycle:                           # NEW Round-2 (Phase F validated)
+  enum: [authoring, build, validation, deploy, runtime-happy, runtime-edge, runtime-at-scale, evolution, documentation]
+defect-class:                        # NEW Round-2 (Phase F validated)
+  enum: [syntax, semantic, norm, ergonomic, incomplete, over-specification, privacy-leakage, operational-metadata-missing]
+```
+
+### Convergence Signal
+
+Marginal-yield curve across rounds:
+- **Round-1**: 5 lenses established (~80 patterns).
+- **Round-2 Phases A-E**: +4 lenses (6, 7, 8, 9), ~340 patterns raw → ~270 dedup'd.
+- **Round-2 Phase F**: +1 lens (10), +20 patterns.
+
+**Diminishing-yield curve confirmed.** Each round adds **fewer** lenses than the last (Round-1: 5; Round-2-AE: 4; Round-2-F: 1). Pattern-mining declared **converged at 10 lenses**. Further mining-rounds would yield single-digit patterns each.
+
+**Implication**: post-spike-lock, scheduled re-mining quarterly (openapi-generator issues + RFC publishing-status) is sufficient — no need for a Round-3.
+
+### Open Questions Updated (Round-2)
+
+Re-evaluating the 6 original open questions from Iteration-1:
+
+1. **Q1: Stehen die 5 Lenses unabhängig oder überlappen sie?** — **RESOLVED Round-2.** Heavy overlap confirmed (~30 of 54 TM-A* are cross-Lens; ~60% of EV-* are cross-Lens; almost all SC-* are cross-Lens with Lens-4). Multi-Lens-Tags is required not optional. All Round-2 patterns carry multi-lens.
+
+2. **Q2: Ist die `Stakeholder × Lifecycle × Defect-Class`-Klassifikation operativ-nützlich?** — **RESOLVED Round-2.** Validated by Phase F: the cube *predicted* the new lenses (Lens 9 = machine-stakeholder-cell; Lens 10 = runtime-at-scale-operational-metadata; Lens 6 = privacy-leakage). Cube promoted from "proposal" to "adopted operational meta-axis". Each new defect-class (privacy-leakage, operational-metadata-missing) was added to fill empty cells.
+
+3. **Q3: Wo enden "deterministisch detektierbar"-Patterns vs "LLM-only"?** — **PARTIALLY RESOLVED Round-2.** Each phase made the boundary explicit per-pattern. Boundary stays **fluid**: many heuristics (description-keyword-match, name-pattern-detect) are deterministic-but-low-precision and benefit from LLM Phase B confirmation. Recommendation: each rule carries a `detection-precision` ∈ `{high, medium, low}`. Low-precision rules are off-by-default OR LLM-confirmed.
+
+4. **Q4: Severity-Mapping zu Lens** — **RESOLVED Round-2.** RFC-2119-verbatim mapping is the gold-standard (MUST → error; SHOULD → warn; MAY/RECOMMENDED → hint). For inferred-severity, multi-source-consensus governs (6+ sources → confident severity; 1-2 sources → start as hint, upgrade after orchestrator-pilot). BCP-tightening overrides original-RFC severity (e.g. RFC 9700 BCP-240 makes OAuth2-implicit MUST-NOT, severity-upgrade Y-7 warn→error).
+
+5. **Q5: Gibt es Lens-6/7/8 die wir noch nicht sehen?** — **RESOLVED Round-2.** YES, found 5 more (6, 7, 8, 9, 10). Phase F H1-test argued for "no Lens 11/12 with strong evidence" (sustainability/i18n/domain-specific all fold into existing lenses or are LLM-territory). Mining declared converged.
+
+6. **Q6: Wie strukturieren wir die Brainstorm-Doc nach Round-2?** — **RESOLVED.** Hierarchical structure adopted: brainstorm Round-1 sections (1-19) preserved; Round-2 Master-Konsolidierung appended as `## Mining-Round-2 Master-Konsolidierung (2026-05-05)` with structured Pattern-Inventory-by-Lens tables, cross-lens patterns, out-of-scope/delegated sections, and Putz-Niveau Benchmark.
+
+### NEW Open Questions surfaced by Round-2
+
+7. **Should "info-tier" findings exist alongside error/warn/hint?** Lens-10 positive markers (SLA4OAI presence, capability-discovery endpoint presence) are not really "findings" — they're "observations". **PROPOSED:** add `info` as 4th severity-tier below `hint`. Patch candidate.
+
+8. **Is Lens 10 distinct enough from Lens 7?** Phase F argued yes (HTTP-protocol vs application-operational-metadata are different concerns). **TRACKING**: during Phase B (LLM) testing, validate distinction with users; merge if artificial.
+
+9. **How does apiq handle the Stakeholder axis in output presentation?** A finding tagged `stakeholder: security` should probably surface differently than `stakeholder: doc-renderer`. **TRACKING**: UI-design follow-up for v1.1.
+
+10. **Is the Springer Delphi 28-high-importance-rules list a hard target for apiq's "best-in-class" bar?** **YES, ADOPTED**: see `rules-brainstorm.md` Putz-Niveau Benchmark (27/28 covered + 1 partial). Reputation-load-bearing claim defensible.
+
+11. **Should DOLAR-pattern-coverage be an explicit benchmark?** **PROPOSED ADOPT**: F-11..F-14 cover the load-bearing DOLAR anti-patterns. "apiq covers the full DOLAR anti-pattern catalog" is a marketing-defensible claim.
+
+12. **Does the 3-architectural-element view (Classifiers / Aggregators / Deep-Mechanic-Modules) need codebase-directory reflection?** Currently flat. **TRACKING**: refactor target post-spike-lock — `classifiers/` + `aggregators/` + `modules/` + `rules/`.
+
+13. **BCP-tracking in rule-metadata** — `source` field SHOULD support BCP-references (`source: rfc-9700-bcp-240` not just `source: rfc-6749`). **ADOPTED** in Severity-Schema Final above.
+
+14. **IANA-registry-snapshot dependency** — apiq ships allowlists for status codes, methods, header field names, link relations, cache directives, media types. Refresh quarterly. **ADOPTED** as recommendation; implementation track in Wave 2.
+
+### Status — Round-2 Validation
+
+- **Authored:** 2026-05-05 evening.
+- **Lens-Framework:** 5 → **10** lenses (5 new Round-2: Privacy, Operations, Internal-Consistency, AI-Agent, Operational-Metadata).
+- **Functional rule-classes:** 8 (unchanged).
+- **Architectural elements above rule-level:** 0 → **3** (Classifiers, Statistical Aggregators, Deep-Mechanic Modules).
+- **Cube validation:** the `Stakeholder × Lifecycle × Defect-Class` axis predicted Round-2 lens-additions; promoted from proposal to adopted operational meta-axis.
+- **Secondary axis:** ISO/IEC 25010 mapping established; serves severity-justification + marketing + Springer-Delphi-bridge.
+- **Severity-Schema:** extended to 4-tier (error/warn/hint/info), direction-modifier (tighten/loosen/drift), multi-lens-tags, source-distinction (incl. BCP-tracking), codegen-targets, ISO/IEC 25010 tag, Stakeholder/Lifecycle/Defect-Class meta-tags, source-verbatim + source-verified-at.
+- **Convergence:** Pattern-mining declared converged at 10 lenses; further rounds expected to yield single-digit-patterns each. Quarterly re-mining recommended (no Round-3 needed pre-launch).
+- **Pattern-inventory:** ~290 take-into-apiq patterns across all 10 lenses (see `rules-brainstorm.md` Mining-Round-2 Master-Konsolidierung section).
+- **Putz-Niveau Benchmark:** apiq covers 27 of 28 Springer-Delphi high-importance rules + 1 partial (single-spec breaking-change prediction; full diff out-of-scope).

@@ -1049,3 +1049,749 @@ Mining-Spectral §"Deep-mechanic patterns (beyond Spectral DSL)" listed 17 DM-* 
 - **Deep-Mechanics tracked:** 17 DM-* patterns mit module-mapping.
 - **Brainstorm-IDs validated:** ~60 cross-source-confirmed.
 - **Implementation:** Wave 2 nach User-Review dieser Konsolidierung. Quelle für Wave-2-Tickets = §1 (P1 cross-source) + §2 single-source nach Priorität.
+
+---
+
+## Mining-Round-2 Master-Konsolidierung (2026-05-05)
+
+> **Zweck.** Mining-Round-2 surfaced ~340 raw patterns across Phases A–F (Threat / Standards / Evolution / Client / Style / Meta). After de-duplication against Round-1 + cross-phase overlap removal, **~290 take-into-apiq patterns** survive. ALL go into Stage A — priority-tagging is implementation-order, not inclusion-filter. Out-of-scope / LLM-only / vendor-specific patterns stay documented in dedicated sections for delegate-traceability.
+>
+> **This section is append-only.** Existing Round-1 content above unchanged.
+
+### Provenance
+
+Mining-Round-2 phases A-F integrated:
+- **Phase A — Threat-Modeling (Lens 1)** → `mining-round2-threat.md`, 54 TM-A* patterns + Lens 6 Privacy proposal.
+- **Phase B — Standards-Compliance (Lens 2)** → `mining-round2-standards.md`, 105 RFC2-* patterns + Lens 7 Operations + Lens 8 Internal-Consistency proposals.
+- **Phase C — Evolution-Friction (Lens 3)** → `mining-round2-evolution.md`, 62 EV-* patterns + breaking-change-class taxonomy A-Q + severity-direction-modifier.
+- **Phase D — Client-Friction (Lens 4)** → `mining-round2-client.md`, 81 CL-* patterns + Lens 9 AI-Agent-Consumability proposal + per-target metadata.
+- **Phase E — Style-Coherence (Lens 5)** → `mining-round2-style.md`, 25 SC-* + 17 SCF-* = 42 patterns + 9-style taxonomy + 2-stage classifier-architecture.
+- **Phase F — Higher Abstraction** → `mining-round2-meta.md`, 20 F-* patterns + Lens 10 Operational-Metadata + meta-classification confirmation + 3 architectural elements.
+
+**Source-Quality-Fix applied** (gh-api-raw verbatim sourcing, see §"Source-Quality-Fix Verbatim Verification" below):
+- JSON:API 1.1 spec (`json-api/json-api` repo, gh-pages branch) — verified verbatim.
+- Google AIPs (`aip-dev/google.aip.dev` repo, master branch) — verified verbatim for AIP-132.
+- RFC 9110 (HTTP Semantics, replaces 7230/7231/7232/7233/7235) via `httpwg/http-core` repo — verbatim verified for 5 critical MUST-headers.
+- RFC 9111 (HTTP Caching, replaces 7234) — repo accessible, sampling-only verified.
+
+WebFetch-denied sources (HAL spec, Siren, OData, OWASP) remain WebSearch-summary-sourced; flagged as "secondary-source — verify at implementation time" in Source-Quality-Fix table.
+
+### Source-Quality-Fix Verbatim Verification
+
+| RFC# / Spec | Section | RFC-2119-Wording-verbatim (gh-api-raw confirmed) | apiq-pattern-impacted |
+|---|---|---|---|
+| **RFC 9110 §15.5.6** (405 Method Not Allowed) | §15.5.6 / §10.2.1 | "the origin server **MUST** generate an Allow header field in a 405 (Method Not Allowed) response containing a list of the target resource's currently supported methods" | RFC2-14 — 405 → Allow header (severity: error confirmed) |
+| **RFC 9110 §11.6.1** (401 Unauthorized) | §11.6.1 | "A server generating a 401 (Unauthorized) response **MUST** send a WWW-Authenticate header field containing at least one challenge" | RFC2-40 + TM-A53 — 401 → WWW-Authenticate (severity: error confirmed; brainstorm C5 severity-upgrade hint→error confirmed) |
+| **RFC 9110 §11.6.4** (407 Proxy Auth Required) | §11.6.4 | "A proxy **MUST** send at least one Proxy-Authenticate header field in each 407 (Proxy Authentication Required) response that it generates" | RFC2-41 — 407 → Proxy-Authenticate (severity: error confirmed) |
+| **RFC 9110 §15.3.7** (206 Partial Content) | §15.3.7 | "the server generating the 206 response **MUST** generate a Content-Range header field" | RFC2-32 — 206 → Content-Range (severity: warn→error candidate) |
+| **RFC 9110 §15.5.16** (426 Upgrade Required) | §15.5.16 | "The server **MUST** send an Upgrade header field in a 426 response to indicate the required protocol(s)" | RFC2-15 — 426 → Upgrade header (severity: error confirmed) |
+| **JSON:API 1.1** (Top-Level Document) | §Document Structure / Top-Level | "The members `data` and `errors` **MUST NOT** coexist in the same document" | SCF-1 — JSON:API top-level data+errors mutually exclusive (severity: warn confirmed) |
+| **JSON:API 1.1** (Media-Type) | §Media-Type Parameters | "The JSON:API media type **MUST NOT** be specified with any media type parameters other than `ext` and `profile`" | SCF-6 — top-level extra-members rejection (severity: warn) |
+| **Google AIP-132** (List request) | §Request message | "The `page_size` and `page_token` fields, which support pagination, **must** be specified on all list request messages" | SCF-14 — AIP-pagination shape (severity: hint when AIP-style detected) |
+| **Google AIP-132** (List request) | §Request message | "A `parent` field **must** be included unless the resource being listed is a top-level resource" | SCF-14 — AIP-parent-field on List (severity: hint when AIP-style detected) |
+| **RFC 6750 §2.3** (Bearer Token in URI) | §2.3 | (Round-1 confirmed) "URI Query Parameter ... is included for completeness, but its use is **NOT RECOMMENDED**" | RFC2-56 / Y-3 — Bearer in URI query forbidden (severity: error) |
+
+**Sources NOT verbatim-verified** (kept as secondary-source — verify at implementation time):
+- RFC 9457 Problem Details (only obsoletion-fact verified; verbatim §3.1/§3.2 wording: secondary)
+- RFC 9700 OAuth 2.0 BCP-240 (2025) — IETF-archive accessible but not gh-mirror; severity-upgrade for Y-7 / F-SP-3 stays based on BCP-fact citation
+- RFC 8725 JWT BCP-225 — secondary
+- RFC 7232 Conditional Requests / RFC 7233 Range / RFC 7234 Caching — superseded by 9110/9111; verify against 9110/9111 verbatim at implementation time
+- RFC 8288 Web Linking — secondary
+- RFC 7240 Prefer header — secondary
+- HAL spec (`stateless.group/hal_specification.html`) — WebSearch-summary; mark SCF-7/8 as "verify at implementation"
+- Siren spec — WebSearch-summary; SCF-9/10 marked
+- OData v4.01 — WebSearch-summary; SCF-11/12 marked
+- OWASP cheat-sheets — WebSearch-summary; TM-A* multi-source consensus mitigates risk
+
+**Methodology recommendation** for v1 implementation: each rule whose severity hinges on RFC-2119-verbatim wording carries a `source-verified-at` timestamp + URL in its metadata. CI re-verifies every 6 months via gh-api-raw against IETF-mirror repos (`httpwg/http-core` for RFC 9110/9111/9112; `martinthomson/I-D` for drafts).
+
+### Stage-A Pattern Inventory by Lens (All Take-Into-apiq)
+
+> **Format.** Each table row: `Pattern-ID | Title | Sources | Multi-Lens-Tags | Severity (verbatim where verified) | Detection | Priority-Tier | Frequency-Estimate | Cost-Tag | Notes`.
+> **Severity column convention:** `MUST` = error; `SHOULD` = warn; `MAY/RECOMMENDED` = hint; `(inferred)` = no RFC-2119 anchor; `(BCP)` indicates BCP-tightened.
+> **Frequency-Estimate** on 4 reference specs (`stripe-full`, `pagerduty-full`, `dnd5eapi`, `github-rest`): `H` = 10+ findings on most specs; `M` = 1-10 on some specs; `L` = rarely fires; `n/a` = wouldn't fire on these 4 but may on others.
+> **Cost-Tag:** `S` = ~30min Spectral DSL rule; `M` = 1-3h Walker or custom-function; `L` = 1-2 days new Module-class.
+> **Priority-Tier:** `P1` = Konkurrenz-Pari (mature linters catch this; apiq-must-too); `P2` = Differentiator (apiq-USP); `P3` = Defense-in-Depth nice-to-have. Implementation-order only — all are implemented.
+
+#### Lens 1 — Threat-Modeling (TM)
+
+| Pattern-ID | Title | Sources | Multi-Lens | Severity | Detection | Priority | Freq | Cost | Notes |
+|---|---|---|---|---|---|---|---|---|---|
+| Y-1 | Numeric IDs in path-params (UUID-format encouraged) | OWASP API1 + multi | TM, Erg | warn (off-by-default) | mech | P2 | M | S | Round-1; Round-2 confirms |
+| Y-2 | API-keys in URL | OWASP API2 | TM | error | mech | P1 | L | S | Round-1; universal |
+| Y-3 | Credentials in URL parameter names | OWASP API2 | TM, Std | error | mech | P1 | L | S | Round-1; multi-confirm |
+| Y-4 | HTTP-Basic Auth (insecure on HTTP) | OWASP + RFC 7617 | TM, Std | error | mech | P1 | L | S | Round-1; verbatim-conditional on non-HTTPS |
+| Y-5 | OAuth2 tokenUrl HTTPS-only | OWASP + RFC 6749 §3.1 | TM, Std | error | mech | P1 | M | S | Round-1; verbatim "MUST utilize TLS" |
+| Y-6 | OAuth2 refreshUrl recommended | RFC 9700 §4.1.5 (BCP) | TM, Evo | warn | mech | P3 | M | S | Severity-upgrade post-BCP-240 |
+| Y-7 | OAuth2 implicit/password forbidden | RFC 9700 §2.1.2 (BCP) | TM, Evo, Std | **error** (BCP) | mech | P1 | M | S | **Severity-upgrade** Round-2: warn→error |
+| Y-8 | JWT bearerFormat → RFC 8725 mention | RFC 8725 §3.1/§3.2 | TM, Std | warn | heuristic | P2 | M | S | Round-2: off-by-default → on-by-default |
+| Y-9 | Auth-schemes outdated (negotiate/OAuth1) | OWASP API2 | TM | warn | mech | P3 | L | S | |
+| Y-10 | additionalProperties:false per-schema | OWASP API3 | TM, Evo | warn | mech | P2 | H | S | |
+| Y-11 | unevaluatedProperties:false (3.1) | OAS 3.1 | TM | warn | mech | P3 | M | S | |
+| Y-12 | Array maxItems required | OWASP API4 | TM, Erg | warn | mech | P2 | H | S | |
+| Y-13 | String maxLength/enum required | OWASP API4 + 42Crunch | TM | warn | mech | P2 | H | S | |
+| Y-14 | Integer min+max required | OWASP API4 | TM | warn | mech | P2 | H | S | |
+| Y-15 | URL-handling-params SSRF flag | OWASP API7 | TM, Std | warn | heuristic | P2 | M | S | |
+| Y-16 | CORS allow-origin declared | OWASP API8 | TM | warn | mech | P3 | L | S | |
+| Y-17 | Server URLs HTTPS-only | OWASP API8 | TM | warn | mech | P1 | H | S | |
+| Y-18 | Sensitive header-names | OWASP API3 | TM | warn | mech | P3 | M | S | |
+| Y-19 | Path no environment-names | OWASP API8 | TM, Evo | warn | mech | P2 | M | S | |
+| Y-20 | Server URL no port (except localhost) | SPS | TM | hint | mech | P3 | L | S | |
+| Y-21 | Property names no programming-keywords | Codegen-multi | TM, Cli | warn | mech-config | P2 | M | M | |
+| Y-22 | Admin-paths distinct security-scheme | OWASP API5 | TM | hint (off-by-default) | graph | P3 | L | M | |
+| Y-23 | Write-ops protected by security | OWASP API2/5 | TM, Std | warn | mech | P1 | H | S | |
+| Y-24 | Read-ops should be security-protected | OWASP API1/5 | TM | hint | mech | P3 | M | S | |
+| Y-25 | Idempotency-Key on POST creates | draft-ietf-httpapi | TM, Std | hint | mech | P3 | L | S | |
+| TM-A1 | Path-params named id/_id/uuid declare format/pattern | OWASP API1 | TM, Erg | warn (SHOULD) | mech | P2 | H | S | Sharper than Y-1 |
+| TM-A2 | Object-id-write-op SHOULD have security | OWASP API1 | TM, Std | warn | mech | P2 | H | S | Refines Y-23 |
+| TM-A3 | 3+ ID-params in one path → BOLA risk | OWASP API1 | TM | hint | mech | P3 | L | M | |
+| TM-A4 | Body has user_id/account_id on non-admin endpoint | OWASP API1 | TM | hint | heuristic | P3 | M | S | |
+| TM-A5 | Bearer+JWT description SHOULD mention RFC 8725 | OWASP JWT + RFC 8725 | TM, Std | warn | heuristic | P2 | M | S | Cross-source-confirm; promote |
+| TM-A6 | OpenIdConnect openIdConnectUrl HTTPS-only | RFC 6749 + APIMatic | TM, Std | error | mech | P1 | L | S | |
+| TM-A7 | OAuth2 authorizationCode SHOULD declare PKCE | RFC 9700 (BCP) | TM, Std | warn (hint→warn post-BCP) | heuristic | P2 | M | S | |
+| TM-A8 | Multiple AND securityRequirements same type | OWASP API2 | TM, Erg | hint | graph | P3 | L | M | |
+| TM-A9 | Login-endpoint password-field + missing rate-limit | OWASP API2 | TM, Erg | warn | heuristic | P2 | L | M | Compound rule |
+| TM-A10 | Tokens (access/refresh/id) in path/query | OWASP API2 + RFC 6750 §2.3 | TM, Std | error | mech | P1 | L | S | |
+| TM-A11 | Privilege-escalation field-names in request | OWASP API3 | TM, Hyg | warn | mech-config | P1 | M | S | apiq-config-driven; high-value |
+| TM-A12 | password/secret request-body SHOULD writeOnly | OAS + OWASP API3 | TM, Std | warn | mech-config | P2 | H | S | |
+| TM-A13 | id/created_at/updated_at response SHOULD readOnly | OAS + OWASP API3 | TM, Std, Erg | warn | mech-config | P2 | H | S | |
+| TM-A14 | Same schema reused req+resp without readOnly/writeOnly | OWASP API3 + 42Crunch | TM, Erg | hint | graph | P2 | M | M | |
+| TM-A15 | PII-named fields in response without format/writeOnly | OWASP API3 + Cloudflare | TM, **Privacy** | warn | mech-config | P1 | H | M | **High-value**; apiq-config-driven; Lens-6 cornerstone |
+| TM-A16 | email property SHOULD declare format:email | OWASP + OAS | TM, Hyg | hint | mech | P3 | H | S | |
+| TM-A17 | additionalProperties:true on request-body | OWASP API3 | TM | warn | graph | P1 | H | S | Sharper than Y-10 |
+| TM-A18 | Recursive schema SHOULD declare max-depth | OWASP API4 + IBM-LI81715 | TM, Erg | warn | graph | P2 | M | M | DoS-class; apiq has cycleStripSpec |
+| TM-A19 | object schema with >50 properties | OWASP API4 + 42Crunch | TM, Erg | hint | mech-stat | P3 | M | M | Walker |
+| TM-A20 | array maxItems > 10000 (defeats purpose) | OWASP API4 | TM | hint | mech | P3 | M | S | |
+| TM-A21 | string maxLength > 1MB (defeats DoS bound) | OWASP API4 | TM | hint | mech | P3 | M | S | |
+| TM-A22 | List-endpoint without limit/per_page param | OWASP API4 + 42Crunch | TM, Erg | warn | heuristic | P1 | M | M | |
+| TM-A23 | Pagination param MUST have maximum | OWASP API4 | TM | error | mech | P1 | M | S | |
+| TM-A24 | File-upload (binary) MUST declare maxLength | OWASP API4 + OAS | TM | error | mech | P1 | L | S | |
+| TM-A25 | Long-running ops timeout / async pattern | OWASP API4 | TM, Erg | hint (off-by-default) | heuristic | P3 | L | M | Vendor-extension territory |
+| TM-A26 | enum array length > 1000 | OWASP API4 + 42Crunch | TM | hint | mech | P3 | L | S | |
+| TM-A27 | Admin paths share security-scheme with public | OWASP API5 | TM | hint | graph | P3 | L | M | |
+| TM-A28 | "admin"/"internal" in description without security | OWASP API5 | TM | warn | heuristic | P2 | M | S | |
+| TM-A29 | GET-only resource without write-ops (review) | OWASP API5 | TM, Erg | hint (informational) | graph | P3 | M | M | |
+| TM-A30 | Non-standard HTTP method without explicit security | OWASP API5 | TM | warn | mech | P3 | L | S | |
+| TM-A31 | Signup-flow without CAPTCHA / rate-limit | OWASP API6 | TM | warn (off-by-default) | heuristic | P3 | L | M | |
+| TM-A32 | Purchase/booking flow MUST have rate-limit headers | OWASP API6 | TM | error | heuristic | P2 | L | M | |
+| TM-A33 | Posting/comment flow SHOULD have rate-limit | OWASP API6 | TM | warn | heuristic | P3 | L | M | |
+| TM-A34 | URL-handling property in body MUST format:uri+pattern | OWASP API7 + SSRF cheat | TM, Std | error | heuristic | P1 | M | S | Extends Y-15 |
+| TM-A35 | URL-handling without scheme-allowlist (^https?) | OWASP API7 | TM | warn | heuristic | P2 | M | S | |
+| TM-A36 | Upstream-URL operation MUST declare 4xx/5xx errors | OWASP API7/10 | TM, Std | warn | graph | P2 | L | M | |
+| TM-A37 | host/hostname/server/origin params flagged for SSRF | OWASP API7 | TM | hint | heuristic | P3 | L | S | |
+| TM-A38 | CORS Allow-Origin: * literal | OWASP API8 + CORS | TM, Std | error | mech | P1 | L | S | |
+| TM-A39 | Allow-Credentials:true + Allow-Origin:* | OWASP CORS | TM, Std | error | graph | P1 | L | S | Mutually-exclusive per CORS-spec |
+| TM-A40 | Origin-reflection without allowlist | OWASP CORS | TM | hint (LLM-borderline) | heuristic | P3 | L | M | |
+| TM-A41 | Browser-API security-headers (HSTS/CSP/etc.) | OWASP HTTP-Headers | TM, Std | hint (off-by-default) | mech-stat | P3 | L | M | Browser-context only |
+| TM-A42 | Error-schema with stack/trace/exception field | OWASP API8 | TM, Hyg | warn | heuristic | P1 | M | S | High-value catch |
+| TM-A43 | TRACE/CONNECT/PROPFIND etc. without security | OWASP API8 | TM | warn | mech | P3 | L | S | |
+| TM-A44 | /debug, /_debug, /test paths in production spec | OWASP API8/9 | TM, Hyg | error | mech | P1 | L | S | |
+| TM-A45 | Multi-version servers without one deprecated | OWASP API9 | TM, Evo | warn | heuristic | P3 | L | M | |
+| TM-A46 | deprecated:true SHOULD have sunset+replacement | OWASP API9 + RFC 8594 | TM, Evo | warn | heuristic | P2 | M | S | |
+| TM-A47 | info.version differs from server URL version-prefix | OWASP API9 | TM, Evo | warn | mech | P2 | M | S | |
+| TM-A48 | info.contact missing in production spec | OWASP API9 | TM, Hyg | warn (production-context) | mech | P3 | H | S | |
+| TM-A49 | Upstream-URL op lacks 502/503/504 declaration | OWASP API10 | TM, Std | hint | graph | P3 | L | M | |
+| TM-A50 | Webhook endpoint MUST declare signature-header | GitHub + Stripe webhook docs | TM, Std | error | mech-config | P1 | M | M | **Highest-value Round-2 catch**; sleeper-killer |
+| TM-A51 | Webhook accepts */* content-type | OWASP API10 + GitHub | TM, Std | warn | mech | P3 | L | S | |
+| TM-A52 | info.description SHOULD have Security section | OWASP REST | TM, Std, Doc | hint | heuristic | P3 | L | M | |
+| TM-A53 | securitySchemes declared, no 401 anywhere | OWASP API2 + RFC 9110 §11.6.1 (verbatim "MUST") | TM, Std | **error** | graph | P1 | L | M | Severity-upgrade |
+| TM-A54 | TLS-version-policy in description | OWASP API8 | TM | hint (LLM-borderline) | heuristic | P3 | L | S | Move to Unsure |
+
+#### Lens 2 — Standards-Compliance (RFC2)
+
+| Pattern-ID | Title | Sources | Multi-Lens | Severity | Detection | Priority | Freq | Cost | Notes |
+|---|---|---|---|---|---|---|---|---|---|
+| RFC2-1 | problem+json schema MUST have type, SHOULD have title/status/detail/instance | RFC 9457 §3.1 | Std, Erg | warn | mech | P1 | M | M | DM-4 module |
+| RFC2-2 | problem-details type MUST be URI (about:blank default) | RFC 9457 §3.1.1 | Std | warn | mech | P2 | M | S | |
+| RFC2-3 | problem-details status MUST match HTTP status | RFC 9457 §3.1.2 (verbatim) | Std, Int-Cons | warn | graph | P2 | L | M | |
+| RFC2-4 | problem-details extensions MUST NOT redefine reserved names | RFC 9457 §3.2/§4.2 | Std | warn | mech | P3 | L | S | |
+| RFC2-5 | problem-class type URI MUST be unique cross-spec | RFC 9457 §4 | Std, Erg | warn | graph | **P1 (USP)** | L | M | **apiq-USP** — no linter ships |
+| RFC2-6 | RFC 7807 → 9457 migration (problem+xml) | RFC 9457 | Std, Evo | hint (informative) | mech | P3 | L | S | |
+| RFC2-7 | HTTP method tokens uppercase | RFC 9110 §4.1 | Std | error | mech | P1 | M | S | spectral:oas covers; verify redundancy |
+| RFC2-8 | GET/HEAD/OPTIONS/TRACE/DELETE SHOULD NOT have body | RFC 9110 §9.3.1 | Std, Erg | warn (DELETE) / error (GET) | mech | P1 | M | S | |
+| RFC2-9 | Safe methods MUST NOT have side effects | RFC 9110 §9.2.1 | Std, TM | (LLM-only) | LLM | — | — | — | OUT — moved to LLM |
+| RFC2-10 | Idempotent methods MUST be idempotent | RFC 9110 §9.2.2 | Std | (LLM-only) | LLM | — | — | — | OUT — moved to LLM |
+| RFC2-11 | Header names canonical Title-Case | RFC 9110 §5.1 | Erg | warn | mech-stat | P2 | H | M | apiq G8 walker |
+| RFC2-12 | Standard headers MUST NOT be redeclared as parameters | RFC 9110 §5 + Microsoft | Std, Erg | warn | mech | P1 | M | S | |
+| RFC2-13 | 1xx response → Upgrade/Connection header | RFC 9110 §6.2 | Std | hint | mech | P3 | L | S | Niche |
+| RFC2-14 | 405 → Allow header REQUIRED | RFC 9110 §15.5.6 (verbatim "MUST") | Std | error | mech | P1 | L | S | http-protocol-pairings module |
+| RFC2-15 | 426 → Upgrade header REQUIRED | RFC 9110 §15.5.16 (verbatim "MUST") | Std | error | mech | P3 | L | S | Niche |
+| RFC2-16 | Status codes MUST be IANA-registered | RFC 9110 + IANA | Std | error | mech | P1 | M | S | |
+| RFC2-17 | 1xx codes MUST NOT be responses-keys | OAS-3 | Std | hint | mech | P3 | L | S | |
+| RFC2-18 | Content-Length SHOULD NOT be declared | RFC 9110 §8.6 | Hyg | hint | mech | P3 | L | S | |
+| RFC2-19 | Date response-header SHOULD NOT be declared | RFC 9110 §6.6.1 | Hyg | hint | mech | P3 | L | S | |
+| RFC2-20 | If-Match → 412 declaration | RFC 9110 §13.1.1 | Std | warn | mech | P2 | L | M | http-protocol-pairings |
+| RFC2-21 | If-None-Match GET → 304 | RFC 9110 §13.1.2 | Std | warn | mech | P2 | L | M | |
+| RFC2-22 | If-None-Match PUT/PATCH/DELETE → 412 | RFC 9110 §13.1.2 | Std | warn | mech | P2 | L | S | |
+| RFC2-23 | If-Modified-Since → 304 | RFC 9110 §13.1.3 | Std | hint | mech | P3 | L | S | |
+| RFC2-24 | If-Unmodified-Since → 412 | RFC 9110 §13.1.4 | Std | warn | mech | P3 | L | S | |
+| RFC2-25 | 304 → ETag/Last-Modified/conditional-param | RFC 9110 §15.4.5 | Std | warn | mech | P2 | L | M | |
+| RFC2-26 | 412 → conditional param | RFC 9110 §15.5.13 | Std | warn | mech | P2 | L | S | |
+| RFC2-27 | ETag value SHOULD use opaque DQUOTE form | RFC 9110 §8.8.3 | Std | hint | mech | P3 | L | S | |
+| RFC2-28 | ETag consistency cross-resource ops | RFC 9110 §8.8.3 | Erg, Int-Cons | hint | graph | P3 | L | M | |
+| RFC2-29 | PUT/PATCH/DELETE on {id} SHOULD support If-Match+ETag | RFC 9110 + Microsoft | Std, Erg | hint | heuristic | P3 | L | M | |
+| RFC2-30 | Range param → 206 declaration | RFC 9110 §14.1 | Std | hint | mech | P3 | L | S | |
+| RFC2-31 | Range → 416 declaration | RFC 9110 §15.5.17 | Std | hint | mech | P3 | L | S | |
+| RFC2-32 | 206 → Content-Range REQUIRED | RFC 9110 §15.3.7 (verbatim "MUST") | Std | error | mech | P2 | L | S | |
+| RFC2-33 | Accept-Ranges value IANA-registered | RFC 9110 §14.3 | Std | hint | mech | P3 | L | S | |
+| RFC2-34 | Heroku-style Range pagination | RFC 9110 + Heroku | Erg | hint | mech | P3 | L | S | |
+| RFC2-35 | Cache-Control directives IANA-registered | RFC 9111 §5.2 | Std | hint | mech | P3 | M | S | |
+| RFC2-36 | Pragma deprecated; SHOULD NOT declare | RFC 9111 §5.4 | Std, Evo | hint | mech | P3 | L | S | |
+| RFC2-37 | Cache-Control + Expires together = smell | RFC 9111 §5.3 | Hyg, Evo | hint | mech | P3 | L | S | |
+| RFC2-38 | Vary header when content-negotiation | RFC 9111 §4.1 | Std, Erg | hint | heuristic | P3 | L | S | |
+| RFC2-39 | 304/200 same ETag-shape | RFC 9111 §4.3.4 | Int-Cons | hint | graph | P3 | L | M | |
+| RFC2-40 | 401 → WWW-Authenticate REQUIRED | RFC 9110 §11.6.1 (verbatim "MUST") | Std, TM | error | mech | P1 | M | S | http-protocol-pairings |
+| RFC2-41 | 407 → Proxy-Authenticate REQUIRED | RFC 9110 §11.6.4 (verbatim "MUST") | Std | error | mech | P3 | L | S | Niche |
+| RFC2-42 | WWW-Authenticate scheme IANA-registered | RFC 9110 + IANA | Std | hint | mech | P3 | L | S | |
+| RFC2-43 | http-basic security-scheme on non-HTTPS | RFC 7617 + 9110 | TM, Std | error | mech | P1 | L | S | covered by Y-4 |
+| RFC2-44 | http-digest auth outdated | RFC 7616 | TM, Evo | hint | mech | P3 | L | S | |
+| RFC2-45 | apiKey in:query flagged | RFC 6750 §2.3 | TM | error | mech | P1 | L | S | covered by Y-2/Y-3 |
+| RFC2-46 | Prefer param → Preference-Applied response | RFC 7240 §3 | Std, Erg | hint | mech | P3 | L | S | |
+| RFC2-47 | Prefer values registered tokens | RFC 7240 §4 + IANA | Std | hint | mech | P3 | L | S | |
+| RFC2-48 | Prefer:respond-async → 202 | RFC 7240 §4.1 | Std | warn | mech | P3 | L | S | |
+| RFC2-49 | Prefer:return=representation | RFC 7240 §4.2 | Std | (LLM-only) | LLM | — | — | — | OUT |
+| RFC2-50 | Custom SFV header example conforms | RFC 9651 §3 | Std | hint | mech | P3 | L | M | |
+| RFC2-51 | New custom headers SHOULD be SFV | RFC 9651 §1.2 | Std, Evo | (LLM-only) | LLM | — | — | — | OUT |
+| RFC2-52 | Link rel-token IANA OR URI | RFC 8288 §2.1 | Std | hint | mech | P3 | L | S | |
+| RFC2-53 | Link rel=next on paginated truncated | RFC 8288 + RFC 5988 | Std, Erg | hint | mech | P3 | L | S | apiq E5 |
+| RFC2-54 | Link header anchor-param absolute IRI | RFC 8288 §3.2 | Std | hint | mech | P3 | L | S | |
+| RFC2-55 | Link rel-tokens case-insensitive coherence | RFC 8288 §3.3 | Hyg | hint | mech | P3 | L | S | |
+| RFC2-56 | Bearer tokens MUST NOT in URI query | RFC 6750 §2.3 (verbatim "NOT RECOMMENDED") | TM, Std | error | mech | P1 | L | S | covered by Y-3 |
+| RFC2-57 | Bearer scheme SHOULD declare bearerFormat | RFC 6750 + OAS | Erg | hint | mech | P3 | M | S | |
+| RFC2-58 | bearerFormat:JWT description mention RFC 8725 | RFC 8725 §3.1/3.2 | TM | warn | heuristic | P2 | M | S | covered by Y-8 |
+| RFC2-59 | Bearer 401 → WWW-Authenticate Bearer realm | RFC 6750 §3 | Std | warn | mech | P2 | L | S | |
+| RFC2-60 | OAuth2 implicit forbidden (BCP 240) | RFC 9700 §2.1.2 (verbatim "MUST NOT") | TM, Evo | error | mech | P1 | L | S | covered by Y-7 |
+| RFC2-61 | OAuth2 password forbidden (BCP 240) | RFC 9700 §2.1.2 (verbatim "MUST NOT") | TM, Evo | error | mech | P1 | L | S | covered by Y-7 |
+| RFC2-62 | OAuth2 *Url MUST HTTPS | RFC 6749 §3.1 (verbatim "MUST utilize TLS") | TM | error | mech | P1 | M | S | covered by Y-5 |
+| RFC2-63 | OAuth2 authCode SHOULD declare refreshUrl | RFC 9700 §4.1.5 | TM, Evo | hint | mech | P3 | M | S | |
+| RFC2-64 | OAuth2 clientCredentials broad/empty scopes | RFC 9700 §2.1 | TM | hint | mech | P3 | L | S | |
+| RFC2-65 | OAuth2 scopes MUST have descriptions | RFC 6749 §3.3 + OAS | Std, Erg | warn | mech | P2 | M | S | |
+| RFC2-66 | Path segments percent-encoded | RFC 3986 §3.3 | Std | error | mech | P1 | L | S | |
+| RFC2-67 | Path segments unreserved+segment-allowed sub-delims | RFC 3986 §3.3 | Std | hint | mech | P3 | L | S | |
+| RFC2-68 | Path MUST NOT contain query `?` | RFC 3986 §3.4 | Std | warn | mech | P1 | L | S | apiq S-SP-7 |
+| RFC2-69 | Path MUST NOT contain fragment `#` | RFC 3986 §3.5 | Std | error | mech | P2 | L | S | |
+| RFC2-70 | OAS path-template = RFC 6570 Level-1 only | RFC 6570 + OAS | Std | error | mech | P2 | L | S | |
+| RFC2-71 | Server-URL host lowercase | RFC 3986 §3.2.2 | Hyg, Std | hint | mech | P4 | M | S | |
+| RFC2-72 | Server-URL scheme lowercase | RFC 3986 §3.1 | Hyg, Std | hint | P4 | mech | M | S | |
+| RFC2-73 | Server-URL path normalized (no `.`/`..`) | RFC 3986 §6.2.2.3 | Hyg, Std | hint | mech | P4 | L | S | |
+| RFC2-74 | Server-URL userinfo (user:pass) forbidden | RFC 3986 §3.2.1 | TM, Hyg | error | mech | P2 | L | S | |
+| RFC2-75 | Custom JSON media-type uses +json | RFC 6838 §4.2.8 | Std, Erg | hint | mech | P4 | L | S | |
+| RFC2-76 | Vendor-specific media-type uses vnd. tree | RFC 6838 §3.2 | Std | hint | mech | P4 | L | S | |
+| RFC2-77 | prs. tree in production = smell | RFC 6838 §3.3 | Hyg | hint | mech | P5 | L | S | |
+| RFC2-78 | `*/*` content-type forbidden | OAS interpretive | Hyg | warn | mech | P2 | L | S | apiq L-MIN-2 |
+| RFC2-79 | Top-level media-type IANA-registered | RFC 6838 + IANA | Std | error | mech | P4 | L | S | |
+| RFC2-80 | charset on application/json redundant | RFC 8259 §8.1 | Hyg | hint | mech | P4 | L | S | |
+| RFC2-81 | int64 SHOULD be string-encoded | RFC 8259 §6 | Std, Erg | hint | mech | P3 | M | S | apiq SG-24 |
+| RFC2-82 | properties keys unique within schema | RFC 8259 §4 | Std | error | mech | P1 | L | S | |
+| RFC2-83 | default/example as JSON-string parses strict | RFC 8259 §2 | Std | hint | heuristic | P5 | L | S | |
+| RFC2-84 | OAS 3.0 + 2020-12-only-keywords = error | OAS-3.0 binding | Std, Evo | error | mech | P1 | M | M | json-schema-draft-version-detector |
+| RFC2-85 | OAS 3.1 jsonSchemaDialect required when 3.1 keywords | OAS-3.1 §4.7.1 | Std | hint | mech | P3 | L | S | |
+| RFC2-86 | definitions → $defs porting smell | JSON-Schema 2019-09 | Evo, Std | hint | mech | P3 | L | S | |
+| RFC2-87 | id → $id porting smell | JSON-Schema draft-06 | Evo | hint | mech | P3 | L | S | |
+| RFC2-88 | Boolean exclusiveMin/Max in 3.1 | JSON-Schema 2019-09+ | Evo, Std | warn | mech | P3 | L | S | apiq X4 |
+| RFC2-89 | contentEncoding/contentMediaType in 3.0 = doc-only | JSON-Schema draft-07 | Std, Evo | hint | mech | P5 | L | S | |
+| RFC2-90 | Idempotency-Key on POST creates | draft-httpapi-idempotency-key | Std, TM | hint | mech | P3 | L | S | covered by Y-25 |
+| RFC2-91 | Deprecation header SHOULD pair Sunset | draft-deprecation-header + RFC 8594 | Evo, Std | hint | mech | P3 | L | S | |
+| RFC2-92 | Sunset header value HTTP-date | RFC 8594 §2 | Std | hint | mech | P3 | L | S | |
+| RFC2-93 | RateLimit-* headers SHOULD declare | draft-httpapi-ratelimit | Std | hint | mech | P3 | L | S | |
+| RFC2-94 | 429 → Retry-After OR RateLimit-* | RFC 7231 §7.1.3 + draft | Std, TM | **error** | mech | P1 | M | S | Severity-upgrade C9: warn→error |
+| RFC2-95 | Retry-After grammar HTTP-date OR delta-seconds | RFC 9110 §10.2.3 | Std | hint | mech | P4 | L | S | |
+| RFC2-96 | 503 → Retry-After SHOULD | RFC 9110 §15.6.4 | Std | hint | mech | P4 | L | S | |
+| RFC2-97 | PATCH MUST declare merge-patch+json OR json-patch+json | RFC 7396 + 6902 | Std, Erg | warn | mech | P2 | L | S | apiq L-SP-2 |
+| RFC2-98 | merge-patch+json properties NOT required | RFC 7396 §2 | Std | warn | mech | P3 | L | S | apiq B-MIN-3 |
+| RFC2-99 | json-patch+json schema MUST be array | RFC 6902 §3 | Std | warn | mech | P3 | L | S | |
+| RFC2-100 | multipart/form-data SHOULD be type:object+properties | RFC 7578 §4.2 | Std | hint | mech | P3 | L | S | |
+| RFC2-101 | multipart binary part SHOULD declare format:binary | RFC 7578 + OAS | Std | hint | mech | P3 | L | S | |
+| RFC2-102 | X- prefix forbidden | RFC 6648 §3 | Std, Erg | warn | mech | P1 | M | S | Round-1 |
+| RFC2-103 | 428 status declaration awareness | RFC 6585 §3 | Std, TM | hint | mech | P5 | L | S | Niche |
+| RFC2-104 | 429 status (covered by C9/RFC2-94) | RFC 6585 §4 | Std, TM | (covered) | mech | — | — | — | |
+| RFC2-105 | 511 status awareness | RFC 6585 §6 | Std | hint | mech | P5 | L | S | Niche |
+
+#### Lens 3 — Evolution-Friction (EV)
+
+| Pattern-ID | Title | Sources | Multi-Lens | Severity-Direction | Detection | Priority | Freq | Cost | Notes |
+|---|---|---|---|---|---|---|---|---|---|
+| EV-1 | deprecated:true without sunset/replacement | OASDIFF + OAS-3.3 + RFC 8594 + 6+ | 3, 4 | warn (drift) | mech | P1 | M | S | apiq H4/R4 strengthen; sleeper compound |
+| EV-2 | Required-field-stability heuristic | OASDIFF inverted + Stripe | 3 | hint (drift) | heuristic | P3 | L | S | False-positive risk |
+| EV-3 | Closed enum without extensibility hook (response) | Zalando + Speakeasy + OASDIFF | 3, 4 | hint (loosen) | mech+heur | P2 | M | S | |
+| EV-4 | Bare-array request/response body | OASDIFF + apiq §1 | 3, 4 | warn (loosen) | mech | P1 | M | S | Round-1 cross-source |
+| EV-5 | additionalProperties not declared on response | OASDIFF + SG-42 + Microsoft + Zalando | 3, 4, 1 | warn (tighten) | mech | P1 | H | S | apiq M8 confirmed |
+| EV-6 | oneOf/anyOf without discriminator(+mapping) | OASDIFF + Bump.sh | 3, 4 | warn(map)/hint(no-map) | mech | P2 | M | S | apiq M14 |
+| EV-7 | Default value on required field | IBM + OASDIFF + Stripe | 3, 5 | warn (drift) | mech | P2 | M | S | apiq T2/M-SP-14 |
+| EV-8 | Operation lacks operationId | OPTIC + OASDIFF + Spectral | 3, 4 | warn (drift) | mech | P1 | M | S | |
+| EV-9 | info.version placeholder/non-versioned | Stripe + GH-API + MS-AZ | 3 | hint (drift) | mech | P3 | M | S | apiq H2 extend |
+| EV-10 | Mixed URL+Header versioning | SG-6 + Zalando + Stripe + GH-API | 3 | warn (drift) | mech | P1 | L | S | apiq H1 |
+| EV-11 | No spec-wide error-shape declared | SG-16 + RFC 7807 + OPTIC | 2, 3, 4 | warn (drift) | mech-stat | P2 | M | M | apiq K2 |
+| EV-12 | Path-version vN.M (minor in URL) | G-URL-2 + Speakeasy + Stripe | 3 | warn (loosen) | mech | P3 | L | S | |
+| EV-13 | info.version non-semver AND non-date | SG-25 + Stripe + GH-API | 3 | warn (drift) | mech | P3 | M | S | |
+| EV-14 | requestBody.required not explicit | SP-G-AZ-9 + IBM | 3, 5 | warn (drift) | mech | P2 | M | S | apiq L2 |
+| EV-15 | Status-code-set wide-open (>10 codes) | OASDIFF inverted | 3, 4 | hint (loosen) | mech-stat | P3 | M | M | New |
+| EV-16 | 5xx/default response missing | SP-G-OWASP-28 + Azure + Zalando | 3, 4 | warn (loosen) | mech | P2 | M | S | apiq C7 |
+| EV-17 | Endpoint without tags | SG-41 + spectral:oas | 3, 4 | warn (drift) | mech | P2 | H | S | apiq Q1 |
+| EV-18 | additionalProperties:true on request without explicit | OWASP + Stripe + MS-AZ | 3, 1 | hint (tighten) | mech | P2 | H | S | inverse EV-5 |
+| EV-19 | securitySchemes declared but unused on ops | OASDIFF + apiq F3 | 3, 1 | warn (drift) | graph | P2 | M | M | |
+| EV-20 | Single media-type response (no neg-room) | OASDIFF | 3, 5 | hint (loosen) | mech | P3 | H | S | |
+| EV-21 | Required prop without description in response | SG-2 + VTex | 3, 4 | hint (drift) | mech-stat | P3 | H | S | |
+| EV-22 | $ref-cycle without max-depth | apiq A2 + JSON-Schema | 3, 1 | hint (drift) | graph | P2 | L | M | |
+| EV-23 | Request prop maxLength/maxItems/maximum/pattern absent | OASDIFF | 3, 1 | warn (tighten) | mech | P1 | H | S | |
+| EV-24 | Request pattern without ^…$ anchors | MIN-2 IBM + OASDIFF | 3, 2 | warn (tighten) | mech | P1 | M | S | apiq A-MIN-1 |
+| EV-25 | type:integer without format:int32/int64 | SP-G-OWASP-21 + Zalando + OASDIFF | 3, 2, 4 | warn (drift) | mech | P1 | H | S | apiq M-SP-9 |
+| EV-26 | TODO/FIXME/placeholder in summary/description | SG-2 + apiq stub | 3, 5 | hint (drift) | mech | P3 | L | S | |
+| EV-27 | Path-segment file-extension (.json/.xml) | SP-G-AYWH-14 + SG-5 + SPS | 3, 5 | error (drift) | mech | P1 | L | S | apiq S-SP-6 |
+| EV-28 | Server URL contains environment name | SP-G-SPS-10 | 3, 1 | error (drift) | mech | P1 | L | S | apiq S-SP-4 |
+| EV-29 | API-Path-prefix /api/ | Zalando | 3, 5 | hint (drift) | mech-stat | P3 | M | M | apiq W-MIN-2 (opinion-divided) |
+| EV-30 | requestBody without application/json media-type | SP-G-AYWH-10 + SPS + OPTIC | 3, 5 | warn (loosen) | mech | P2 | M | S | apiq B-SP-4 |
+| EV-31 | Custom HTTP method without RFC reference | SP-G-SPS-1 | 3, 2 | error (drift) | mech | P1 | L | S | apiq B-SP-9 |
+| EV-32 | Authorization/Content-Type/Accept as explicit param | Azure + SPS + IBM | 3, 2 | warn (drift) | mech | P1 | M | S | apiq T4 |
+| EV-33 | nullable:true AND required:true | JSON-Schema-evolution-blog + Speakeasy | 3, 5 | warn (drift) | mech | P2 | M | S | New |
+| EV-34 | Spec uses Swagger-2 | SP-G-TD-3 + Red-Hat | 3 | error (drift) | mech | P1 | L | S | apiq X-MIN-3 |
+| EV-35 | Two adjacent path-template-segments no separator | MIN-6 IBM | 3, 2 | error (drift) | mech | P1 | L | S | apiq A-MIN-4 |
+| EV-36 | Two paths same structural template | MIN-7 Vacuum + Redocly | 3, 2 | error (drift) | mech | P1 | L | S | apiq A-MIN-5 |
+| EV-37 | info.version not present | OAS-3-MUST | 3 | error (drift) | mech | P1 | L | S | New explicit |
+| EV-38 | Past-tense verb in path-segment | SP-G-SPS-3 + SG-11 | 3, 5 | hint (drift) | mech | P3 | L | S | apiq G-SP-7 partial |
+| EV-39 | Required prop with single-value enum | JSON-Schema + OASDIFF | 3, 5 | hint (drift) | mech | P3 | L | S | |
+| EV-40 | Schema-name reuse case-insensitive | apiq O2 | 3, 4 | warn (drift) | mech | P1 | L | S | apiq O2 |
+| EV-41 | Field-name with _v1/_legacy/_old/_deprecated suffix | apiq prose-walker | 3, 4 | hint (drift) | mech | P3 | L | S | |
+| EV-42 | tags array contains internal/private/beta/experimental | Microsoft + Google AIPs | 3, 4 | hint (drift) | mech | P3 | L | S | New |
+| EV-43 | swagger:2.0 artifacts + openapi:3.x | SP-G-TD-3 + pb33f | 3, 2 | error (drift) | mech | P1 | L | S | |
+| EV-44 | No top-level components.schemas (every schema inline) | apiq M6 extended | 3, 4 | hint (drift) | mech-stat | P3 | M | M | apiq M6 |
+| EV-45 | default + specific status overlap conflict | OASDIFF + OPTIC | 3, 5 | hint (drift) | mech | P3 | L | M | New |
+| EV-46 | readOnly:true in REQUEST or writeOnly:true in RESPONSE | SP-G-AZ-24 + OASDIFF | 3, 4 | warn (drift) | mech | P2 | M | S | apiq M-SP-3 |
+| EV-47 | requestBody multipart+json same schema | Azure + OPTIC | 3, 5 | hint (drift) | mech | P3 | L | S | New |
+| EV-48 | PATCH accepts application/json (not patch-types) | SP-G-TD-4 + Azure + IBM | 3, 2 | warn (drift) | mech | P2 | L | S | apiq L-SP-2 |
+| EV-49 | 429 declared without Retry-After header | SG-31 + SP-G-OWASP-15 | 3, 1, 2 | error (drift) | mech | P1 | M | S | apiq C9; covered by RFC2-94 |
+| EV-50 | 304 declared without conditional infrastructure | RFC 7232 / 9110 + apiq C10 | 3, 2 | warn (drift) | mech | P2 | L | S | apiq C10 |
+| EV-51 | Magic-string (free-text where enum viable) | LL-13 + apiq M13 | 3, 5 | hint (loosen) | mech-heur | P3 | M | S | apiq M13 |
+| EV-52 | Integer maximum > 2^53 without int64 string-encoding | SG-24 + AIP + Zalando #168 + Stripe | 3, 2, 4 | hint (drift) | mech | P3 | M | S | apiq J-SG-2 |
+| EV-53 | URL-version /v1/ vs info.version 2.x drift | Adidas + Speakeasy + G-URL-1 | 3, 5 | warn (drift) | mech | P2 | L | S | apiq H3 |
+| EV-54 | version param without enum constraint | apiq existing | 3 | warn (loosen) | mech | P3 | L | S | |
+| EV-55 | Required parameter shows default value | Azure + IBM + OASDIFF | 3 | warn (drift) | mech | P2 | M | S | apiq T2 |
+| EV-56 | servers array missing/empty | SP-Redocly | 3, 5 | warn (drift) | mech | P2 | L | S | apiq P-SP-5 |
+| EV-57 | required declares fields not in properties | apiq A3 | 3, 5 | error (drift) | mech | P1 | L | S | apiq A3 |
+| EV-58 | deprecated:true op + active-status enum | OAS-3.3-PROP | 3, 5 | (LLM-only) | LLM | — | — | — | OUT |
+| EV-59 | 3xx (301/302/307/308) without Location header | SP-G-SPS-15 inverse + RFC 9110 | 3, 2 | warn (drift) | mech | P3 | L | S | New |
+| EV-60 | webhooks (3.1) without summary/description | SP-G-SPS-21 + apiq U1/U2 | 3, 4 | hint (drift) | mech | P3 | L | S | apiq U1 |
+| EV-61 | oneOf closed + description "more variants" language | apiq prose-walker | 3, 4 | hint (loosen) | mech-heur | P3 | L | S | |
+| EV-62 | type:integer candidate for type:string (>2^53 evidence) | SG-24 + Stripe + AIPs | 3, 4 | hint (drift) | mech | P3 | M | S | New |
+
+#### Lens 4 — Client-Friction (CL)
+
+| Pattern-ID | Title | Sources | Multi-Lens | Severity | Detection | Priority | Freq | Cost | Notes |
+|---|---|---|---|---|---|---|---|---|---|
+| CL-1 | Reserved-keyword property/operationId per target-lang | openapi-generator multi-issue | 4, 3 | warn | mech-stat | P1 | M | M | **Multi-lang allowlist** load-bearing |
+| CL-2 | Property-name leading underscore/digit | swagger-codegen #4805 + openapi-gen | 4 | warn | mech | P1 | L | S | Java/Go/Python compile-fail |
+| CL-3 | Camelize-collide property×schema-name | openapi-generator #17909 | 4 | warn | graph | P3 | L | M | Niche |
+| CL-4 | Inline-Object schemas without title | multi-codegen + Speakeasy | 4 | warn | mech | P2 | H | S | apiq M6 narrower |
+| CL-5 | operationId verbose / FastAPI-style | Speakeasy + SDK-vendor | 4 | warn | heuristic | P2 | M | S | apiq G3 strengthen |
+| CL-6 | operationId missing | openapi-gen + multi | 4, 3 | error | mech | P1 | M | S | spectral covers |
+| CL-7 | required + nullable without 3-state semantics | openapi-generator #14765 + Speakeasy | 4, 3 | hint | mech | P2 | M | S | New |
+| CL-8 | Property required-in-response not-in-request asymmetry | Speakeasy + openapi-gen #20213 | 4 | hint | graph | P3 | M | M | |
+| CL-9 | Same-status-code multiple content-types | openapi-gen #17877 + oapi-codegen #1897 | 4 | warn | mech | P2 | M | S | High-impact |
+| CL-10 | Mixed text/plain + application/json same code | oapi-codegen #1897 | 4 | warn | mech | P3 | L | S | Subset CL-9 |
+| CL-11 | anyOf where oneOf intended | Speakeasy + openapi-gen | 4 | hint | LLM | — | — | — | apiq A14; LLM-only |
+| CL-12 | oneOf without discriminator | Redocly + multi | 4 | warn | mech | P1 | M | S | apiq existing |
+| CL-13 | discriminator.propertyName not in required | openapi-gen #9444 + Redocly | 4 | warn | mech | P2 | L | S | apiq A4 extend |
+| CL-14 | discriminator.propertyName leading underscore | openapi-gen #9444 | 4 | warn | mech | P3 | L | S | Java-specific |
+| CL-15 | int64 integer without format declared | OAI + Speakeasy + openapi-gen | 4, 3 | warn | heuristic | P2 | M | S | |
+| CL-16 | int64 declared without string-alternative | OAI + Speakeasy + Stripe | 4 | hint | mech | P3 | M | S | |
+| CL-17 | Recursive schema without termination | openapi-gen + python-client + utoipa | 4, 3 | warn | graph | P2 | L | M | apiq A2 upgrade |
+| CL-18 | Recursive cycle on required field | pb33f | 4 | error | graph | P2 | L | M | Stricter CL-17 |
+| CL-19 | Empty-body 2xx + 4xx no discriminating header | openapi-typescript | 4 | hint | mech | P3 | L | S | |
+| CL-20 | 204 declared with content (RFC violation) | OAI #3536 | 4, 2 | warn | mech | P1 | L | S | New |
+| CL-21 | format not in IANA-format-registry | openapi-gen multi | 4 | hint | mech | P2 | M | S | apiq A7 |
+| CL-22 | type:object without properties+additionalProperties | openapi-gen + Apicurio | 4 | warn | mech | P2 | M | S | apiq M-SP-13 |
+| CL-23 | additionalProperties:true free-form-object | openapi-gen #796 | 4 | hint | mech | P3 | M | S | Java-specific |
+| CL-24 | Multiple-types in 3.1 unconstrained | openapi-gen #18207 | 4 | warn | mech | P2 | L | S | apiq A-MIN-16 |
+| CL-25 | pattern Regex unsupported by ECMA/Java/Python | ReDoc + openapi-python-client | 4 | warn | mech-stat | P2 | M | M | apiq A6 multi-engine |
+| CL-26 | pattern without ^/$ anchors | MIN-2 IBM + Speakeasy | 4, 1 | warn | mech | P1 | M | S | apiq A-MIN-1 |
+| CL-27 | components.responses inconsistent $ref | openapi-typescript #408 | 4 | hint | graph | P3 | L | M | |
+| CL-28 | Patterned status-codes (4XX/5XX) | openapi-python-client #1271 | 4 | warn | mech | P3 | L | S | |
+| CL-29 | Deeply-nested inline objects (>3-4 levels) | swagger-ui + redoc | 4 | warn | mech-stat | P2 | M | M | apiq M4 |
+| CL-30 | Deeply-nested allOf/oneOf chains (≥3 hops) | swagger-ui #7437 | 4 | warn | graph | P3 | L | M | New |
+| CL-31 | Bare-array request body | openapi-gen #17877 | 4 | warn | mech | P1 | L | S | Extends EV-4 |
+| CL-32 | array-of-array | MIN-32 IBM + stoplight #1418 | 4 | hint | mech | P3 | L | S | apiq D-MIN-5 |
+| CL-33 | schema without type | MIN-11 Vacuum + openapi-gen | 4 | warn | mech | P1 | M | S | apiq A-MIN-9 |
+| CL-34 | Property-name "Client" | openapi-python-client #1045 | 4 | hint | mech | P3 | L | S | |
+| CL-35 | Schema named Client/API/Response/Request | openapi-python-client | 4 | warn | mech | P2 | L | S | New |
+| CL-36 | example with value AND externalValue | MIN-48 Redocly | 4, syntax | error | mech | P1 | L | S | apiq M-MIN-2 |
+| CL-37 | Component naming spaces/special chars | MIN-47 IBM + MIN-49 Redocly | 4 | warn | mech | P1 | L | S | apiq A-SP-3/4 |
+| CL-38 | Multi-line description leading-space stripped | openapi-gen #8011 + oapi-codegen | 4 | hint | heuristic | P3 | L | S | |
+| CL-39 | Description has HTML or complex Markdown | OAS + swagger-editor #2180 | 4 | hint | mech | P3 | M | S | apiq HTML-Walker |
+| CL-40 | Path with `?` query in path-template | SP-G-SPS-17 | 4 | warn | mech | P1 | L | S | apiq S-SP-7 |
+| CL-41 | External $ref to relative-path file | openapi-gen + oapi-codegen | 4, 3 | hint | mech | P3 | L | S | |
+| CL-42 | $ref to external HTTPS URLs (offline-bundling) | openapi-gen + oapi-codegen | 4, 3 | hint | mech | P3 | L | S | |
+| CL-43 | description has $ref-like-strings | MIN-46 IBM | 4 | hint | mech | P3 | L | S | |
+| CL-44 | Verbose vs cryptic field-names | Speakeasy + Lens-4 | 4 | hint | heuristic | P3 | M | S | |
+| CL-45 | Pagination mixed conventions cross-spec | Speakeasy + Postman + Lens-4 | 4 | warn | heuristic | P1 | M | M | apiq W10 |
+| CL-46 | Inconsistent error-shape cross-endpoint | Speakeasy + Lens-4 | 4 | warn | mech-stat | P1 | M | M | apiq D2 strengthen |
+| CL-47 | POST/PUT/PATCH return-shape ≠ GET-shape | MIN-35 IBM + Lens-4 | 4 | hint | mech | P3 | M | M | apiq D-MIN-3 |
+| CL-48 | Multiple similar-not-identical schemas (no convention) | Lens-4 + Stripe | 4 | hint | mech-stat | P2 | M | M | apiq M7 near-duplicate |
+| CL-49 | Doc-vs-Schema divergence | Lens-4 + OAI | 4 | (LLM-only) | LLM | — | — | — | OUT |
+| CL-50 | Path-segments file-extensions | SG-5 + SP-G-SPS-13 | 4, 2 | error | mech | P1 | L | S | apiq S-SP-6 |
+| CL-51 | Required+optional params unordered | MIN-27 IBM | 4 | hint | mech | P3 | M | S | apiq R-MIN-1 |
+| CL-52 | additionalProperties dictionary inconsistent value-type | MIN-IBM | 4 | hint | mech | P3 | L | M | apiq M-SP-17 |
+| CL-53 | parameters + requestBody both required total>5 | Speakeasy + Postman | 4 | hint | mech | P3 | L | S | apiq R3 |
+| CL-54 | securitySchemes mixed types globally | Speakeasy SDK | 4, 3 | warn | mech-stat | P2 | M | M | apiq F |
+| CL-55 | Uppercase mixed with lowercase enum values | SG-37 + apiq M12 | 4 | warn | mech | P1 | M | S | apiq M12 |
+| CL-56 | Enum values not valid identifier-chars | openapi-typescript #1874 | 4 | warn | mech | P2 | M | S | New |
+| CL-57 | enum with duplicate values | spectral default | 4, syntax | error | mech | P1 | L | S | spectral covers |
+| CL-58 | Duplicate paths (case-insensitive resolve same) | MIN-7 + MIN-8 Vacuum | 4 | error | mech | P1 | L | S | apiq A-MIN-5/6 |
+| CL-59 | operationId not URL-friendly | SP-G-SD-5 | 4 | error | mech | P1 | L | S | apiq G-SP-8 |
+| CL-60 | x-internal:true usage | OpenAPI + Speakeasy + Stripe | 4, 3 | hint (info) | mech | P5 | L | S | Informational |
+| CL-61 | Vendor-extension prefix-inconsistency | Speakeasy + OAI | 4, 3 | hint | mech-stat | P3 | L | M | |
+| CL-62 | Operations same Resource varying tags | Lens-4 + Postman | 4 | hint | mech-stat | P3 | M | M | apiq Q5 strengthen |
+| CL-63 | Operations missing summary AND description | spectral + Speakeasy | 4 | warn | mech | P1 | M | S | apiq R-SP-1 |
+| CL-64 | operationId verb-prefix vs HTTP-method | R-SP-5 + apiq B8 | 4 | hint | heuristic | P2 | M | S | apiq B8 |
+| CL-65 | Required boolean without default | openapi-gen multi | 4 | hint | mech | P3 | L | S | Niche |
+| CL-66 | Discriminator mapping references missing schemas | A4/A5 + swagger-ui #9832 | 4, syntax | error | mech | P1 | L | S | apiq A4/A5 |
+| CL-67 | Schema oneOf with single element | apiq A13 | 4 | hint | mech | P2 | L | S | apiq A13 |
+| CL-68 | Path consecutive parameters (`/foo/{a}/{b}` no sep) | MIN-6 IBM | 4, syntax | error | mech | P1 | L | S | apiq A-MIN-4 |
+| CL-69 | example value violates schema | spectral + AJV-layer | 4 | warn | mech | P1 | M | M | apiq M-MIN-3 |
+| CL-70 | default value violates schema | apiq + multi | 4 | error | mech | P1 | M | M | apiq |
+| CL-71 | Property-naming change v-N to v-N+1 | Octokit | 4, 3 | (out-of-scope diff) | LLM | — | — | — | OUT (diff) |
+| CL-72 | multipart/mixed content-type | swagger-ui + openapi-gen | 4 | warn | mech | P3 | L | S | |
+| CL-73 | servers[].url placeholder example.com/localhost | SP-G-SD-4 + apiq P-SP-1 | 4 | warn | mech | P1 | L | S | apiq P-SP-1 |
+| CL-74 | callbacks without webhooks-3.1 OR webhooks no signature | Lens-4 + Twilio | 4, 1 | hint | mech | P3 | L | S | apiq U |
+| CL-75 | Mixed casing cross-Tag | MIN Q-SP-5 | 4 | hint | mech-stat | P3 | M | M | apiq G7 + Q-SP-5 |
+| CL-76 | Same path+method declared multiple times | MIN-8 Vacuum | 4, syntax | error | mech | P1 | L | S | apiq A-MIN-6 |
+| CL-77 | Heavy allOf with multi non-$ref objects | openapi-gen #9756 | 4 | warn | heuristic | P2 | M | M | apiq A12 |
+| CL-78 | Schema combines allOf + oneOf + anyOf siblings | Speakeasy | 4 | warn | mech | P3 | L | S | New |
+| CL-79 | requestBody form-urlencoded + JSON simultaneously | openapi-gen #4908 | 4 | warn | mech | P3 | L | S | Subset CL-9 |
+| CL-80 | readOnly:true AND required:true | M-SP-3 mirrors | 4, 3 | hint | mech | P3 | M | S | New |
+| CL-81 | $ref siblings in same object (3.0-violation) | OAS A1 + apiq | 4, syntax | error | mech | P1 | L | S | apiq existing |
+
+#### Lens 5 — Style-Coherence (SC + SCF)
+
+| Pattern-ID | Title | Sources | Multi-Lens | Severity | Detection | Priority | Freq | Cost | Notes |
+|---|---|---|---|---|---|---|---|---|---|
+| SC-1 | REST-vs-RPC mixing in paths (>10% each) | Microsoft + AIP-121 + Richardson | 4, 5 | hint | mech-stat | P2 | M | M | Style-classifier |
+| SC-2 | Custom-method colon-verb consistency | AIP-136 + Microsoft | 4, 5 | hint | mech | P3 | L | S | |
+| SC-3 | HTTP-method semantics (GET with state-change words) | Fielding + Microsoft + AIP-131..135 | 4, 5 | warn | heuristic | P2 | M | S | |
+| SC-4 | Hypermedia-marker consistency | HAL + JSON:API + Siren + Fielding | 4, 5 | hint | mech | P3 | L | M | |
+| SC-5 | Envelope-style coherence cross-list | JSON:API + OData + Microsoft + AIP | 4, 5 | warn | mech-stat | P1 | M | M | apiq E4 cross-op classifier |
+| SC-6 | Resource-name pluralization coherence | AIP-122 + Zalando + JSON:API | 4, 5 | warn (upgrade from hint) | mech-stat | P1 | H | M | apiq S7 |
+| SC-7 | Path-segment alternation (collection/id) | AIP-122 + Microsoft | 4, 5 | hint | graph | P3 | L | M | |
+| SC-8 | Pagination-shape coherence | AIP-158 + JSON:API + OData + Zalando | 4, 5 | warn | mech-stat | P1 | M | M | apiq E2/E3 + Walker |
+| SC-9 | Error-shape coherence cross-spec | RFC 7807 + JSON:API + Heroku + Zalando | 2, 4, 5 | warn | mech-stat | P1 | M | M | apiq K1/K4 |
+| SC-10 | JSON:API conformance (data/errors not coexist) | JSON:API v1.1 (verbatim "MUST NOT") | 2, 5 | warn | mech | P2 | L | M | |
+| SC-11 | HAL conformance (_links present when hal+json) | HAL spec | 2, 5 | warn | mech | P2 | L | S | |
+| SC-12 | Siren conformance (class array) | Siren spec | 2, 5 | hint | mech | P3 | L | S | Niche |
+| SC-13 | OData conformance (value array + @odata.context) | OData v4.01 | 5 | warn | mech | P2 | L | M | Enterprise-pillar |
+| SC-14 | Style-marker leakage (mixed envelope styles) | HAL + JSON:API + Siren | 4, 5 | warn | mech-stat | P2 | L | M | |
+| SC-15 | CRUD symmetry per resource | AIP-121 + REST | 4, 5 | hint | graph | P3 | M | M | apiq §5 |
+| SC-16 | Resource-vs-Action shape | Microsoft + AIP-136 | 4, 5 | hint | mech | P3 | L | S | |
+| SC-17 | HTTP-method per-op distribution | Richardson + AIP | 5 | hint | mech-stat | P3 | M | M | New |
+| SC-18 | Field-name casing × content-type style | JSON:API + AIP-140 | 4, 5 | hint | mech-stat | P3 | M | M | New |
+| SC-19 | Time-field naming coherence (*_time vs *_at) | AIP-142 + Rails/Stripe + Microsoft | 4, 5 | hint | mech-stat | P3 | M | S | apiq I4 extend |
+| SC-20 | Standard-field-presence on AIP-style resources | AIP-148 | 5 | hint (off-by-default) | mech | P5 | L | S | Off-by-default |
+| SC-21 | Reserved-field-name leakage from non-target style | All hypermedia specs | 4, 5 | hint | mech | P3 | L | S | |
+| SC-22 | Filter-syntax coherence | AIP-160 + JSON:API + OData | 4, 5 | hint | mech-stat | P3 | L | M | |
+| SC-23 | Sort-syntax coherence | AIP-132 + JSON:API + OData | 4, 5 | hint | mech-stat | P3 | L | M | |
+| SC-24 | Asymmetric resource-shape POST vs GET | AIP-133 + Microsoft + IBM | 4, 5 | warn | graph | P2 | M | M | apiq DM-9/10 |
+| SC-25 | Status-code distribution per operation type | RFC 7231 + Microsoft + AIP | 2, 5 | hint | mech-stat | P3 | M | M | |
+| SCF-1 | JSON:API data/errors mutually exclusive | JSON:API v1.1 (verbatim MUST NOT) | 2, 5 | warn | mech | P2 | L | M | High-precision |
+| SCF-2 | JSON:API resource type+id strings | JSON:API v1.1 §Resource | 2, 5 | warn | mech | P3 | L | S | |
+| SCF-3 | JSON:API error object members | JSON:API v1.1 §Error | 2, 5 | warn | mech | P3 | L | S | |
+| SCF-4 | JSON:API pagination params page[number]/page[size] | JSON:API v1.1 §Pagination | 2, 5 | hint | mech | P3 | L | S | |
+| SCF-5 | JSON:API top-level links first/last/prev/next | JSON:API v1.1 §Pagination Links | 2, 5 | hint | mech | P3 | L | S | |
+| SCF-6 | JSON:API no extra top-level members | JSON:API v1.1 (verbatim MUST NOT) | 2, 5 | warn | mech | P3 | L | S | |
+| SCF-7 | HAL response has _links | HAL spec | 2, 5 | warn | mech | P3 | L | S | |
+| SCF-8 | HAL _embedded values are HAL-shape | HAL spec | 2, 5 | hint | mech | P3 | L | S | |
+| SCF-9 | Siren response has class array | Siren spec | 2, 5 | warn | mech | P3 | L | S | Niche |
+| SCF-10 | Siren actions have name+href | Siren spec | 2, 5 | warn | mech | P3 | L | S | |
+| SCF-11 | OData list-response has value array | OData v4.01 | 5 | warn | mech | P3 | L | S | |
+| SCF-12 | OData $-prefix params allowed-set | OData v4.01 | 5 | hint | mech | P3 | L | S | |
+| SCF-13 | AIP custom-method paths use POST (or GET read-only) | AIP-136 | 5 | warn | mech | P3 | L | S | |
+| SCF-14 | AIP list-ops parent/page_size/page_token (verbatim "must") | AIP-132 | 5 | hint | mech | P3 | L | S | |
+| SCF-15 | AIP resource paths alternate collection/id | AIP-122 | 5 | hint | mech | P3 | L | S | |
+| SCF-16 | AIP field-names lower_snake_case + lowerCamelCase collections | AIP-140/122 | 5 | hint | mech-stat | P3 | L | M | |
+| SCF-17 | AIP time-fields imperative (*_time NOT *ed_time) | AIP-142 | 5 | hint | mech | P3 | L | S | apiq I4 form |
+
+#### Lens 6 — Privacy / Data-Classification (NEW Round-2)
+
+| Pattern-ID | Title | Sources | Multi-Lens | Severity | Detection | Priority | Freq | Cost | Notes |
+|---|---|---|---|---|---|---|---|---|---|
+| TM-A15 | PII-named-fields in response (already listed Lens 1) | OWASP API3 + OAI #2190 + Cloudflare + truffleHog/Gitleaks | 1, **6** | warn | mech-config | P1 | H | M | Lens-6 cornerstone |
+| TM-A16 | email format declared (already listed Lens 1) | OWASP + OAI #2190 | 1, **6** | hint | mech | P3 | H | S | |
+| L6-1 | PII-named field on path/query parameters | OWASP API3 generalized to params | **6**, 1 | warn | mech-config | P2 | M | S | New — extends TM-A15 to params |
+| L6-2 | Vendor-extension PII-tag presence (positive marker) | Cloudflare PII-redaction + OAI #2190 | **6** | hint (info-tier) | mech | P5 | L | S | x-pii-tag / x-data-class — positive marker |
+| L6-3 | Health-record-like field-name (PHI hint) | HIPAA-relevance heuristic | **6** | hint (off-by-default) | mech-config | P3 | L | S | Vendor-config-driven |
+| L6-4 | Default-values containing literal PII patterns | TruffleHog/Gitleaks regex | **6**, 1 | warn | mech | P2 | L | M | secret-scanner module |
+
+#### Lens 7 — Operations / HTTP-protocol-Performance (NEW Round-2)
+
+| Pattern-ID | Title | Sources | Multi-Lens | Severity | Detection | Priority | Freq | Cost | Notes |
+|---|---|---|---|---|---|---|---|---|---|
+| RFC2-25..29 | Conditional-request infrastructure (covered Lens 2) | RFC 7232 / 9110 | 2, **7** | (covered) | — | — | — | — | Re-tag |
+| RFC2-30..34 | Range-request infrastructure (covered Lens 2) | RFC 7233 / 9110 | 2, **7** | (covered) | — | — | — | — | Re-tag |
+| RFC2-35..39 | Caching directives (covered Lens 2) | RFC 7234 / 9111 | 2, **7** | (covered) | — | — | — | — | Re-tag |
+| RFC2-93..96 | Rate-limit + Retry-After (covered Lens 2) | RFC 6585 + draft-ratelimit | 2, **7** | (covered) | — | — | — | — | Re-tag |
+| L7-1 | List-endpoint without cache-headers (cacheable-GET) | RFC 9111 + cross-industry | **7**, 4 | hint | mech-stat | P3 | M | M | New |
+
+#### Lens 8 — Internal-Consistency (NEW Round-2)
+
+| Pattern-ID | Title | Sources | Multi-Lens | Severity | Detection | Priority | Freq | Cost | Notes |
+|---|---|---|---|---|---|---|---|---|---|
+| RFC2-3 | problem-status matches HTTP status (covered Lens 2) | RFC 9457 §3.1.2 | 2, **8** | (covered) | graph | P2 | L | M | Re-tag |
+| RFC2-5 | Problem-class type-URI uniqueness cross-spec (covered Lens 2 + USP) | RFC 9457 §4 | 2, **8** | (covered USP) | graph | **P1 (USP)** | L | M | Re-tag |
+| RFC2-28 | ETag consistency cross-resource ops (covered Lens 2) | RFC 9110 | 2, **8** | (covered) | graph | P3 | L | M | Re-tag |
+| RFC2-39 | 304/200 same ETag-shape (covered Lens 2) | RFC 9111 | 2, **8** | (covered) | graph | P3 | L | M | Re-tag |
+| L8-1 | Property name+type consistency cross-schemas (apiq G-SP-5) | apiq existing | **8**, 4 | hint | graph | P2 | M | M | Re-tag |
+| L8-2 | Hash-duplicate schemas (apiq M7) | apiq existing | **8** | hint | mech-stat | P2 | M | M | Re-tag |
+| L8-3 | Component-duplicate-hash (apiq O3) | apiq existing | **8** | hint | mech | P3 | L | S | Re-tag |
+| L8-4 | Cross-op response-shape consistency (apiq D1, DM-9/10) | apiq existing | **8**, 4, 5 | warn | graph | P2 | M | M | Re-tag |
+
+#### Lens 9 — AI-Agent-Consumability (NEW Round-2)
+
+| Pattern-ID | Title | Sources | Multi-Lens | Severity | Detection | Priority | Freq | Cost | Notes |
+|---|---|---|---|---|---|---|---|---|---|
+| L9-1 | Examples-coverage on operations (apiq W4 strengthened) | Postman 2025 + Speakeasy + Fern | **9**, 4 | hint | mech-stat | P2 | M | M | Walker |
+| L9-2 | description.length × parameter.count ratio | Postman 2025 + agentic-patterns | **9**, 4 | hint | mech-stat | P3 | M | M | Walker |
+| L9-3 | Error-schema discoverability for AI-recovery | Postman 2025 + Speakeasy | **9**, 4 | hint | graph | P3 | M | M | |
+| L9-4 | Pagination-cursor stability documentation | Postman 2025 | **9**, 4 | hint | heuristic | P3 | L | S | |
+| L9-5 | operationId machine-friendly + concise (≤30 chars + verb-noun) | Speakeasy + LLM-friendly-API | **9**, 4 | hint | heuristic | P3 | M | S | |
+| L9-6 | summary present + ≤80-char single-sentence | LLM-friendly-API + Speakeasy | **9**, 4 | hint | mech-stat | P3 | M | S | |
+| L9-7 | Capability-discovery endpoint (positive marker) | FHIR + MCP + .well-known | **9**, 10 | hint (info-tier) | mech | P5 | L | S | F-4 / F-16 |
+| L9-8 | Function-call-friendly schema (no anyOf complexity) | OpenAI function-calling + MCP | **9** | hint | mech | P3 | M | S | |
+
+#### Lens 10 — Operational-Metadata-Coverage (NEW Round-2 Phase F)
+
+| Pattern-ID | Title | Sources | Multi-Lens | Severity | Detection | Priority | Freq | Cost | Notes |
+|---|---|---|---|---|---|---|---|---|---|
+| F-1 | Sunset header on deprecated operations | RFC 8594 + FAPI + EV-1 | 3, **10** | warn | mech | P2 | L | S | apiq H4/J3 strengthen |
+| F-6 | Retry-After on 429+503 (covered RFC2-94/96) | RFC 9110 + cross-industry | 7, **10** | (covered) | mech | — | — | — | Re-tag |
+| F-7 | RateLimit-* headers when 429 declared | OpenAI + GitHub + Stripe + draft | 7, **10** | hint (warn post-RFC) | mech | P2 | M | S | New cornerstone |
+| F-10 | SLA4OAI / x-sla / x-rate-limit / x-quota presence | SLA4OAI + MAP | **10** | hint (info-tier positive-marker) | mech | P5 | L | S | Positive marker |
+| F-16 | Capability-discovery endpoint (covered Lens 9) | FHIR + MCP | 9, **10** | hint (info-tier) | mech | P5 | L | S | |
+| L10-1 | 429 declared without ANY rate-limit signaling | RFC 7231 + draft + apiq C9 | **10**, 7, 1 | warn | mech | P1 | M | S | Compound |
+| L10-2 | Some ops have rate-limit headers, others don't (consistency) | cross-industry | **10**, 4, 8 | warn | mech-stat | P2 | M | M | New |
+| L10-3 | deprecated:true ops without sunset extension OR Sunset header | OWASP API9 + EV-1 | **10**, 3 | warn | heuristic | P2 | L | S | Compound |
+| L10-4 | externalDocs.url declared but stub | FAIR + Postman + RapidAPI | **10**, 4, 9 | hint | mech | P3 | M | S | F-9 stub-check (offline) |
+| L10-5 | info.contact substantive (URL/email valid structure) | FAIR + Postman | **10**, 4, 9 | hint | mech | P3 | H | S | F-8 |
+| L10-6 | info.license substantive | FAIR + Postman | **10**, 4, 9 | hint | mech | P3 | H | S | F-8 |
+
+#### Cross-Lens / Phase-F-Direct Additions
+
+| Pattern-ID | Title | Sources | Lens | Severity | Detection | Priority | Freq | Cost | Notes |
+|---|---|---|---|---|---|---|---|---|---|
+| F-2 | Accept-Language support on user-facing ops | i18n | 2, 4 | hint (off-by-default) | mech-stat | P3 | L | M | |
+| F-3 | Time-zone-explicit datetime (RFC 3339 with Z/±) | i18n + RFC 3339 | 2, 4 | hint | mech | P3 | M | S | apiq I4 strengthen |
+| F-5 | Consistent expand/fields query-param cross-getters | TM Forum + Stripe + GitHub | 4, 5 | hint | mech-stat | P3 | L | M | New (action-item from Phase F) |
+| F-11 | Linguistic anti-pattern: Amorphous URI | Palma/Khomh DOLAR | 4, 5 | warn (subset)/hint | mech | P2 | M | S | Already partial |
+| F-12 | Linguistic anti-pattern: Tiny Resource (1-2 chars) | DOLAR | 4, 5 | hint | mech | P3 | L | S | New |
+| F-13 | Linguistic anti-pattern: Forgotten Verbs | DOLAR | 5 | hint | graph | P3 | M | M | apiq §5 formalize |
+| F-14 | Linguistic anti-pattern: Pluralised Nodes (sing/plur on same resource) | DOLAR | 5 | warn | graph | P2 | M | M | Refines apiq S7 |
+| F-15 | Polymorphism @type wire-discriminator convention | TM Forum + JSON:API + Schema.org | 5 | hint | graph | P3 | L | M | |
+| F-17 | POLA — Operation summary doesn't contradict HTTP method (covered SC-3) | Bloch + Qt + SC-3 | 4, 5 | warn | heuristic | P2 | M | S | Re-tag |
+| F-18 | Doc-smell: Bloated description (>2000 words) | API Docs Smells arXiv | 4 | hint | mech-stat | P5 | L | S | New |
+| F-19 | Doc-smell: Lazy description (copy of name) | API Docs Smells arXiv | 4 | hint | mech | P3 | M | S | New angle on substantive-rule |
+| F-20 | Bearer scheme bearerFormat declared (covered RFC2-57) | RFC 7519 + FAPI | 1, 2 | hint | mech | P3 | M | S | Re-tag |
+
+### Cross-Lens Patterns (multi-tagged)
+
+Patterns that explicitly span 2+ Lenses (a representative subset; complete tagging in tables above):
+
+| Pattern | Lenses |
+|---|---|
+| Y-2/Y-3 (creds in URL) | 1, 2 |
+| Y-7 / RFC2-60/61 (OAuth2 implicit/password) | 1, 2, 3 |
+| Y-15 / TM-A34 (URL-handling-params) | 1, 2 |
+| TM-A15 (PII-named-fields response) | 1, 6 |
+| TM-A50 (webhook-signature) | 1, 2 |
+| RFC2-14 (405 → Allow) | 2, 7 |
+| RFC2-25..29 (conditional infra) | 2, 7 |
+| RFC2-93..96 (rate-limit) | 2, 7, 10 |
+| RFC2-94 (429 → Retry-After) | 2, 7, 1, 10 |
+| RFC2-3 / RFC2-5 (problem-details consistency) | 2, 8 |
+| EV-49 / C9 (429 + Retry-After + Lens-3) | 1, 2, 3, 7, 10 |
+| CL-15 (int64 without format) | 4, 3, 1 (precision-loss + drift + JS-overflow attack) |
+| F-5 (expand/fields cross-getters) | 4, 5 |
+| F-7 (RateLimit-* headers) | 7, 10 |
+| L9-7 / F-16 (capability-discovery) | 9, 10 |
+| SC-9 (error-shape coherence) | 2, 4, 5 |
+| SC-18 (casing × content-type style) | 4, 5 |
+| TM-A53 / RFC2-40 (401 needs WWW-Authenticate) | 1, 2 |
+
+### Phase-F Action Items integrated
+
+- **F-5 (expand/fields cross-getter consistency)** — integrated as Cross-Lens Phase-F-Direct rule above (P3, mech-stat).
+- **F-10 (SLA4OAI extension presence)** — integrated as Lens-10 positive-marker (P5, info-tier).
+- **DOLAR linguistic anti-patterns (F-11/F-12/F-13/F-14)** — integrated as Phase-F-Direct rules (4-6 rules covered).
+- **ISO/IEC 25010 quality-characteristic tagging** — recommended-application: every Stage-A rule's metadata carries an `iso25010` tag in `{functional-suitability, performance-efficiency, compatibility, usability, reliability, security, maintainability, portability}`. Mapping: Lens-1/6 → security; Lens-4/5 → usability; Lens-3 → maintainability; Lens-7/10 → reliability + performance-efficiency; Lens-2/9 → compatibility; Lens-8 → functional-suitability.
+- **Springer-Delphi 28-high-importance cross-reference** — see Putz-Niveau Benchmark below.
+
+### Out-of-Scope / Delegate Sections (NOT in Stage A)
+
+#### Delegated to Phase B (LLM)
+
+| Pattern | Source | Why-LLM-territory |
+|---|---|---|
+| RFC2-9 / OOS-1 (Safe methods MUST NOT have side effects) | RFC 9110 §9.2.1 | Semantic intent inspection |
+| RFC2-10 / OOS-2 (Idempotent methods MUST be idempotent) | RFC 9110 §9.2.2 | Semantic + runtime |
+| RFC2-49 (Prefer:return=representation) | RFC 7240 §4.2 | Semantic — what is "representation" |
+| RFC2-51 (custom headers SHOULD be SFV when list/dict) | RFC 9651 | Intent-of-header-value |
+| CL-11 (anyOf where oneOf intended) | Speakeasy + openapi-gen | Semantic mutual-exclusivity reasoning |
+| CL-49 (Doc-vs-Schema divergence) | Lens-4 + OAI | NLP description-vs-schema reasoning |
+| EV-58 (deprecated:true op + active enum value) | OAS-3.3-PROP | Semantic contradiction |
+| U-A1 (Tenant-isolation detection) | OWASP API1 | Cross-spec semantic resource-graph |
+| U-A2 (admin-by-purpose beyond URL-heuristic) | OWASP API5 | Description NLP |
+| U-A3 (sensitive-business-flow classification deeper than path-keyword) | OWASP API6 | Semantic |
+| U-A4 (excessive-data-exposure beyond PII-heuristic) | OWASP API3 | Intent of endpoint |
+| U-A5 (verbose-error stack-trace in example-content) | OWASP API8 | Example-content NLP |
+| U-A6 (response status-codes semantically-make-sense) | OWASP REST | Semantic |
+| U-A7 (TLS-version-policy in description) | OWASP API8 | Description NLP |
+| U-A13 (single sign-on hygiene beyond openIdConnectUrl-https) | OWASP API2 | Semantic |
+| U-A14 (refresh-token rotation strategy in description) | OWASP API2 + RFC 6819 | Description NLP |
+| U-A15 (scope granularity smell read_all vs read:invoices.list) | OAuth-BCP | Semantic |
+| U-A17 (CORS-origin-reflection beyond heuristic) | OWASP CORS | NLP |
+| UNS-2 (operation-summary verb contradicts method beyond keyword) | RFC 9110 | NLP |
+| UNS-7 (Link rel="alternate" requires alternate availability) | RFC 8288 + IANA | Semantic |
+| UNS-8 (OAuth2 scope-naming-convention coherence) | RFC 6749 | Convention-driven NLP |
+| OOS-6 (REST verbs for state changes — soft NLP) | Fielding + Microsoft | Semantic |
+| OOS-7 (Hypermedia-discoverability runtime quality) | Fielding | Runtime + semantic |
+| U-SC-2 (field-mask AIP annotation-faithful) | AIP-134/203 | Annotation semantics |
+| U-SC-7 (HATEOAS-completeness for declared style) | Fielding HAL Siren | Semantic state-transition |
+| **All FinTech FDX naming + HealthTech FHIR resource-naming** | Phase-F survey | Domain-knowledge |
+
+#### Out-of-scope (requires runtime / two-spec-diff / vendor-detection)
+
+| Pattern | Source | Reason | Possible-future-feature |
+|---|---|---|---|
+| OOS-3 / OOS-4 (ETag/Last-Modified runtime) | RFC 7232 | Runtime contract | Live-mode validation (epic post-launch) |
+| OOS-5 (Cache-Control honoured) | RFC 7234 / 9111 | Runtime | — |
+| OOS-6 (WWW-Authenticate semantic content) | RFC 7235 / 9110 | Semantic NLP | LLM Phase B |
+| OOS-7 (JWT signature acceptable) | RFC 7519 / 8725 | Runtime | — |
+| OOS-9 (Range-request server actually supports) | RFC 7233 | Runtime | — |
+| OOS-13 (URI normalization applied) | RFC 3986 | Runtime/proxy | — |
+| OOS-14 (JSON parsing UTF-8 strict) | RFC 8259 | Runtime | — |
+| OOS-15 (Sunset/Deprecation honoured) | RFC 8594 + draft | Runtime/client-side | — |
+| OOS-16 / OOS-17 (RateLimit / Retry-After actual values) | draft-ratelimit + RFC 7231 | Runtime | — |
+| OASDIFF OOS-1..20 (all two-spec breaking-change rules) | OASDIFF + OPTIC + pb33f | Requires v1+v2 spec | Diff-mode epic post-launch |
+| U-A11 (API-version-set inventory check) | OWASP API9 | Runtime / multiple endpoints | — |
+| U-A12 (dormant endpoint detection) | OWASP API9 | Runtime traffic | — |
+| U-A18 (test/sandbox endpoints in production) | OWASP API9 | Heuristic on hostname; off-by-default | Apiq workspace-policy mode |
+| OOS-CL-1..6 (run codegen tools and capture output) | openapi-generator + ReDoc + Swagger-UI + Stoplight | Runtime tools | Future opt-in module |
+| OOS-CL-7 (cross-spec-version-diff Octokit-style) | Octokit + oasdiff | Two-spec | Diff-mode epic |
+| OOS-CL-8 (inferring schema from real API responses) | apiq §15 | Runtime traffic | Apiq spec-vs-traffic mode |
+
+#### Vendor/Org-Specific (skip with reasoning)
+
+| Pattern | Source | Reason |
+|---|---|---|
+| S-A1..S-A5 (MFA/lockout/password-strength/pwned-passwords markers) | OWASP Auth | Vendor-extension; no standardization |
+| S-A6 (HSTS max-age ≥ 1 year) | MDN HSTS | Spec-visible only as default-value; opinion-divided per MDN |
+| S-A7..S-A8 (device-fingerprinting / IP-allowlist) | OWASP API6 | Runtime-only |
+| S-A9..S-A10 (audit-log-redaction / HIPAA/PCI markers) | OAI #2190 + Cloudflare | Vendor-extension; revisit when standardized |
+| S-A11..S-A12 (rate-limit-by-UA / captcha vendor-extensions) | OWASP API6 | Vendor-extension |
+| S-A13 (session-cookie attributes) | OWASP HTTP-Headers | Cookies rarely declared per-op in OAS |
+| UNS-4 (apiKey in:cookie + Set-Cookie documentation) | OAS + RFC 6265 | Vendor-context |
+| UNS-5 (open-vs-closed enum extensibility x-ms-enum.modelAsString) | Azure | Vendor-specific |
+| UNS-12 (RFC 8941/9651 SFV grammar in custom headers) | RFC 8941/9651 | High-effort, low-frequency 2026 |
+| UN-CL-1 (Redocly-specific x-tagGroups / x-logo) | Redocly | Vendor UX-hint |
+| UN-CL-3 (Stripe-style x-resourceId / x-expandableFields) | Stripe-codegen | Vendor-codegen-specific |
+| **All FinTech FAPI-runtime / mTLS / DPoP / PSD2 SCA** | OpenID FAPI / PSD2 | Runtime + business-context |
+| **Apollo Federation / Shopify GraphQL @key/@shareable** | Federation | GraphQL not OpenAPI |
+| **OpenTelemetry semantic-conventions for span attributes** | OTel | Run-time instrumentation |
+| **MCP transport-protocol details** | MCP | Separate transport-spec |
+| **HIPAA / PCI / FERPA-specific markers** | Compliance | Domain-knowledge |
+| **Sustainability / green-software / carbon-aware patterns** | Green Software Foundation | Too speculative |
+| **Government accessibility-WCAG-for-APIs** | NHS / GOV.UK | Mostly content-level |
+
+### Severity-Schema (post-Round-2)
+
+**4-tier severity**:
+- `error` — Fatal-validity violation OR RFC-2119 MUST violated; CI-blocking.
+- `warn` — RFC-2119 SHOULD violated, OR strong cross-source consensus; review-blocking.
+- `hint` — Soft signal; informative; opinion-divided OR low-confidence-heuristic; off-by-default-overridable.
+- `info` (NEW Round-2 Phase F) — Positive-marker / observation; not a "finding" per se. E.g. SLA4OAI-presence, capability-discovery-endpoint-presence. Below `hint`.
+
+**Direction-modifier (Lens-3 specific, per Phase C)**:
+- `tighten` — server adds constraint later; absence-today permits future tightening.
+- `loosen` — server removes/expands later; presence-today implies future-removal-or-expansion-breaking.
+- `drift` — internal contradiction; future-fix is breaking.
+
+**Multi-lens-tags**: each rule MAY have 2+ lenses (e.g. Y-3 has `[1, 2]`, RFC2-94 has `[1, 2, 7, 10]`).
+
+**Source-distinction**: rule metadata carries `source-type` ∈ `{rfc-N, bcp-N, iso-25010-X, iana-registry-Y, vendor-Z, owasp-cheat, code-gen-issue, paper-X}`.
+
+**Codegen-targets** (Lens 4 patterns): rule MAY have `targets: ['*']` OR `targets: ['java', 'go', 'python', 'typescript', 'rust', 'csharp', 'kotlin']`. Default `*` = all.
+
+**Lens-tags**: required field; values `[1..10]` per Round-2 framework.
+
+**ISO/IEC 25010 quality-characteristic** (NEW Round-2 Phase F): each rule MAY carry `iso25010` ∈ `{functional-suitability, performance-efficiency, compatibility, usability, reliability, security, maintainability, portability}` for severity-justification + marketing.
+
+**Stakeholder × Lifecycle × Defect-Class meta-tags** (NEW Round-2 Phase F validated): each rule MAY carry `stakeholder` + `lifecycle` + `defect-class` for output-grouping. Values per `meta-insights.md` Round-2 Validation appendix.
+
+### Putz-Niveau Benchmark — apiq vs Springer-Delphi-28-high-importance
+
+The Springer Delphi study (arXiv 2108.00033) ranked 82 RESTful API design rules by 21 industry experts; **28 emerged as high-importance**. Below mark which Pattern-ID covers each. Gaps are explicit ✗ entries to close.
+
+| # | High-importance rule (Delphi) | apiq coverage | Pattern-ID(s) |
+|---|---|---|---|
+| 1 | Use plural nouns for resources | ✓ | apiq S7, SC-6, F-14 |
+| 2 | Use HTTP methods semantically | ✓ | apiq B-SP-2/3/9, SC-3, RFC2-7/8 |
+| 3 | Use HTTP status codes semantically (RFC 7231/9110) | ✓ | apiq C* + RFC2-16/8/14/40 |
+| 4 | Use proper HTTP authentication mechanisms (no Basic on HTTP) | ✓ | Y-4, RFC2-43, RFC2-62 |
+| 5 | Use TLS for transport (HTTPS only) | ✓ | Y-17, RFC2-62 |
+| 6 | Provide consistent error messages (problem+json) | ✓ | K1/K2/K4 + RFC2-1..6 + SC-9 |
+| 7 | Use OAuth2 / OpenID Connect for auth | ✓ | F-SP-* family + RFC2-60..65 |
+| 8 | Apply API versioning explicitly | ✓ | H1/H2 + EV-9/10/13/37 |
+| 9 | Provide examples in documentation | ✓ | apiq examples-coverage walker (W4) + L9-1 |
+| 10 | Use camelCase or snake_case consistently | ✓ | apiq G1/G2 + SC-18 |
+| 11 | Use lowercase letters in URIs | ✓ | apiq S* + RFC2-71/72 |
+| 12 | Use hyphens to improve readability of URIs | ✓ | apiq S-SP-* (hyphenation) |
+| 13 | Avoid file extensions in URIs | ✓ | apiq S-SP-6, EV-27, CL-50, F-11 |
+| 14 | Use forward slash to indicate hierarchy | ✓ | spectral path-template |
+| 15 | Avoid trailing forward slashes | ✓ | apiq S-SP-* |
+| 16 | Validate request inputs | ✓ | A-MIN-1, EV-23/24, M9/M10 + RFC2-82 |
+| 17 | Provide pagination for list endpoints | ✓ | E1/E2/E3, SC-8, TM-A22, SCF-14 |
+| 18 | Use HATEOAS where appropriate (consistency check, not mandate) | ✓ (consistency) | SC-4, SCF-7/8 |
+| 19 | Document the API thoroughly | ✓ | apiq R-SP-1, CL-63, info-description-substantive |
+| 20 | Maintain backward compatibility | ✓ | All Lens-3 EV-* patterns |
+| 21 | Use Content-Type / Accept headers properly | ✓ | RFC2-78, B-SP-4, EV-30 |
+| 22 | Provide rate-limiting and document it | ✓ | RFC2-93/94, F-7, L10-1 |
+| 23 | Use appropriate cache control | ✓ | RFC2-35..39 |
+| 24 | Use ETags for concurrency control | ✓ | RFC2-25..29, C10, RFC2-50 (state-change ops) |
+| 25 | Use proper resource naming conventions | ✓ | S7, SC-6, F-14 |
+| 26 | Provide clear contact / license info | ✓ | apiq spectral defaults + Y-A48 + L10-5/6 |
+| 27 | Use idempotency keys for non-idempotent operations | ✓ | Y-25, RFC2-90 |
+| 28 | Detect and report breaking changes | ⚠ partial (single-spec prediction only; full diff out-of-scope) | Lens-3 EV-* + future "evolution mode" plug-in |
+
+**Coverage:** 27 of 28 fully covered + 1 partial (breaking-change detection — single-spec-prediction part covered, two-spec-diff documented out-of-scope as future feature).
+
+**Reputation-load-bearing claim defensible:** apiq covers ALL 28 high-importance Springer-Delphi rules; the one partial (#28) is by-architecture (single-spec scope) with clear future-roadmap.
+
+### Status — Mining-Round-2 Master-Konsolidierung
+
+- **Konsolidiert:** 2026-05-05 evening.
+- **Total Stage-A patterns (take-into-apiq):** ~290 (after dedup + cross-phase consolidation across the 364 raw mining-patterns).
+- **By Lens** (primary-tag count; many patterns are multi-tagged):
+  - Lens 1 (Threat): 25 (Y-1..25) + 54 (TM-A1..54) = ~70
+  - Lens 2 (Standards): ~95 (RFC2-1..105 minus LLM-only)
+  - Lens 3 (Evolution): ~58 (EV-1..62 minus LLM-only)
+  - Lens 4 (Client): ~78 (CL-1..81 minus LLM-only)
+  - Lens 5 (Style): 25 (SC) + 17 (SCF) = 42
+  - Lens 6 (Privacy): 4 + cross-tagged from Lens 1
+  - Lens 7 (Operations): 0 unique + cross-tagged from Lens 2
+  - Lens 8 (Internal-Consistency): 0 unique + cross-tagged
+  - Lens 9 (AI-Agent): 8 + L9-1..8
+  - Lens 10 (Operational-Metadata): 6 + cross-tagged
+  - Phase-F-Direct: 12 (F-2/3/5/11..15/17..20)
+- **Severity-upgrades validated:**
+  - Y-7 / F-SP-3 / RFC2-60/61: warn → **error** (RFC 9700 BCP-240, 2025)
+  - C9 / RFC2-94: warn → **error** (cross-source consensus + verbatim "MUST send Retry-After")
+  - C5 / TM-A53 / RFC2-40: warn → **error** (RFC 9110 §11.6.1 verbatim "MUST")
+  - Y-8: off-by-default → **on-by-default warn** (multi-source confirm RFC 8725)
+  - K2 / problem+json: hint → warn (RFC 9457 + multi-source)
+  - SC-6 (resource-name pluralization): hint → warn (Phase E mining recommendation)
+- **New module candidates (Round-2)**:
+  1. `secret-scanner.ts` — TruffleHog/Gitleaks regex on default/example/description (TM-A* + L6-4)
+  2. `http-protocol-pairings.ts` — declarative param↔header / status↔header / scheme↔challenge pairings (RFC2-14/15/20-26/30-32/40-41/48/94/96)
+  3. `oauth2-flow-validator.ts` — RFC 9700 BCP-240 wrapper (RFC2-60..65)
+  4. `media-type-iana-validator.ts` — RFC 6838 + IANA registry (RFC2-75..79)
+  5. `json-schema-draft-version-detector.ts` — version-conditional rule firing (RFC2-84..89)
+  6. `problem-json-validator.ts` — RFC 9457 cross-response invariants (RFC2-1..5 incl. USP RFC2-5)
+  7. `style-classifier.ts` — first-classify-then-conditional-fire (Phase E SC-* + SCF-*)
+  8. `webhook-signature-detector.ts` — TM-A50 dedicated module (sleeper-killer rule)
+- **Convergence signal:** Round-1 → 5 lenses; Round-2 A-E → +4 lenses; Round-2 F → +1 lens (10). Each round adds fewer lenses; pattern-mining declared converged at **10 lenses**.
+- **Implementation:** Wave 2 ticket-allocation per `big-spec-architecture-spike-stage-a-implementation-priority.md`.
