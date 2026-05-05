@@ -118,12 +118,18 @@ export async function registerDefaultRunners(): Promise<void> {
   } catch {
     // module not yet present
   }
-  try {
-    const mod = await import('./domain-knowledge/index.js');
-    if (mod.runDomainKnowledgeLayers) registerDomainKnowledgeRunner(mod.runDomainKnowledgeLayers);
-  } catch {
-    // module not yet present
-  }
+  // Domain-knowledge layer (A2 / Stripe-only) is REMOVED from default-pipeline
+  // as of 2026-05-05 (Iteration 6 of the Big-Spec Architecture Spike).
+  // Rationale: vendor-/API-family-specific knowledge belongs to LLM Phase B,
+  // not deterministic Stage A. apiq is spec-agnostic — it analyzes ANY OpenAPI
+  // spec without hardcoding API-family detection. The LLM has Stripe / GitHub /
+  // PagerDuty conventions in its training data and applies them via reasoning,
+  // not deterministic pattern-matching. The `./domain-knowledge/` module is
+  // preserved as a spike datapoint (4 Stripe patterns with 100% recall in
+  // isolated test) but no longer auto-registered. Manual re-registration is
+  // possible if needed:
+  //   const dk = await import('./domain-knowledge/index.js');
+  //   registerDomainKnowledgeRunner(dk.runDomainKnowledgeLayers);
 }
 
 export type { DetectorFinding, DetectorOptions, DeterministicLayerResult, DetectorLayer } from './types.js';

@@ -1,6 +1,35 @@
 /**
  * Domain-knowledge layer dispatcher (Task A2).
  *
+ * **STATUS (2026-05-05): SPIKE DATAPOINT ONLY — NOT IN PRODUCTION PIPELINE.**
+ *
+ * Iteration 6 of the Big-Spec Architecture Spike (see
+ * `specs/big-spec-architecture-spike-critical-review.md` §17–§19) deemed this
+ * layer wrong-layer for Stage A:
+ *   - apiq is spec-agnostic — it analyses ANY OpenAPI spec
+ *   - Hardcoding Stripe-specific patterns competes with Spectral-custom-
+ *     rulesets, not apiq's actual differentiator
+ *   - Vendor knowledge belongs to LLM Phase B (the LLM has Stripe / GitHub /
+ *     PagerDuty / dnd5eapi conventions in its training data and applies them
+ *     via reasoning, not deterministic pattern-matching)
+ *   - A3 (PD/GitHub/dnd5eapi pattern libraries) was explicitly cancelled —
+ *     not built — for the same reason and the additional product-scaling
+ *     constraint (a Self-Service tool can't curate libs for the long-tail of
+ *     incoming specs)
+ *
+ * This module is **preserved as a spike datapoint** for the empirical record:
+ * the 4 hardcoded Stripe patterns (F7 Idempotency-Key, F9 stripeBypass,
+ * F12 Stripe-Account, F28 rate-limit) achieved 100% recall in isolated tests
+ * — demonstrating the recall ceiling for Stripe-specific patterns when
+ * deterministically encoded. The empirical comparison against LLM-Phase-B
+ * (with v6-prompt invoking training-knowledge) is the actual spike-lock test.
+ *
+ * The module is no longer auto-registered by `registerDefaultRunners()` in
+ * `../index.ts`. The original architecture below (heuristic detection +
+ * dispatcher) is preserved verbatim for traceability.
+ *
+ * ----------------------------------------------------------------------------
+ *
  * Detects which API-family a spec belongs to and dispatches to the matching
  * pattern library. Currently supports Stripe-class specs only; A3 will expand
  * to PagerDuty / GitHub / dnd5eapi families post-launch (each addition is a
