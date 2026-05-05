@@ -34,6 +34,21 @@ Concrete steps taken so the policy doesn't read like "we'll set this up someday"
 
 What's next: `/dev specs/09-big-spec-architecture-spike.md` (or `/refine_all_ind` first if spec-hardening preferred). Both run automatically on `v1-launch` + against v1-dev DB.
 
+#### 2026-05-05 — Critical Review Epic 09 → Spike paused, Stage 4 (Deterministic Layer) added
+
+Cross-session deep critique of Spike Draft 0.11. Twelve substantive blind spots identified; three changed the architecture-direction. See `specs/big-spec-architecture-spike-critical-review.md` for full record.
+
+1. **Findings-Inspection erstmals durchgeführt:** qualitativer Pass über `specs/big-spec-runs/haiku4-5_x_sonnet4-6__two-call__{pagerduty-full,stripe-full}.json` — Top-30 PD = ~37% repetitive variants of <10 unique Befunde; Top-15 Stripe = ~17% repetitive. Echte unique-Findings nach Rollup auf Stripe geschätzt ~300-500 statt 1423.
+2. **Architektur-Korrektur identifiziert:** 50-65% PD / 40-55% Stripe der LLM-Findings sind deterministisch findbar (Spectral-class + erweiterte Custom-Rules). Implikation: apiq-Architektur sollte Hybrid sein (Deterministic Layer + LLM Layer), nicht LLM-First.
+3. **User-Decision: Spike pausieren** — Stage 4 (Deterministic Layer) bauen (~2-4 Tage Engineering im `scripts/spike/`-Harness), DANN finale (C-i)-Messung mit deterministisch-vorprozessiertem Spec. Dies validiert die Differentiator-Empirik sauber: der LLM-Output nach Pre-Pass IST das was der LLM wirklich an Knowledge-Asymmetrie liefert.
+4. **Cost-Implication:** wenn 50% der LLM-Findings deterministisch werden, schrumpft Stripe-Run von $5.86 auf ~$1.50-2 (mit Prompt-Caching). Self-fundable bis Bull-Case → BYOK kann zurück nach v1.1 als optional-feature, nicht v1-must.
+5. **PRD-Revision-Liste teilweise zurückgenommen:** BYOK-as-v1-must, Workspace-Cap-$30-50, Async-Job-Pattern bleiben relevant aber Dringlichkeit hängt von Stage-4-Empirik ab. Final-Liste nach Stage 4.
+6. Memory-Handoff (`project_epic09_spike_handoff.md`) auf 2026-05-05 Stage-4-State aktualisiert.
+
+What's next: Stage-4-Engineering — Pattern-Extraktion aus existierenden JSONs → Spectral-Integration-Eval → Custom-Rules implementieren → Validation-Pass gegen JSONs. Dann Phase B (Pre-Pass + v6 + Cache: PD/Stripe-Runs). Konkrete Schritte in `specs/big-spec-architecture-spike-critical-review.md` "Aktualisierter Plan"-Abschnitt.
+
+**Update 2026-05-05 (later same day): Eval-Framework als Phase 0 vor Stage 4.** User-Decision: bevor Stage 4 (Deterministic Layer) gebaut wird, ~1 Tag Engineering in ein leichtes Custom-Eval-Framework investieren (`scripts/spike/eval/*`). Gründe: Multi-Run-Aggregation (löst Critical-Review-Punkt N=1-Varianz), strukturiertes Reference-Format für human-hardening, Repetition-Cluster-Scorer (misst direkt Stage-4-Effekt), Comparison-Reports + Regression-Snapshots. Port-Pattern nach `src/lib/eval/` im Foundation-Block. Verworfen: 3rd-Party-Frameworks (Promptfoo, Inspect, LangSmith — overhead + Drift-Risiko für unseren spezifischen Use-Case) und Code-Discipline-only (Critical-Review-Punkte bleiben unmessbar). Aktualisierte Reihenfolge: Phase 0 (Eval-Framework, ~1 Tag) → Phase A (Deterministic Layer, ~2-4 Tage) → Phase B (finale (C-i)-Messung mit N=3-5 multi-run, ~$5-8) → Phase C (Lock). Konkreter Phase-0-Scope in `specs/big-spec-architecture-spike-critical-review.md` Iteration 3.
+
 ### Live state (relevant facts below stay valid through v1 dev)
 
 | Item | Value |

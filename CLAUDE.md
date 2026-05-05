@@ -2,13 +2,13 @@
 
 Guidance for Claude Code (claude.ai/code) when working with this repository.
 
-> **Status:** v0.1 done (Epics 00–08). **Epic 09 Big-Spec Architecture Spike: Stage 3 measurement complete (2026-05-04 evening). Two open decisions before final-lock — see `specs/big-spec-architecture-spike.md` Draft 0.6 "Open decisions" section.** Conditional Spike-Epics 10–13 not yet spec'd.
+> **Status:** v0.1 done (Epics 00–08). **Epic 09 Big-Spec Architecture Spike: PAUSED at Phase 0 entry (2026-05-05). Critical review found 13 blind spots in Draft 0.11. Decision: Phase 0 = Eval-Framework (~1 day), Phase A = Deterministic Layer (~2-4 days), Phase B = finale (C-i)-Messung mit multi-run, Phase C = Lock. See `specs/big-spec-architecture-spike-critical-review.md` for full record.** Conditional Spike-Epics 10–13 not yet spec'd.
 > **Done:** Epic 00 (Research Spike) → Epic 08 (Export + Polish). 298 tests pass, lint + build clean.
 > **Live:** Portfolio-deploy of v0.1 at https://apiq-mvp.vercel.app — pre-seeded demo (`demo@example.com` / `demo`) with daily 03:00 UTC reset. Production-Vercel-Deploy is pinned to `main`. **CV-relevant URL — must stay stable through v1 development.**
 >
 > **Branch policy (since 2026-05-04):** `main` is FROZEN at the v0.1 portfolio-deploy state. **All v1 epic-implementation work happens on the `v1-launch` branch** — including Epic 09 spike + Epics 14–28 + any conditional spike-epic specs. NEVER `vercel --prod` from `v1-launch`. NEVER run `prisma migrate dev` against the production Supabase while on `v1-launch` — use the separate v1-dev Supabase (set in local `.env`). Merge `v1-launch` → `main` only when v1 is launch-ready and the user explicitly approves cutover.
 >
-> **Next (resuming Epic 09 mid-stage):** read `specs/big-spec-architecture-spike.md` Draft 0.6 "Open decisions" section first (Q1 v6-prompt-comprehensive recommended yes; Q2 B-Hybrid recommended skip). Plus `specs/big-spec-runs/_manual-coverage-audit-stripe-Cii.md` for empirical context. Then continue per User's Q1/Q2 calls. Stage 3 artefacts UNCOMMITTED on `v1-launch` — final commit closes Epic 09.
+> **Next (resuming Epic 09):** read `specs/big-spec-architecture-spike-critical-review.md` first (full critical review + decisions + Phase 0 → A → B → C plan). Then `LAUNCH-PROGRESS.md` "2026-05-05" Setup-Actions-Log entry. Architectural insight: 50-65% PD / 40-55% Stripe der LLM-Findings sind deterministisch findbar → apiq-Architektur ist Hybrid (Deterministic Layer + LLM Layer), nicht LLM-First. Phase 0 = Eval-Framework im `scripts/spike/eval/`-Harness; Phase A = Deterministic Layer; Phase B = finale (C-i)-Messung mit multi-run statistical signal; Phase C = Lock.
 >
 > **Conditional epics 10–13 (Spike S1/S2/S3 + Capability-Gap-Implementation):** spec'd ON-DEMAND after each preceding spike's `*-results.md` Cancel-Decision. Workflow + cancel-thresholds in `specs/brainstorming-launch.md` §"Conditional Epic Trigger Workflow". Trigger via `/spec_ind <n> <slug> "<context-prompt>"`. Skipping is safe (those features auto-defer to v1.1+); the engineering-track 14→28 ships v1 either way.
 >
