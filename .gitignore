@@ -59,3 +59,4 @@ specs/research-spike-runs/
 # are ignored. Reproducible via `npx tsx scripts/spike/run-arch.ts ...`.
 specs/big-spec-runs/*.json
 !specs/big-spec-runs/_precheck.json
+scripts/spike/eval/cache/

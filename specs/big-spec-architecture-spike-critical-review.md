@@ -435,3 +435,155 @@ Stage-A Output umfasst:
 3. **Ref-Update-Diff:** umgetaggte Klassifikationen + neue Refs + kalibrierte Recall-Zahlen
 4. **Updated `STAGE-A-PREDICTIONS.md`:** echte Recall-Zahlen ersetzen 95%/75% Hypothesen
 5. **Re-locked Snapshots:** alle 13 Stage-3-Snapshots werden mit Stage-A-pre-pass-output neu gemessen
+
+---
+
+## Update 2026-05-05 (Diskussions-Iteration 5): Cross-Layer Findings-Deduplication als Production-Feature
+
+User-Insight 2026-05-05 (mid-Phase-A Vocabulary-Mismatch-Diskussion): "ist [embedding-similarity-scorer] nicht selbst schon ein apiq Feature an sich?"
+
+### 16. Vocabulary-Bridging IS ein Production-Feature, nicht nur Eval-Tool
+
+Was Phase 0 / Phase A als "Coverage-Scorer" baut (Token-Jaccard + Rollup-Clustering + narrationKeywords-aware-Matching + Embedding-Similarity) ist **mechanisch identisch zu einem load-bearing v1-Production-Feature: Cross-Layer Findings-Deduplication.**
+
+**Die Production-Realität in v1:**
+
+Eine Analyse-Run produziert findings aus 5 Layern:
+1. **Spectral findings** (per-occurrence) — z.B. 47× "Operation should have operationId"
+2. **Walker findings** (aggregated) — "All 47 ops missing operationId"
+3. **Domain-Knowledge findings** — z.B. F7 Idempotency-Key
+4. **LLM Phase-1 findings** (per-endpoint) — "Charge missing rate-limit declaration"
+5. **LLM Phase-2 / Aggregator findings** (spec-level) — "Rate-limit headers undocumented across spec"
+
+Dasselbe Issue wird häufig von 3+ Layern parallel emittiert. Der User darf in der Findings-Tab nicht 5× das gleiche sehen — er muss EIN finding mit gemerged `affectedEndpoints` + reconciled `patchOps` sehen.
+
+**Konkrete Manifestationen in unserer Phase-A-Empirik:**
+
+- Spectral emittiert 582× "HTML markup found in description" auf Stripe; Walker emittiert 1× "Operation descriptions use HTML markup" mit `affectedEndpoints: [582 Pfade]`. Beide sind dasselbe Issue. Aktuell würden beide getrennt im Output landen.
+- Spectral 1096× "stub-only schema description" auf Stripe; Walker 1× "Component schemas carry empty descriptions (80.7%)"; Phase-2-LLM emittiert wahrscheinlich auch eine spec-level-Variante.
+- F28 (rate-limit-headers): Domain-Knowledge-Layer emittiert + LLM-Phase-1 hat Chance es per-endpoint zu finden + LLM-Phase-2 hat Chance es spec-level zu finden. Drei findings, ein Issue.
+
+### Implikation für v1 Foundation-Block
+
+**Neuer load-bearing Engineering-Task:** "Cross-Layer Findings-Deduplication" (~2-3 Tage Engineering, derzeit nicht in `prd-launch.md` §3 Foundation-Block gelistet).
+
+Mechanik:
+1. **Token-basierte Cluster-Equivalence:** Rollup-Clustering der Findings über alle Layer hinweg via Repetition-Cluster-Scorer-Mechanik (existing in eval/).
+2. **narrationKeywords-aware-Match:** für High-Confidence-Cluster-Merges leveraged human-curated keywords aus Reference-Catalog (oder LLM-emitted narrationKeywords im LLM-output).
+3. **Embedding-Similarity** für Hard-Vocabulary-Bridge-Cases (Day-2 von eval/, portable in Production).
+4. **Patch-Reconciliation:** wenn 3 Layer den gleichen Findings-Cluster emittieren, welche `patchOps` werden für den User serviert? Heuristik: Domain-Knowledge > Walker > Spectral > LLM (umgekehrte Reihenfolge wenn Patches widersprechen).
+
+### Reuse-Pattern: Spike → Foundation-Block
+
+Genau wie Epic 04's `scripts/spike/run-prompt.ts` → `src/lib/analysis/runAnalysis.ts` Port-Pattern:
+- Eval-Scorer-Mechanik in `scripts/spike/eval/scorers/{jaccard,repetition-cluster,embedding-similarity}.ts` ist bereits modular gebaut
+- Foundation-Block portiert diese nach `src/lib/analysis/dedup/` und ruft sie als Pipeline-Step nach allen Layer-Outputs auf
+- Code-Duplikation = null; Test-Suites mit-portiert via vitest
+- Geschätzter Foundation-Block-Port-Aufwand: ~0.5 Tag pro Scorer = ~1.5 Tage total
+
+### Konsequenzen für PRD-Revision-Liste
+
+`LAUNCH-PROGRESS.md` "Pre-Foundation-Block follow-ups" → ein Eintrag dazufügen:
+
+> Add **Cross-Layer Findings-Deduplication** as Foundation-Block engineering task (~2-3 Tage). Required because Stage-A pre-pass + LLM Phase-1+2 emit overlapping findings across layers; without dedup the user sees 5×-duplicates per spec issue. Mechanik bereits modular im Spike-Harness gebaut (Phase-0 + Phase-A); port nach `src/lib/analysis/dedup/`.
+
+### Nicht-Konsequenz: Phase-A-Refactoring
+
+Der Embedding-Agent (Task #25) und A+B-Implementation (Task #24) bauen den Code in `scripts/spike/eval/scorers/`. Das ist **richtig so** — Spike-Harness-Convention. Foundation-Block-Port verschiebt die Files; aktuelle Lokation ist nicht zu ändern.
+
+---
+
+## Update 2026-05-05 (Diskussions-Iteration 6): Architektur-Korrektur — Putz-First, A2/A3 falsch
+
+User-Insight 2026-05-05 (end of Phase A): zwei load-bearing Korrekturen die alle Phase-A-Empirik neu rahmen.
+
+### 17. A2 (Stripe-Domain-Knowledge) ist Architektur-Verirrung — A3 NICHT bauen
+
+User-Push-Back: "das soll doch genau die aufgabe des llms sein und nicht deterministisch oder?"
+
+**Stimmt.** Apiq's Differentiator-Claim ist "AI knows what your spec should say". Das LLM hat Stripe-Docs, GitHub-Docs, PD-Docs in seinen Training-Daten. Wenn wir Stripe-spezifisches Wissen ("erwarte Idempotency-Key auf POST") in Detector-Code hardcoden, konkurrieren wir mit Spectral-Custom-Rulesets — exakt das Gegenteil von dem was apiq vom Linter-Pack abhebt.
+
+**Stage-A war ursprünglich klar gedacht:**
+- **Deterministischer Layer (A1):** strukturelle, repetitive Patterns ohne Domain-Wissen — Spectral-class.
+- **LLM-Layer (Phase B mit v6-Prompt):** Domain-Wissen anwenden — apiq's eigentlicher Differentiator.
+
+**Was schiefgegangen ist:** Stage-A2 hat vier Stripe-Domain-Patterns als Detector-Code hardcoded (F7, F9, F12, F28). Das ist die Verirrung — diese Patterns gehören dem LLM. Stage-A3 (analoge Detectors für PD/GitHub/dnd5eapi mit 13 weiteren Patterns) wäre noch mehr Verirrung.
+
+**Konsequenz:**
+- **A3 NICHT bauen** — kategorisch.
+- **A2 reframen** als defensive fallback, nicht als primary Detector. Stripe-Domain-Layer feuert nur als Backup falls LLM unter v6 fehlschlägt.
+- **Refs (`findings.json` Files) bleiben unangetastet** — sie sind der Goldstandard gegen den sowohl deterministische als auch LLM outputs gemessen werden. Domain-Knowledge-Class-Refs (17 total über 4 specs) bleiben drin.
+
+### 18. Reputations-Limit: Putz-Schritt muss BEST-IN-CLASS sein bevor LLM-Differentiator zählt
+
+User-Push-Back: "was nutzt uns 'advanced' llm insight, wenn wir vor der eigenen haustür nicht richtig putzen. angenommen ein user verlässt sich komplett auf uns zur evaluierung seiner openapi spec, aber wir finden den 'offensichtlichen müll' nicht, was hilft ihm dann llm 'hallucination'?"
+
+**Reputations-Logik:** apiq verkauft sich als "ich prüfe deine Spec". User erwartet *zuerst* dass alles was ein normaler Linter findet, auch apiq findet. Plus dann den AI-Bonus. **LLM-Insights sind Add-On — der Putz ist Pflicht.**
+
+**Wo wir tatsächlich stehen:**
+- Spectral-Standard-Niveau: ✓ (wir nutzen Spectral-Engine)
+- "Best-in-class-Linter"-Niveau (Vacuum-Tools + Community-Rulesets + tuned Custom-Rules): **✗ wahrscheinlich nicht**
+- LLM-Differentiator-Niveau: **✗ nicht getestet**
+
+**Was wir nicht gemacht haben (aber müssen):** den Spec einfach durch **Vacuum** (Spectral-kompatibler kommerzieller Linter), durch **Redocly CLI**, durch ein paar bekannte Community-Spectral-Rulesets jagen. Schauen was die finden. Dann: findet apiq mindestens das? Wenn nein → wir haben echte Lücken im Putz-Schritt die wir schließen müssen, **bevor** wir den LLM-Differentiator polieren.
+
+Self-measurement gegen unsere eigene Reference-Liste hat den Bias zu sehr in die andere Richtung — sind wir ehrlich dass wir Sachen verfehlen die andere mature Tools zuverlässig finden?
+
+### 19. Korrekte Reihenfolge — Re-Plan post-iteration-6
+
+**Falsch gemacht heute:**
+1. Phase 0 Eval-Framework (richtig — Werkzeug zur Messung)
+2. Stage-A1 Spectral + Walker + Custom-Ruleset (richtig — Putz-Schritt aufgesetzt)
+3. **Stage-A2 Stripe-Domain-Detectors (falsch — gehört LLM)**
+4. **Sprung zu LLM-Test übersprungen, stattdessen Vocabulary-Mismatch-Mitigation auf eigene Refs (zu narzisstisch)**
+
+**Richtige Reihenfolge ab jetzt:**
+
+1. **Stage-A polieren auf "Best-in-class-Linter"-Niveau** (~2-4 Tage)
+   - Externe Reality-Check: Vacuum + Redocly CLI + Community-Spectral-Rulesets gegen unsere 4 Specs
+   - Lücke schließen: Custom-Rules schreiben für alles was externe Tools finden aber wir verfehlen
+   - Tier-0a (Fatal-Validity: spec-parse, dangling-$ref, missing-required-fields) absolut bombenfest
+   - Tier-0b (Non-Fatal-Validity: operationId-uniqueness, type-format-mismatch) absolut bombenfest
+   - Custom-Spectral-Ruleset von 27 → 50-100 Rules
+   - Community-Publishability als Open-Source-Ruleset (Differentiator-extender, Marketing-Win)
+   - Refs-Klassifikation ehrlich überarbeiten (Phase-0 war zu optimistisch)
+
+2. **A2 reframen als defensive-fallback, nicht primary** (~30 min Doc-Änderung)
+   - Stripe-Domain-Layer bleibt im Repo, aber als Backup gekennzeichnet
+   - Tasks #22-Code bleibt, Architektur-Rolle ändert sich
+
+3. **A3 explizit als "do not build"** (~10 min in PRD/Memory)
+   - LLM mit v6-Prompt soll diese Patterns finden
+   - Wenn LLM-v6-Test fehlschlägt → strategische Entscheidung (Differentiator revidieren oder Krücke akzeptieren)
+
+4. **DANN erst Phase B: LLM mit v6-Prompt** (~$5, 30 min Wall-Clock pro Run)
+   - v6 mit explizitem "apply your training knowledge of Stripe/GitHub/PagerDuty/etc API conventions"
+   - Misst ob Differentiator-Claim hält
+   - **Das ist der eigentliche Spike-Lock-Test** — alle anderen Sachen davor sind Vorbereitung
+
+5. **Phase C: Spike-Lock**
+   - Dokumentation der finalen Empirik
+   - Foundation-Block-Plan basierend auf Real-Empirik (nicht Predictions)
+
+### 20. Was bleibt vom heutigen Tag
+
+**Wertvoll und behalten:**
+- Phase 0 Eval-Framework (kompletter Stack: Runner, Scorer-Suite, Snapshot-System, Comparison-Reporter, Bulk-Sweep)
+- 4 Reference-Targets (`openapi-examples/<spec>/reference/findings.json`) — Klassifikations-Tags müssen ehrlicher werden, aber Body-Content bleibt
+- Spectral-Runner (A1) — Engine korrekt integriert, OAS3-default + Custom-Ruleset funktioniert
+- 12 Walkers (A1) — statistische Aggregations, korrekt
+- 27 Custom-Spectral-Rules (A1) — Basis, muss erweitert werden
+- Embedding-Similarity-Scorer (mit OpenAI text-embedding-3-small, OPENAI_API_KEY in scripts/spike/.env)
+- Stripe-Domain-Layer (A2) als defensive-fallback
+- Vitest-Tests für die kritischen Scorer
+
+**Nicht wertvoll (Korrekturen):**
+- Predicted-vs-measured-Vergleich aus Phase-0 — Predictions waren zu optimistisch (95% pure-spectral / 75% domain-knowledge). Bei ehrlicher Refs-Klassifikation realistische Predicted-Werte: 50-65%.
+- Stage-A-Validation-Rate von 30-50% — gemessen gegen too-narzisstische eigene Refs. Echter Reality-Check (gegen externe Linter) noch ausstehend.
+
+**Architektur-Lehren:**
+- Putz-Schritt-First ist load-bearing für Reputation
+- Differentiator (LLM-Domain-Knowledge) ist Add-On, nicht Substitute
+- Don't hardcode what the LLM should know
+- Self-measurement biased — externe Reality-Checks sind Pflicht
+

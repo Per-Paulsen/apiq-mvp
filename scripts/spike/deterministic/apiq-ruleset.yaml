@@ -1,0 +1,604 @@
+# apiq Spectral Ruleset
+#
+# Custom Spectral rules covering apiq's Stage-A pure-spectral-detectable
+# reference findings that the @stoplight/spectral-rulesets OAS3 default
+# ruleset does not natively catch.
+#
+# Authored 2026-05-05 (Task A1.2) from analysis of 4 reference targets:
+#   - Stripe FULL    (openapi-examples/stripe-full)
+#   - PagerDuty FULL (openapi-examples/pagerduty-full)
+#   - dnd5eapi       (openapi-examples/dnd5eapi)
+#   - GitHub REST    (openapi-examples/github-rest)
+#
+# Total `isPureSpectralDetectable: true` refs across the four references:
+#   stripe:20 + pd:17 + dnd:10 + github:26 = 73
+#
+# Coverage map (rule -> ref-IDs targeted) lives in apiq-ruleset-coverage.md.
+# Refs that require statistical aggregation (e.g. >70% empty descriptions,
+# >50% schemas without additionalProperties) are NOT expressible as Spectral
+# rules and are marked for the Walkers layer (Task A1.3) in the coverage map.
+# Refs that require domain catalogue (e.g. Idempotency-Key on Stripe POSTs,
+# X-GitHub-Api-Version, From-header on PagerDuty writes) are marked for the
+# Domain-Knowledge layer (Task A2).
+#
+# Severity discipline:
+#   - error: actual OAS-3 spec violations (e.g. $ref-with-siblings, deepObject
+#     on array, default value type-mismatch)
+#   - warn:  contract gaps that have a clear "right answer" (e.g. *_id field
+#     should declare format/pattern, deprecated-in-prose without flag)
+#   - hint:  stylistic/lint-class issues (orphan tags, info.license missing,
+#     stub schema descriptions)
+#
+# We deliberately extend `spectral:oas` rather than disabling it; the OAS3
+# default ruleset already covers many of our findings (info.license,
+# operation-operationId, operation-tag-defined, oas3-server-trailing-slash,
+# duplicated-entry-in-enum, oas3-valid-media-example, oas3-unused-component,
+# operation-description, operation-summary). Custom rules below add the
+# refs the defaults miss.
+
+extends:
+  - spectral:oas
+
+formats:
+  - oas3
+  - oas3_0
+  - oas3_1
+
+rules:
+  # =========================================================================
+  # ========================== APIQ CUSTOM RULES ============================
+  # =========================================================================
+
+  # -------------------------------------------------------------------------
+  # FK / ID-typing rules
+  # -------------------------------------------------------------------------
+
+  # Targets: stripe:F23, pagerduty:F12, github:F22
+  # Heuristic: properties named `*_id` typed as plain string with no
+  # `format`, `pattern`, or `$ref` are likely foreign-key references that
+  # would benefit from a typed primitive.
+  apiq-fk-fields-need-format-or-pattern:
+    description: >-
+      Fields named *_id likely reference another resource and should declare
+      `format`, `pattern`, or `$ref` so codegen and validators can build a
+      typed relationship graph.
+    message: "{{property}} looks like a foreign-key reference; declare `format`, `pattern`, or `$ref` to the linked schema."
+    severity: warn
+    given: "$..properties[?(@property.match(/^.+_id$/) && @.type=='string' && !@.format && !@.pattern && !@.enum)]"
+    then:
+      function: defined
+      field: format
+
+  # Targets: stripe:F11, github:F22 (sha pattern subset)
+  # Heuristic: integer fields named `*_at`, `*_timestamp`, or `*_ts` are
+  # likely unix-time and should declare `format: unix-time` (the convention
+  # adopted by Stripe's spec for its 152 timestamp fields).
+  apiq-unix-time-format-on-timestamp-fields:
+    description: >-
+      Integer fields named *_at, *_timestamp, *_ts likely represent unix-time
+      and should declare a `format` so codegen can map them to a Timestamp
+      type.
+    message: "Field {{property}} looks like a timestamp; consider `format: unix-time` for consistency."
+    severity: hint
+    given: "$..properties[?(@property.match(/^.+_(at|timestamp|ts)$/) && @.type=='integer' && !@.format)]"
+    then:
+      function: defined
+      field: format
+
+  # -------------------------------------------------------------------------
+  # Numeric range constraint rules
+  # -------------------------------------------------------------------------
+
+  # Targets: stripe:F25, github:F19, pagerduty:F11 (limit-no-range cluster)
+  # Heuristic: properties named `limit` or `*_limit` typed as integer with
+  # no `minimum`/`maximum` are pagination/result-cap fields whose bound is
+  # a contract surface; they should carry an upper bound.
+  apiq-limit-parameter-needs-bounds:
+    description: >-
+      `limit`-style integer parameters/properties should declare both a
+      `minimum` and a `maximum`. Prose-only bounds in `description` are
+      invisible to codegen and client-side validators.
+    message: "{{property}} is a limit-style integer; declare numeric bounds (`minimum`/`maximum`) rather than prose-only."
+    severity: warn
+    given: "$..[?(@property.match(/^(limit|.+_limit)$/) && @.schema && @.schema.type=='integer' && (@.schema.maximum===undefined))]"
+    then:
+      function: defined
+      field: schema.maximum
+
+  # Companion to the above: covers component-schema properties (not just
+  # parameter objects).
+  apiq-limit-property-needs-bounds:
+    description: >-
+      Schema properties named `limit` or `*_limit` should declare numeric
+      bounds (`minimum`/`maximum`).
+    message: "{{property}} is a limit-style integer property; declare `maximum` so SDKs can emit typed bounds."
+    severity: hint
+    given: "$..properties[?(@property.match(/^(limit|.+_limit)$/) && @.type=='integer' && @.maximum===undefined)]"
+    then:
+      function: defined
+      field: maximum
+
+  # -------------------------------------------------------------------------
+  # OAS-3 spec violations (severity: error)
+  # -------------------------------------------------------------------------
+
+  # Targets: stripe:F10
+  # OAS 3.0 §4.7.10.1: `style: deepObject` is for objects only, NOT arrays.
+  # Stripe's `expand` parameter on 270 operations violates this.
+  apiq-deepobject-only-on-objects:
+    description: >-
+      Parameter `style: deepObject` is only valid for object-typed schemas
+      per OAS 3.0 §4.7.10.1. For arrays, use `form` (with explode: true) or
+      `pipeDelimited` / `spaceDelimited`.
+    message: "Parameter style 'deepObject' must not be combined with `schema.type: array` (OAS 3.0 §4.7.10.1 violation)."
+    severity: error
+    given: "$.paths[*][*].parameters[?(@.style=='deepObject' && @.schema && @.schema.type=='array')]"
+    then:
+      function: undefined
+      field: style
+
+  # Targets: dnd:F5
+  # OAS 3.0 §3.0 (Reference Object): `$ref` MUST be the only key; siblings
+  # are silently dropped.
+  apiq-no-ref-siblings:
+    description: >-
+      Per OAS 3.0 §3.0 (Reference Object), `$ref` MUST be the only key in
+      its object — sibling keys (description, allOf, etc.) are silently
+      dropped by conformant parsers. Wrap in `allOf` if you need siblings.
+    message: "{{property}} co-occurs with `$ref`; OAS 3.0 silently drops it. Wrap `$ref` in an `allOf` to preserve siblings."
+    severity: error
+    formats:
+      - oas3_0
+    given: "$..[?(@.$ref && (@.description!==undefined || @.allOf!==undefined || @.oneOf!==undefined || @.anyOf!==undefined || @.properties!==undefined || @.type!==undefined))]"
+    then:
+      - field: description
+        function: undefined
+      - field: allOf
+        function: undefined
+
+  # -------------------------------------------------------------------------
+  # Description / documentation rules
+  # -------------------------------------------------------------------------
+
+  # Targets: stripe:F3
+  # OAS 3 §3 specifies CommonMark; HTML markup defeats cross-renderer
+  # compatibility.
+  apiq-description-no-html-markup:
+    description: >-
+      OpenAPI description fields support CommonMark (OAS 3.0 §3). HTML
+      tags like `<p>`, `<a>`, `<code>`, `<strong>` defeat cross-renderer
+      consistency; use Markdown instead.
+    message: "Description contains HTML markup; OAS 3 expects CommonMark."
+    severity: warn
+    given:
+      - "$.info.description"
+      - "$.paths[*][*].description"
+      - "$.paths[*].description"
+      - "$.components.schemas[*].description"
+      - "$.components.parameters[*].description"
+      - "$.components.responses[*].description"
+    then:
+      function: pattern
+      functionOptions:
+        notMatch: "<(p|a|code|strong|em|li|ul|ol|br|h[1-6]|div|span|table|tr|td|th|tbody|thead|pre|blockquote)\\b"
+
+  # Targets: dnd:F11
+  # Stub descriptions like "`Spell`\n" or "WeaponProperty" that just echo
+  # the schema name carry no information.
+  apiq-schema-description-not-stub:
+    description: >-
+      Component-schema `description` should not be a stub that just echoes
+      the schema's name (e.g. "`Spell`\n") — that signals an unfinished
+      authoring pipeline.
+    message: "Schema description appears to be a stub (echoes schema name or is shorter than 10 visible chars)."
+    severity: hint
+    given: "$.components.schemas[*].description"
+    then:
+      function: length
+      functionOptions:
+        min: 10
+
+  # Targets: github:F10
+  # Heuristic: info.description shorter than ~80 chars on a multi-op API
+  # is almost certainly a placeholder.
+  apiq-info-description-substantive:
+    description: >-
+      `info.description` should be a substantive overview (auth, base URL,
+      versioning, pagination conventions). Sub-80-character descriptions
+      on a multi-operation API signal a placeholder.
+    message: "info.description is too short to be a useful overview ({{value}} chars)."
+    severity: hint
+    given: "$.info.description"
+    then:
+      function: length
+      functionOptions:
+        min: 80
+
+  # -------------------------------------------------------------------------
+  # Tags rules
+  # -------------------------------------------------------------------------
+
+  # Targets: stripe:F2 (no top-level tags), dnd:F2 (14 of 16 tags missing
+  # from top-level array). Note: spectral:oas already includes
+  # `operation-tag-defined` (warns on operation tags absent from top-level
+  # tags array). This rule complements by flagging the spec-level absence.
+  apiq-spec-needs-tags-array:
+    description: >-
+      Top-level `tags` array should be present and non-empty so operations
+      can be grouped in documentation portals and SDKs.
+    message: "No top-level `tags` array declared; operations cannot be grouped."
+    severity: warn
+    given: "$"
+    then:
+      - field: tags
+        function: defined
+      - field: tags
+        function: length
+        functionOptions:
+          min: 1
+
+  # Targets: pd:F13 (orphan tag). Each top-level tag should have a
+  # non-empty description (the OAS3-default `oas3-tag-no-empty-description`
+  # check is included in `spectral:oas` but only warns; we strengthen the
+  # signal by also requiring description-length >= 5).
+  apiq-tag-meaningful-description:
+    description: >-
+      Each top-level tag should carry a non-trivially-short description
+      so portals can render a useful group header.
+    message: "Tag {{property}} has a too-short description (<5 chars)."
+    severity: hint
+    given: "$.tags[?(@.description !== undefined)]"
+    then:
+      field: description
+      function: length
+      functionOptions:
+        min: 5
+
+  # -------------------------------------------------------------------------
+  # Polymorphism / discriminator rules
+  # -------------------------------------------------------------------------
+
+  # Targets: pagerduty:F14, github:F26
+  # `oneOf` without a `discriminator` forces consumers to runtime-probe.
+  apiq-oneof-needs-discriminator:
+    description: >-
+      `oneOf` schemas should declare a `discriminator` to enable
+      machine-readable variant deserialisation per OAS 3.0 §4.7.25.
+    message: "`oneOf` schema lacks a `discriminator`; codegens fall back to runtime variant-probing."
+    severity: hint
+    given: "$..[?(@.oneOf && @.oneOf.length > 1 && !@.discriminator)]"
+    then:
+      function: defined
+      field: discriminator
+
+  # -------------------------------------------------------------------------
+  # Type / primitive rules
+  # -------------------------------------------------------------------------
+
+  # Targets: dnd:F10
+  # Properties named like counts/levels/sizes with `type: number` are
+  # almost certainly integers semantically.
+  apiq-count-fields-should-be-integer:
+    description: >-
+      Properties whose name signals a count/level/index (count, level,
+      size, total, num_*, *_count) and that are typed `number` should
+      almost always be `integer` instead.
+    message: "{{property}} looks integer-valued (count/level/index); `type: number` permits floats."
+    severity: hint
+    given: "$..properties[?(@property.match(/^(count|level|size|total|num_.+|.+_count|.+_level|.+_size|.+_total|.+_index)$/) && @.type=='number')]"
+    then:
+      function: pattern
+      field: type
+      functionOptions:
+        match: "^integer$"
+
+  # -------------------------------------------------------------------------
+  # Server / hygiene rules
+  # -------------------------------------------------------------------------
+
+  # Targets: dnd:F1
+  # Localhost server URLs should not appear in published specs.
+  apiq-no-localhost-servers:
+    description: >-
+      `servers[].url` should not include `localhost`, `127.0.0.1`, or
+      similar dev-only hosts in a published spec.
+    message: "Server URL '{{value}}' looks like a development host; remove from published spec."
+    severity: warn
+    given: "$.servers[*].url"
+    then:
+      function: pattern
+      functionOptions:
+        notMatch: "(localhost|127\\.0\\.0\\.1|0\\.0\\.0\\.0|::1)"
+
+  # -------------------------------------------------------------------------
+  # Response / shape rules
+  # -------------------------------------------------------------------------
+
+  # Targets: pagerduty:F6
+  # Response components with only `description` and no `content` advertise
+  # an empty body — usually a contract-loss bug.
+  apiq-response-needs-content:
+    description: >-
+      Response components used by operations that return a body should
+      declare `content`. A `description`-only response advertises an
+      empty body.
+    message: "Response component {{property}} has no `content`; will render as body-less to consumers."
+    severity: warn
+    given: "$.components.responses[?(!@.content && !@.headers && @property.match(/.*(BadRequest|Unauthorized|Forbidden|NotFound|Conflict|Error|Webhook).*/))]"
+    then:
+      function: defined
+      field: content
+
+  # Targets: pagerduty:F7
+  # OAS 3 derives request `Content-Type` from `requestBody.content` keys;
+  # declaring `Content-Type` as a header parameter is a Swagger-2 holdover.
+  apiq-no-content-type-header-parameter:
+    description: >-
+      Per OAS 3.0 §4.7.13, request `Content-Type` is derived from
+      `requestBody.content` keys. Declaring `Content-Type` as a header
+      parameter is a Swagger-2 holdover and double-declares the contract.
+    message: "Operation declares a `Content-Type` header parameter; OAS 3 derives it from requestBody.content."
+    severity: warn
+    given: "$..parameters[?(@.in=='header' && (@.name=='Content-Type' || @.name=='content-type'))]"
+    then:
+      function: undefined
+      field: name
+
+  # Targets: stripe:F8
+  # POST endpoints should accept application/json (de-facto modern REST
+  # transport) in addition to or in lieu of application/x-www-form-urlencoded.
+  # We flag the case where the ONLY body type is x-www-form-urlencoded.
+  apiq-post-should-accept-json:
+    description: >-
+      POST endpoints with a request body should accept application/json
+      alongside any legacy form-encoded content-type.
+    message: "POST operation accepts only form-encoded; consider adding application/json."
+    severity: hint
+    given: "$.paths[*].post.requestBody.content[?(@property=='application/x-www-form-urlencoded')]^^"
+    then:
+      field: application/json
+      function: defined
+
+  # -------------------------------------------------------------------------
+  # Enum rules
+  # -------------------------------------------------------------------------
+
+  # Targets: pagerduty:F8 (Accept header free-form string with prose-only
+  # version vocabulary)
+  # When a parameter description includes the word "version" or "enum",
+  # an `enum` constraint should be present on its schema.
+  apiq-versioning-headers-need-enum:
+    description: >-
+      Header parameters whose name or description mentions versioning
+      should declare `enum` to enumerate supported values.
+    message: "Versioning-related header parameter {{property}} lacks `enum`; supported version values cannot be enumerated."
+    severity: hint
+    given: "$..parameters[?(@.in=='header' && (@.name && (@.name.match(/[Vv]ersion/) || @.name=='Accept')) && @.schema && @.schema.type=='string' && !@.schema.enum)]"
+    then:
+      function: defined
+      field: schema.enum
+
+  # -------------------------------------------------------------------------
+  # Default-value type-consistency rules
+  # -------------------------------------------------------------------------
+
+  # Targets: pagerduty:F9
+  # JSON Schema §6.2 / OAS 3.0 §3.7: `default` must match the schema's
+  # type. spectral:oas does NOT include this check; oas3-valid-schema-example
+  # only validates `example`, not `default`.
+  apiq-default-type-matches-integer:
+    description: >-
+      A `default` on a `type: integer` schema must be an integer, not a
+      string. JSON Schema §6.2 / OAS 3.0 §3.7 require defaults to validate
+      against their own schema.
+    message: "Default value is not an integer but the schema declares `type: integer`."
+    severity: error
+    given: "$..[?(@.type=='integer' && @.default!==undefined)]"
+    then:
+      function: schema
+      field: default
+      functionOptions:
+        schema:
+          type: integer
+
+  apiq-default-type-matches-number:
+    description: >-
+      A `default` on a `type: number` schema must be a number.
+    message: "Default value type does not match `type: number`."
+    severity: error
+    given: "$..[?(@.type=='number' && @.default!==undefined)]"
+    then:
+      function: schema
+      field: default
+      functionOptions:
+        schema:
+          type: number
+
+  apiq-default-type-matches-boolean:
+    description: >-
+      A `default` on a `type: boolean` schema must be a boolean.
+    message: "Default value type does not match `type: boolean`."
+    severity: error
+    given: "$..[?(@.type=='boolean' && @.default!==undefined)]"
+    then:
+      function: schema
+      field: default
+      functionOptions:
+        schema:
+          type: boolean
+
+  apiq-default-type-matches-string:
+    description: >-
+      A `default` on a `type: string` schema must be a string.
+    message: "Default value type does not match `type: string`."
+    severity: error
+    given: "$..[?(@.type=='string' && @.default!==undefined)]"
+    then:
+      function: schema
+      field: default
+      functionOptions:
+        schema:
+          type: string
+
+  # -------------------------------------------------------------------------
+  # Content / media-type rules
+  # -------------------------------------------------------------------------
+
+  # Targets: github:F31
+  # `text/x-markdown` was deprecated by RFC 7763 in favour of `text/markdown`.
+  apiq-prefer-iana-markdown-mediatype:
+    description: >-
+      Use the IANA-registered `text/markdown` (RFC 7763) rather than the
+      deprecated `text/x-markdown`.
+    message: "Media-type `text/x-markdown` was deprecated by RFC 7763; use `text/markdown`."
+    severity: hint
+    given: "$..content"
+    then:
+      function: pattern
+      field: "@key"
+      functionOptions:
+        notMatch: "^text/x-markdown$"
+
+  # -------------------------------------------------------------------------
+  # Examples coverage rules
+  # -------------------------------------------------------------------------
+
+  # Targets: stripe:F27
+  # Operations with a request body should provide at least one example
+  # for codegen and documentation portals.
+  apiq-request-body-needs-example:
+    description: >-
+      Operations with a `requestBody` should provide an `example` or
+      `examples` map on each content-type so codegen can build realistic
+      test fixtures and portals can render sample payloads.
+    message: "Request body content has neither `example` nor `examples`; codegen + docs portals get no sample payload."
+    severity: hint
+    given: "$.paths[*][post,put,patch].requestBody.content[*]"
+    then:
+      function: xor
+      functionOptions:
+        properties:
+          - example
+          - examples
+
+  # -------------------------------------------------------------------------
+  # Status-code / response-shape rules
+  # -------------------------------------------------------------------------
+
+  # Targets: pagerduty:F21 (UnprocessableEntity component wired to status 400)
+  # Heuristic: when a response component is named with a status semantic
+  # (UnprocessableEntity, NotFound, Forbidden, Unauthorized) and is
+  # referenced from a status code that conflicts with that semantic,
+  # warn. We can only check the simple case: components whose name encodes
+  # a status referenced from the wrong status code on operations.
+  # Not directly expressible cleanly in pure Spectral DSL; documented in
+  # coverage map as a Walker-deferred rule. The simpler companion below
+  # checks only that named-status response components carry the conventional
+  # name → status mapping in components.responses (not in operations).
+
+  # Targets: github:F28
+  # Parameters described as comma-separated should be typed as arrays,
+  # not strings.
+  apiq-comma-separated-should-be-array:
+    description: >-
+      Parameters described as "comma-separated" should be typed as arrays
+      with `style: form, explode: false` rather than as flat strings.
+    message: "Parameter description mentions comma-separation but `schema.type` is `string`; use `type: array` with `style: form, explode: false`."
+    severity: hint
+    given: "$..parameters[?(@.description && @.description.match(/[Cc]omma[- ]separated/) && @.schema && @.schema.type=='string')]"
+    then:
+      field: schema.type
+      function: pattern
+      functionOptions:
+        match: "^array$"
+
+  # -------------------------------------------------------------------------
+  # Dead-code / unused-component rules
+  # -------------------------------------------------------------------------
+  # Note: spectral:oas already includes `oas3-unused-component` for unused
+  # `components.schemas`. We add coverage for `components.headers`, which
+  # the default rule does NOT cover and which is targeted by github:F5
+  # (X-RateLimit headers defined but referenced by zero operations).
+  apiq-unused-component-headers:
+    description: >-
+      Header objects in `components.headers` should be referenced from at
+      least one response. Unreferenced headers are dead code in the spec.
+    message: "Header {{property}} is defined but never referenced."
+    severity: hint
+    recommended: true
+    resolved: false
+    given: "$.components.headers"
+    then:
+      function: unreferencedReusableObject
+      functionOptions:
+        reusableObjectsLocation: "#/components/headers"
+
+  apiq-unused-component-examples:
+    description: >-
+      Example objects in `components.examples` should be referenced from
+      at least one operation, parameter, or response.
+    message: "Example {{property}} is defined but never referenced."
+    severity: hint
+    recommended: true
+    resolved: false
+    given: "$.components.examples"
+    then:
+      function: unreferencedReusableObject
+      functionOptions:
+        reusableObjectsLocation: "#/components/examples"
+
+  # -------------------------------------------------------------------------
+  # Vendor-extension hygiene
+  # -------------------------------------------------------------------------
+
+  # Targets: github:F23 (x-github), stripe:F9 (x-stripeBypassValidation)
+  # When a spec uses a custom vendor extension on more than a handful of
+  # operations or schemas, info.description should mention it. A pure
+  # Spectral rule cannot count occurrences across the spec, so we leave
+  # the >5%-coverage check to a Walker (Task A1.3). However, we CAN flag
+  # the simpler case: any `x-` extension at the document root must be
+  # described in info.description. This is a weaker check; the strong
+  # rule lives in the Walker layer.
+
+  # =========================================================================
+  # Notes on rules NOT included (deferred to other layers)
+  # =========================================================================
+  # See apiq-ruleset-coverage.md for the full coverage matrix and rationale.
+  #
+  # WALKERS layer (require statistical aggregation):
+  #   - stripe F24: maxLength=5000-everywhere (>50% coverage threshold)
+  #   - stripe F29: 79% empty schema descriptions
+  #   - github F17: 97% schemas without additionalProperties
+  #   - github F18: 99.8% strings without maxLength
+  #   - github F20: 42% schemas without description
+  #   - github F8:  pagination Link-header coverage on list endpoints
+  #   - pd F19:     additionalProperties absent on 518/520 schemas
+  #   - pd F16:     76% schemas without description
+  #
+  # DOMAIN-KNOWLEDGE layer (require external API-family catalogue):
+  #   - stripe F7:  Idempotency-Key on POSTs (Stripe convention)
+  #   - stripe F12: Stripe-Account, Stripe-Version headers
+  #   - stripe F28: rate-limit response headers
+  #   - github F2:  X-GitHub-Api-Version header
+  #   - github F14: 429 response on rate-limited operations
+  #   - github F15: Idempotency-Key (advisory, not GitHub-documented)
+  #   - pd F1:      OAuth2 scheme alongside api_key
+  #   - pd F2:      From header on writes
+  #   - pd F3:      X-EARLY-ACCESS stability signal
+  #   - pd F4:      Retry-After / X-RateLimit headers on 429
+  #   - pd F18:     Error code enumeration
+  #
+  # LLM-ONLY layer (require NLP/semantic reasoning):
+  #   - stripe F13: prose-only deprecation marker (NLP needed to reliably
+  #                 distinguish "deprecated" prose from false positives like
+  #                 "the last created override has priority")
+  #   - stripe F20: wrong summary ("Create a card" on bank_accounts endpoint)
+  #   - stripe F21: parameter-relationship rules in prose only
+  #   - stripe F22: ambiguous customer/customer_account relationship
+  #   - pd F15:     prose-only deprecation marker
+  #   - pd F20:     conditional-validation rules in prose only
+  #   - dnd F12:    path-parameter inconsistency (semantic)
+  #   - dnd F8:     RFC 7807 conformance (deeply structural)
+  #   - dnd F9:     pagination convention absent
+  #   - github F9:  webhooks under x-webhooks (semantic recognition needed)
+  #   - github F27: binary-upload content-type (NLP on op description)

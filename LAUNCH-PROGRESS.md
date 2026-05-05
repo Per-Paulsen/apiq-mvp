@@ -152,6 +152,7 @@ Recommendation: option 1 (retire). The pre-seeded demo-account is a v0.1 stopgap
   - §3 Foundation-Block: add **Tier-0a/0b correctness-check** as MUST (reputation-protection for v1).
   - §7 Success-Metrics: add "Cost per active user per month" with BYOK-segmentation.
   - Affected Epics: 20 (MCP) + 21 (CLI) need async-API-contract; 17 (UI Redesign) needs findings-prioritisation-at-scale; 14+ get extended scope.
+- [ ] **Cross-Layer Findings-Deduplication** (~2-3 Tage, neu identifiziert 2026-05-05 in Phase A): Stage-A pre-pass (Spectral + Walkers + Domain-Knowledge) + LLM Phase-1+2 emit overlapping findings across layers. Ohne Dedup sieht User 3-5× duplikate pro Spec-Issue (Spectral per-occurrence + Walker aggregated + LLM-Phase-1 per-endpoint + LLM-Phase-2 spec-level für dasselbe Issue). Mechanik bereits modular im Spike-Harness (Phase-0 Token-Jaccard + Repetition-Cluster + Phase-A narrationKeywords-aware + Phase-A Embedding-Similarity); Port nach `src/lib/analysis/dedup/` analog zu Epic-04-Pattern. Siehe `specs/big-spec-architecture-spike-critical-review.md` Iteration 5 Punkt 16.
 
 ### Engineering track (always-run)
 
