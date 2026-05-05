@@ -334,3 +334,104 @@ Phase C — Spike-Lock
 ```
 
 Total-Verzögerung gegenüber direktem Stage-4-Start: +1 Tag. Empirischer Gewinn signifikant.
+
+---
+
+## Update 2026-05-05 (Diskussions-Iteration 4): Refs als Living-Artefakt + Stage-A-Tooling-Map
+
+User-Insight 2026-05-05 (post-Phase-0 hardening): "Glaubst du Stage A wird einen Einfluss auf die Refs haben?" Antwort: ja, mit hoher Wahrscheinlichkeit. References sind Phase-0-Best-Effort, nicht frozen. Plus: "machen wir in Stage A nur Spectral oder auch andere Tools?" — Stage A ist mehrschichtig, nicht monolithisch.
+
+### 14. Refs als Living-Artefakt — nicht frozen-on-Phase-0
+
+Phase 0 hat 4 References authored (Stripe 29 + PD 23 + dnd5eapi 14 + GitHub 31 = 97 findings, 4 zod-validierte JSONs). **Stage A wird diese Refs mit hoher Wahrscheinlichkeit beeinflussen** auf vier Wegen:
+
+**a) Klassifikations-Re-Tagging (~5-15% der Tags wahrscheinlich falsch).** Beim Bau der Detection-Mechaniken werden Klassifikations-Annahmen empirisch validiert oder falsifiziert. Beispiele:
+- F23 (cross-resource refs) als pure-spectral getaggt mit `*_id`-Heuristik. Aber GitHub hat tausende korrekt-typed `*_id`-Felder → Heuristik wird noisy → eher domain-knowledge oder LLM-only.
+- F11 (unix-time format) als pure-spectral getaggt, aber Walker braucht Field-Naming-Catalog (`_at`, `_timestamp`, ...) → eher domain-knowledge.
+- Umgekehrt: F28 (rate-limit headers) als domain-knowledge getaggt, aber generischer Walker "spec hat 429-response → erwarte Retry-After/X-RateLimit-*" könnte pure-spectral reichen.
+
+**b) Neue Refs entdecken.** Beim Pattern-Engineering werden Patterns auf den Tisch kommen die in Phase-0-Authoring vergessen wurden:
+- OperationId-Uniqueness-Check (Spectral OAS3 default, nicht in Refs)
+- `required` referenziert nicht-existierende property (0/97 Refs)
+- `discriminator` referenziert ungültiges `oneOf`-Subschema (0/97)
+- Cross-cutting statistical patterns (z.B. "spec-wide >70% empty-description" als single rolled-up finding)
+
+**c) Recall-Annahmen empirisch falsifizieren.** STAGE-A-PREDICTIONS.md geht von 95% pure-spectral / 75% domain-knowledge recall aus. Diese Werte sind plausible Schätzungen, keine Messungen. Stage A misst sie real:
+- Pure-spectral 95% könnte 100% sein (mechanical, no false negatives)
+- Pure-spectral könnte 60% sein (Custom-Rules schwerer als gedacht)
+- Domain-knowledge 75% könnte 30-90% sein (pattern-library-coverage-abhängig)
+- ±15-30pp Auswirkung auf alle Phase-A-Predicted-Coverage-Numbers
+
+**d) Patch-Konsistenz.** Refs haben händisch-authored RFC-6902-Patches. Stage-A-Patches sind template-generated. Wenn die Shapes divergieren, schlagen Patch-Equality-Tests fehl auch bei semantischer Korrektheit → Refs müssen ggf. angeglichen oder Test-Logik aufgeweicht werden.
+
+**Konsequenz:** Refs + Predictions + Snapshots sind versioniertes Living-Artefakt. Stage A's Output ist nicht nur Code, sondern **ein Ref-Update-Diff**:
+- N Tags umgetaggt mit Begründung
+- M neue Refs hinzugefügt
+- K Refs als deprecated markiert
+- Echte Recall-Zahlen ersetzen die 95%/75% Hypothesen
+
+Eval-Framework-Erweiterung (Tier-2-Optional): Snapshots sollten ref-hash-aware sein, sodass alte Snapshots nicht plötzlich "drift" zeigen wenn Refs sich ändern. Aktuell speichern Snapshots keinen ref-hash. Beim ersten Stage-A-Ref-Update werden die alten Snapshots logisch invalid; pragmatisch: Snapshots beim Stage-A-Lock zusammen mit Refs neu erzeugen.
+
+### 15. Stage-A-Tooling-Map — nicht nur Spectral
+
+Stage A's "Deterministic Layer" ist mehrschichtig, nicht monolithisch. Tooling-Aufteilung:
+
+**Tier 1 (must-have für Stage A):**
+
+| Tool | Rolle | Effort | Was es catched |
+|---|---|---|---|
+| `@apidevtools/swagger-parser` | Strukturelle Validität (Tier-0a) | 30min Integration (bereits im spike) | Invalid OpenAPI · dangling $refs · operationId duplicates · path-template-mismatches |
+| `@stoplight/spectral-core` mit OAS3-default-ruleset | Pure-Spectral-Layer Kern | 0.5-1 Tag | ~10-15 von 73 pure-spectral refs nativ |
+| Spectral Custom-Ruleset (eigenes) | Pure-Spectral-Layer Erweiterung | 2-3 Tage | Die ~50-60 verbleibenden pure-spectral refs |
+| Custom TS-Walkers | Cross-cutting statistical checks die Spectral schwer ausdrücken kann | 1-2 Tage | Spec-wide aggregates (>70% empty-description), Pattern-Matching mit Catalog-Lookups |
+| Domain-Knowledge-Layer (eigenes Engineering pro API-family) | Stripe/PD/GitHub-spezifische Pattern-Libraries | 1-2 Tage pro family | Idempotency-Key (Stripe), From-Header (PD), X-RateLimit-* (GitHub), etc. |
+
+**Tier 2 (überlegen, wahrscheinlich skip):**
+- **Vacuum** (Go) — Spectral-kompatibel, 100× schneller. Nur relevant bei Spectral-perf-Issues auf 1145-op-Specs. Spectral schafft das vermutlich.
+- **Redocly CLI** — alternative Linter. Wenig Mehrwert wenn Spectral steht.
+- **AJV** — schon in spike für Patch-Validation, nicht für Spec-Linting.
+
+**Tier 3 (out-of-scope für Stage A):**
+- **oasdiff** — breaking-change-detection, anderer Feature-Bereich, v1.1+
+- **OpenAPI Generator / Mocking-Tools** — codegen / runtime mocking sind separate Epics (Epic 18 Live-Preview)
+
+### Anti-NIH-Pattern + Open-Source-Marketing-Win
+
+Spectral hat etabliertes Custom-Ruleset-Format (YAML/JSON) + Custom-Rules-API + JS-functions als Code-Rules. **Wir sollten nutzen, nicht nachbauen.** Wenn wir unsere Custom-Rules als Spectral-Ruleset publishen, kann die OpenAPI-Community sie nutzen → Open-Source-Marketing-Win für apiq (publish "apiq-spectral-ruleset", treibt Awareness, established Tooling-Standard).
+
+**Was wir selbst bauen müssen:**
+- Domain-Knowledge-Layer (keine Library macht "PD-From-Header-detection")
+- Bridge zwischen Spectral-Output und unserem `Finding`-Schema (Spectral hat eigene Result-Shape)
+- Cross-cutting Statistical-Walkers (Spectral ist per-node-rule-orientiert, nicht aggregations-orientiert)
+
+### Stage-A-Phase-Aufteilung
+
+| Phase | Scope | Effort | Predicted Coverage-Lift |
+|---|---|---|---|
+| **A1: Pure-Spectral-Layer** | Swagger-Parser + Spectral (OAS3-default + ~50 custom rules) + cross-cutting walkers | 3-4 Tage | Catched pure-spectral refs (73 total) → bei 95% recall: +69pp coverage cross-spec |
+| **A2: Domain-Knowledge Stripe-only** | Pattern-Library für die 4 Stripe-domain-refs | 1-2 Tage | +10pp Stripe-coverage |
+| **A3 (post-Stripe-validation, optional)** | Pattern-Libraries PD + GitHub + dnd5eapi | 3-5 Tage | Generalisiert Stage A auf 4 specs |
+
+**Strategie-Empfehlung:** **A1 + A2 für v1-launch, A3 als post-launch / Stage-B-Iterations-Loop.** Total Stage-A für v1: ~5-7 Tage Engineering. A3 ist optional + iterativ — Pattern-Libraries pro API-family wachsen mit jedem zusätzlich-supported Use-Case.
+
+### Aktualisierte Reihenfolge (post-Phase-0)
+
+```
+Phase 0 ✓ (DONE 2026-05-05) — Eval-Framework + 4 References + Stage-A-Predictions
+   ↓
+Phase A — Deterministic Layer (mehrschichtig)
+  A1: Pure-Spectral-Layer       (3-4 Tage) — Spectral + Custom-Rules + Walkers
+  A2: Domain-Knowledge Stripe   (1-2 Tage) — Pattern-Library Stripe-edition
+  A3 (post-launch optional):     (3-5 Tage) — PD/GitHub/dnd5eapi pattern-libraries
+   ↓
+Phase B — finale (C-i)-Messung (~$5-8, multi-run mit Pre-Pass + v6 + Cache)
+   ↓
+Phase C — Spike-Lock + Ref-Update-Diff aus Stage A
+```
+
+Stage-A Output umfasst:
+1. **Code:** `scripts/spike/deterministic/{spectral-runner,custom-walkers,domain-knowledge}.ts`
+2. **Custom Spectral-Ruleset:** `scripts/spike/deterministic/apiq-ruleset.yaml` (publishable als community OSS)
+3. **Ref-Update-Diff:** umgetaggte Klassifikationen + neue Refs + kalibrierte Recall-Zahlen
+4. **Updated `STAGE-A-PREDICTIONS.md`:** echte Recall-Zahlen ersetzen 95%/75% Hypothesen
+5. **Re-locked Snapshots:** alle 13 Stage-3-Snapshots werden mit Stage-A-pre-pass-output neu gemessen
