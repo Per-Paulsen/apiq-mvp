@@ -1,0 +1,23 @@
+{
+  "label": "v5-baseline (Stage 3 actual)",
+  "spec": "stripe-full",
+  "runMeta": {
+    "architecture": "C-i Two-Call",
+    "perEndpointModel": "anthropic/claude-sonnet-4.6",
+    "aggregatorModel": "anthropic/claude-sonnet-4.6",
+    "promptVariant": "v5",
+    "runs": 1
+  },
+  "metrics": {
+    "findingCount": 1423,
+    "uniqueClusters": 986,
+    "repetitionRate": 0.3071,
+    "coverageRate": 0.3793,
+    "substantiveCoverageRate": 0.3043,
+    "knowledgeBackedCoverageRate": 0.2857,
+    "applyCleanRate": 0.9930,
+    "halluRate": 0.0070,
+    "costUSD": 5.8630,
+    "durationMs": 2044225
+  }
+}

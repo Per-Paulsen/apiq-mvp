@@ -1,0 +1,27 @@
+# Baseline (C-i) Two-Call Sonnet+Sonnet on Stripe FULL — Phase 0 replay test.
+#
+# This config exercises the eval-runner end-to-end without burning LLM money:
+# the Stripe run is replayed from the existing run-output JSON.
+# With runs=1, aggregation reduces to a deterministic pass-through.
+
+name: c-i-baseline-stripe
+description: |
+  Baseline (C-i) Two-Call Sonnet+Sonnet on Stripe FULL, v5 prompt,
+  no pre/post-processing. Replay-only — for Phase 0 validation
+  of the eval-runner aggregation pipeline.
+
+architecture: two-call
+per_endpoint_model: anthropic/claude-sonnet-4.6
+aggregator_model: anthropic/claude-sonnet-4.6
+prompt_variant: v5
+pre_pass: null
+post_pass: null
+prompt_caching: false
+
+runs: 1
+
+specs:
+  - stripe-full
+
+replay_from:
+  stripe-full: specs/big-spec-runs/haiku4-5_x_sonnet4-6__two-call__stripe-full.json

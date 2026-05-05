@@ -49,6 +49,25 @@ What's next: Stage-4-Engineering — Pattern-Extraktion aus existierenden JSONs 
 
 **Update 2026-05-05 (later same day): Eval-Framework als Phase 0 vor Stage 4.** User-Decision: bevor Stage 4 (Deterministic Layer) gebaut wird, ~1 Tag Engineering in ein leichtes Custom-Eval-Framework investieren (`scripts/spike/eval/*`). Gründe: Multi-Run-Aggregation (löst Critical-Review-Punkt N=1-Varianz), strukturiertes Reference-Format für human-hardening, Repetition-Cluster-Scorer (misst direkt Stage-4-Effekt), Comparison-Reports + Regression-Snapshots. Port-Pattern nach `src/lib/eval/` im Foundation-Block. Verworfen: 3rd-Party-Frameworks (Promptfoo, Inspect, LangSmith — overhead + Drift-Risiko für unseren spezifischen Use-Case) und Code-Discipline-only (Critical-Review-Punkte bleiben unmessbar). Aktualisierte Reihenfolge: Phase 0 (Eval-Framework, ~1 Tag) → Phase A (Deterministic Layer, ~2-4 Tage) → Phase B (finale (C-i)-Messung mit N=3-5 multi-run, ~$5-8) → Phase C (Lock). Konkreter Phase-0-Scope in `specs/big-spec-architecture-spike-critical-review.md` Iteration 3.
 
+#### 2026-05-05 (evening) — Phase 0 Eval-Framework DONE
+
+8 Tasks komplett, alle in einem Tag mit 4 parallel Background-Agents. Eval-Pipeline operational:
+
+1. **Strukturiertes Reference-Format** (`openapi-examples/stripe-full/reference/findings.json`): Stripe-Reference von Markdown nach JSON migriert. 29 Findings + Klassifikations-Tags (`isLintFlavoured` 6/29, `isKnowledgeBackedGap` 14/29, `isDeterministicallyDetectable` 23/29, `narrationKeywords`, `expectedClusterKey`). Markdown bleibt als Companion. Migration via `scripts/spike/eval/migrate-md-to-json.ts`. **User-Review-Action offen:** Klassifikation per F# best-guess von Claude Code; User reviewt nach Bedarf, JSON-Schema dokumentiert.
+2. **Pluggable Scorer-Architektur** (`scripts/spike/eval/scorers/`): JaccardScorer (refactored from `score-coverage.ts`, identische Algorithmus + erweiterte Splits substantive/llm-only/knowledge-backed) · RepetitionClusterScorer (token-bag-Normalisierung + Cluster-Gruppierung) · ClassificationScorer (Stub bis Phase A).
+3. **Multi-Run-Runner** (`scripts/spike/eval/runner.ts`): YAML-Config-Loader · Replay-Mode (kostenlos, lädt existierende JSONs) · Live-Mode-Stub (Phase B) · N-Run-Aggregation mit mean/p50/p95/std.
+4. **Snapshot-Regression-System** (`scripts/spike/eval/snapshot.ts`): lockSnapshot / loadSnapshot / diffAgainstSnapshot · Tolerance-Defaults staffelig (±5% quality, ±10% counts, ±20% cost/latency) · CLI-Subcommands lock/diff · Git-SHA-Capture beim Lock.
+5. **Comparison-Reporter** (`scripts/spike/eval/comparison.ts`): Markdown-Tabelle mit Δ + Δ% + Direction-Arrows · per-Metrik direction-lookup (higher-better / lower-better / neutral) · Cross-Spec / Runs-Mismatch Warnungen.
+6. **score-run.ts Glue**: Runner-Output → ScoredRunnerOutput. Aggregiert alle Scorer pro spec, fügt aggregate-Stats für coverage / repetition / cluster-Metriken hinzu.
+7. **Empirische Stage-3-Reproduktion + Locked Baseline:** `eval-configs/c-i-baseline-stripe.yaml` läuft im Replay-Mode gegen Stripe-FULL JSON. Reproduziert Stage-3 exakt: 1423 findings, $5.8630 cost, 34.1min duration, 99.3% apply-clean, 0.7% hallu, **37.9% Coverage = identisch zum Stage-3 algorithmic** (= valid Refactor). Plus neue Splits: 30.4% substantive (23/29 non-lint refs), 33.3% LLM-only (6/29 non-deterministisch refs), **28.6% knowledge-backed (4/14 differentiator-class)**. Snapshot locked at `scripts/spike/eval/snapshots/c-i-baseline-stripe.json`.
+8. **Empirische Headline-Number-Korrekturen** (gegen die existing JSONs):
+   - PD-FULL: 623 findings → 437 unique clusters (29.9% repetition rate, top cluster "Missing 429" × 62)
+   - Stripe-FULL: 1423 findings → 986 unique clusters (30.7% repetition, top cluster "Missing limit min/max" × 81)
+   - Spike-Headline "(C-i) emits 119× more findings than (A)" → realistisch ~21× nach dedup
+   - Knowledge-Backed-Coverage 28.6% (4/14) empirisch validiert v6-Prompt-Defizit: nur F8, F16, F22, F23 gematcht; F3, F6, F7, F9, F10, F12, F17, F18, F21, F28 verfehlt — exakt die Critical-Review-prognose.
+
+**Stage 4 baseline + measurement-pipeline ready.** Stage-4-Engineering (Deterministic Layer) startet als nächstes; jeder Run wird automatisch gegen Snapshot diffbar + per Comparison-Reporter visualisierbar gegen baseline.
+
 ### Live state (relevant facts below stay valid through v1 dev)
 
 | Item | Value |

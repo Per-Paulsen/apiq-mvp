@@ -1,0 +1,44 @@
+{
+  "configName": "c-i-baseline-stripe",
+  "lockedAt": "2026-05-05T11:34:18.942Z",
+  "lockedBy": "562d10ce80ae800e7ed5a0b97eab77fae95775fd",
+  "spec": "stripe-full",
+  "metrics": {
+    "findingCount": {
+      "mean": 1423,
+      "p50": 1423,
+      "p95": 1423,
+      "std": 0
+    },
+    "costUSD": {
+      "mean": 5.862952,
+      "p50": 5.862952,
+      "p95": 5.862952,
+      "std": 0
+    },
+    "durationMs": {
+      "mean": 2044225,
+      "p50": 2044225,
+      "p95": 2044225,
+      "std": 0
+    },
+    "applyCleanRate": {
+      "mean": 0.9929725931131412,
+      "p50": 0.9929725931131412,
+      "p95": 0.9929725931131412,
+      "std": 0
+    },
+    "halluRate": {
+      "mean": 0.007027406886858749,
+      "p50": 0.007027406886858749,
+      "p95": 0.007027406886858749,
+      "std": 0
+    },
+    "coverageRate": 0.3793103448275862,
+    "substantiveCoverageRate": 0.30434782608695654,
+    "knowledgeBackedCoverageRate": 0.2857142857142857,
+    "repetitionRate": 0.3070976809557273,
+    "uniqueClusters": 986
+  },
+  "notes": "Phase 0 baseline lock: pre-Stage-4 (C-i) Sonnet+Sonnet Two-Call v5 prompt, no pre/post-processing, no caching. Replay of Stage-3 stripe-full Sonnet+Sonnet run."
+}
