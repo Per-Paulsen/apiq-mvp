@@ -27,6 +27,10 @@ import { walkPaginationStyleInconsistency } from './pagination-style-inconsisten
 import { walkVendorExtensionOveruse } from './vendor-extension-overuse.js';
 import { walkUnusedComponentHeaders } from './unused-component-headers.js';
 import { walkResponseWithoutValidatorsOn304 } from './response-without-validators-on-304.js';
+import { walkAiAgentConsumability } from './ai-agent-consumability.js';
+import { walkEvolutionStatistical } from './evolution-statistical.js';
+import { walkOperationalMetadata } from './operational-metadata.js';
+import { walkPrivacyDataClass } from './privacy-data-class.js';
 
 type WalkerFn = (spec: object, opts?: DetectorOptions) => Promise<DetectorFinding[]>;
 
@@ -43,6 +47,10 @@ const ALL_WALKERS: WalkerFn[] = [
   walkVendorExtensionOveruse,
   walkUnusedComponentHeaders,
   walkResponseWithoutValidatorsOn304,
+  walkAiAgentConsumability,
+  walkEvolutionStatistical,
+  walkOperationalMetadata,
+  walkPrivacyDataClass,
 ];
 
 export async function runWalkers(
