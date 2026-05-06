@@ -19,6 +19,7 @@ export type DetectorLayer =
   | 'spectral-oas3-default'   // Spectral built-in OAS3 rules
   | 'spectral-apiq-custom'     // our custom Spectral ruleset
   | 'walker-statistical'       // cross-cutting statistical walkers
+  | 'module-class'             // standalone module-class detectors (W2)
   | 'domain-knowledge';        // per-API-family pattern libraries
 
 /**
@@ -67,6 +68,12 @@ export interface DetectorOptions {
   specName?: string;
   /** Hint to runners that may run differently in CI vs. interactive use. */
   verbose?: boolean;
+  /** When true (default), the output-mapper aggregates per-occurrence
+   *  `codegen:*` DetectorFindings down to one row per `detectorId` so the
+   *  Phase-B token-budget stays bounded on huge specs (github-rest emits
+   *  ~9.8k codegen-validation occurrences pre-aggregation). Set to `false`
+   *  for tests/debugging that need raw per-occurrence findings. */
+  aggregateCodegen?: boolean;
 }
 
 /**

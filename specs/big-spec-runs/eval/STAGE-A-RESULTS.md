@@ -8,143 +8,30 @@
 
 | Spec | Baseline (C-i) | Predicted post-Stage-A | **Measured (Jaccard)** | **Measured (Embedding)** | Delta vs predicted |
 |---|---:|---:|---:|---:|---:|
-| dnd5eapi | 28.6% | 85.7% | 28.6% (4/14) | **50.0% (7/14)** | -35.7pp |
-| pagerduty-full | 21.7% | 90.9% | 26.1% (6/23) | **39.1% (9/23)** | -51.8pp |
-| github-rest | 12.9% | 86.9% | 22.6% (7/31) | **35.5% (11/31)** | -51.4pp |
-
-## dnd5eapi
-
-Findings emitted by deterministic layer: **243**
-
-Per-layer breakdown:
-
-| Layer | Findings |
-|---|---:|
-| Spectral (OAS3-default) | 217 |
-| Spectral (apiq-custom) | 24 |
-| Walkers (statistical) | 2 |
-| Domain-knowledge | 0 |
-
-Unique clusters: **37** (repetition rate 84.8%)
-
-### Coverage breakdown
-
-| Subset | Covered | Total | Rate |
-|---|---:|---:|---:|
-| Total | 4 | 14 | 28.6% |
-| Substantive (non-lint) | 4 | 12 | 33.3% |
-| Pure-spectral | 2 | 10 | 20.0% |
-| Domain-knowledge | 1 | 2 | 50.0% |
-| LLM-only | 1 | 2 | 50.0% |
-| Knowledge-backed-gap | 1 | 4 | 25.0% |
-
-### Unmatched refs (candidates for Living-Artefact tag review)
-
-- **F1** [pspec] `servers` array exposes a `localhost:3000` development URL alongside production
-- **F2** [pspec] Top-level `tags` declares 2 entries; operations reference 16 distinct tag names
-- **F4** [pspec] 25 of 47 operations are missing `description`
-- **F5** [pspec] OAS 3.0 violation: `$ref` co-occurs with sibling keys in 4 locations
-- **F6** [pspec] 48 of 49 component schemas have no `required` array
-- **F7** [pspec] Only 1 of 47 operations declares any non-200 response; the catalog of error states is undocumented
-- **F8** [domk] `error-response` schema is not RFC 7807-conformant
-- **F10** [pspec] Pervasive `type: number` on properties that are integers by domain semantics
-- **F13** [lint,pspec] `info.contact.email` is missing
-- **F14** [lint,llm-only] `info.version: "0.1"` does not reflect data-version or follow semver
-
-### Top detectors firing on this spec
-
-| Detector | Count |
-|---|---:|
-| spectral:oas3-unused-component | 77 |
-| spectral:operation-operationId | 47 |
-| spectral:operation-tag-defined | 39 |
-| spectral:operation-description | 25 |
-| spectral:path-params | 20 |
-| spectral:apiq-count-fields-should-be-integer | 17 |
-| spectral:apiq-oneof-needs-discriminator | 5 |
-| spectral:oas3-schema | 5 |
-
-## pagerduty-full
-
-Findings emitted by deterministic layer: **1643**
-
-Per-layer breakdown:
-
-| Layer | Findings |
-|---|---:|
-| Spectral (OAS3-default) | 1422 |
-| Spectral (apiq-custom) | 217 |
-| Walkers (statistical) | 4 |
-| Domain-knowledge | 0 |
-
-Unique clusters: **313** (repetition rate 80.9%)
-
-### Coverage breakdown
-
-| Subset | Covered | Total | Rate |
-|---|---:|---:|---:|
-| Total | 6 | 23 | 26.1% |
-| Substantive (non-lint) | 6 | 19 | 31.6% |
-| Pure-spectral | 6 | 17 | 35.3% |
-| Domain-knowledge | 0 | 5 | 0.0% |
-| LLM-only | 0 | 1 | 0.0% |
-| Knowledge-backed-gap | 2 | 12 | 16.7% |
-
-### Unmatched refs (candidates for Living-Artefact tag review)
-
-- **F1** [domk] Only one security scheme declared; OAuth2 path absent despite 363 operations referencing OAuth scopes in prose
-- **F2** [domk] `From` header is required for audit-trailed write operations but declared on only 14 of 224 write operations
-- **F3** [domk] All 24 `/v3/schedules*` operations carry a required `X-EARLY-ACCESS` header — production-unsafe path is not flagged at spec level
-- **F4** [domk] 234 operations declare a `429 Too Many Requests` response but no rate-limit response headers (`X-RateLimit-*`, `Retry-After`)
-- **F5** [pspec] Two divergent error-envelope shapes coexist: `V3ErrorResponse` (errors as object/map) vs the inline Conflict-derived schema (errors as array of strings)
-- **F6** [pspec] The four `Webhook*` response components carry only a `description`, no `content`/`schema` — webhook error bodies are unparseable from the spec
-- **F8** [pspec] `Accept` header documents versioning via `application/vnd.pagerduty+json;version=2` but the schema is unconstrained string with no other versions enumerated
-- **F9** [pspec] `sre_memories_limit.schema.default` is the string `"20 - incident_summary"` on an integer-typed schema
-- **F10** [pspec] Pagination paradigm split: 37 list-GETs use offset+limit, 14 use cursor — single API, two pagination models
-- **F12** [pspec] 63 cross-resource reference fields (`*_id`) typed as plain `string` with no `$ref` to the referenced resource
-- **F13** [lint,pspec] Tag `Apps` is declared at top level with empty description but is attached to zero operations
-- **F17** [lint,pspec] `info` block is missing `license` and `termsOfService`
-- **F18** [domk] Error `code` field typed as integer but the codespace (`2001`, `2100`, ...) is undocumented
-- **F19** [pspec] `additionalProperties` is omitted on 518 of 520 object schemas — strict-vs-lax serialisation policy is ambiguous
-- **F20** [llm-only] Conditional-validation rules ("Required when X", "mutually exclusive with Y") encoded in prose only on at least 8 schema fields
-- **F22** [lint,pspec] Most response components used 5000+ times share a `$ref` chain into `Conflict.content.application~1json.schema`, creating a fragile schema topology
-- **F23** [lint,pspec] Operation summaries are short enough but 19 of 272 schemas carry `example` (7%); request/response examples are far better-covered (134 of 156 requests, 330 of 401 inline 2xx responses)
-
-### Top detectors firing on this spec
-
-| Detector | Count |
-|---|---:|
-| spectral:oas3-unused-component | 560 |
-| spectral:path-params | 436 |
-| spectral:oas3-schema | 401 |
-| spectral:apiq-fk-fields-need-format-or-pattern | 92 |
-| spectral:apiq-oneof-needs-discriminator | 49 |
-| spectral:apiq-unused-component-examples | 27 |
-| spectral:apiq-limit-property-needs-bounds | 17 |
-| spectral:apiq-count-fields-should-be-integer | 16 |
+| github-rest | 12.9% | 86.9% | 25.8% (8/31) | **64.5% (20/31)** | -22.4pp |
 
 ## github-rest
 
-Findings emitted by deterministic layer: **8427**
+Findings emitted by deterministic layer: **21106**
 
 Per-layer breakdown:
 
 | Layer | Findings |
 |---|---:|
 | Spectral (OAS3-default) | 5853 |
-| Spectral (apiq-custom) | 2568 |
-| Walkers (statistical) | 6 |
+| Spectral (apiq-custom) | 14486 |
+| Walkers (statistical) | 21 |
 | Domain-knowledge | 0 |
 
-Unique clusters: **1890** (repetition rate 77.6%)
+Unique clusters: **3197** (repetition rate 84.9%)
 
 ### Coverage breakdown
 
 | Subset | Covered | Total | Rate |
 |---|---:|---:|---:|
-| Total | 7 | 31 | 22.6% |
+| Total | 8 | 31 | 25.8% |
 | Substantive (non-lint) | 6 | 24 | 25.0% |
-| Pure-spectral | 6 | 26 | 23.1% |
+| Pure-spectral | 7 | 26 | 26.9% |
 | Domain-knowledge | 1 | 6 | 16.7% |
 | LLM-only | 1 | 2 | 50.0% |
 | Knowledge-backed-gap | 7 | 18 | 38.9% |
@@ -166,7 +53,6 @@ Unique clusters: **1890** (repetition rate 77.6%)
 - **F17** [pspec] `additionalProperties` not set on 792 of 814 object schemas (97%)
 - **F18** [pspec] 8017 of 8037 string properties (99.8%) have no `maxLength`
 - **F19** [pspec] 2828 integer properties have no `minimum`/`maximum` constraints
-- **F20** [lint,pspec] 388 of 923 component schemas (42%) have no `description`
 - **F21** [lint,pspec] 28 of 1145 operations missing `description`
 - **F23** [pspec,domk] All 1145 operations carry an undocumented `x-github` extension
 - **F24** [lint,pspec] `tags` array uses 48 entries but operations carry only 1 tag each, defeating multi-faceted grouping
@@ -180,14 +66,14 @@ Unique clusters: **1890** (repetition rate 77.6%)
 
 | Detector | Count |
 |---|---:|
+| codegen:openapi-typescript:validation-problem | 9834 |
+| spectral:apiq-ev-25-integer-needs-format | 3380 |
+| spectral:apiq-cl1-property-name-reserved-keyword | 2662 |
 | spectral:path-params | 2050 |
 | spectral:apiq-fk-fields-need-format-or-pattern | 1806 |
 | spectral:oas3-unused-component | 1685 |
-| spectral:oas3-schema | 828 |
-| spectral:oas3-valid-media-example | 655 |
-| spectral:oas3-examples-value-or-externalValue | 579 |
-| spectral:apiq-unused-component-examples | 514 |
-| spectral:apiq-oneof-needs-discriminator | 231 |
+| spectral:apiq-tm-a34-url-property-format-and-pattern | 1265 |
+| spectral:apiq-cl59-operationid-url-friendly | 1145 |
 
 ## What Phase B measures next
 

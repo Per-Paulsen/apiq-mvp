@@ -306,10 +306,19 @@ rules:
   # Heuristic: GET responses with array-typed body + no `limit`/`per_page`/
   # `page_size` query parameter.
   # NOTE: Pure-DSL detection is approximate; we use a custom JS function
-  # passed in via test-time registration.
+  # (`list-endpoint-has-pagination`) registered in spectral-runner.ts.
   # =========================================================================
-  # (Implemented via custom function `listEndpointHasPagination` registered
-  # in tests; see threat-p1-rules.test.ts.)
+  apiq-tm-a22-list-endpoint-pagination:
+    description: >-
+      GET endpoints returning array bodies SHOULD declare a pagination query
+      parameter (limit / per_page / page_size / page / cursor) per OWASP API4
+      (resource-consumption) + 42Crunch + Stripe. Unbounded list-endpoints
+      enable DoS via huge result-sets.
+    message: "{{error}}"
+    severity: warn
+    given: "$.paths[*][get]"
+    then:
+      function: list-endpoint-has-pagination
 
   # =========================================================================
   # TM-A23 — Pagination param MUST have `maximum`
@@ -350,10 +359,21 @@ rules:
   # TM-A32 — Purchase/booking flow MUST have rate-limit headers (error)
   # OWASP API6 sensitive-business-flow; severity: error
   # Custom function — heuristic on operation summary/path matching
-  # purchase/checkout/order/booking + responses lacking rate-limit headers.
-  # Implemented via custom JS function in tests.
+  # purchase/checkout/order/booking/payment + responses lacking rate-limit
+  # headers (X-RateLimit-* / RateLimit-* / Retry-After). Custom function
+  # `sensitive-flow-needs-rate-limit-headers` registered in spectral-runner.ts.
   # =========================================================================
-  # (Custom function `sensitiveFlowNeedsRateLimitHeaders` registered in tests.)
+  apiq-tm-a32-sensitive-flow-rate-limit-headers:
+    description: >-
+      Sensitive business-flow operations (purchase / checkout / order /
+      booking / payment / charge / refund / transfer) MUST declare rate-limit
+      headers (X-RateLimit-* / RateLimit-* / Retry-After) on responses per
+      OWASP API6 sensitive-business-flow.
+    message: "{{error}}"
+    severity: error
+    given: "$.paths[*][post,put,patch]"
+    then:
+      function: sensitive-flow-needs-rate-limit-headers
 
   # =========================================================================
   # TM-A34 — URL-handling property MUST format:uri+pattern
@@ -402,10 +422,21 @@ rules:
   # TM-A39 — Allow-Credentials:true + Allow-Origin:* impossible
   # OWASP CORS WSTG; severity: error
   # Header objects on the same response declaring credentials:true with
-  # origin:* — browsers reject this combination per CORS spec.
-  # Implemented via custom function (cross-header check).
+  # origin:* — browsers reject this combination per CORS spec. Custom
+  # function `cors-credentials-wildcard-conflict` does the cross-header
+  # check (registered in spectral-runner.ts).
   # =========================================================================
-  # (Custom function `corsCredentialsWildcardConflict` in tests.)
+  apiq-tm-a39-cors-credentials-wildcard-conflict:
+    description: >-
+      `Access-Control-Allow-Credentials: true` combined with
+      `Access-Control-Allow-Origin: *` is rejected by browsers per the CORS
+      spec (OWASP CORS WSTG). Use an allowlisted origin when credentials
+      are exchanged.
+    message: "{{error}}"
+    severity: error
+    given: "$..responses[*]"
+    then:
+      function: cors-credentials-wildcard-conflict
 
   # =========================================================================
   # TM-A42 — Error-schema with stack/trace/exception field
@@ -446,7 +477,17 @@ rules:
   # =========================================================================
   # TM-A53 / RFC2-40 — 401 → WWW-Authenticate header MUST be defined
   # RFC 9110 §11.6.1 (verbatim "MUST send WWW-Authenticate"); severity: error
-  # Implemented via custom function — checks every operation with a 401
-  # response that the response declares a `WWW-Authenticate` header.
+  # Custom function `response-has-www-authenticate-header` checks every
+  # operation: if `responses[401]` exists, it MUST declare a
+  # `WWW-Authenticate` header (registered in spectral-runner.ts).
   # =========================================================================
-  # (Custom function `responseHasWwwAuthenticateHeader` in tests.)
+  apiq-tm-a53-401-www-authenticate:
+    description: >-
+      401 responses MUST declare a `WWW-Authenticate` header per RFC 9110
+      §11.6.1 (verbatim "the server generating a 401 (Unauthorized) response
+      MUST send a WWW-Authenticate header field").
+    message: "{{error}}"
+    severity: error
+    given: "$.paths[*][*]"
+    then:
+      function: response-has-www-authenticate-header

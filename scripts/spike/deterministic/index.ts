@@ -31,6 +31,7 @@ import { mapDetectorFindings } from './output-mapper.js';
 let _spectralRunner: ((spec: object, opts?: DetectorOptions) => Promise<DetectorFinding[]>) | null = null;
 let _walkerRunner: ((spec: object, opts?: DetectorOptions) => Promise<DetectorFinding[]>) | null = null;
 let _domainKnowledgeRunner: ((spec: object, opts?: DetectorOptions) => Promise<DetectorFinding[]>) | null = null;
+let _moduleRunner: ((spec: object, opts?: DetectorOptions) => Promise<DetectorFinding[]>) | null = null;
 
 /** Late-bind the spectral runner once it's implemented. */
 export function registerSpectralRunner(fn: typeof _spectralRunner): void {
@@ -45,6 +46,11 @@ export function registerWalkerRunner(fn: typeof _walkerRunner): void {
 /** Late-bind the domain-knowledge runner once it's implemented. */
 export function registerDomainKnowledgeRunner(fn: typeof _domainKnowledgeRunner): void {
   _domainKnowledgeRunner = fn;
+}
+
+/** Late-bind the module-class runner (W2 — wires 15 standalone modules). */
+export function registerModuleRunner(fn: typeof _moduleRunner): void {
+  _moduleRunner = fn;
 }
 
 export async function runDeterministicLayer(
@@ -68,6 +74,13 @@ export async function runDeterministicLayer(
       console.warn(`[deterministic] walker-runner failed: ${err instanceof Error ? err.message : err}`);
     }
   }
+  if (_moduleRunner) {
+    try {
+      collected.push(...(await _moduleRunner(spec, opts)));
+    } catch (err) {
+      console.warn(`[deterministic] module-runner failed: ${err instanceof Error ? err.message : err}`);
+    }
+  }
   if (_domainKnowledgeRunner) {
     try {
       collected.push(...(await _domainKnowledgeRunner(spec, opts)));
@@ -76,12 +89,13 @@ export async function runDeterministicLayer(
     }
   }
 
-  const findings: Finding[] = mapDetectorFindings(collected);
+  const findings: Finding[] = mapDetectorFindings(collected, opts);
 
   const perLayer: Record<DetectorLayer, number> = {
     'spectral-oas3-default': 0,
     'spectral-apiq-custom': 0,
     'walker-statistical': 0,
+    'module-class': 0,
     'domain-knowledge': 0,
   };
   const perDetector: Record<string, number> = {};
@@ -115,6 +129,12 @@ export async function registerDefaultRunners(): Promise<void> {
   try {
     const mod = await import('./walkers/index.js');
     if (mod.runWalkers) registerWalkerRunner(mod.runWalkers);
+  } catch {
+    // module not yet present
+  }
+  try {
+    const mod = await import('./modules/index.js');
+    if (mod.runModules) registerModuleRunner(mod.runModules);
   } catch {
     // module not yet present
   }

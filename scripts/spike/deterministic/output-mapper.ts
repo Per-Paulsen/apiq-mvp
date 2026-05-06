@@ -12,12 +12,13 @@
  */
 
 import { FindingSchema, type Finding, type PatchOp } from '../schema.js';
-import type { DetectorFinding, DetectorLayer } from './types.js';
+import type { DetectorFinding, DetectorLayer, DetectorOptions } from './types.js';
 
 const LAYER_TAGS: Record<DetectorLayer, string> = {
   'spectral-oas3-default': '[spectral·oas3]',
   'spectral-apiq-custom': '[spectral·apiq]',
   'walker-statistical': '[walker]',
+  'module-class': '[module]',
   'domain-knowledge': '[domain]',
 };
 
@@ -64,9 +65,164 @@ export function mapDetectorFinding(d: DetectorFinding): Finding {
   return FindingSchema.parse(candidate);
 }
 
-export function mapDetectorFindings(detectorFindings: DetectorFinding[]): Finding[] {
+// =============================================================================
+// Codegen-aggregation (Welle Q / Q1).
+//
+// `codegen-validation.ts` emits one DetectorFinding per occurrence — on
+// github-rest that's ~9.8k findings for a single root rule. That blows the
+// Phase-B-LLM token budget. We collapse those occurrences down to one
+// aggregated row per distinct `detectorId` at the output-mapper boundary
+// (NOT inside the module — the module stays per-occurrence for sourcePath
+// telemetry / future filtering). Aggregation is gated by
+// `DetectorOptions.aggregateCodegen` (default `true`); raw flow-through is
+// available for tests/debugging.
+//
+// Aggregation only applies to findings whose `detectorId` starts with
+// `codegen:` — Spectral / walker / module-class findings pass through
+// unchanged.
+// =============================================================================
+
+const SEVERITY_RANK: Record<DetectorFinding['severity'], number> = {
+  critical: 4,
+  high: 3,
+  medium: 2,
+  low: 1,
+};
+
+function maxSeverity(
+  a: DetectorFinding['severity'],
+  b: DetectorFinding['severity']
+): DetectorFinding['severity'] {
+  return SEVERITY_RANK[a] >= SEVERITY_RANK[b] ? a : b;
+}
+
+/**
+ * Aggregate per-occurrence `codegen:*` DetectorFindings down to one row per
+ * distinct `detectorId`. Non-codegen findings pass through unchanged. Order
+ * is preserved (first-seen of each codegen-group keeps its original slot).
+ *
+ * Single-finding groups (count === 1) are emitted unchanged — no "(aggregated,
+ * 1 occurrences)" suffix and no narration prefix.
+ */
+export function aggregateCodegenFindings(
+  detectorFindings: DetectorFinding[]
+): DetectorFinding[] {
+  const groups = new Map<string, DetectorFinding[]>();
+  const order: string[] = [];
+  const passthrough: Array<{ slot: number; finding: DetectorFinding }> = [];
+
+  detectorFindings.forEach((d, idx) => {
+    if (!d.detectorId.startsWith('codegen:')) {
+      passthrough.push({ slot: idx, finding: d });
+      return;
+    }
+    const existing = groups.get(d.detectorId);
+    if (existing) {
+      existing.push(d);
+    } else {
+      groups.set(d.detectorId, [d]);
+      order.push(d.detectorId);
+    }
+  });
+
+  const aggregated: DetectorFinding[] = [];
+  for (const detectorId of order) {
+    const group = groups.get(detectorId)!;
+    if (group.length === 1) {
+      aggregated.push(group[0]);
+      continue;
+    }
+
+    const first = group[0];
+    const distinctSourcePaths: string[] = [];
+    const seenSourcePaths = new Set<string>();
+    for (const g of group) {
+      if (g.sourcePath && !seenSourcePaths.has(g.sourcePath)) {
+        seenSourcePaths.add(g.sourcePath);
+        distinctSourcePaths.push(g.sourcePath);
+      }
+    }
+    const topSourcePaths = distinctSourcePaths.slice(0, 10);
+
+    const endpointsSeen = new Set<string>();
+    const dedupedEndpoints: Array<{ path: string; method: string }> = [];
+    for (const g of group) {
+      for (const e of g.affectedEndpoints) {
+        const key = `${e.path}${e.method}`;
+        if (!endpointsSeen.has(key)) {
+          endpointsSeen.add(key);
+          dedupedEndpoints.push(e);
+        }
+      }
+    }
+
+    let sev: DetectorFinding['severity'] = first.severity;
+    for (let i = 1; i < group.length; i++) sev = maxSeverity(sev, group[i].severity);
+
+    const aggregatedNarrationPrefix =
+      `Aggregated from ${group.length} raw codegen findings on ${distinctSourcePaths.length} distinct sourcePaths. ` +
+      `Top sample paths: ${topSourcePaths.join(', ')}.`;
+
+    aggregated.push({
+      ...first,
+      title: `${first.title} (aggregated, ${group.length} occurrences)`,
+      narration: `${aggregatedNarrationPrefix} ${first.narration}`,
+      affectedEndpoints: dedupedEndpoints,
+      severity: sev,
+      meta: {
+        ...(first.meta ?? {}),
+        aggregateOccurrences: group.length,
+        aggregateSourcePaths: topSourcePaths,
+      },
+    });
+  }
+
+  // Re-stitch: passthrough items keep their original relative order; the
+  // aggregated codegen rows are placed at the position of their group's
+  // first-seen finding so output order stays deterministic.
+  const codegenSlots: number[] = [];
+  detectorFindings.forEach((d, idx) => {
+    if (d.detectorId.startsWith('codegen:')) {
+      const aggregatedIdx = order.indexOf(d.detectorId);
+      if (aggregatedIdx >= 0 && groups.get(d.detectorId)![0] === d) {
+        codegenSlots.push(idx);
+      }
+    }
+  });
+
+  const out: DetectorFinding[] = [];
+  let codegenCursor = 0;
+  let passthroughCursor = 0;
+  for (let idx = 0; idx < detectorFindings.length; idx++) {
+    if (codegenCursor < codegenSlots.length && codegenSlots[codegenCursor] === idx) {
+      out.push(aggregated[codegenCursor]);
+      codegenCursor++;
+    } else if (
+      passthroughCursor < passthrough.length &&
+      passthrough[passthroughCursor].slot === idx
+    ) {
+      out.push(passthrough[passthroughCursor].finding);
+      passthroughCursor++;
+    }
+  }
+  return out;
+}
+
+/**
+ * Mapping pattern: opts is optional + defaults to `{ aggregateCodegen: true }`.
+ * Aggregation runs first as a pure DetectorFinding → DetectorFinding pass; the
+ * canonical-Finding mapping runs after. Existing callers that don't pass opts
+ * get the safe default (aggregation on) which is what production wants.
+ */
+export function mapDetectorFindings(
+  detectorFindings: DetectorFinding[],
+  opts: DetectorOptions = {}
+): Finding[] {
+  const aggregateCodegen = opts.aggregateCodegen ?? true;
+  const input = aggregateCodegen ? aggregateCodegenFindings(detectorFindings) : detectorFindings;
+
   const out: Finding[] = [];
-  for (const d of detectorFindings) {
+  for (const d of input) {
     try {
       out.push(mapDetectorFinding(d));
     } catch (err) {

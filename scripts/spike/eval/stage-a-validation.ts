@@ -35,12 +35,23 @@ import type { ReferenceTarget } from './types.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const REPO_ROOT = path.resolve(__dirname, '..', '..', '..');
-const SPIKE_DIR = path.resolve(__dirname, '..', '..');
+const SPIKE_DIR = path.resolve(__dirname, '..');
 
 // Load env from scripts/spike/.env regardless of cwd. Root .env is also tried
-// (some keys like ANTHROPIC_API_KEY may live there).
-dotenv.config({ path: path.join(SPIKE_DIR, '.env') });
+// (some keys like ANTHROPIC_API_KEY may live there). Spike .env is loaded with
+// override:true so its values win over repo-root .env when both define the same key.
 dotenv.config({ path: path.join(REPO_ROOT, '.env') });
+dotenv.config({ path: path.join(SPIKE_DIR, '.env'), override: true });
+
+if (!process.env.OPENAI_API_KEY) {
+  console.warn(
+    '[stage-a-validation] OPENAI_API_KEY not found in process.env after loading .env files.\n' +
+    '  Embedding-scorer will be skipped. Add OPENAI_API_KEY=... to scripts/spike/.env or repo-root .env to enable embedding-scoring.\n' +
+    '  Tried paths:\n' +
+    `    - ${path.join(SPIKE_DIR, '.env')} (exists: ${fs.existsSync(path.join(SPIKE_DIR, '.env'))})\n` +
+    `    - ${path.join(REPO_ROOT, '.env')} (exists: ${fs.existsSync(path.join(REPO_ROOT, '.env'))})`
+  );
+}
 
 const ALL_SPECS = ['stripe-full', 'pagerduty-full', 'dnd5eapi', 'github-rest'];
 
