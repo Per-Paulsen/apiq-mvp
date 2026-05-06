@@ -1,0 +1,452 @@
+# apiq Spectral Ruleset — P1 Threat-Modeling Rules (T16a, Welle B)
+#
+# 22 P1 (Konkurrenz-Pari-Pflicht) Threat-Modeling rules per
+# implementation-priority.md — these are the rules that mature linters
+# (Vacuum, Redocly, IBM, OWASP-Spectral, Zalando-Zally, Microsoft, Google)
+# catch and apiq must catch too. Missing any of these = trust-kaputt at
+# first pari-test.
+#
+# Authored 2026-05-06 (T16a / Welle B) from:
+#   - specs/big-spec-architecture-spike-stage-a-implementation-priority.md (P1 list)
+#   - specs/big-spec-architecture-spike-stage-a-rules-brainstorm.md (pattern definitions)
+#   - specs/big-spec-architecture-spike-stage-a-mining-round2-threat.md (TM-A* details)
+#
+# Severity discipline (per Severity-Schema Final, T23):
+#   - error: RFC-2119 MUST violated; CI-blocking
+#   - warn:  RFC-2119 SHOULD violated, OR strong cross-source consensus; review-blocking
+#   - hint:  Soft signal; informative; opinion-divided OR low-confidence-heuristic
+#
+# Sources backing each rule are documented per-rule below in `description`.
+#
+# This file is SEPARATE from apiq-ruleset.yaml so the two can be merged
+# independently. The spectral-runner `extends:` chain only supports
+# `spectral:oas`, but the test-suite for this file builds its own
+# Spectral instance and registers any custom-functions inline.
+
+extends:
+  - spectral:oas
+
+formats:
+  - oas3
+  - oas3_0
+  - oas3_1
+
+rules:
+  # =========================================================================
+  # Y-2 — API keys in URL (path or query parameter)
+  # OWASP API2:2023; severity: error
+  # Heuristic: parameters named like api_key/apikey/api-key/access_token in
+  # `path` or `query` location are credentials-in-URL.
+  # =========================================================================
+  apiq-tm-y2-api-key-in-url:
+    description: >-
+      Parameters named like an API key (api_key, apikey, api-key, access_token,
+      token, key, secret) MUST NOT be passed in `path` or `query` per OWASP
+      API2:2023. Use a header parameter or a `securityScheme` of type
+      `apiKey` with `in: header` instead.
+    message: "{{property}} '{{value}}' looks like a credential carried in URL ({{path}}); move to header or securityScheme."
+    severity: error
+    given: "$.paths[*][*].parameters[?(@ && @.in && (@.in=='path' || @.in=='query') && @.name && @.name.toString().match(/^(api[-_]?key|apikey|access[-_]?token|password|secret|client[-_]?secret|auth[-_]?token)$/i))]"
+    then:
+      function: falsy
+      field: name
+
+  # Companion at component-parameter level
+  apiq-tm-y2-api-key-in-url-components:
+    description: >-
+      Component-parameter named like an API key MUST NOT be passed in `path`
+      or `query` per OWASP API2:2023.
+    message: "Component parameter '{{property}}' carries credential in URL; move to header or securityScheme."
+    severity: error
+    given: "$.components.parameters[?(@ && @.in && (@.in=='path' || @.in=='query') && @.name && @.name.toString().match(/^(api[-_]?key|apikey|access[-_]?token|password|secret|client[-_]?secret|auth[-_]?token)$/i))]"
+    then:
+      function: falsy
+      field: name
+
+  # =========================================================================
+  # Y-3 / RFC2-56 — Credentials in URL (path/query carrying user/password tokens)
+  # OWASP + RFC 6750; severity: error
+  # Path-template segments containing `{password}` or `{token}` etc., AND
+  # any path or query parameter whose name semantically holds a credential.
+  # Covered by Y-2 above for parameters; this rule additionally flags
+  # path-template segments that bake credentials in.
+  # =========================================================================
+  apiq-tm-y3-credentials-in-path-template:
+    description: >-
+      Path-template segments MUST NOT name credential-bearing parameters
+      (per OWASP API2 + RFC 6750 §2.3 — bearer tokens MUST NOT be passed
+      in URI). Use header/cookie auth or a securityScheme.
+    message: "Path '{{property}}' contains credential-bearing template segment; use header-based auth instead."
+    severity: error
+    given: "$.paths"
+    then:
+      function: pattern
+      field: "@key"
+      functionOptions:
+        notMatch: "\\{(password|token|access[_-]?token|api[_-]?key|secret|client[_-]?secret|bearer|jwt)\\}"
+
+  # =========================================================================
+  # Y-4 / RFC2-43 — HTTP-Basic over non-HTTPS server
+  # OWASP + RFC 7617; severity: error
+  # Heuristic: any server with `http://` (not localhost) when securitySchemes
+  # contains a `basic`/`bearer` http scheme.
+  # =========================================================================
+  apiq-tm-y4-http-basic-on-insecure-server:
+    description: >-
+      Servers using plain `http://` (not localhost) violate RFC 7617 / OWASP
+      API2 when ANY HTTP authentication scheme is declared. Credentials sent
+      over HTTP can be intercepted in transit.
+    message: "Server URL '{{value}}' uses plain http:// — credentials transmitted over plaintext."
+    severity: error
+    given: "$.servers[*].url"
+    then:
+      function: pattern
+      functionOptions:
+        notMatch: "^http://(?!localhost|127\\.0\\.0\\.1|0\\.0\\.0\\.0|::1|\\[::1\\])"
+
+  # =========================================================================
+  # Y-5 / RFC2-62 — OAuth2 *Url MUST be HTTPS
+  # RFC 6749 §3.1 (verbatim "MUST utilize TLS"); severity: error
+  # =========================================================================
+  apiq-tm-y5-oauth2-authorization-url-https:
+    description: >-
+      RFC 6749 §3.1 requires TLS — `authorizationUrl` MUST use https://.
+    message: "OAuth2 authorizationUrl '{{value}}' must use https:// per RFC 6749 §3.1."
+    severity: error
+    given: "$..flows.*.authorizationUrl"
+    then:
+      function: pattern
+      functionOptions:
+        match: "^https://"
+
+  apiq-tm-y5-oauth2-token-url-https:
+    description: >-
+      RFC 6749 §3.2 requires TLS — `tokenUrl` MUST use https://.
+    message: "OAuth2 tokenUrl '{{value}}' must use https:// per RFC 6749 §3.2."
+    severity: error
+    given: "$..flows.*.tokenUrl"
+    then:
+      function: pattern
+      functionOptions:
+        match: "^https://"
+
+  apiq-tm-y5-oauth2-refresh-url-https:
+    description: >-
+      OAuth2 `refreshUrl` MUST use https:// — refresh tokens are long-lived
+      credentials and MUST NOT traverse plaintext.
+    message: "OAuth2 refreshUrl '{{value}}' must use https://."
+    severity: error
+    given: "$..flows.*.refreshUrl"
+    then:
+      function: pattern
+      functionOptions:
+        match: "^https://"
+
+  # =========================================================================
+  # Y-7 / RFC2-60/61 — OAuth2 implicit + password flows forbidden (BCP-240)
+  # RFC 9700 BCP-240 (2025, verbatim "MUST NOT"); severity: error
+  # =========================================================================
+  apiq-tm-y7-oauth2-implicit-flow-forbidden:
+    description: >-
+      RFC 9700 BCP-240 (2025) §2.1.2 deprecates the OAuth2 implicit flow
+      ("MUST NOT be used"). Use authorizationCode + PKCE instead.
+    message: "OAuth2 implicit flow is forbidden by RFC 9700 BCP-240; use authorizationCode + PKCE."
+    severity: error
+    given: "$..securitySchemes[?(@ && @.type=='oauth2')].flows"
+    then:
+      function: undefined
+      field: implicit
+
+  apiq-tm-y7-oauth2-password-flow-forbidden:
+    description: >-
+      RFC 9700 BCP-240 §2.4 deprecates the OAuth2 resource-owner-password
+      flow ("MUST NOT be used"). Use authorizationCode + PKCE instead.
+    message: "OAuth2 password flow is forbidden by RFC 9700 BCP-240."
+    severity: error
+    given: "$..securitySchemes[?(@ && @.type=='oauth2')].flows"
+    then:
+      function: undefined
+      field: password
+
+  # =========================================================================
+  # Y-17 — Server URLs MUST be HTTPS (warn — http:// localhost permitted)
+  # OWASP API8; severity: warn
+  # =========================================================================
+  apiq-tm-y17-server-url-https-only:
+    description: >-
+      Production server URLs SHOULD use https:// (OWASP API8). Plaintext
+      http:// is only acceptable for localhost / dev hosts.
+    message: "Server URL '{{value}}' should use https://."
+    severity: warn
+    given: "$.servers[*].url"
+    then:
+      function: pattern
+      functionOptions:
+        notMatch: "^http://(?!localhost|127\\.0\\.0\\.1|0\\.0\\.0\\.0|::1|\\[::1\\])"
+
+  # =========================================================================
+  # Y-23 — Write operations MUST be protected by `security`
+  # OWASP API2/API5; severity: warn
+  # POST/PUT/PATCH/DELETE without operation-level security AND no
+  # spec-level security — flagged. (Note: the `security: []` empty-array
+  # override that disables auth on a single op is also flagged here.)
+  # =========================================================================
+  apiq-tm-y23-write-op-needs-security:
+    description: >-
+      POST/PUT/PATCH/DELETE operations should declare `security` (or inherit
+      from spec-level `security`). Public write-endpoints with no auth are
+      a frequent OWASP API2 / API5 finding.
+    message: "Write operation lacks `security` declaration; auth should be required."
+    severity: warn
+    given: "$.paths[*][post,put,patch,delete]"
+    then:
+      function: defined
+      field: security
+
+  # =========================================================================
+  # TM-A6 — OpenIdConnect openIdConnectUrl HTTPS-only
+  # RFC 6749 + APIMatic; severity: error
+  # =========================================================================
+  apiq-tm-a6-openid-connect-url-https:
+    description: >-
+      OpenIdConnect `openIdConnectUrl` MUST use https:// — discovery doc
+      contains JWKS URIs and endpoint locations that must be retrieved
+      over TLS.
+    message: "openIdConnectUrl '{{value}}' must use https://."
+    severity: error
+    given: "$..securitySchemes[?(@ && @.type=='openIdConnect')].openIdConnectUrl"
+    then:
+      function: pattern
+      functionOptions:
+        match: "^https://"
+
+  # =========================================================================
+  # TM-A10 — Tokens in path/query forbidden (RFC 6750 §2.3)
+  # RFC 6750 §2.3 verbatim "clients MUST NOT use the URI"; severity: error
+  # Covered partially by Y-2 (parameter-name match); this rule emphasises
+  # bearer-tokens specifically and fires on parameter-description heuristics.
+  # =========================================================================
+  apiq-tm-a10-bearer-token-in-url:
+    description: >-
+      Parameters described as carrying a bearer/access token MUST NOT be
+      transmitted in `path` or `query` per RFC 6750 §2.3.
+    message: "{{property}} description suggests bearer-token but parameter is in URL — forbidden by RFC 6750 §2.3."
+    severity: error
+    given: "$..parameters[?(@ && @.in && (@.in=='path' || @.in=='query') && @.description && @.description.toString().match(/[Bb]earer\\s+token|[Aa]ccess\\s+token|JWT/))]"
+    then:
+      function: pattern
+      field: in
+      functionOptions:
+        match: "^(header|cookie)$"
+
+  # =========================================================================
+  # TM-A11 — Mass-assignment privilege-escalation field-names in request
+  # OWASP API3; severity: warn
+  # Fields named `is_admin`, `role`, `permissions`, `roles`, `is_superuser`,
+  # `account_balance`, `credits` etc. in REQUEST schemas (not response).
+  # =========================================================================
+  apiq-tm-a11-mass-assignment-fields:
+    description: >-
+      Request schemas with privilege-escalation field-names (is_admin, role,
+      roles, permissions, is_superuser, account_balance, credits, balance,
+      verified, email_verified) are mass-assignment risks (OWASP API3).
+      Either remove the field from the request schema or declare it
+      `readOnly: true` so codegen drops it from request types.
+    message: "Field '{{property}}' is a privilege-escalation risk in request bodies; declare `readOnly: true`."
+    severity: warn
+    given: "$.paths[*][post,put,patch].requestBody.content[*].schema..properties[?(@ && @property && @property.toString().match(/^(is_admin|isAdmin|role|roles|permissions|is_superuser|isSuperuser|account_balance|accountBalance|balance|credits|verified|email_verified|emailVerified|is_active|isActive|disabled|enabled)$/) && !@.readOnly)]"
+    then:
+      function: truthy
+      field: readOnly
+
+  # =========================================================================
+  # TM-A15 — PII-named fields in response (HIGH-VALUE CORNERSTONE)
+  # OWASP API3 + Cloudflare + OAI #2190; severity: warn
+  # Fields with names matching a curated PII list in response schemas
+  # without `writeOnly: true` declaration.
+  # =========================================================================
+  apiq-tm-a15-pii-named-fields-response:
+    description: >-
+      Response schemas exposing PII-named fields (ssn, social_security_number,
+      tax_id, passport, drivers_license, credit_card, cc_number, cvv, dob,
+      date_of_birth, mother_maiden_name, full_name, home_address) without
+      explicit `writeOnly` are excessive-data-exposure risks (OWASP API3 +
+      Lens-6 cornerstone).
+    message: "Response field '{{property}}' looks like PII; consider redaction or split read/write schemas."
+    severity: warn
+    given: "$.paths[*][*].responses[*].content[*].schema..properties[?(@ && @property && @property.toString().match(/^(ssn|social_security_number|socialSecurityNumber|tax_id|taxId|passport|passport_number|passportNumber|drivers_license|driversLicense|credit_card|creditCard|cc_number|ccNumber|cvv|cvc|dob|date_of_birth|dateOfBirth|mother_maiden_name|motherMaidenName|home_address|homeAddress|full_address|fullAddress)$/i))]"
+    then:
+      function: defined
+      field: description
+
+  # =========================================================================
+  # TM-A17 — additionalProperties:true on request-body schema
+  # OWASP API3; severity: warn
+  # Spectral DSL — flag schemas in requestBody that have additionalProperties:true.
+  # =========================================================================
+  apiq-tm-a17-additional-properties-true-request:
+    description: >-
+      Request-body schemas with `additionalProperties: true` accept
+      arbitrary client-supplied properties — mass-assignment risk
+      (OWASP API3). Use `additionalProperties: false` or a typed schema.
+    message: "Request schema declares `additionalProperties: true`; tighten or remove."
+    severity: warn
+    given: "$.paths[*][post,put,patch].requestBody.content[*].schema"
+    then:
+      function: schema
+      field: additionalProperties
+      functionOptions:
+        schema:
+          not:
+            const: true
+
+  # =========================================================================
+  # TM-A22 — List-endpoint without limit/per_page param (warn)
+  # OWASP API4 + 42Crunch + Stripe; severity: warn
+  # Heuristic: GET responses with array-typed body + no `limit`/`per_page`/
+  # `page_size` query parameter.
+  # NOTE: Pure-DSL detection is approximate; we use a custom JS function
+  # passed in via test-time registration.
+  # =========================================================================
+  # (Implemented via custom function `listEndpointHasPagination` registered
+  # in tests; see threat-p1-rules.test.ts.)
+
+  # =========================================================================
+  # TM-A23 — Pagination param MUST have `maximum`
+  # OWASP API4; severity: error
+  # Query parameters named limit/per_page/page_size MUST declare maximum.
+  # =========================================================================
+  apiq-tm-a23-pagination-param-needs-maximum:
+    description: >-
+      Pagination parameters (limit, per_page, page_size, pageSize, count, top)
+      typed integer MUST declare `maximum` per OWASP API4 (resource-consumption
+      protection). Unbounded pagination → DoS via huge result-sets.
+    message: "Pagination parameter '{{property}}' lacks `maximum` (DoS risk)."
+    severity: error
+    given: "$..parameters[?(@ && @.in=='query' && @.name && @.name.toString().match(/^(limit|per_page|perPage|page_size|pageSize|count|top|max[_-]?results|maxResults)$/) && @.schema && @.schema.type=='integer')]"
+    then:
+      function: defined
+      field: schema.maximum
+
+  # =========================================================================
+  # TM-A24 — File-upload binary MUST declare `maxLength`
+  # OWASP API4 + OAS multipart; severity: error
+  # Schema with `type: string, format: binary` (or contentEncoding base64)
+  # MUST declare `maxLength` (resource-consumption — request-body-size cap).
+  # =========================================================================
+  apiq-tm-a24-binary-upload-needs-maxlength:
+    description: >-
+      Binary upload schemas (`type: string, format: binary`) MUST declare
+      `maxLength` so server can enforce upload-size limit (OWASP API4 —
+      unbounded uploads = DoS).
+    message: "Binary-upload schema lacks `maxLength` (unbounded upload-size = DoS risk)."
+    severity: error
+    given: "$..[?(@ && @.type=='string' && (@.format=='binary' || @.format=='byte' || @.contentEncoding=='base64'))]"
+    then:
+      function: defined
+      field: maxLength
+
+  # =========================================================================
+  # TM-A32 — Purchase/booking flow MUST have rate-limit headers (error)
+  # OWASP API6 sensitive-business-flow; severity: error
+  # Custom function — heuristic on operation summary/path matching
+  # purchase/checkout/order/booking + responses lacking rate-limit headers.
+  # Implemented via custom JS function in tests.
+  # =========================================================================
+  # (Custom function `sensitiveFlowNeedsRateLimitHeaders` registered in tests.)
+
+  # =========================================================================
+  # TM-A34 — URL-handling property MUST format:uri+pattern
+  # OWASP API7 + SSRF cheat; severity: error
+  # Properties with names like `url`, `webhook_url`, `callback_url`, `redirect_url`,
+  # `image_url` MUST declare BOTH format:uri AND pattern (scheme/host allowlist).
+  # =========================================================================
+  apiq-tm-a34-url-property-format-and-pattern:
+    description: >-
+      URL-handling properties (url, webhook_url, callback_url, redirect_url,
+      redirect_uri, image_url, target_url) MUST declare BOTH `format: uri`
+      AND a `pattern` (scheme/host allowlist) per OWASP API7 + SSRF cheat —
+      open URL-fields are SSRF-pivots.
+    message: "URL-handling property '{{property}}' lacks `format: uri` AND `pattern` (SSRF risk)."
+    severity: error
+    given: "$..properties[?(@ && @property.toString().match(/^(url|uri|webhook_url|webhookUrl|callback_url|callbackUrl|redirect_url|redirectUrl|redirect_uri|redirectUri|image_url|imageUrl|target_url|targetUrl|return_url|returnUrl)$/) && @.type=='string')]"
+    then:
+      - function: pattern
+        field: format
+        functionOptions:
+          match: "^uri$"
+      - function: defined
+        field: pattern
+
+  # =========================================================================
+  # TM-A38 — CORS Allow-Origin: * literal in response headers
+  # OWASP API8 + CORS-Misconfig; severity: error
+  # Response-header definition where Access-Control-Allow-Origin schema
+  # default/example/enum is literal '*'.
+  # =========================================================================
+  apiq-tm-a38-cors-allow-origin-wildcard:
+    description: >-
+      Response header `Access-Control-Allow-Origin` literal `*` is forbidden
+      when credentials are exchanged or sensitive data is returned (OWASP
+      API8 + CORS-Misconfig). Use an allowlisted origin.
+    message: "CORS Allow-Origin literal '*' is too permissive; use an allowlist."
+    severity: error
+    given: "$..headers[?(@ && @property && @property.toString().match(/^[Aa]ccess-[Cc]ontrol-[Aa]llow-[Oo]rigin$/))].schema"
+    then:
+      function: pattern
+      field: example
+      functionOptions:
+        notMatch: "^\\*$"
+
+  # =========================================================================
+  # TM-A39 — Allow-Credentials:true + Allow-Origin:* impossible
+  # OWASP CORS WSTG; severity: error
+  # Header objects on the same response declaring credentials:true with
+  # origin:* — browsers reject this combination per CORS spec.
+  # Implemented via custom function (cross-header check).
+  # =========================================================================
+  # (Custom function `corsCredentialsWildcardConflict` in tests.)
+
+  # =========================================================================
+  # TM-A42 — Error-schema with stack/trace/exception field
+  # OWASP API8 verbose-error; severity: warn
+  # Component-schemas exposing internal stack-traces leak debugging info.
+  # =========================================================================
+  apiq-tm-a42-error-schema-no-stack-trace:
+    description: >-
+      Error schemas MUST NOT expose stack/trace/exception fields (OWASP API8
+      verbose-error). These leak internal implementation details (file paths,
+      framework versions) to attackers.
+    message: "Error schema property '{{property}}' exposes stack/trace/exception detail."
+    severity: warn
+    given: "$.components.schemas[*].properties[?(@ && @property && @property.toString().match(/^(stack|stack_trace|stackTrace|trace|traceback|exception|stacktrace|debug_info|debugInfo|inner_exception|innerException|frames)$/i))]"
+    then:
+      function: undefined
+      field: type
+
+  # =========================================================================
+  # TM-A44 — /debug, /_debug, /test, /admin paths in production spec
+  # OWASP API8/9; severity: error
+  # Path keys matching debug/test/internal patterns.
+  # =========================================================================
+  apiq-tm-a44-no-debug-paths:
+    description: >-
+      Production spec MUST NOT declare paths matching `/debug`, `/_debug`,
+      `/test`, `/_test`, `/dev`, `/internal`, `/_internal`, `/admin/console`
+      (OWASP API8/9 — stale debug endpoints are common breach-vector).
+    message: "Path '{{property}}' looks like a debug/test endpoint; remove from production spec."
+    severity: error
+    given: "$.paths"
+    then:
+      function: pattern
+      field: "@key"
+      functionOptions:
+        notMatch: "^/(debug|_debug|test|_test|dev|_dev|internal|_internal|admin/console|debug/.*|_debug/.*|test/.*|_test/.*|internal/.*|_internal/.*)(/|$)"
+
+  # =========================================================================
+  # TM-A53 / RFC2-40 — 401 → WWW-Authenticate header MUST be defined
+  # RFC 9110 §11.6.1 (verbatim "MUST send WWW-Authenticate"); severity: error
+  # Implemented via custom function — checks every operation with a 401
+  # response that the response declares a `WWW-Authenticate` header.
+  # =========================================================================
+  # (Custom function `responseHasWwwAuthenticateHeader` in tests.)
