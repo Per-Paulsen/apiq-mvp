@@ -59,11 +59,36 @@ import type { ReferenceTarget } from '../eval/types.js';
 import { JaccardScorer } from '../eval/scorers/jaccard.js';
 import { mapDetectorFindings } from './output-mapper.js';
 import { cycleStripSpec } from '../stringify-spec.js';
+import multiLangReservedKeywordsFn from './spectral-functions/multi-lang-reserved-keywords.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const APIQ_RULESET_PATH = path.join(__dirname, 'apiq-ruleset.yaml');
+/**
+ * Welle B P1 Client-Friction (Lens 4) ruleset — 25 CL-* rules including
+ * CL-1 (multi-lang reserved-keywords) which uses a custom Spectral function
+ * registered below. Loaded on top of `apiq-ruleset.yaml` so the rules
+ * compose with the rest of the apiq custom-rule set.
+ */
+const APIQ_RULESET_CLIENT_P1_PATH = path.join(
+  __dirname,
+  'apiq-ruleset-client-p1.yaml'
+);
+
+/**
+ * Custom Spectral functions registered in addition to `@stoplight/spectral-functions`.
+ * Function-name (as it appears in YAML `function:` field) → callable.
+ *
+ * Naming uses kebab-case to match Spectral's stylistic convention.
+ */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+const APIQ_CUSTOM_FUNCTIONS: Record<string, (...args: any[]) => any> = {
+  'multi-lang-reserved-keywords': multiLangReservedKeywordsFn as unknown as (
+    ...args: any[]
+  ) => any,
+};
+/* eslint-enable @typescript-eslint/no-explicit-any */
 
 // =============================================================================
 // OAS3-default rule code set — extracted at module-init from the imported
@@ -126,7 +151,20 @@ const SUPPORTED_FUNCTIONS = new Set([
   'unreferencedReusableObject',
   'xor',
   'or',
+  // apiq custom functions registered in APIQ_CUSTOM_FUNCTIONS:
+  'multi-lang-reserved-keywords',
 ]);
+
+/**
+ * Look up a function name in either the spectral-functions package OR the
+ * apiq custom-functions registry. Returns the function or undefined.
+ */
+function resolveFunction(name: string): unknown {
+  if (Object.prototype.hasOwnProperty.call(APIQ_CUSTOM_FUNCTIONS, name)) {
+    return APIQ_CUSTOM_FUNCTIONS[name];
+  }
+  return (spectralFunctions as Record<string, unknown>)[name];
+}
 
 /**
  * Rule-codes known to crash Spectral's Nimma JSONPath compiler at run-time on
@@ -152,22 +190,24 @@ const RULE_CRASH_BLOCKLIST: ReadonlySet<string> = new Set([
 // message, not the description).
 const customRuleDescriptions = new Map<string, string>();
 
-function buildRulesetFromYaml(yamlText: string): RulesetDefinition | null {
+function buildRulesAccFromYaml(
+  yamlText: string,
+  fileLabel: string,
+): Record<string, unknown> | null {
   let parsed: YamlRuleset;
   try {
     parsed = YAML.parse(yamlText) as YamlRuleset;
   } catch (err) {
     console.warn(
-      `[spectral-runner] failed to parse apiq-ruleset.yaml: ${err instanceof Error ? err.message : String(err)}`
+      `[spectral-runner] failed to parse ${fileLabel}: ${err instanceof Error ? err.message : String(err)}`
     );
     return null;
   }
   if (!parsed || typeof parsed !== 'object' || !parsed.rules) {
-    console.warn('[spectral-runner] apiq-ruleset.yaml has no `rules` block; skipping');
+    console.warn(`[spectral-runner] ${fileLabel} has no \`rules\` block; skipping`);
     return null;
   }
 
-  const convertedRules: Record<string, RulesetDefinition extends { rules: infer R } ? R : never> = {} as never;
   // Eslint: we work with `any` here because the converted rules need to satisfy
   // Spectral's RuleDefinition shape, which uses heavy generics for function
   // schemas. Keeping the boundary narrow.
@@ -196,7 +236,7 @@ function buildRulesetFromYaml(yamlText: string): RulesetDefinition | null {
         badFn = true;
         break;
       }
-      const fn = (spectralFunctions as Record<string, unknown>)[t.function];
+      const fn = resolveFunction(t.function);
       if (typeof fn !== 'function') {
         console.warn(`[spectral-runner] ruleset rule "${code}" function "${t.function}" not callable; skipping rule`);
         badFn = true;
@@ -227,10 +267,22 @@ function buildRulesetFromYaml(yamlText: string): RulesetDefinition | null {
   /* eslint-enable @typescript-eslint/no-explicit-any */
 
   if (Object.keys(rulesAcc).length === 0) {
-    console.warn('[spectral-runner] apiq-ruleset.yaml had 0 convertible rules; using OAS3-default only');
+    console.warn(
+      `[spectral-runner] ${fileLabel} had 0 convertible rules; skipping`
+    );
     return null;
   }
+  return rulesAcc;
+}
 
+/**
+ * Backwards-compat wrapper retained for tests that import the legacy
+ * `buildRulesetFromYaml`. Combines a single YAML file into a full
+ * RulesetDefinition extending the OAS3 default.
+ */
+function buildRulesetFromYaml(yamlText: string): RulesetDefinition | null {
+  const rulesAcc = buildRulesAccFromYaml(yamlText, 'apiq-ruleset.yaml');
+  if (!rulesAcc) return null;
   return {
     extends: [oas3Ruleset as unknown as RulesetDefinition],
     rules: rulesAcc,
@@ -244,30 +296,81 @@ function buildRulesetFromYaml(yamlText: string): RulesetDefinition | null {
 
 let cachedSpectral: SpectralCore.Spectral | null = null;
 
+/**
+ * Reset the cached Spectral instance — used by tests that mutate the
+ * filesystem-loaded ruleset and need a fresh build.
+ */
+export function _resetSpectralCacheForTests(): void {
+  cachedSpectral = null;
+}
+
+/**
+ * Read-only inspection of the apiq client-friction P1 ruleset — exposed
+ * for tests that check the YAML round-trips and contains all expected
+ * pattern-IDs.
+ */
+export function getClientP1RuleCodes(): string[] {
+  const acc = loadYamlRules(
+    APIQ_RULESET_CLIENT_P1_PATH,
+    'apiq-ruleset-client-p1.yaml'
+  );
+  return acc ? Object.keys(acc) : [];
+}
+
+function loadYamlRules(
+  filePath: string,
+  fileLabel: string,
+): Record<string, unknown> | null {
+  if (!fs.existsSync(filePath)) {
+    console.warn(
+      `[spectral-runner] ${fileLabel} not found at ${filePath}; skipping`
+    );
+    return null;
+  }
+  try {
+    const yamlText = fs.readFileSync(filePath, 'utf8');
+    return buildRulesAccFromYaml(yamlText, fileLabel);
+  } catch (err) {
+    console.warn(
+      `[spectral-runner] failed to read ${fileLabel}: ${
+        err instanceof Error ? err.message : String(err)
+      }`
+    );
+    return null;
+  }
+}
+
 function buildSpectral(): SpectralCore.Spectral {
   if (cachedSpectral) return cachedSpectral;
   const spectral = new SpectralClass();
 
-  let customRuleset: RulesetDefinition | null = null;
-  if (fs.existsSync(APIQ_RULESET_PATH)) {
-    try {
-      const yamlText = fs.readFileSync(APIQ_RULESET_PATH, 'utf8');
-      customRuleset = buildRulesetFromYaml(yamlText);
-    } catch (err) {
-      console.warn(
-        `[spectral-runner] failed to read apiq-ruleset.yaml: ${err instanceof Error ? err.message : String(err)}`
-      );
-    }
+  // Merge rules from each apiq YAML ruleset (in order — later files overwrite
+  // earlier rule-codes if duplicated).
+  const baseRules = loadYamlRules(APIQ_RULESET_PATH, 'apiq-ruleset.yaml');
+  const clientP1Rules = loadYamlRules(
+    APIQ_RULESET_CLIENT_P1_PATH,
+    'apiq-ruleset-client-p1.yaml'
+  );
+
+  /* eslint-disable @typescript-eslint/no-explicit-any */
+  const merged: Record<string, any> = {};
+  if (baseRules) Object.assign(merged, baseRules);
+  if (clientP1Rules) Object.assign(merged, clientP1Rules);
+  /* eslint-enable @typescript-eslint/no-explicit-any */
+
+  if (Object.keys(merged).length > 0) {
+    const customRuleset = {
+      extends: [oas3Ruleset as unknown as RulesetDefinition],
+      rules: merged,
+    } as unknown as RulesetDefinition;
+    spectral.setRuleset(customRuleset);
   } else {
     console.warn(
-      `[spectral-runner] apiq-ruleset.yaml not found at ${APIQ_RULESET_PATH}; ` +
-        `using OAS3-default ruleset only (Task A1.2 will deliver custom rules).`
+      '[spectral-runner] no apiq custom rules loaded; using OAS3-default only'
     );
+    spectral.setRuleset(oas3Ruleset as unknown as RulesetDefinition);
   }
 
-  spectral.setRuleset(
-    (customRuleset ?? (oas3Ruleset as unknown as RulesetDefinition)) as RulesetDefinition
-  );
   cachedSpectral = spectral;
   return spectral;
 }

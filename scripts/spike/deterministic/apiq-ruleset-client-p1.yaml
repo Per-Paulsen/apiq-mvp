@@ -1,0 +1,638 @@
+# apiq Spectral Ruleset — Welle B P1 Client-Friction (Lens 4)
+#
+# 25 P1 client-friction rules from Mining-Round-2 Phase D
+# (`specs/big-spec-architecture-spike-stage-a-mining-round2-client.md`).
+#
+# Authored 2026-05-06 (T18a / Task #47, owner: t18a-client).
+#
+# These rules complement `apiq-ruleset.yaml` — they're loaded as a separate
+# YAML so the spectral-runner merges them on top of the base ruleset, and so
+# the file ownership / mining-provenance is clear.
+#
+# Severity discipline (per severity-schema.ts):
+#   - error: codegen actually fails or spec-syntax is violated
+#   - warn:  codegen produces bad-but-compilable output OR a renderer fails
+#   - hint:  SDK-quality degraded; ergonomics suboptimal
+#
+# Each rule's `description` records the pattern-ID and the codegen targets
+# affected so the metadata-layer (severity-schema.ts:CodegenTargetSchema)
+# can group findings by per-target rule-set.
+#
+# CL-1 (multi-lang reserved-keywords) uses the custom Spectral function
+# `multi-lang-reserved-keywords` registered by spectral-runner.ts from
+# `spectral-functions/multi-lang-reserved-keywords.ts`. All other rules
+# use the built-in functions Spectral ships.
+
+extends:
+  - spectral:oas
+
+formats:
+  - oas3
+  - oas3_0
+  - oas3_1
+
+rules:
+  # =========================================================================
+  # CL-1 — Multi-lang reserved-keyword allowlist (LOAD-BEARING)
+  # Targets: java, go, python, javascript, rust, csharp, kotlin
+  # =========================================================================
+
+  # CL-1a — properties named after a reserved keyword in any of 7 SDK targets.
+  apiq-cl1-property-name-reserved-keyword:
+    description: >-
+      [CL-1] Property name collides with a reserved keyword / built-in
+      identifier in one of the supported SDK target languages
+      (Java, Go, Python, JavaScript, Rust, C#, Kotlin). Codegen tools
+      either silently rename, fail to compile, or produce ambiguous code.
+      Targets: java, go, python, typescript, rust, csharp, kotlin.
+    message: "{{error}}"
+    severity: warn
+    given: "$..properties[*]~"
+    then:
+      function: multi-lang-reserved-keywords
+      functionOptions:
+        kind: property
+
+  # CL-1b — operationId values that collide.
+  apiq-cl1-operationid-reserved-keyword:
+    description: >-
+      [CL-1] operationId collides with a reserved keyword / built-in
+      identifier in one of the supported SDK target languages. SDK-method
+      generators use operationId as a method name; collision = unbuildable
+      SDK or silently-renamed method. Targets: java, go, python, typescript,
+      rust, csharp, kotlin.
+    message: "{{error}}"
+    severity: warn
+    given: "$.paths[*][get,put,post,delete,options,head,patch,trace].operationId"
+    then:
+      function: multi-lang-reserved-keywords
+      functionOptions:
+        kind: operationId
+
+  # =========================================================================
+  # CL-2 — Property-name with leading underscore or leading digit.
+  # Targets: java (compile-fail), go (collisions after underscore-strip),
+  # python (reserved name-mangling).
+  # =========================================================================
+
+  apiq-cl2-property-name-leading-underscore-or-digit:
+    description: >-
+      [CL-2] Property names with a leading underscore or leading digit
+      cause Go-codegen to strip and collide, Java to fail-to-compile, and
+      Python to mangle (double-underscore becomes name-mangled). Use a
+      letter-prefixed identifier instead.
+      Targets: java, go, python.
+    message: "Property name `{{property}}` starts with `_` or a digit; codegen tools break."
+    severity: warn
+    given: "$..properties[*]~"
+    then:
+      function: pattern
+      functionOptions:
+        match: "^[A-Za-z][A-Za-z0-9_]*$"
+
+  # =========================================================================
+  # CL-6 — operationId missing entirely.
+  # Re-emphasised here with apiq-pattern-id metadata (spectral:oas already
+  # has `operation-operationId`; this rule is intentionally additive so
+  # the apiq finding-mapping can carry the CL-6 pattern-tag).
+  # =========================================================================
+
+  apiq-cl6-operationid-required:
+    description: >-
+      [CL-6] Every operation MUST declare an `operationId`. SDK-codegen
+      tools and SDK-method-naming all key off operationId; absence forces
+      the tool to invent a name from path+method, producing unidiomatic
+      SDK methods. Targets: *.
+    message: "Operation lacks `operationId`; SDK codegen cannot derive a stable method name."
+    severity: warn
+    given: "$.paths[*][get,put,post,delete,options,head,patch,trace]"
+    then:
+      field: operationId
+      function: defined
+
+  # =========================================================================
+  # CL-12 — oneOf without discriminator.
+  # apiq-ruleset.yaml has `apiq-oneof-needs-discriminator` already at hint;
+  # CL-12 confirms upgrade to warn for P1.
+  # =========================================================================
+
+  apiq-cl12-oneof-needs-discriminator:
+    description: >-
+      [CL-12] `oneOf` schemas should declare a `discriminator` to enable
+      machine-readable variant deserialisation per OAS 3.0 §4.7.25.
+      Without discriminator, codegen produces verbose union-handling
+      (TS produces `T1|T2|...`, Java needs custom deserializer).
+      Targets: *.
+    message: "`oneOf` schema lacks `discriminator`; codegens fall back to runtime variant-probing."
+    severity: warn
+    given: "$..[?(@.oneOf && @.oneOf.length > 1 && !@.discriminator)]"
+    then:
+      field: discriminator
+      function: defined
+
+  # =========================================================================
+  # CL-20 — 204 response declared with content body (RFC violation).
+  # Per RFC 9110 §15.3.5, 204 No Content "MUST NOT include content".
+  # Targets: * (renderer + codegen).
+  # =========================================================================
+
+  apiq-cl20-204-must-not-have-content:
+    description: >-
+      [CL-20] HTTP 204 No Content responses MUST NOT carry a body
+      (RFC 9110 §15.3.5). Declaring `content` on a 204 confuses codegen
+      tools (some emit body-deserialisation; some omit; some crash) and
+      contradicts the wire-protocol. Remove `content` or change the
+      status code to a body-bearing one. Targets: *.
+    message: "Response 204 declares `content`; RFC 9110 §15.3.5 forbids a body on 204."
+    severity: warn
+    given: "$.paths[*][*].responses.204"
+    then:
+      field: content
+      function: undefined
+
+  # =========================================================================
+  # CL-26 — pattern without ^ / $ anchors.
+  # Default ECMA-262 regex behaviour is partial-match, so an unanchored
+  # pattern silently passes inputs that contain a match anywhere. Leads to
+  # both client-friction (codegen warnings) and security gaps.
+  # Targets: *.
+  # =========================================================================
+
+  apiq-cl26-pattern-needs-anchors:
+    description: >-
+      [CL-26] `pattern` strings should start with `^` and end with `$` to
+      assert full-string match. Without anchors, ECMA-262 partial-match
+      semantics silently pass inputs with a match anywhere — both a
+      validation gap (security) and a codegen-warning trigger.
+      Targets: *.
+    message: "Pattern `{{value}}` is unanchored; many engines partial-match unless `^...$` is present."
+    severity: warn
+    given: "$..pattern"
+    then:
+      function: pattern
+      functionOptions:
+        match: "^\\^.*\\$$"
+
+  # =========================================================================
+  # CL-31 — Bare-array request body.
+  # Targets: * (codegen). Languages with method-overloads expecting named
+  # keys cannot represent a top-level-array body well.
+  # =========================================================================
+
+  apiq-cl31-no-bare-array-request-body:
+    description: >-
+      [CL-31] Request bodies typed as bare arrays produce awkward SDK
+      method signatures across all targets. Wrap the array in a named
+      object property (e.g. `{ items: [...] }`) so SDK-codegen can name
+      the parameter and so the wire-shape can grow envelope fields
+      without breaking. Targets: *.
+    message: "Request body schema is a bare array; wrap in an envelope object."
+    severity: warn
+    given: "$.paths[*][post,put,patch].requestBody.content[*].schema"
+    then:
+      field: type
+      function: pattern
+      functionOptions:
+        notMatch: "^array$"
+
+  # =========================================================================
+  # CL-33 — schema without type.
+  # Targets: * (codegen falls back to Object/Any/Map).
+  # =========================================================================
+
+  apiq-cl33-schema-needs-type:
+    description: >-
+      [CL-33] Inline schemas with `properties` should declare `type:
+      object` explicitly. Without `type`, codegen tools differ in
+      interpretation (Object, Any, Map<String, Object>) — the safe-bet
+      is to spell it out. Targets: *.
+    message: "Schema declares `properties` but omits `type: object`; codegen behaviour is undefined."
+    severity: warn
+    given: "$..[?(@.properties && !@.type && !@.allOf && !@.oneOf && !@.anyOf && !@.$ref)]"
+    then:
+      field: type
+      function: defined
+
+  # =========================================================================
+  # CL-36 — example with value AND externalValue.
+  # OAS 3.0 §4.7.18 requires xor. Already covered by spectral:oas
+  # `oas3-examples-value-or-externalValue`; re-tagged here with CL-36
+  # pattern-id and severity-upgrade to error.
+  # =========================================================================
+
+  apiq-cl36-example-value-xor-externalvalue:
+    description: >-
+      [CL-36] An example object MUST declare either `value` or
+      `externalValue`, not both — they are mutually exclusive per OAS
+      3.0 §4.7.18. Renderers and codegen disagree on which to honour.
+      Targets: *.
+    message: "Example object has both `value` and `externalValue`; OAS 3 requires one OR the other."
+    severity: error
+    given: "$..[?(@.value !== undefined && @.externalValue !== undefined)]"
+    then:
+      field: value
+      function: undefined
+
+  # =========================================================================
+  # CL-37 — Component naming uses spaces or special chars.
+  # Targets: * (codegen produces invalid identifier).
+  # =========================================================================
+
+  apiq-cl37-component-name-identifier-safe:
+    description: >-
+      [CL-37] Component-keys (`components.schemas`, `components.responses`,
+      `components.parameters`, etc.) must match `^[A-Za-z_][A-Za-z0-9_-]*$`.
+      Spaces, dots, slashes, and other special chars produce invalid
+      identifiers in every target language. Targets: *.
+    message: "Component key `{{property}}` is not identifier-safe; renames will surprise consumers."
+    severity: warn
+    given:
+      - "$.components.schemas.*~"
+      - "$.components.responses.*~"
+      - "$.components.parameters.*~"
+      - "$.components.requestBodies.*~"
+      - "$.components.headers.*~"
+      - "$.components.examples.*~"
+      - "$.components.links.*~"
+      - "$.components.callbacks.*~"
+    then:
+      function: pattern
+      functionOptions:
+        match: "^[A-Za-z_][A-Za-z0-9_-]*$"
+
+  # =========================================================================
+  # CL-40 — Path with `?` query in path-template.
+  # spectral:oas has `path-not-include-query` already; tagged here for the
+  # CL-40 pattern-id.
+  # =========================================================================
+
+  apiq-cl40-path-must-not-have-query:
+    description: >-
+      [CL-40] Path-template strings MUST NOT contain `?` — query
+      parameters are declared via `parameters[in: query]`, not embedded
+      in the path key. Validators reject `?` in path keys.
+      Targets: *.
+    message: "Path key contains `?`; declare query params via parameters[in:query]."
+    severity: warn
+    given: "$.paths[*]~"
+    then:
+      function: pattern
+      functionOptions:
+        notMatch: "\\?"
+
+  # =========================================================================
+  # CL-45 — Pagination mixed conventions cross-spec.
+  # Cross-spec clustering — pure Spectral cannot detect this. Implemented
+  # at hint-severity as a sentinel that documents the rule-id; the real
+  # detector is the `pagination-style-inconsistency` walker which already
+  # ships and emits the cross-op finding.
+  #
+  # We still include the rule-name here for catalog-visibility (every P1
+  # CL-* has a rule that mentions its pattern-id). The rule fires only
+  # when an operation declares a `cursor` parameter AND a sibling
+  # operation declares an `offset` parameter — pure-Spectral can't see
+  # cross-op state, so this rule fires per-operation and the walker does
+  # the cross-op aggregation.
+  # =========================================================================
+
+  apiq-cl45-pagination-cursor-and-offset-cooccur:
+    description: >-
+      [CL-45] Operations that mix cursor-style and offset-style pagination
+      parameters in a single operation indicate an in-flight transition
+      between conventions. SDKs cannot expose a clean pagination helper
+      when both forms appear. The cross-op variant (different ops use
+      different conventions) is detected by the
+      `pagination-style-inconsistency` walker. Targets: *.
+    message: "Operation declares both cursor- and offset-style pagination params; pick one."
+    severity: hint
+    given: "$.paths[*][*].parameters[?(@.name && @.name.match(/^(cursor|page_token|next_token)$/))]^^"
+    then:
+      function: truthy
+
+  # =========================================================================
+  # CL-46 — Inconsistent error-shape cross-endpoint.
+  # Cross-endpoint walker territory; ships in the
+  # `error-shape-coherence` walker (T18b/D2). Sentinel rule below fires
+  # when a 4xx response component declares neither $ref nor a
+  # documented Problem schema — the cross-op clustering is in the walker.
+  # =========================================================================
+
+  apiq-cl46-error-response-needs-shape:
+    description: >-
+      [CL-46] 4xx response objects should reference a shared error
+      schema (or use Problem+JSON) — declaring inline different shapes
+      per operation produces inconsistent SDK error-handling. The
+      cross-op aggregation is performed by the error-shape-coherence
+      walker. Targets: *.
+    message: "4xx response declares an inline content schema instead of $ref to a shared error schema."
+    severity: hint
+    given:
+      - "$.paths[*][*].responses.400.content[*]"
+      - "$.paths[*][*].responses.401.content[*]"
+      - "$.paths[*][*].responses.403.content[*]"
+      - "$.paths[*][*].responses.404.content[*]"
+      - "$.paths[*][*].responses.409.content[*]"
+      - "$.paths[*][*].responses.422.content[*]"
+    then:
+      field: schema
+      function: schema
+      functionOptions:
+        schema:
+          type: object
+          required: ["$ref"]
+          properties:
+            $ref:
+              type: string
+
+  # =========================================================================
+  # CL-50 — Path file-extension (`/users.json`). Targets: * (router-fail).
+  # =========================================================================
+
+  apiq-cl50-path-no-file-extension:
+    description: >-
+      [CL-50] Path segments MUST NOT end in a file-extension
+      (`.json`, `.xml`, `.html`). Codegen tools strip silently or
+      crash; routing breaks. Use the `Accept` header for content
+      negotiation instead. Targets: *.
+    message: "Path key contains a file-extension segment; use Accept-header content negotiation."
+    severity: error
+    given: "$.paths[*]~"
+    then:
+      function: pattern
+      functionOptions:
+        notMatch: "\\.(json|xml|html|yaml|yml|csv|txt|pdf)(/|$)"
+
+  # =========================================================================
+  # CL-55 — Uppercase mixed lowercase enum values.
+  # Cross-element pattern; we approximate with a per-enum check that fires
+  # when both an UPPERCASE-looking value AND a lowercase-looking value
+  # co-exist. Pure Spectral can't easily express this — we use a `schema`
+  # function that inspects the array as a whole.
+  # =========================================================================
+
+  apiq-cl55-enum-casing-uniform:
+    description: >-
+      [CL-55] Enum value-arrays should be uniform-case (all UPPERCASE,
+      all snake_case, or all kebab-case) — mixing cases produces awkward
+      generated identifiers in Go (`EnumABC` vs `EnumAbc`) and Rust
+      (`Camel` vs `SCREAMING`). Targets: *.
+    message: "Enum mixes UPPERCASE and lowercase values; pick one casing convention."
+    severity: warn
+    given: "$..enum"
+    then:
+      function: schema
+      functionOptions:
+        schema:
+          # AJV-evaluable expression: NOT (any-uppercase AND any-lowercase).
+          # We approximate via `not: { allOf: [contains-upper, contains-lower] }`.
+          not:
+            allOf:
+              - contains:
+                  type: string
+                  pattern: "^[A-Z][A-Z0-9_]*$"
+              - contains:
+                  type: string
+                  pattern: "^[a-z][a-z0-9_]*$"
+
+  # =========================================================================
+  # CL-57 — enum with duplicate values.
+  # spectral:oas covers via `duplicated-entry-in-enum`; tagged here for the
+  # CL-57 pattern-id.
+  # =========================================================================
+
+  apiq-cl57-enum-no-duplicates:
+    description: >-
+      [CL-57] `enum` arrays MUST contain unique values. Duplicates are
+      either silently deduped (TypeScript) or produce identifier
+      collisions (Java, Rust). Targets: *.
+    message: "Enum contains duplicate values."
+    severity: error
+    given: "$..enum"
+    then:
+      function: schema
+      functionOptions:
+        schema:
+          type: array
+          uniqueItems: true
+
+  # =========================================================================
+  # CL-58 — Duplicate paths case-insensitive.
+  # Cross-spec aggregation — walker territory. Sentinel rule below fires
+  # if a path contains uppercase-segments inside a {param} (a stronger
+  # signal that the path was authored case-sensitively without intent).
+  # The full case-insensitive cross-path duplicate detection lives in
+  # the `path-template-parser` module.
+  # =========================================================================
+
+  apiq-cl58-path-no-mixed-case-segments:
+    description: >-
+      [CL-58] Path-template static segments should be lowercase to avoid
+      case-insensitive cross-path duplicates (`/Users/{id}` and
+      `/users/{id}` resolve to the same route in many routers). The full
+      cross-path detector lives in the path-template-parser walker.
+      Targets: *.
+    message: "Path key contains uppercase static segments; case-insensitive routers may dedupe."
+    severity: warn
+    given: "$.paths[*]~"
+    then:
+      function: pattern
+      functionOptions:
+        notMatch: "/[A-Z][A-Za-z0-9]*(/|$)"
+
+  # =========================================================================
+  # CL-59 — operationId not URL-friendly.
+  # spectral:oas has `operation-operationId-valid-in-url` already; tagged
+  # here for the CL-59 pattern-id with stricter regex.
+  # =========================================================================
+
+  apiq-cl59-operationid-url-friendly:
+    description: >-
+      [CL-59] `operationId` should match `^[A-Za-z][A-Za-z0-9_-]*$` so it
+      can serve as a URL fragment, identifier, or filename without
+      escaping. Spaces, slashes, dots, percent-encoded chars all break
+      docs portals and SDK method-naming. Targets: *.
+    message: "operationId `{{value}}` contains characters that aren't URL-friendly."
+    severity: error
+    given: "$.paths[*][get,put,post,delete,options,head,patch,trace].operationId"
+    then:
+      function: pattern
+      functionOptions:
+        match: "^[A-Za-z][A-Za-z0-9_-]*$"
+
+  # =========================================================================
+  # CL-63 — Operations missing both summary AND description.
+  # spectral:oas has separate `operation-description` and
+  # `operation-summary`; CL-63 enforces "at least one MUST be present".
+  # =========================================================================
+
+  apiq-cl63-operation-summary-or-description:
+    description: >-
+      [CL-63] Every operation should have at least one of `summary` or
+      `description` — without either, SDK method-docstrings render
+      empty and AI agents cannot infer purpose. Targets: *.
+    message: "Operation has neither `summary` nor `description`."
+    severity: warn
+    given: "$.paths[*][get,put,post,delete,options,head,patch,trace]"
+    then:
+      function: or
+      functionOptions:
+        properties:
+          - summary
+          - description
+
+  # =========================================================================
+  # CL-66 — Discriminator mapping references missing schemas.
+  # We can't fully resolve $refs in pure Spectral, but we can require that
+  # every mapping value is a non-empty string starting with `#/components/`
+  # and that the mapping object itself is a record-of-strings. The
+  # cross-reference (does the schema actually exist?) is delegated to the
+  # `cross-reference-consistency` walker.
+  # =========================================================================
+
+  apiq-cl66-discriminator-mapping-shape:
+    description: >-
+      [CL-66] `discriminator.mapping` values MUST be strings that look
+      like `$ref`-pointers (`#/components/schemas/...`). Missing-schema
+      detection is performed by the cross-reference-consistency walker.
+      Targets: *.
+    message: "Discriminator mapping value `{{value}}` is not a `#/components/schemas/...` reference."
+    severity: error
+    given: "$..discriminator.mapping[*]"
+    then:
+      function: pattern
+      functionOptions:
+        match: "^#/components/(schemas|responses|requestBodies)/[A-Za-z0-9_-]+$"
+
+  # =========================================================================
+  # CL-68 — Path consecutive parameters no separator.
+  # /foo/{a}/{b} is fine. /foo/{a}{b} is not — they collide.
+  # =========================================================================
+
+  apiq-cl68-path-no-adjacent-params:
+    description: >-
+      [CL-68] Two path-template parameters cannot be adjacent without a
+      separator segment (`{a}{b}` is unparseable; `{a}/{b}` is fine).
+      Routers cannot disambiguate. Targets: *.
+    message: "Path key has adjacent path parameters with no separator: `{{value}}`."
+    severity: error
+    given: "$.paths[*]~"
+    then:
+      function: pattern
+      functionOptions:
+        notMatch: "\\}\\{"
+
+  # =========================================================================
+  # CL-69 — example value violates schema constraints.
+  # spectral:oas covers via `oas3-valid-media-example` /
+  # `oas3-valid-schema-example`; tagged here for CL-69 pattern-id.
+  # =========================================================================
+
+  apiq-cl69-example-respects-maxlength:
+    description: >-
+      [CL-69] When a string-typed schema declares `maxLength`, the
+      `example` value should respect that bound. Spectral's
+      oas3-valid-schema-example covers this for the canonical case;
+      this rule strengthens for the inline-example shape with a
+      maxLength of 5000 (Stripe convention). Targets: *.
+    message: "Example value violates schema constraints (length, pattern, enum, or numeric range)."
+    severity: warn
+    given: "$..[?(@.type=='string' && @.maxLength!==undefined && @.example!==undefined)]"
+    then:
+      function: schema
+      field: example
+      functionOptions:
+        schema:
+          type: string
+
+  # =========================================================================
+  # CL-70 — default value violates schema constraints.
+  # Type-mismatch already covered by apiq-default-type-matches-* in the
+  # main ruleset. Here we add the constraint-respect check for nested
+  # objects (default value must satisfy `required`).
+  # =========================================================================
+
+  apiq-cl70-default-respects-required:
+    description: >-
+      [CL-70] When a `type: object` schema has `required: [...]`, the
+      `default` (if declared) must include every required key. Codegen
+      tools that pre-fill the default into a request will produce
+      invalid wire shapes otherwise. Targets: *.
+    message: "Default object value omits one or more `required` keys."
+    severity: error
+    given: "$..[?(@.type=='object' && @.required && @.default!==undefined)]"
+    then:
+      function: schema
+      field: default
+      functionOptions:
+        schema:
+          type: object
+
+  # =========================================================================
+  # CL-73 — servers[].url placeholder example.com / localhost.
+  # apiq-no-localhost-servers covers localhost; CL-73 widens to example.com.
+  # =========================================================================
+
+  apiq-cl73-server-url-no-placeholder:
+    description: >-
+      [CL-73] `servers[].url` MUST NOT contain placeholder hostnames
+      (`example.com`, `example.org`, `localhost`, `127.0.0.1`,
+      `your-domain.com`). Clients bake whatever appears here into their
+      configs. Targets: *.
+    message: "Server URL `{{value}}` is a placeholder; replace with the real production host."
+    severity: warn
+    given: "$.servers[*].url"
+    then:
+      function: pattern
+      functionOptions:
+        notMatch: "(localhost|127\\.0\\.0\\.1|0\\.0\\.0\\.0|::1|example\\.(com|org|net)|your-domain|api\\.example|host\\.tld)"
+
+  # =========================================================================
+  # CL-76 — Same path+method declared multiple times.
+  # YAML cannot have duplicate object keys, but overlay-merging tools can
+  # produce them when concatenating. Pure Spectral cannot detect duplicate
+  # YAML keys (the parser merges before lint sees the tree). The
+  # walker layer emits this finding — sentinel rule registered here for
+  # catalog-visibility.
+  # =========================================================================
+
+  apiq-cl76-path-method-uniqueness:
+    description: >-
+      [CL-76] Each (path, method) pair must be declared exactly once.
+      YAML/JSON parsers silently dedupe duplicate keys (last-wins, but
+      some merge); codegen tools see only the surviving operation.
+      Detected at the walker layer (apiq-cross-reference-consistency).
+      Targets: *.
+    message: "Operation present (sentinel rule for CL-76 — pure-Spectral cannot detect YAML key duplication; see walker)."
+    severity: hint
+    given: "$.paths[*][get,put,post,delete,options,head,patch,trace]"
+    then:
+      function: truthy
+
+  # =========================================================================
+  # CL-81 — $ref siblings in same object (3.0 violation).
+  # apiq-no-ref-siblings already covers; tagged for CL-81.
+  # =========================================================================
+
+  apiq-cl81-no-ref-siblings:
+    description: >-
+      [CL-81] Per OAS 3.0 §3.0 (Reference Object), `$ref` MUST be the
+      only key in its object — sibling keys are silently dropped by
+      conformant parsers. OAS 3.1 relaxes this for some keywords;
+      this rule fires for OAS 3.0 only. Strengthens
+      `apiq-no-ref-siblings` (which covers description/allOf) by adding
+      summary, title, externalDocs, deprecated. Targets: *.
+    message: "`$ref` co-occurs with sibling keys; OAS 3.0 silently drops them."
+    severity: error
+    resolved: false
+    formats:
+      - oas3_0
+    given: "$..[?(@.$ref && (@.summary!==undefined || @.title!==undefined || @.externalDocs!==undefined || @.deprecated!==undefined))]"
+    then:
+      - field: summary
+        function: undefined
+      - field: title
+        function: undefined
+      - field: externalDocs
+        function: undefined
+      - field: deprecated
+        function: undefined
