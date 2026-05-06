@@ -553,4 +553,4 @@ These are explicitly NOT implemented in Stage A. Documented for delegate-traceab
 - **Cost estimate:** P1+P2 = ~155 patterns, ~30 person-days for 2 engineers = realistic 4-6 week dedicated sprint.
 - **Wave 2 deliverable:** P1+P2 + 8 Modules (T8-T15) + Spectral rule-sets (T16-T19) + Cross-cutting infra (T22-T25) = full Stage-A polishing per Iteration-6 reputation-load-bearing standard.
 - **Wave 3 (post-launch):** P3 trail + P4/P5 backfill + per-quarterly-review re-mining.
-- **Pari-gate:** 27/28 Springer-Delphi high-importance rules + DOLAR-catalog + RFC-9457 USP RFC2-5 + webhook-signature USP TM-A50.
+- **Pari-gate (target, not current state):** 27/28 Springer-Delphi narrative-mapped + 1 partial (T26 spec-diff). DOLAR-catalog (F-11..F-14) wartet auf Welle C P2-Client. RFC-9457 USP RFC2-5 + webhook-signature USP TM-A50 sind in `problem-json-validator.ts` und `webhook-signature.ts` implementiert, **aber beide Module sind orphan-but-tested und nicht in `runDeterministicLayer` gewired** (W2-Fix). Bis Pari-Gate empirisch (cross-linter + reference-spec-firing) verifiziert ist, gilt: target-formulation, nicht achievement-statement.

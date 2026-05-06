@@ -487,7 +487,7 @@ Re-evaluating the 6 original open questions from Iteration-1:
 
 9. **How does apiq handle the Stakeholder axis in output presentation?** A finding tagged `stakeholder: security` should probably surface differently than `stakeholder: doc-renderer`. **TRACKING**: UI-design follow-up for v1.1.
 
-10. **Is the Springer Delphi 28-high-importance-rules list a hard target for apiq's "best-in-class" bar?** **YES, ADOPTED**: see `rules-brainstorm.md` Putz-Niveau Benchmark (27/28 covered + 1 partial). Reputation-load-bearing claim defensible.
+10. **Is the Springer Delphi 28-high-importance-rules list a hard target for apiq's "best-in-class" bar?** **YES, ADOPTED**: see `rules-brainstorm.md` Putz-Niveau Benchmark (27/28 narrative-mapped + 1 partial — T26 spec-diff). **Caveat (2026-05-06):** the 27/28 mapping is a manual cross-reference between Springer-Delphi rule-IDs and apiq pattern-IDs in the rules-brainstorm doc. **No test in the codebase asserts that any Springer-Delphi rule actually fires on a real spec.** T24 Putz-Niveau-Benchmark (Welle E) is the validation gate — it must run + pass before "27/28 covered" can be stated as achievement rather than narrative target. Reputation-load-bearing claim still defensible as a target.
 
 11. **Should DOLAR-pattern-coverage be an explicit benchmark?** **PROPOSED ADOPT**: F-11..F-14 cover the load-bearing DOLAR anti-patterns. "apiq covers the full DOLAR anti-pattern catalog" is a marketing-defensible claim.
 

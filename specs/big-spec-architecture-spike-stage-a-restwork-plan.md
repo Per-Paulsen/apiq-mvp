@@ -1,0 +1,674 @@
+# Stage-A Restwork Plan v2 — Maximalismus + /spec_ind/dev-Workflow
+
+> **Status:** 2026-05-06 v2 (Maximalismus-Decision + /dev-Workflow). Plan-Doc ist Source-of-Truth für alle weiteren Stage-A-Wellen + Pre-Phase-B-Wellen. **Putzen-First-Regel + Maximalismus-Setup**: erst alles selbst optimieren das ehrlich geht (nicht nur "Pflicht"-Teile), dann gegen Konkurrenz validieren, dann Phase B.
+>
+> **Decision (2026-05-06):** v1 hatte 3 Varianten (a/b/c) für Engineering-Constraints — keine davon greift hier. User hat klargestellt: keine v1-launch-Timeline, keine Resource-Constraints (Claude Max + Zeit), Ziel ist "alles ordentlich, sauber, funktionsfähig, optimal". Plan-Doc v2 ist deshalb (a)+ = Plan + Maximalismus-Ergänzungen.
+>
+> **Origin der Putzen-First-Regel:** `critical-review.md:528, :585`. 2026-05-06 erneut bestätigt nach kritischer User-Review. Cross-Linter-Parity-Test gegen Vacuum/Redocly würde — wenn vor Putzen ausgeführt — die Implementation antreiben statt validieren ("Konkurrenz-treibt-Implementation"-Anti-pattern). Cross-Linter kommt deshalb in Welle V, ganz am Ende vor Phase B.
+
+---
+
+## 1. Putzen-First-Prinzip
+
+**Regel:** Stage-A-Implementation wird zur eigenen Best-in-class-Vision gebaut, nicht zur Konkurrenz-Lücken-Schließung. Konkurrenz-Vergleiche kommen NACH dem Putzen, als Validation. Wenn ein Vacuum/Redocly-Test vor dem Putzen läuft, wird das Resultat zur Roadmap-Vorlage statt zum Reality-Check — apiq würde zum "Vacuum-aber-mit-extra-stuff" statt zum eigenständigen Produkt.
+
+**Konsequenz:** Mining-Optimization + Framework-Optimization + Implementation-Wellen + Code-Quality + Reference-Hardening + Test-Coverage + Documentation + Refactoring kommen ALLE vor Cross-Linter-Parity-Test. Phase-B-Engineering kommt nach Cross-Linter-Parity.
+
+**Maximalismus-Ergänzung:** "alles geputzt was geht" heißt nicht nur "Pflicht-Items im Plan" sondern echte Maximierung — Mining ehrlich maxed-out (Round 3 + Corpus), Framework ehrlich maxed-out (Schema sauber + 110 rules promotet + alle Subagent-B-Lücken geschlossen), Implementation ehrlich maxed-out (P1+P2+P3+P4+P5), Test-Coverage maximal (alle Specs + Snapshot + CI), Documentation maximal (dev-README + Architecture-Diagram + Contributor-Guide), Refactoring (flat → classifiers/aggregators/modules/rules), References ehrlich klassifiziert (R1 + R2).
+
+---
+
+## 2. Execution-Framework — `/spec_ind` + `/dev`
+
+**Architektur:**
+- Plan-Doc (DIESES Doc) = strategischer Master (welche Wellen, Pre-Conditions, Reihenfolge)
+- Pro Welle: `/spec_ind <slug> "<context-prompt>"` erzeugt Epic-Spec mit konkreten acceptance criteria
+- Pro Welle: `/dev <epic-spec>` führt mit self-organizing team aus (code + tests + verification + commit)
+
+**Begründung:**
+- Strukturierte acceptance criteria pro Welle statt prose-instructions
+- Eingebaute verification + commit (kein hand-orchestrating)
+- Self-organizing team-coordination
+- Reproduzierbar + auditierbar (Epic-Spec ist Source-of-Truth, nicht Conversation-Memory)
+- Skalierbar — orthogonale Wellen können parallel /dev-laufen
+
+**Workflow pro Welle:**
+1. Plan-Doc Welle-Section lesen
+2. `/spec_ind <welle-slug> "<context-prompt-mit-pre-conditions-+-acceptance-criteria>"`
+3. Generated Epic-Spec reviewen, ggf. refinen via `/refine`
+4. `/dev <epic-spec>` ausführen
+5. Test-Suite verifizieren grün, Commit landen
+6. Plan-Doc Status-Section aktualisieren mit Welle-done-Marker
+7. Memory-Handoff aktualisieren
+
+**Naming-Convention für Welle-Specs:**
+- `specs/E09-w-{m|f|c|d|e|q|t|doc|arch|r|v}-{slug}.md` (E09 = Epic 09 — z.B. `E09-w-m-mining-round3.md`)
+- Plus eventuell `*-results.md` post-/dev mit deviations + tests + commit-list
+
+### Decision-Heuristik: `/spec_ind` (mit Brainstorming) vs direkter Epic-Spec
+
+Pro Welle entscheiden: was passt besser?
+
+**Direkter Epic-Spec (kein Brainstorming):** wenn die Welle im Plan-Doc bereits konkrete acceptance criteria hat, alle Decisions klar dokumentiert sind, und kein zusätzlicher Discussion-Wert von Brainstorming entsteht. Vorgehen: Welle-Section aus Plan-Doc als Vorlage → direkt `specs/E09-w-{x}-{slug}.md` schreiben → `/dev`.
+
+**`/spec_ind` mit Brainstorming:** wenn die Welle Sub-Decisions hat die Discussion brauchen (z.B. Refactoring-Strategy bei Welle Arch, Mining-Source-Selection bei Welle M, Reviewer-Auswahl bei Welle R), oder scope ist nicht voll definiert. Vorgehen: `/spec_ind <n> <slug> "<context-mit-link-auf-plan-doc-section>"` → iterative Brainstorming-Antworten → Spec finalized → `/dev`.
+
+**Klassifizierung pro Welle (Stand 2026-05-06):**
+
+| Welle | Modus | Begründung |
+|---|---|---|
+| Q | direkt | Q1-Q5 sind klar definiert, kein Discussion-Wert |
+| M | brainstorming | M1-Source-Selektion + M2-Corpus-Approach + Decision-Point M1→M2 brauchen Diskussion |
+| F | brainstorming | F1-F10 mit 10 Sub-Items + F4-Migration-Strategy für 110 rules braucht Sequenzierung-Diskussion |
+| C | direkt | P2-Patterns klar in `implementation-priority.md` |
+| D | direkt | P3-Patterns klar in `implementation-priority.md` |
+| D2 | direkt | P4+P5-Patterns klar in `implementation-priority.md` |
+| E | direkt | T24 Putz-Niveau-Benchmark hat klare 28-Springer-Delphi-Regeln |
+| T | direkt | T1-T3 sind klar (Integration-Tests + Snapshot + CI) |
+| Doc | brainstorming | Doc-Style + Audience + Tiefe nicht voll definiert; Discussion-Wert |
+| Arch | brainstorming | Refactor-Strategy + welche Files in welche subtree + spec-diff in modules/ vs experimental/ braucht Diskussion |
+| R | brainstorming | R2-Reviewer-Auswahl (welches Modell) + Disagreement-Workflow braucht Diskussion |
+| V | direkt | 4-way Cross-Linter-Liste + Comparison-Format klar |
+| Phase B | direkt | Bereits ausführliches Design-Doc `phase-b-design.md` vorhanden — direkt als Spec-Vorlage nutzen |
+
+**Append-Workflow:** sobald eine Welle done ist, Plan-Doc §21 Welle-Status-Tracker aktualisieren mit Spec-Pfad + commit-Hash + Test-Stand. Memory-Handoff aktualisieren falls signifikante Erkenntnisse.
+
+---
+
+## 3. Wellen-Übersicht (erweitert v2)
+
+| Welle | Inhalt | Aufwand | Pre-Conditions | Parallel-möglich? |
+|---|---|---|---:|---|
+| **Q** | Code-Quality (codegen-aggr + OPENAI-fix + layer-tag + ext. integration-tests + PREDICTIONS-marker) | 3-5h | keine | ✓ orthogonal — kann sofort + parallel zu allem laufen |
+| **M** | Mining-Optimization (M1 Round-3 + M2 Corpus-Mining + M3 Konsolidierung + M4 Code-Comments) | 8-15h | keine | ✓ orthogonal zu Q |
+| **F** | Framework-Optimization (F1-F10, 10 Sub-Items inkl. 110-rule metadata-promotion) | 12-18h | M done (Mining-Outputs müssen Schema-Erweiterungen reflektieren) |
+| **C** | P2 Spectral (T16b Threat ~25 + T18b Client ~20 inkl. 4 DOLAR) | 5-8h | F done | ✓ T16b + T18b parallel |
+| **D** | P3 Trail (T16c Threat ~30 + T18c Client ~30 + T25 Source-Verify-CI) | 8-12h | C done | ✓ 3 Subagents parallel |
+| **D2** | P4 + P5 Niche/Vendor-Patterns (~25 patterns) | 3-5h | D done | — |
+| **E** | T24 Putz-Niveau-Benchmark (gegen 28 Springer-Delphi-Rules) | 2-4h | D2 done (alle target rules implementiert) |
+| **T** | Test-Coverage (Integration-all-specs + Snapshot-Tests + CI-Pipeline) | 4-6h | C done | ✓ parallel zu D/D2/E |
+| **Doc** | Documentation (dev-README + Architecture-Diagram + Contributor-Guide) | 4-6h | M+F+Arch done | — |
+| **Arch** | Architectural Refactoring (flat → classifiers/aggregators/modules/rules) | 8-12h | F done | — |
+| **R** | Reference-Hardening (R1 isPureSpectralDetectable + R2 Second-LLM-Review) | 5-8h | keine | ✓ orthogonal — parallel zu allem ab Welle C |
+| **V** | 4-way Cross-Linter-Parity (Vacuum + Redocly + IBM-validator + Spectral-OWASP) + Final Stage-A-Run | 3-5h | M+F+C+D+D2+E+Q+T+Doc+Arch+R done |
+| **Phase B** | LLM-Pipeline-Engineering (N=3×4 Runs, eigentlicher Spike-Lock-Test) | 5-8d + ~$60-80 LLM | V done |
+
+**Total Restwork Stage-A:** ~60-90h Engineering. Phase-B danach 5-8 Tage zusätzlich + ~$60-80 LLM-Cost.
+
+**Decision-Points zwischendurch:**
+- Nach M1: Round-3-Erkenntnisse vielversprechend → M2 Corpus oder skip falls offensichtlich-maxed?
+- Nach M2: weitere Mining-Round-4 falls neue Source-Familie auftaucht?
+- Nach E: 28/28 Springer-Delphi tatsächlich erreicht? Falls nicht, Welle E1 (Lückenschließen).
+- Nach V: Cross-Linter-Parity-Output entscheidet Phase-B-Prompt-Engineering-Strategie.
+- Nach Phase B: pass/partial/fail per `phase-b-design.md §7`.
+
+---
+
+## 4. Welle M — Mining-Optimization
+
+### Prinzip
+Mining ist NICHT maxed-out. Round-2-Phase-F's "declared converged at 10 lenses" basierte auf 3 Source-Familien (spectral-rules, linters, style-guides). Round 3 mit anderen Sources kann zusätzliche Patterns + möglicherweise zusätzliche Lenses ergeben. Maximalismus-Setup: Round 3 (M1) + Corpus (M2) verpflichtend, Round 4 nach Decision-Point.
+
+### M1 — Mining-Round-3 curated batch 1 (~3-5h Subagent)
+
+**Sources (kuriert, nicht unbounded):**
+1. **API-Design-Books** (3-4 Bücher Capacity):
+   - Erik Wilde "Web API Design"
+   - Olaf Zimmermann / Cesare Pautasso "Patterns for API Design"
+   - Restful Web Services Cookbook (Allamaraju)
+   - "Design and Build Great Web APIs"
+2. **Negative-space — Postmortem Patterns** (5-8 documented public failures):
+   - Twitter API v2 deprecation disaster (2023)
+   - Reddit API pricing fiasco (2023)
+   - PayPal IPN deprecation chaos
+   - GitHub deprecation policy evolution
+   - Plus 1-2 vendor-side postmortems (e.g. Stripe-Anti-pattern docs)
+3. **Round-2-Pattern-Re-Audit:** sind die ~290 take-into-apiq Patterns wirklich vollständig? Oder gab es Patterns aus Round-2-mining die in Master-Konsolidierung verloren gingen?
+
+**Output:** `specs/big-spec-architecture-spike-stage-a-mining-round3.md` — neue Patterns mit Source-Mapping. Patterns werden in `rules-brainstorm.md` Master-Konsolidierung integriert.
+
+**Erwarteter Funde-Range:** +20-50 zusätzliche Patterns. Plus: Evaluation ob neue Lenses (Lens 11 Performance-and-Cost / Lens 12 Observability) eigenständig sind oder in existing Lenses einsortierbar.
+
+### M2 — API-Corpus-Mining VERPFLICHTEND (~1d Subagent)
+
+**Was:** statistische Mining-Pass über APIs.guru-Korpus (2000+ public OpenAPI specs). Patterns wie "99% of healthy APIs declare X, only 30% of yours does" — data-driven Mining vs source-driven.
+
+**Output:** `specs/big-spec-architecture-spike-stage-a-mining-round3-corpus.md`. Statistische Patterns für Lens-3-Evolution + Lens-4-Client + Lens-9-AI-Agent.
+
+**Bei Maximalismus:** verpflichtend (war v1: optional). Macht "Mining maxed-out"-Claim ehrlich.
+
+### M3 — 8 Mining-Files konsolidieren (~1-2h)
+
+Per Subagent A's Audit (2026-05-06):
+- 3 Round-1-Files (mining-spectral / mining-linters / mining-style-guides) → "sources + extraction-rationale" Stubs (~30 Zeilen each), Patterns redundant zu rules-brainstorm.md
+- 5 Round-2-Files (mining-round2-{threat,standards,evolution,client,style}) → ähnliche Stubs
+- 1 Round-2-File (mining-round2-meta) — größerer (744 Zeilen) → Konsolidierung größer, weil Lens-10-Discovery + Springer-Delphi-Mapping load-bearing ist
+- Master-File `rules-brainstorm.md` bekommt unique-deltas integriert (insbesondere TM-A detail aus round2-threat + Springer-Delphi-Mapping aus round2-meta)
+- `implementation-priority.md:10` Cross-Reference zu Round-2-Files updaten
+
+**Total:** ~3500 Zeilen Markdown → ~600 Zeilen Stubs. Reduce process-friction für Round-3-Append.
+
+### M4 — Mining-Reflection in Code-Comments (~3-4h Subagent)
+
+**Aktuell:** 5000+ Zeilen Mining-Markdown isoliert vom Code. Spectral-Rule-`description:` enthält nicht die Source-Pointer.
+
+**Ziel:** jede aktive Rule trägt Source-Mapping in:
+- YAML-rule-comments oberhalb der rule-def: `# Source: OWASP API4 + 42Crunch + Stripe + RFC 9110 §10.2.3 (verbatim "MUST send Retry-After")`
+- Custom-function JSDoc: Source + Lens-Mapping als JSDoc-Comments
+- Module-class header-comments: Source + Lens + Round-2-Phase-Reference
+
+**Output:** ~110 YAML-Rules mit Source-Comments + 5 Custom-Functions mit JSDoc + 15 Module-Classes mit erweiterten Headern. Defense gegen Skepsis ("warum diese Rule?" → Comment liefert RFC/Source-Pointer).
+
+### M-Decision-Point
+
+Nach M1+M2: wenn diminishing-yield klar (M1 + M2 zusammen <40 neue Patterns), dann ehrlicher Mining-maxed-out-Claim. Sonst Round 4 mit weiteren Sources (Conference-Talks, Vendor-Engineering-Blogs, recent papers).
+
+---
+
+## 5. Welle F — Framework-Optimization
+
+Per Subagent B's Audit (2026-05-06): Framework hat substantielle Lücken — **83% der 110 YAML-Rules tragen Metadata nur in Prosa, nicht structured**. Plus mehrere Schema-Sync-Issues. Welle F adressiert alle Lücken.
+
+### F1 — `autoFixSafe` + `detection-precision` Schema-Erweiterung (~2h)
+
+- Add `autoFixSafe: boolean` zu `RuleMetadataSchema` in `severity-schema.ts`
+- Add `detectionPrecision: 'high' | 'medium' | 'low'` zu schema
+- Tag ~30-50 Patterns als `autoFixSafe: true` (basierend auf phase-b-design.md §2 Layer 1 Liste)
+- Tag low-precision Patterns (z.B. heuristisch-textbasierte Rules) als `detectionPrecision: 'low'`
+
+**Pre-Condition für Phase B** (autoFixSafe ist explizit Phase-B-Pipeline-Anforderung).
+
+### F2 — Stakeholder/Lifecycle/Defect-class Enum-Sync (~1h)
+
+Schema ist 1-Round-1-step hinter Round-2-Doc. Konkrete Lücken (per Subagent B Audit):
+
+**Stakeholder-Enum:**
+- **`ai-agent` fehlt** — direkt undermining für Lens-9 USP. Walker-rules tagen aktuell `client-dev` als fallback. Add to enum.
+- Aktuell: `spec-author / client-dev / end-user / operations / security / codegen-tool / docs-tool / self`
+- Ziel (per `meta-insights.md:330, :448`): plus `ai-agent`
+
+**Lifecycle-Enum:**
+- **`authoring-time` + `validation-time` fehlen.** Aktuell 8 Werte; doc lists 9 phases.
+- Plus naming-Konsistenz (`runtime-scale` vs doc's `runtime-at-scale`).
+
+**Defect-class-Enum:**
+- **`privacy-leakage` + `operational-metadata-missing` fehlen** (Round-2-Promotion nicht reflektiert in TS).
+- Aktuell 6 Werte; Round-2 promovierte auf 8 (per `meta-insights.md:334, :452`).
+- Plus naming-Konsistenz (`ergonomics`/`incompleteness` vs doc's `ergonomic`/`incomplete`).
+
+### F3 — `direction-modifier` von Prosa zu structured field (~3-4h)
+
+Schema hat `direction: 'tighten'|'loosen'|'drift'`. **Null YAML-rules tragen es als structured field** — alle 36 Hits in `apiq-ruleset-evolution.yaml` sind Prosa (`[lens-3 | drift]` in description).
+
+Zusätzlich: `spectral-runner.ts:299-307` kopiert nur `description/message/severity/recommended/resolved` durch — selbst wenn YAML `direction:` trüge, würde es bei Conversion gedroppt.
+
+**Workstreams:**
+1. Spectral-runner extend um `direction:` + andere apiq-meta-Felder durchzukopieren (siehe F4)
+2. ~30 EV-rules + relevante andere Rules taggen mit `direction:`
+
+### F4 — YAML-rule metadata promotion (~1-2 Tage Subagent — load-bearing)
+
+**Aktuell:** 110 YAML-rules carry nur `description / message / severity / given / then`. Apiq-Extended-Metadata (lens-tags / source-distinction / codegen-targets / stakeholder / lifecycle / defect-class / iso25010) **nirgends als structured fields**, nur in description-Prosa. **~83% der active rules sind metadata-arm.**
+
+**Ziel:** YAML-rule-shape erweitern um:
+```yaml
+apiq-tm-y17-server-url-https-only:
+  description: Server URLs MUST use HTTPS (OWASP API8)
+  message: "..."
+  severity: warn
+  given: "..."
+  then: { ... }
+  apiq-meta:
+    pattern-id: TM-Y17
+    lenses: [lens-1, lens-2]
+    direction: drift
+    sources:
+      - { type: rfc, id: 'RFC 9110', section: '...', verbatim: '...', verifiedAt: '2026-05-06' }
+      - { type: vendor, id: 'OWASP API8' }
+    stakeholders: [security, end-user]
+    lifecyclePhase: deploy-time
+    defectClass: semantic
+    iso25010: [security]
+    codegenTargets: ['*']
+    detectionPrecision: high
+    autoFixSafe: false
+```
+
+**Spectral-runner.ts erweitern:** apiq-meta-Block lesen, in DetectorFinding einbetten, durch `validateMetadata` validieren.
+
+**Migration der 110 rules** parallelisierbar via Subagents (4 parallele Wellen-A/B/C/D-Subagents je ~28 rules).
+
+### F5 — `validateMetadata` enforcement in pipeline (~30min)
+
+Aktuell ist `validateMetadata` advisory — wird in 23 walker/module-rules aufgerufen, in 0 YAML-rules. Plus `migrateLegacyRule` ist nur in Tests.
+
+**Ziel:** spectral-runner ruft `validateMetadata` auf jeder geladenen rule auf, schmeißt Warning bei missing apiq-meta. Optional: Build-time-Test der mindestens N% der rules komplette Metadata haben.
+
+### F6 — `info`-tier emission auf Lens-10 walkers (~1h)
+
+Schema unterstützt `info`-Tier. **Null walker emittiert findings auf `info`** (alle Lens-10-positive-markers stehen auf `hint`). Round-2 hat `info`-tier explizit als USP markiert.
+
+**Ziel:** L10-positive-markers (SLA4OAI-presence, capability-discovery-endpoint-presence) emittieren mit `severity: info`.
+
+### F7 — Per-target codegen-tagging (~1-2h)
+
+Aktuell **alle rules carry `codegenTargets: ['*']`** auch wenn description sagt "Targets: java, go, python". Lens-4 P1-Rules sind codegen-target-spezifisch.
+
+**Ziel:** ~30-50 Lens-4-Rules taggen mit konkreten Targets-Lists. Erlaubt per-SDK-target finding-Filter.
+
+### F8 — `source-verbatim` + `source-verified-at` Fields (~30min)
+
+`RuleSourceSchema` hat aktuell kein `verbatim` (RFC-text-quote) + `verified-at` (Timestamp). T25 Source-Verify-CI (Welle D) braucht das.
+
+**Ziel:** Schema erweitern + populate als Teil von F4.
+
+### F9 — Quality-Framework-Mapping (NEU für Maximalismus, ~2-3h)
+
+Aktuell nur ISO/IEC 25010 als Quality-Framework. Bei Maximalismus: secondary regulatory-mapping field für Enterprise/Compliance-Tier.
+
+**Frameworks:**
+- **NIST CSF 2.0** (Cybersecurity Framework Functions: Govern/Identify/Protect/Detect/Respond/Recover)
+- **OWASP ASVS 5.0** (Application Security Verification Standard — V1-V14 chapters)
+- **CIS Controls 8.1** (Top 18 Critical Security Controls)
+- **GDPR Art** für Privacy-relevante Patterns
+- **SOC 2 TSC** (Trust Services Criteria) für Audit-Trail-Patterns
+
+**Ziel:** Schema-erweiterung `regulatoryMapping: { nist?: string[]; asvs?: string[]; cis?: string[]; gdpr?: string[]; soc2?: string[] }`. Tagging ~30-50 security/privacy-relevant rules. Defense für Enterprise-tier-Sales-Conversations.
+
+**Rationale:** kein Konkurrenz-Linter ships explicit regulatory-mapping. Echtes USP-Differentiator.
+
+### F10 — `cost-impact` + `mttr-impact` axes (NEU für Maximalismus, ~1-2h)
+
+Aktuell weder dokumentiert noch implementiert. Bei Maximalismus: SRE-relevante Filter-Dimensionen.
+
+**Schema-Erweiterung:**
+- `costImpact: 'low' | 'medium' | 'high'` (cost-of-fix für Author)
+- `mttrImpact: 'low' | 'medium' | 'high'` (impact-on-MTTR-when-fired-in-prod)
+
+**Ziel:** Tagging der 110 + Welle-C/D-Rules. Ermöglicht "show me only high-cost-impact rules" / "show me MTTR-relevant rules" Filter im UI.
+
+### F-Decision-Point
+
+Nach F4 (YAML-metadata-promotion): erste Migration-Welle erfolgreich + F5-Enforcement aktiv? → Welle C startet. Sonst F4-Subagents nochmal nachschärfen.
+
+---
+
+## 6. Welle C — P2 Spectral Rules
+
+**Inhalt** (per `implementation-priority.md` P2-Tabelle):
+- **T16b P2-Threat** ~25 rules — Y-1, Y-8, Y-10, Y-12/13/14, Y-15, Y-19, Y-21, TM-A2, TM-A5, TM-A7, TM-A9, TM-A12, TM-A13, TM-A14, TM-A18, TM-A28, TM-A35, TM-A36, TM-A45, TM-A46, TM-A47, RFC2-1/2/3, RFC2-11, RFC2-20/21/22/25/26, RFC2-32, RFC2-58, RFC2-59, RFC2-65, RFC2-69, RFC2-70, RFC2-74, RFC2-97
+- **T18b P2-Client** ~20 rules — CL-4, CL-5, CL-7, CL-9, CL-13, CL-15, CL-17, CL-18, CL-21, CL-22, CL-24, CL-25, CL-29, CL-35, CL-48, CL-54, CL-56, CL-64, CL-77, plus DOLAR F-11/F-12/F-13/F-14 (alle 4)
+
+**Pre-Condition:** Welle F done — alle neue rules nutzen finalisiertes Schema (mit apiq-meta, autoFixSafe, detection-precision, vollständigem Stakeholder/Lifecycle/Defect-Class enum).
+
+**Subagent-Welle:** 2 parallele Subagents (T16b + T18b). ~5-8h.
+
+**Output:** `apiq-ruleset-threat-p2.yaml` + `apiq-ruleset-client-p2.yaml`. Plus eventuell Custom-Functions für komplexere Patterns. spectral-runner um neue YAMLs erweitern.
+
+---
+
+## 7. Welle D — P3 Trail
+
+**Inhalt** (per `implementation-priority.md` P3-Tabelle):
+- **T16c P3-Threat** ~30 rules
+- **T18c P3-Client** ~30 rules
+- **T25 Source-Verify-CI Job** — quarterly gh-api-raw verification of RFC-2119-verbatim wording, populate `source-verified-at` timestamps
+
+**Pre-Condition:** Welle C done. F8 (`source-verbatim`/`verified-at` schema) done.
+
+**Subagent-Welle:** 3 parallele Subagents (T16c + T18c + T25). ~8-12h.
+
+---
+
+## 8. Welle D2 — P4 + P5 Niche/Vendor Patterns (NEU für Maximalismus)
+
+**Inhalt** (per `implementation-priority.md` P4 + P5 tables, ~25 patterns):
+- **P4 Niche/Low-Frequency** ~15 patterns: RFC2-71/72/73 (Server-URL host/scheme/path lowercase), RFC2-75/76 (Custom JSON / vendor media-types), RFC2-79 (Top-level media-type IANA-registered), RFC2-80 (charset on application/json redundant), RFC2-95 (Retry-After grammar), RFC2-96 (503 → Retry-After SHOULD)
+- **P5 Vendor-Extension/Information-only** ~10 patterns: RFC2-50, RFC2-77, RFC2-83, RFC2-89, RFC2-103/105, CL-60, L6-2, L9-7, F-10, F-18, SC-20
+
+**Pre-Condition:** Welle D done.
+
+**Output:** P4/P5-Patterns als zusätzliche YAML-Rules in existing rulesets ODER in eigener `apiq-ruleset-niche.yaml`. Many sind off-by-default/info-tier.
+
+**Maximalismus-Begründung:** "alles was geht" inklusive Niche-Patterns. Niedriger Aufwand pro Pattern (alle S = small, ~30min Spectral DSL).
+
+---
+
+## 9. Welle E — Putz-Niveau-Benchmark T24
+
+**Inhalt:** ehrlicher Test der "27/28 Springer-Delphi covered + 1 partial" Behauptung. apiq gegen 4 Reference-Specs, prüfe dass alle 28 high-importance Springer-Delphi-Rules entweder fire OR explicit-skip-with-rationale haben.
+
+**Pre-Condition:** Welle D2 done — alle target-Rules implementiert.
+
+**Output:**
+- `specs/big-spec-architecture-spike-stage-a-putz-benchmark.md` — Test-Report
+- CI-Job: falls eine Springer-Delphi-Rule nicht fire + nicht explicit-skip → CI-Fail
+- Update CLAUDE.md / Memory: "27/28 covered + 1 partial" wird zu **verified statement** (oder corrigiert auf actual Zahl)
+
+---
+
+## 10. Welle Q — Code-Quality-Cleanup (orthogonal — parallel-möglich)
+
+Diese Wellen-Punkte sind unabhängig von Coverage/Konkurrenz und können parallel zu M/F/C/D laufen:
+
+### Q1 — codegen-validation Output-Aggregation (~1-2h)
+**Pre-Condition für Phase B.** Aktuell 9.834 separate Findings auf github-rest. Ziel: 1 category-aggregate `{occurrences: 9834, locations: [top-10]}`. Decision: pragmatisch output-mapper-side collapse all `codegen:*` findings zu 1 row, kein Modul-Code-Change.
+
+### Q2 — OPENAI_API_KEY env-loading Fix (~10min)
+`stage-a-validation.ts` lädt `.env` aber findet `OPENAI_API_KEY` nicht. Embedding-Scorer fehlt deshalb. Quick fix.
+
+### Q3 — Layer-Tagging cosmetic (~30min)
+DetectorLayer-Type um `'module-class'` erweitern. modules tagen sich aktuell als `walker-statistical`. perLayer-reporting undercount-t module contribution.
+
+### Q4 — Integration-Tests auf weitere Specs (~1h, ergänzt durch Welle T)
+Aktuell nur dnd5eapi getestet. Add stripe / pagerduty / github-rest integration-tests (mit längerer timeout für codegen). Welle T baut darauf auf mit Snapshot-Tests + CI-Pipeline.
+
+### Q5 — STAGE-A-PREDICTIONS.md stale-marker (~10min)
+Header anhängen: "Phase-0 hypothesis. W4 measured large negative deltas (-20.7pp bis -61.1pp). Loader at `stage-a-validation.ts:162` reads this file; do not regenerate without re-running bulk-sweep with updated hypothesis."
+
+### Q-Subset wann
+Q1 ist Pre-Condition für Phase B → muss vor Phase B done. Q2-Q5 sind nice-to-have. Q ist orthogonal — kann parallel zu Welle M oder F laufen.
+
+---
+
+## 11. Welle T — Test-Coverage (NEU für Maximalismus)
+
+Aktuell genau **1 Integration-Test** (run-deterministic-layer.test.ts auf dnd5eapi). Bei Maximalismus: vollständige Test-Coverage-Maximierung.
+
+### T1 — Integration-Tests auf alle 4 Specs (~2-3h)
+
+**Ziel:** je 1 Integration-Test pro `openapi-examples/{stripe-full,pagerduty-full,github-rest,dnd5eapi}/spec.json`. Pro Test:
+- runDeterministicLayer end-to-end
+- Findings > expected-threshold
+- Per-detector breakdown sane (no detector dominates absurd, no detector silent if expected)
+- Duration < timeout (codegen-validation auf stripe-full kann 30s+ — angemessener timeout)
+
+**Pre-Condition:** Welle C done (stable Rule-Set). Vorher würde Test-fixtures bei jeder neuen Rule brechen.
+
+### T2 — Snapshot-Tests pro Module-Output (~2-3h)
+
+**Ziel:** für jedes der 15 wired Module-Classes ein Snapshot-Test der das DetectorFinding[]-Output gegen einen baseline-snapshot vergleicht. Hilft regression-detection bei Welle C/D Erweiterungen — wenn ein neuer Rule die Output-Shape eines Moduls ändert, snapshot-test fängt das.
+
+**Tools:** Vitest's snapshot-feature (`expect(...).toMatchSnapshot()`).
+
+### T3 — CI-Pipeline mit Putz-Benchmark + Source-Verify als Gates (~1h)
+
+**Ziel:** GitHub Actions workflow der:
+1. `npx vitest run` (alle 791+ tests)
+2. `npx tsx scripts/spike/eval/stage-a-validation.ts` (Coverage-Run, fail-bei-Regression vs baseline)
+3. T24 Putz-Niveau-Benchmark als Gate (28/28 Springer-Delphi-Rules fire)
+4. T25 Source-Verify-CI als Quarterly-Cron
+
+**Pre-Condition:** T2 done. Welle E done (T24 verfügbar). Welle D done (T25 verfügbar).
+
+---
+
+## 12. Welle Doc — Documentation (NEU für Maximalismus)
+
+### Doc1 — dev-README für scripts/spike (~2-3h Subagent)
+
+**Aktuell:** kein README für `scripts/spike/`. Engineer der das Repo öffnet hat keinen Entry-Point.
+
+**Ziel:** `scripts/spike/README.md` mit:
+- Architecture-Overview (Spectral + Walkers + Module-Classes Layer)
+- runDeterministicLayer Public-API
+- Wie man neue Rules / Walker / Module hinzufügt
+- Test-Workflow + Eval-Workflow
+- Mining-Source-Mapping (verweist auf rules-brainstorm.md)
+- Severity-Schema-Erklärung
+
+### Doc2 — Architecture-Diagram (~1-2h)
+
+**Ziel:** ASCII oder Mermaid Diagramm des Stage-A-Pipeline-Flows. Zeigt:
+- Spec-Input → `runDeterministicLayer` → 3 Layer-Runner → Findings → Output-Mapper → Final-Findings
+- Cross-Cutting: Severity-Schema + IANA-Registry + Spectral-Functions
+- Phase-B-Connection (Stage-A-Output als Pre-pass-Input)
+
+**Output:** in `scripts/spike/README.md` eingebettet plus standalone `docs/architecture-stage-a.md`.
+
+### Doc3 — Contributor-Guide (~1-2h Subagent)
+
+**Ziel:** wie ein Engineer (extern oder intern) eine neue Rule beiträgt:
+- Source-mining-Vorbereitung (welcher Lens? welche Source?)
+- Rule-Schreiben (YAML-template oder Walker-template)
+- Severity-Metadata-Anforderungen
+- Test-Schreiben (inline-fixtures oder spec-based)
+- Welle/PR-Process
+
+**Output:** `CONTRIBUTING.md` für scripts/spike-contributors.
+
+---
+
+## 13. Welle Arch — Architectural Refactoring (NEU für Maximalismus)
+
+Per `critical-review.md:585`: "Architectural directory refactor (post-spike-lock candidate): current flat `scripts/spike/deterministic/` could be split into `classifiers/` + `aggregators/` + `modules/` + `rules/` to reflect the 8-rule-classes + 3-arch-elements view."
+
+### Arch1 — flat → classifiers/aggregators/modules/rules subtrees (~6-10h Subagent)
+
+**Aktuell:** `scripts/spike/deterministic/*.ts` flat-tree mit 22 files. Plus `walkers/` + `iana/` + `spectral-functions/` + `modules/` als sub-trees.
+
+**Ziel-Struktur** (per meta-insights 8 functional rule-classes + 3 architectural elements):
+```
+scripts/spike/deterministic/
+├── classifiers/         # Stage-1 classifiers (kein Finding-Output, gate other detectors)
+│   ├── style-classifier.ts
+│   ├── json-schema-draft-detector.ts
+│   ├── oauth2-flow-classifier.ts (T12 als classifier umbenannt)
+│   └── media-type-iana-classifier.ts (T13)
+├── aggregators/         # Statistical aggregators (Walker-class)
+│   └── (was walkers/ ist — umbenannt für Konsistenz)
+├── modules/             # Deep-mechanic modules (already existing)
+│   ├── secret-scanner.ts
+│   ├── webhook-signature.ts
+│   ├── http-protocol-pairings.ts
+│   ├── problem-json-validator.ts
+│   ├── per-style-coherence.ts
+│   ├── ajv-validator.ts
+│   ├── codegen-validation.ts
+│   ├── cross-reference-consistency.ts
+│   ├── duplicate-schemas.ts
+│   ├── naming-classifier.ts
+│   ├── path-template-parser.ts
+│   ├── ref-graph.ts
+│   ├── spec-diff.ts (orphan)
+│   └── index.ts (runModules)
+├── rules/               # YAML-rule-sets
+│   ├── apiq-ruleset.yaml
+│   ├── apiq-ruleset-threat-p1.yaml
+│   ├── apiq-ruleset-client-p1.yaml
+│   ├── apiq-ruleset-evolution.yaml
+│   ├── apiq-ruleset-threat-p2.yaml (Welle C)
+│   ├── apiq-ruleset-client-p2.yaml (Welle C)
+│   └── apiq-ruleset-niche.yaml (Welle D2)
+├── spectral-functions/  # already existing
+├── iana/                # already existing
+├── infra/               # severity-schema + types + output-mapper + spectral-runner
+│   ├── severity-schema.ts
+│   ├── types.ts
+│   ├── output-mapper.ts
+│   └── spectral-runner.ts
+└── index.ts             # public API entry
+```
+
+**Refactor-Approach:**
+- Subagent moves files + updates imports
+- All tests must continue green
+- spec-diff bleibt orphan in modules/ (oder eigener `experimental/` subtree?)
+
+**Pre-Condition:** Welle F done (Schema-Erweiterungen abgeschlossen, sonst doppelarbeit beim refactor).
+
+### Arch2 — DetectorLayer-Type erweitert um module-class (~30min)
+
+Aktuell taggen Module-Findings sich als `walker-statistical`. Erweitere `DetectorLayer` um `'module-class' | 'classifier'` (falls Arch1 Classifier-Subtree introduces als own layer).
+
+### Arch3 — Output-mapper-aggregation für codegen-validation (Q1 wenn nicht früher schon done)
+
+Q1 macht das. Wenn Q1 nicht früher passiert ist, hier in Welle Arch konsolidieren.
+
+---
+
+## 14. Welle R — Reference-Hardening
+
+### R1 — `isPureSpectralDetectable` Re-Classification (~2-3h Subagent — VERPFLICHTEND)
+Aktuell sind 97 References LLM-authored, never human-hardened. Coverage-Messung ist meta-circular. R1 ist mid-step: ehrliches `isPureSpectralDetectable: true | partial | false` tagging plus optional `expected-detector-id` (welcher Stage-A-Detektor sollte das catchen).
+
+**Output:** updated `openapi-examples/{stripe-full,pagerduty-full,github-rest,dnd5eapi}/reference/findings.json`.
+
+### R2 — Second-LLM-Review (~3-5h Subagent — VERPFLICHTEND für Maximalismus)
+**Bei Maximalismus:** zweiter LLM-Reviewer (anderes Modell als Phase-0-Author — z.B. wenn Original LLM Sonnet 4.6 war, dann GPT-5 oder Opus 4.7) reviewed die References. Disagreements → human-flagged-for-review-list.
+
+**Optional:** Domain-Expert-Review für je 2-3 References pro Spec — falls verfügbar (ohne external dependency).
+
+### R-Decision-Point
+Beide R1 + R2 verpflichtend für Maximalismus. References-Authenticity wird damit Multi-Model-cross-validated.
+
+---
+
+## 15. Welle V — Validation
+
+### V1 — 4-way Cross-Linter-Parity Smoke (~2-3h)
+
+**Bei Maximalismus erweitert auf 4-way:**
+- **Vacuum** (default rules) auf 4 Specs
+- **Redocly-CLI** default-config auf 4 Specs
+- **IBM OpenAPI Validator** auf 4 Specs
+- **Spectral mit OWASP-Spectral-Rulesets standalone** auf 4 Specs
+- Vergleich gegen apiq Stage-A-Output
+
+**Comparison-Tabellen pro Spec:**
+- Findings-count per linter
+- Top-detectors per linter
+- Detector-overlap (welcher detector findet was — Venn-diagram)
+- apiq-only catches / Konkurrenz-only catches
+
+**Output:** `specs/big-spec-runs/eval/CROSS-LINTER-PARITY.md` — defense für "best-in-class deterministic linter"-Claim. Plus: detected-but-uncatched-by-apiq Lücken sind input für post-V Welle C′ falls nötig.
+
+### V2 — Final Stage-A Validation Re-Run (~10min run)
+`stage-a-validation.ts` final auf alle 4 Specs (mit Embedding-Scorer dank Q2 + R-hardened references). STAGE-A-RESULTS.md final regenerate. Final Coverage-Numbers post-M+F+C+D+D2+E+Q+T+Doc+Arch+R.
+
+### V-Decision-Point
+**Nach V1+V2 echte Phase-B-Decision.** Drei mögliche Outcomes:
+1. **Stage A schlägt Konkurrenz + Coverage gegen R-hardened references >50%:** Phase-B-Engineering ist klare next step
+2. **Stage A pari mit Konkurrenz aber Coverage stagniert <40%:** Phase-B trotzdem Pflicht für Differentiator-Test
+3. **Stage A signifikant unter Konkurrenz:** Welle C′/D′ gezielt + erst dann Phase B
+
+---
+
+## 16. Phase B — LLM-Pipeline-Engineering (eigentlicher Spike-Lock-Test)
+
+Per `phase-b-design.md`. Pre-Conditions:
+- Alle Wellen oben done (M+F+C+D+D2+E+Q+T+Doc+Arch+R+V)
+- F1 autoFixSafe-Tag implementiert
+- Q1 codegen-aggregation done (Token-Budget-Math)
+- V1 Cross-Linter-Parity-Output verfügbar (Konkurrenz-Diff für Phase-B-Prompt-Engineering)
+
+**Bei Maximalismus erweitert:**
+- **N=3 auf alle 4 Specs** (statt N=3 + N=1×3 in v1) für statistische Confidence-Intervalle. Total ~12 Runs.
+- **v7-Prompt-Iteration** falls v6 PARTIAL — direkt eingeplant statt optional.
+
+**Aufwand:** 5-8d Engineering + ~$60-80 LLM-Cost (war ~$25-40 in v1).
+
+**Output:** Coverage post-Phase-B vs Stage-A-only. Differentiator-Test PASS/PARTIAL/FAIL per `phase-b-design.md §7 Success-Criteria`.
+
+---
+
+## 17. Append-Workflow für Mining-Round-N
+
+Mining-Round-3 wird in `mining-round3.md` geschrieben. Falls nach M1+M2 weitere Rounds sinnvoll sind:
+
+**Round-N Append-Pattern:**
+1. Neue Datei `mining-round{N}.md` (z.B. `mining-round4.md`)
+2. Header dokumentiert: Sources, Mining-Pass-Datum, Erwartete-Funde-Range, Decision-Trigger ("nur wenn...")
+3. Subagent-Briefing nutzt curated source-list (nicht unbounded blogs/conference)
+4. Output integriert sich in `rules-brainstorm.md` Master-Konsolidierung
+5. Falls neue Lenses gefunden: `meta-insights.md` Round-N-Promotion + Severity-Schema-Update + Welle F-Erweiterung
+
+**Decision-Trigger für Round 4+:**
+- Round 3 + Corpus zusammen >40 neue Patterns (Hint dass Mining nicht maxed-out)
+- ODER neue Source-Familie verfügbar (z.B. neuer API-Design-Standard, neue Compliance-Framework)
+- ODER PRD-Reframe macht neuen Lens-Bereich relevant
+
+---
+
+## 18. Resume-Trigger für nächste Sessions
+
+**Resume-Trigger:** "weiter mit restwork-plan v2" oder "stage-a status check" oder "welle X starten" (z.B. "welle M starten", "welle F starten").
+
+**Standard Resume-Procedure:**
+1. CLAUDE.md status-block lesen (zeigt aktuellen Welle-Stand)
+2. Diesen Plan-Doc v2 lesen
+3. Memory-File `~/.claude/projects/.../memory/project_epic09_spike_handoff.md` lesen
+4. Letzten Commit + git-status prüfen (ob laufender Welle-Stand sauber ist)
+5. Nächste Welle identifizieren basierend auf Pre-Condition-Chain in §3-Tabelle
+6. `/spec_ind w-{welle}-{slug} "<context-prompt>"` für die nächste Welle
+7. `/dev <epic-spec>` ausführen
+
+**Falls eine Welle interrupted wurde:**
+- Subagent-Reports (falls noch verfügbar) prüfen
+- Working-tree git-status prüfen
+- Tests laufen — wenn nicht 791+ grün, identify regression
+- `/dev <epic-spec>` resumed wo es aufhörte (Skill handles es)
+
+---
+
+## 19. Risiken + Mitigations
+
+**Risiko 1 — Mining-Round-3+Corpus liefert <40 neue Patterns.** Dann Round-3-Maximum-Claim ehrlich + skip Round 4.
+**Mitigation:** Decision-Point nach M1+M2.
+
+**Risiko 2 — F4 (110-rule metadata promotion) findet Spectral-runner-Conversion-Lücken.** Dann F4 ist größer als geschätzt.
+**Mitigation:** F4 ist als Subagent-Welle parallelisiert; falls Conversion-Lücken auftauchen → spectral-runner.ts erweitern als Teil von F4.
+
+**Risiko 3 — Welle C/D bringen zusätzliche Patterns die Round-3-Mining hätte finden sollen.** Doppelarbeit-Risiko.
+**Mitigation:** Welle M+F vor Welle C+D ist genau dafür.
+
+**Risiko 4 — Cross-Linter-Parity zeigt Vacuum/Konkurrenz schlägt apiq.** Reputations-Risk.
+**Mitigation:** Honest-truth approach — wenn Lücken existieren, sind sie data für Welle C′/D′. Putzen-First-Reihenfolge minimiert dieses Risiko.
+
+**Risiko 5 — Phase-B-Test zeigt LLM-Pipeline bringt nichts über Stage-A.** Spike-Lock-Decision-Risk.
+**Mitigation:** Phase-B-Design hat dokumentierte Pass/Partial/Fail-Criteria. Falls Fail: Stage-A allein als "deterministic linter" ist trotzdem ship-bar (siehe stripe-full 62.1% — strong baseline).
+
+**Risiko 6 — `/dev` Skill bei großen Wellen overwhelmed.** Z.B. F4 mit 110 Rule-Migrationen könnte zu groß sein.
+**Mitigation:** Welle in Sub-Specs splitten (F4a F4b F4c F4d je ~28 rules). Wir sehen das nach erstem `/dev`-Run.
+
+---
+
+## 20. Status zum 2026-05-06
+
+**Welle 0+A+B + W1-W4 done** (siehe `project_epic09_spike_handoff.md`).
+
+**Aktuelle Inventur:**
+- 110 active spectral rules (4 yamls)
+- 16 walkers
+- 15 module-classes wired (modules/index.ts)
+- 5 custom spectral-functions (alle aktiv)
+- 791 tests pass / 36 files
+
+**W4-Coverage** (Jaccard-only, embedding-scorer broken):
+- stripe-full 62.1% / pagerduty 30.4% / dnd5eapi 35.7% / github-rest 25.8%
+
+**Strategischer Kontext:** -20 to -61pp Gap zur Phase-0-Prediction ist LLM-territory (Lens 3/5/8/9), nicht deterministic-territory. Welle C/D/E ist value-add für Reputation/Putz-Maximum, nicht load-bearing für Coverage-Lücke-Schließung.
+
+**Nächster Schritt:** Welle Q startet — orthogonal + sofort startbar. `/spec_ind w-q-code-quality-cleanup "..."` + `/dev`. Plus parallel: Welle M `/spec_ind w-m-mining-optimization "..."` (M1 Mining-Round-3 Subagent).
+
+---
+
+## 21. Welle-Status-Tracker
+
+Wird bei jedem `/dev`-Run aktualisiert.
+
+| Welle | Spec | /dev gelaufen | Tests grün | Commit | Notes |
+|---|---|---|---|---|---|
+| Q | `specs/E09-w-q-code-quality-cleanup.md` | ✓ 2026-05-06 | 802/2 skip | (commit-hash post-commit) | done; 4 parallele Subagents (q1+q3+q2q5+q4); Q1 codegen-aggregation + Q2 env-fix + Q3 module-class layer-tag + Q4 3 integration-tests + Q5 PREDICTIONS stale-marker |
+| M | TBD (`/spec_ind` mit Brainstorming) | — | — | — | startbar sofort (orthogonal) |
+| F | TBD | — | — | — | wartet auf M |
+| C | TBD | — | — | — | wartet auf F |
+| D | TBD | — | — | — | wartet auf C |
+| D2 | TBD | — | — | — | wartet auf D |
+| E | TBD | — | — | — | wartet auf D2 |
+| T | TBD | — | — | — | wartet auf C; parallel zu D/D2/E |
+| Doc | TBD | — | — | — | wartet auf M+F+Arch |
+| Arch | TBD | — | — | — | wartet auf F |
+| R | TBD | — | — | — | startbar ab Welle C |
+| V | TBD | — | — | — | wartet auf alle |
+| Phase B | siehe `phase-b-design.md` | — | — | — | wartet auf V |

@@ -2,7 +2,7 @@
 
 > **Zweck:** single source-of-truth für Phase-B-Pipeline-Design. Phase B = LLM v6-Prompt-Test mit Pre-pass via Stage A. Eigentlicher Spike-Lock-Test (Stage A war Vorbereitung). Wird ausgeführt nach Welle E (Stage A komplett).
 >
-> **Status (2026-05-06):** Design-doc, nicht implementiert. Erwartete Implementierung post-Welle-E.
+> **Status (2026-05-06):** Design-doc, post-W4. Stage-A-Pipeline gewired (W2 done) + ehrlich gemessen (W4 done — siehe `specs/big-spec-runs/eval/STAGE-A-RESULTS.md`). Erwartete Implementierung: post-Pre-Phase-B-Restpunkte (codegen-aggregation, OPENAI_API_KEY-fix, reference-classify, cross-linter-parity). **Token-Budget-Math in §2 ist nach W4-Measurement neu zu rechnen** — codegen-validation emittiert 9.834 single findings pro Spec, blow-out für naive 3-Layer-Cleanup (siehe neue OQ8 in §8). Cost-Schätzung in §10 unverändert (3-5d + ~$25-40 LLM-Cost) aber Pre-Conditions verschoben.
 >
 > **Beziehung zu anderen specs:**
 > - `big-spec-architecture-spike.md` Draft 0.6+ — original spike-doc mit Two-Call-Architektur und (C-i) Sonnet+Sonnet Decision
@@ -17,17 +17,22 @@
                           [User uploads spec]
                                  │
                                  ▼
-                    ┌─────────────────────────┐
-                    │ Stage A — Deterministic │
-                    │ ~290 Pattern-Detectors  │
-                    │ (17 modules + 4 yamls + │
-                    │ 16 walkers)             │
-                    └────────┬────────────────┘
+                    ┌────────────────────────────┐
+                    │ Stage A — Deterministic    │
+                    │ Pipeline-active: 4 yamls   │
+                    │ (110 active rules incl.    │
+                    │ W3's 4 threat-p1) + 16     │
+                    │ walkers + 15 module-       │
+                    │ classes (W2 done; spec-    │
+                    │ diff orphan, 2-Spec).      │
+                    └────────┬───────────────────┘
                              │ produces
                              ▼
               ┌──────────────────────────────────┐
-              │ Stage-A Findings (~50-1100 raw   │
-              │ per spec, post-aggregation)      │
+              │ Stage-A Findings (W4-measured    │
+              │ 746-30939 raw per spec; codegen- │
+              │ validation = single biggest      │
+              │ producer ~9k findings/spec)      │
               └──────┬─────────────────────┬─────┘
                      │                     │
                      ▼                     ▼
@@ -86,7 +91,7 @@
 ## 2. Stage-A-Findings-Integration (load-bearing)
 
 ### Problem
-Stage A produziert ~50-1100 findings auf real-world specs. Naive prefixen aller findings im LLM-prompt sprengt Sonnet's 200K context-limit auf großen Specs (pagerduty: ~60K Tokens nur für Findings + 150K für spec + 100K phase-1-outputs = 510K → overflow).
+Stage A produziert W4-measured **746-30.939 findings auf real-world specs** (post-W2/W3, full pipeline). codegen-validation allein 9.834 findings auf github-rest, 4.572 pagerduty, 3.430 stripe, 264 dnd5eapi — single biggest producer + per-occurrence-Findings die in much-smaller root-cause-set clustern. Naive 3-Layer-Cleanup würde im Phase-2-Aggregator selbst nach Per-Endpoint-Slicing den 200K-Context sprengen. **Pre-Phase-B-Engineering-Pre-Condition: codegen-validation Output-Aggregation** (1 Category-Row statt 9.834 individual rows; siehe OQ8 in §8).
 
 ### Lösung: 3-Layer-Cleanup
 
@@ -142,6 +147,17 @@ Phase-1-calls sind per-endpoint. Pro call braucht LLM nur die Stage-A-findings d
 | github-rest | ~180K | ~5K | ~12K | ~280K — ⚠️ noch overflow |
 | stripe-full | ~150K | ~3K | ~10K | ~220K — ⚠️ noch overflow |
 | dnd5eapi | ~30K | ~2K | ~5K | ~80K — fine |
+
+**W4-measured Token-Budget-Math (post-W2/W3):**
+
+| Spec | Findings (raw) | Codegen-share | Other-share | Per-Endpoint-Slice viable? | Phase-2-aggregator viable? |
+|---|---:|---:|---:|---|---|
+| dnd5eapi | 746 | 264 (35%) | 482 | ✓ small | ✓ |
+| pagerduty-full | 8.467 | 4.572 (54%) | 3.895 | ⚠ (~14 findings/op) | ⚠ overflow ohne map-reduce + codegen-aggregation |
+| stripe-full | 12.947 | 3.430 (26%) | 9.517 | ⚠ | ✗ overflow ohne aggregation |
+| github-rest | 30.939 | 9.834 (32%) | 21.105 | ✗ floods | ✗ overflow definitiv |
+
+**Implication:** Phase-B Engineering kann **erst nach codegen-validation Output-Aggregation** starten. Naive Token-Budget mit 30.939 individual codegen findings sprengt jede Phase-2-Strategie.
 
 **Implication:** Phase-2 aggregator-call braucht **map-reduce** für große Specs:
 - Phase-2 wird in chunks gemacht (z.B. groupiere phase-1-outputs zu 10er-chunks)
@@ -301,6 +317,13 @@ LLM emittiert findings auf "pre-cleaned spec" mit cleaned-Pfaden. User sieht ORI
 4. **N=3 statistical-power:** ist N=3 genug für ±5pp variance-confidence? Oder N=5 für tighter signal?
 5. **Stripe-quirk-handling:** Stripe-spec hat 262 GET-with-body (RFC-violation aber Stripe-design). Wie pre-clean — auto-fix wäre breaking-change. Sollten Stripe-quirks in stage-a-skip-list?
 6. **Prompt-caching-stability:** ändert sich category-summary zwischen Phase-1-calls (sollte nicht), oder muss pro call neu computed werden?
+7. **Stage-A pipeline-wiring (W2):** ✓ RESOLVED 2026-05-06. 15 of 17 module-classes wired in `scripts/spike/deterministic/modules/index.ts` (spec-diff stays orphan, 2-Spec). All 5 custom-functions referenced by active rules. 110 total active spectral rules.
+
+8. **codegen-validation Output-Aggregation (NEW post-W4):** das Modul emittiert per-occurrence findings (9.834 für ein Root-Problem auf github-rest). Phase-B-Token-Budget kann das nicht in 200K-Context stuffen. Optionen: (a) module-side: codegen-validation aggregiert intern + emittiert 1 Finding mit `{occurrences: 9834, locations: [...]}`; (b) output-mapper-side: collapse all `codegen:*` findings zu 1 category-row vor LLM-prompt; (c) findings-compaction: pattern-id-based grouping schon im Compaction-Layer-2. Decision: pragmatisch (b) zuerst — 1-2h work, kein Modul-Code-Change. Pre-Condition für Phase-B-Engineering-Start.
+
+9. **Reference-Findings Authenticity (NEW):** alle 4 Reference-Sets sind LLM-authored, never human-hardened (per `humanHardenedDate: null` in JSON). Coverage-Messung gegen LLM-References ist meta-circular. Empfehlung: dedicated Re-Classification Subagent-Task vor Phase-B (~2-3h) — `isPureSpectralDetectable` ehrlich tagger.
+
+10. **Cross-Linter-Parity Smoke (NEW):** Vacuum/Redocly/Spectral-OWASP comparison nie ausgeführt (siehe `critical-review.md:528`). "Konkurrenz-Pari"-Claims sind un-tested. Smoke-Test (~1h) — wenn Stage-A wirklich Pari erreicht, supports "best-in-class deterministic linter"-Positioning für PRD; wenn nicht, dann positioning braucht Reframe.
 
 ---
 
@@ -330,3 +353,17 @@ LLM emittiert findings auf "pre-cleaned spec" mit cleaned-Pfaden. User sieht ORI
 | **Phase-B Run-Cost** | **~$25-40 LLM-cost** |
 
 (Ursprünglich hatte ich Phase B mit "1 Tag" geschätzt — das war falsch. Realistic mit Stage-A-Integration ist 3-5 Tage Engineering plus Cost.)
+
+**Pre-condition:** Phase B Engineering kann nicht starten bevor (alle DONE 2026-05-06):
+- W1 doc-honesty sync ✓
+- W2 module-wiring (15 modules in `modules/index.ts`) ✓
+- W3 4 threat-p1 YAML-Rules ausgeschrieben ✓
+- W4 stage-a-validation re-run auf 4 Specs ✓
+
+Plus zusätzliche Pre-Conditions aufgrund W4-Findings:
+- **codegen-validation Output-Aggregation** (OQ8 ~1-2h) — Pre-Condition für Token-Budget-Math
+- **OPENAI_API_KEY env-loading fix** (~10min) — Embedding-Scorer für ehrliche Coverage
+- **Reference-Findings Re-Classification** (OQ9 ~2-3h)
+- **Cross-Linter-Parity Smoke** (OQ10 ~1h, optional aber wertvoll für Positioning-Claims)
+
+Total Pre-Phase-B-Restwork: **~5-7h Engineering**. Phase-B-Engineering selbst danach unverändert ~3-5d + ~$25-40 LLM-Cost.
