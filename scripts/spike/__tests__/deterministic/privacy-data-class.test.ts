@@ -21,13 +21,13 @@ import {
   PHI_FIELD_NAME_PATTERNS,
   DATA_CLASS_VENDOR_EXTENSIONS,
   walkPrivacyDataClass,
-} from "../../../deterministic/walkers/privacy-data-class.js";
-import { mapDetectorFindings } from "../../../deterministic/output-mapper.js";
-import { FindingSchema } from "../../../schema.js";
+} from "../../deterministic/walkers/privacy-data-class.js";
+import { mapDetectorFindings } from "../../deterministic/output-mapper.js";
+import { FindingSchema } from "../../schema.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const SPIKE_DIR = path.resolve(__dirname, "..", "..", "..");
+const SPIKE_DIR = path.resolve(__dirname, "..", "..");
 const REPO_ROOT = path.resolve(SPIKE_DIR, "..", "..");
 const EXAMPLES_DIR = path.join(REPO_ROOT, "openapi-examples");
 

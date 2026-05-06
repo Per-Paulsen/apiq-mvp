@@ -23,12 +23,12 @@ import { fileURLToPath } from 'node:url';
 import {
   walkOperationalMetadata,
   OPERATIONAL_METADATA_RULES,
-} from '../../../deterministic/walkers/operational-metadata.js';
-import type { DetectorFinding } from '../../../deterministic/types.js';
+} from '../../deterministic/walkers/operational-metadata.js';
+import type { DetectorFinding } from '../../deterministic/types.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const SPIKE_DIR = path.resolve(__dirname, '..', '..', '..');
+const SPIKE_DIR = path.resolve(__dirname, '..', '..');
 const REPO_ROOT = path.resolve(SPIKE_DIR, '..', '..');
 const EXAMPLES_DIR = path.join(REPO_ROOT, 'openapi-examples');
 
