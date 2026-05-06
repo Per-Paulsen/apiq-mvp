@@ -60,6 +60,12 @@ import { JaccardScorer } from '../eval/scorers/jaccard.js';
 import { mapDetectorFindings } from './output-mapper.js';
 import { cycleStripSpec } from '../stringify-spec.js';
 import multiLangReservedKeywordsFn from './spectral-functions/multi-lang-reserved-keywords.js';
+import {
+  listEndpointHasPagination,
+  sensitiveFlowNeedsRateLimitHeaders,
+  corsCredentialsWildcardConflict,
+  responseHasWwwAuthenticateHeader,
+} from './spectral-functions/threat-p1-functions.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -77,6 +83,33 @@ const APIQ_RULESET_CLIENT_P1_PATH = path.join(
 );
 
 /**
+ * Welle B P1 Threat-Modeling (Lens 1) ruleset — 22 P1 Y-* / TM-A* rules.
+ * 18 are DSL-only; 4 (TM-A22/A32/A39/A53) reference the threat-p1 custom
+ * functions registered below. The rule definitions for those 4 are
+ * currently commented in the YAML — to activate them, write rule defs
+ * referencing list-endpoint-has-pagination /
+ * sensitive-flow-needs-rate-limit-headers /
+ * cors-credentials-wildcard-conflict /
+ * response-has-www-authenticate-header (see threat-p1-rules.test.ts for
+ * inline-fixture examples). Follow-up TODO.
+ */
+const APIQ_RULESET_THREAT_P1_PATH = path.join(
+  __dirname,
+  'apiq-ruleset-threat-p1.yaml'
+);
+
+/**
+ * Welle B Evolution-Friction (Lens 3) ruleset — 27 EV-* Spectral rules
+ * for single-spec breaking-change-prediction (apiq-DIFF). Pure DSL —
+ * no custom functions; statistical-aggregation patterns live in the
+ * walker layer (walkers/evolution-statistical.ts).
+ */
+const APIQ_RULESET_EVOLUTION_PATH = path.join(
+  __dirname,
+  'apiq-ruleset-evolution.yaml'
+);
+
+/**
  * Custom Spectral functions registered in addition to `@stoplight/spectral-functions`.
  * Function-name (as it appears in YAML `function:` field) → callable.
  *
@@ -87,6 +120,16 @@ const APIQ_CUSTOM_FUNCTIONS: Record<string, (...args: any[]) => any> = {
   'multi-lang-reserved-keywords': multiLangReservedKeywordsFn as unknown as (
     ...args: any[]
   ) => any,
+  // T16a Threat-P1 custom functions (Lens 1):
+  'list-endpoint-has-pagination': listEndpointHasPagination as unknown as (
+    ...args: any[]
+  ) => any,
+  'sensitive-flow-needs-rate-limit-headers':
+    sensitiveFlowNeedsRateLimitHeaders as unknown as (...args: any[]) => any,
+  'cors-credentials-wildcard-conflict':
+    corsCredentialsWildcardConflict as unknown as (...args: any[]) => any,
+  'response-has-www-authenticate-header':
+    responseHasWwwAuthenticateHeader as unknown as (...args: any[]) => any,
 };
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
@@ -153,6 +196,10 @@ const SUPPORTED_FUNCTIONS = new Set([
   'or',
   // apiq custom functions registered in APIQ_CUSTOM_FUNCTIONS:
   'multi-lang-reserved-keywords',
+  'list-endpoint-has-pagination',
+  'sensitive-flow-needs-rate-limit-headers',
+  'cors-credentials-wildcard-conflict',
+  'response-has-www-authenticate-header',
 ]);
 
 /**
@@ -351,11 +398,21 @@ function buildSpectral(): SpectralCore.Spectral {
     APIQ_RULESET_CLIENT_P1_PATH,
     'apiq-ruleset-client-p1.yaml'
   );
+  const threatP1Rules = loadYamlRules(
+    APIQ_RULESET_THREAT_P1_PATH,
+    'apiq-ruleset-threat-p1.yaml'
+  );
+  const evolutionRules = loadYamlRules(
+    APIQ_RULESET_EVOLUTION_PATH,
+    'apiq-ruleset-evolution.yaml'
+  );
 
   /* eslint-disable @typescript-eslint/no-explicit-any */
   const merged: Record<string, any> = {};
   if (baseRules) Object.assign(merged, baseRules);
   if (clientP1Rules) Object.assign(merged, clientP1Rules);
+  if (threatP1Rules) Object.assign(merged, threatP1Rules);
+  if (evolutionRules) Object.assign(merged, evolutionRules);
   /* eslint-enable @typescript-eslint/no-explicit-any */
 
   if (Object.keys(merged).length > 0) {
