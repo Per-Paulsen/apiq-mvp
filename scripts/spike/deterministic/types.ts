@@ -82,3 +82,74 @@ export interface DeterministicLayerResult {
   /** Total runtime in ms. */
   durationMs: number;
 }
+
+// =============================================================================
+// Re-exports from severity-schema.ts (Round-2 rule-metadata schema)
+//
+// New rule-tagging schema introduced by Task T23 (Welle 0). Re-exported here
+// so existing imports from `./types.js` keep working while new rule code can
+// also pull richer metadata types from the same module.
+//
+// `RuleMetadata.severity` (error/warn/hint/info) is at the RULE-tagging layer
+// and is INTENTIONALLY DISTINCT from `DetectorFinding.severity` above
+// (critical/high/medium/low) which lives at the LLM-Finding-equivalent layer.
+// See `severity-schema.ts` header for full rationale.
+// =============================================================================
+export {
+  // Severity (4-tier)
+  SeveritySchema,
+  SEVERITY_DOCS,
+  // Direction-modifier
+  SeverityDirectionSchema,
+  SEVERITY_DIRECTION_DOCS,
+  // Lens (10-lens framework)
+  LensSchema,
+  LensesSchema,
+  LENS_TO_NUMBER,
+  // Source
+  RuleSourceSchema,
+  RuleSourcesSchema,
+  // Codegen targets
+  CodegenTargetSchema,
+  DEFAULT_CODEGEN_TARGETS,
+  // Stakeholder x Lifecycle x Defect-Class meta-axes
+  StakeholderSchema,
+  LifecyclePhaseSchema,
+  DefectClassSchema,
+  // ISO/IEC 25010
+  IsoIec25010Schema,
+  // Priority
+  PrioritySchema,
+  PRIORITY_DOCS,
+  // Combined
+  RuleMetadataSchema,
+  FindingMetadataSchema,
+  FindingLocationSchema,
+  // Helpers
+  validateMetadata,
+  safeValidateMetadata,
+  validateFindingMetadata,
+  safeValidateFindingMetadata,
+  tagFinding,
+  // Legacy migration
+  migrateLegacyRule,
+} from './severity-schema.js';
+
+export type {
+  Severity,
+  SeverityDirection,
+  Lens,
+  RuleSource,
+  CodegenTarget,
+  Stakeholder,
+  LifecyclePhase,
+  DefectClass,
+  IsoIec25010,
+  Priority,
+  RuleMetadata,
+  RuleMetadataInput,
+  FindingMetadata,
+  FindingMetadataInput,
+  FindingLocation,
+  LegacySeverityOnly,
+} from './severity-schema.js';
