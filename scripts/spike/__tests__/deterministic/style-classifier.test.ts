@@ -23,11 +23,11 @@ import {
   classifyApiStyle,
   collectStats,
   type ApiStyle,
-} from '../../../scripts/spike/deterministic/style-classifier.js';
+} from '../../deterministic/style-classifier.js';
 import {
   runStyleCoherenceChecks,
   _coherenceInternals,
-} from '../../../scripts/spike/deterministic/per-style-coherence.js';
+} from '../../deterministic/per-style-coherence.js';
 
 // ---------------------------------------------------------------------------
 // Helper fixtures
@@ -702,7 +702,7 @@ describe('declared-style helpers', () => {
 // ---------------------------------------------------------------------------
 
 describe('end-to-end against openapi-examples (regression smoke)', () => {
-  const REPO_ROOT = path.resolve(__dirname, '..', '..', '..');
+  const REPO_ROOT = path.resolve(__dirname, '..', '..', '..', '..');
   const EXAMPLES = path.join(REPO_ROOT, 'openapi-examples');
 
   function loadSpec(name: string): object | null {
