@@ -229,3 +229,84 @@ Build (`npx tsc --noEmit`): 0 errors in Welle-M-files (2 pre-existing in severit
 | API-Corpus-Library | 10 statistics, exported | Welle V re-use ready |
 | API-Corpus (gitignored) | 521 healthy specs (253 MB) | reproducible |
 | Mining-files konsolidiert | 8 Stubs + 1 eigenständig (meta) | per D13 |
+
+---
+
+## Round-4 Update (2026-05-07 evening) — User-Direktive: "do not skip round 4"
+
+> **APPENDIX — append-only correction zu OQ1+OQ3 Recommendations.** User-Direktive im Review oben: "do not skip round 4" + "enrich" + "sind wir denn nicht latest?". Ergebnis: Round-4-Mining + Verbatim-Enrich-Pass durchgeführt + committed.
+
+### Was gebaut wurde (Round-4)
+
+**3 parallele Source-Familie-Subagents:**
+- **R4-Conferences:** 19 unique patterns (23 row-IDs) aus 28 Talks (11 initial + 17 discovered) — APIDays, NordicAPIs, AWS re:Invent, Stripe Sessions, GitHub Universe, etc.
+- **R4-Vendor-Blogs:** 33 patterns aus 13 distinct vendors (15 initial + 18 discovered) — Stripe / GitHub / Twilio / Slack / Microsoft / Google AIP / etc. 97% De-Dup-Rate (Vendor-blogs primary value: citation-strengthening, nicht novel-pattern-generation)
+- **R4-Papers + IETF:** 32 patterns aus 19 sources (8 IETF-RFCs/drafts + 11 academic papers) — RFC 9700/9727/9728/9745 alle 2025 + Hasan-2026 MCP-tool-smelly + Serbout-2024 SemVer-empirical + EmRest + APIstic
+
+**Parallel: Verbatim-Enrich-Tool-Erweiterung:**
+- `patterns-export.ts` 912 → 1466 Zeilen (+554 Zeilen, +6 tests)
+- mining-round2-meta.md cross-reference parser (16 meta-file matches)
+- Description-marker scan + Notes-column scan + URL auto-derive (483 URL auto-derives)
+- Phase-3 git-history mining SKIPPED (Phase 1+2 schon ≥60% target erreicht)
+
+**Master-Konsolidierung:**
+- `rules-brainstorm.md` 2075 → **2327 Zeilen** (+252 Zeilen "Round-4 Additions"-Section)
+- 88 R4-patterns integriert in per-Lens-Tabellen
+- Lens-Coverage-Lift-Tabelle Round-3→Round-4 dokumentiert
+- Round-5-Decision: skip — Mining maxed-out aus discovery-unbounded (7 source-families saturated)
+
+**Pattern-Index rebuild:**
+- 678 → **763 entries** (+85 R4 patterns embedded)
+- 100% cache reuse für existing Round-1+2+3 (kein re-embed)
+- Index-file-size: 26.26 MB → 29.56 MB
+
+### Final Numbers post-Round-4
+
+| Metric | Pre-Welle-M | Post-R3 (was reported above) | Post-R4 + Verbatim-Enrich (NEU) |
+|---|---:|---:|---:|
+| Total patterns (patterns.json) | n/a | 871 | **959** |
+| Source-families | 3 (R1+R2 implicit) | 4 (R3 added) | **7** (R4 added 3) |
+| Citation-coverage | n/a | 12% | **80.4%** |
+| URL-coverage | n/a | ~12% | **72.4%** |
+| Verbatim-coverage | n/a | 12% | **23.1%** |
+| Pattern-Index entries | n/a | 678 | **763** |
+| Total tests | 806 (Welle Q baseline) | 833 (+27) | **845** (+39 vs baseline) |
+| Master line-count | 1797 | 2075 | **2327** |
+
+### Top-10 Round-4 Highlights
+
+1. **R4-IETF-ST-03/04/05 — RFC 9728 OAuth Protected Resource Metadata (April 2025).** 0% adoption in 518-spec corpus. Foundation für MCP-OAuth-discovery (modelcontextprotocol/SEP-985).
+2. **R4-AP-AI-01/02 — Hasan et al "MCP Tool Descriptions Are Smelly" (arXiv 2602.14878, Feb 2026).** 856-tool/103-server study: 97.1% have ≥1 quality smell, 56% Unclear-Purpose. Empirical apiq-Vision validation (Plan-Doc §0).
+3. **R4-IETF-ST-01 — RFC 9745 Deprecation Header (März 2025).** Standards-Track. Severity-upgrade-evidence für EV-1/F-1.
+4. **R4-IETF-ST-06 — RFC 9727 api-catalog (März 2025).** `/.well-known/api-catalog`. 0% adoption-baseline. Lens-10 mature-publisher signal.
+5. **R4-AP-EV-01 — Serbout & Pautasso ICWE 2024 SemVer empirical:** 64% APIs violate semver on minor/patch breaking-changes. Spike-only territory but Phase-B-prompt-relevant.
+6. **R4-VB-EV-06 — Date-versioning 5+ vendor consensus** (Stripe + GitHub + Square + Twilio + Heroku). EV-13 severity-validation.
+7. **R4-VB-IC-04 — Webhook events not order-guaranteed** (Stripe documented). Webhook-payload-schemas brauchen `timestamp`-field.
+8. **R4-CT-CL-01 — Kheyrollahi Transparent-Server pattern.** `db_id`/`mongo_id`/`pgsql_*` in property-names = leakage. Quick-win Spectral rule, kein equivalent in apiq.
+9. **R4-CT-AI-01 — Kilcommins Arazzo workflow-document positive-marker.** Erste apiq-rule für workflow-document presence. Direkt aligned mit Strategic-Vision Lens-9-underweighting fix.
+10. **R4-VB-AI-01 — Slack rate-limit-tier-metadata** (`x-rate-limit-tier`). Phase-B-prompt-relevant: AI-agents könnten aus tier-metadata Pacing-Strategien ableiten.
+
+### OQ1 — Round-4-Mining Decision Update
+
+User-direktive "do not skip round 4" supersedes original recommendation. **Result:** ein-Round-4-pass executed → 88 patterns added (vs 0-pattern recommendation if skipped). Net-yield highly justifies — RFC 9728 + Hasan-2026 + RFC 9745 + RFC 9727 alle verbindlich für Welle F (Schema-Erweiterungen) + Phase B (prompt-context).
+
+**Round-5-Decision:** skip — discovery-unbounded saturated nach 7 source-families. Welle M2 (post-V) bleibt geplant für gerichtetes agent-readiness-Mining (siehe Plan-Doc §16a).
+
+### OQ3 — Verbatim-Enrich Decision Update
+
+User-direktive "enrich" supersedes original recommendation. **Result:** patterns-export.ts erweitert → Citation-coverage 12% → 80.4%, URL-coverage 12% → 72.4%, Verbatim-coverage 12% → 23.1% (intrinsic ceiling weil Master-tables keine inline-quotes haben). Welle F Subagents nutzen jetzt verbesserte patterns.json als single-source.
+
+### OQ2 — Corpus Latest-State Clarification
+
+User-Frage "sind wir denn nicht latest?" — **Antwort: doch.** APIs.guru list.json + Vendor-specs alle am 2026-05-07 heruntergeladen (= heute zur Zeit der Welle-M-execution). Mein "Snapshot vom 2026-05-07" war missverständlich — ich meinte "Snapshot eingefroren auf state-of-2026-05-07" (= heute). Welle V kann später re-downloaden falls Drift.
+
+### Commits
+
+- `465177f` (R3-feat) — original Welle M Round-3
+- `87c4d2b` (vision-tracking) — Strategic vision constants + Welle M2 + Welle Z stub-sections
+- `593d6b7` (R4-feat) — Round-4 mining + Verbatim-enrich
+- `540e818` (docs) — Plan-Doc + CLAUDE.md sync post-R4
+
+### Status
+
+**Welle M is COMPLETE.** Alle 3 OQs resolved per User-direktiven. Welle F als nächste Welle.
