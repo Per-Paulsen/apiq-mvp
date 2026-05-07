@@ -762,33 +762,45 @@ Mining-Round-3 wird in `mining-round3.md` geschrieben. Falls nach M1+M2 weitere 
 
 **Welle 0+A+B + W1-W4 + Welle Q + Welle M done** (siehe `project_epic09_spike_handoff.md`).
 
-**Aktuelle Inventur (post-Welle-M):**
+**Aktuelle Inventur (post-Welle-M Round-3+4):**
 - 110 active spectral rules (4 yamls) — 100% mit Source-Mapping-Comments (M4)
 - 16 walkers
 - 15 module-classes wired (modules/index.ts) — 100% mit erweiterten JSDoc-Headers (Lens + Round + Sources)
 - 5 custom spectral-functions — 100% mit JSDoc-Source-Mapping
-- 833 tests pass / 41 files / 2 skipped / 0 fail (war 806 — +27 neue Tests in 3 neuen Eval-Tools)
-- **NEU**: 871 patterns in `scripts/spike/data/patterns.json` (Round-1 388 + Round-2 375 + Round-3 108)
-- **NEU**: Pattern-Knowledge-Index in `scripts/spike/eval/cache/pattern-index.json` (678 patterns embedded mit text-embedding-3-small, 26.26 MB, gitignored)
+- **845 tests pass / 41 files / 2 skipped / 0 fail** (war 806 baseline — +39 neue Tests inkl. 27 für Eval-Tools + 6 verbatim-enrich + 6 Round-4)
+- **NEU**: **959 patterns** in `scripts/spike/data/patterns.json` (Round-1 388 + Round-2 375 + Round-3 108 + **Round-4 88**)
+  - **Citation-coverage 80.4%** (war 12% pre-enrich) — verbatim-enrich-pass appended Source-Citations + URL für Round-1+2 patterns
+  - **URL-coverage 72.4%** (war ~12%)
+  - **Verbatim-coverage 23.1%** (war 12%) — intrinsic ceiling weil Master-tables keine inline-quotes haben
+- **NEU**: Pattern-Knowledge-Index in `scripts/spike/eval/cache/pattern-index.json` (**763 patterns embedded**, 29.56 MB, gitignored, reproducible)
 - **NEU**: API-Corpus-Analyzer-Library in `scripts/spike/eval/api-corpus-analyzer.ts` (10 Statistics)
 - **NEU**: 521 healthy OpenAPI-specs in `scripts/spike/data/healthy-corpus/` (gitignored, 253 MB; reproduzierbar via `scripts/spike/download-corpus.mjs`)
+- **NEU**: 7 source-families committed (book + postmortem + corpus + re-audit + conference-talk + vendor-blog + paper-rfc)
 
-**Welle M Round-3 Mining-Output:**
+**Welle M Round-3+4 Mining-Output:**
 
-| Source-Family | Patterns | Citation-Quality | Stop-Reason |
-|---|---:|---|---|
-| Books | 51 | 100% verbatim+URL | 21 surveyed (7 initial + 14 discovered), Plausibility-Erschöpfung |
-| Postmortems | 42 | 100% verbatim+URL | 36 surveyed (8 initial + 28 discovered), Plausibility-Erschöpfung |
-| API-Corpus | 11 derived + 10 statistics | manifest-anchored | 521-spec-corpus-saturation |
-| Re-Audit Orphans | 18 (4 active + 5 OOS + 9 doc) | source-traced | 97.5% master-adoption confirmed |
-| **Total candidates** | **122** | | |
+| Round | Source-Family | Patterns | Citation-Quality | Stop-Reason |
+|---|---|---:|---|---|
+| R3 | Books | 51 | 100% verbatim+URL | 21 surveyed, Plausibility-Erschöpfung |
+| R3 | Postmortems | 42 | 100% verbatim+URL | 36 surveyed, Plausibility-Erschöpfung |
+| R3 | API-Corpus | 11 derived + 10 statistics | manifest-anchored | 521-spec saturation |
+| R3 | Re-Audit Orphans | 18 (4 active + 5 OOS + 9 doc) | source-traced | 97.5% master-adoption |
+| R4 | Conference-Talks | 19 (23 row-IDs) | 100% verbatim+URL | 28 talks surveyed |
+| R4 | Vendor-Blogs | 33 | 100% verbatim+URL | 13 vendors surveyed; 97% de-dup |
+| R4 | Academic-Papers + IETF | 32 | 100% verbatim+URL | 19 sources (11 IETF + 11 academic) |
+| **Total** | | **206 candidates** | | 7 source-families |
 
-**Top-5 Round-3 Highlights:**
-1. **RFC-7807 (problem+json) adoption is 0% across 518 healthy public APIs** — apiq-Lens-2 muss `hint` statt `warn` bei RFC-7807-Recommendations setzen (R3-CO-SC-01)
-2. **Sunset/Deprecation headers (RFC-8594/9745) at 0%** — strongest empirical-gap, perfect Stage-A finding-class für Lens-3+10
-3. **22.2% of healthy public APIs leave write-ops unsecured** (no global, no operation-level security) — Lens-1 catch-all rule justification
-4. **GitHub brownouts as deprecation-validator** (R3-PM-EV-07) — `x-brownout-schedule` positive-marker neu für Lens-3
-5. **OAuth2 Implicit/Password flows formally deprecated** RFC 9700 BCP-240 Jan-2025 — severity-upgrade-evidence für apiq-tm-y7 von hint→warn (R3-PM-IC-04)
+**Top Round-3+4 Highlights:**
+1. **RFC-7807 (problem+json) adoption is 0% across 518 healthy public APIs** (R3) — apiq-Lens-2 muss `hint` statt `warn` bei RFC-7807-Recommendations setzen
+2. **Sunset/Deprecation headers (RFC-8594/9745) at 0%** (R3) — strongest empirical-gap, perfect Stage-A finding-class für Lens-3+10
+3. **22.2% of healthy public APIs leave write-ops unsecured** (R3) — Lens-1 catch-all rule justification
+4. **RFC 9728 OAuth Protected Resource Metadata (April 2025)** (R4-IETF) — 0% adoption-baseline, foundation für MCP-OAuth-discovery
+5. **Hasan et al "MCP Tool Descriptions Are Smelly" arXiv Feb 2026** (R4-AP) — 97.1% MCP-tools haben ≥1 quality-smell, 56% Unclear-Purpose. Direkt vision-aligned (Plan-Doc §0).
+6. **RFC 9745 Deprecation Header (März 2025)** (R4-IETF) — Standards-Track, neuer header separate von Sunset, severity-upgrade-evidence
+7. **Date-versioning 5+ vendor consensus** (R4-VB) — Stripe + GitHub + Square + Twilio + Heroku
+8. **Stripe webhook events not order-guaranteed** (R4-VB) — webhook-payload-schemas brauchen `timestamp`-field
+9. **Kheyrollahi Transparent-Server pattern** (R4-CT) — `db_id`/`mongo_id`/`pgsql_*` in property-names = leakage-anti-pattern
+10. **Kilcommins Arazzo workflow-document positive-marker** (R4-CT) — neuer Lens-9-pattern für AI-agent-consumability
 
 **Lens-Coverage-Lift (Round-2 → Round-3 deltas):**
 
@@ -829,7 +841,7 @@ Wird bei jedem `/dev`-Run aktualisiert.
 | Welle | Spec | /dev gelaufen | Tests grün | Commit | Notes |
 |---|---|---|---|---|---|
 | Q | `specs/E09-w-q-code-quality-cleanup.md` (+ `*-results.md`) | ✓ 2026-05-06 | 802/2 skip | `c8f8658` (feat) + `4560a2a` (docs) | done; 4 parallele Subagents (q1+q3+q2q5+q4); Q1 codegen-aggregation + Q2 env-fix + Q3 module-class layer-tag + Q4 3 integration-tests + Q5 PREDICTIONS stale-marker |
-| M | `specs/E09-w-m-mining-optimization.md` (+ `*-brainstorming.md` + `*-results.md`) | ✓ 2026-05-07 | 833/2 skip (war 806; +27 neue Tests) | `465177f` (feat) | done; 8 parallele Subagent-Phasen (M1-Books/Postmortems/Re-Audit + M2a-Corpus + M2b/c-Analyzer + M3-Konsolidierung + M4-Comments + Patterns-Export + M5-Index); 122 Round-3-patterns; 871 patterns in patterns.json (Round-1+2+3); Pattern-Knowledge-Index funktional (oauth2-test ≥3 matches @ ≥0.5 sim); 110/110 YAML rules + 5/5 functions + 15/15 module-headers mit Source-Mapping; 8 alte Mining-Files zu Stubs konsolidiert; Round-4-Decision dokumentiert (conditional-on-user) |
+| M | `specs/E09-w-m-mining-optimization.md` (+ `*-brainstorming.md` + `*-results.md`) | ✓ 2026-05-07 R3 + R4 | 845/2 skip (war 806 baseline) | `465177f` (R3-feat) + `593d6b7` (R4-feat) | done; 12 parallele Subagent-Phasen (R3: 8 + R4: 4); **R3: 122 patterns** (51 books + 42 postmortems + 11 corpus + 18 reaudit) + **R4: 88 patterns** (19 conferences + 33 vendor-blogs + 32 papers); Total 959 patterns in patterns.json (Round-1+2+3+4); Citation-coverage 80.4% post verbatim-enrich; Pattern-Knowledge-Index 763 entries; 110/110 YAML rules + 5/5 functions + 15/15 module-headers mit Source-Mapping; 8 alte Mining-Files zu Stubs konsolidiert; Round-5-Decision: skip (Mining maxed-out aus discovery-unbounded; Welle M2 post-V bleibt geplant für gerichtetes mining) |
 | F | TBD | — | — | — | wartet auf M ✓ |
 | C | TBD | — | — | — | wartet auf F |
 | D | TBD | — | — | — | wartet auf C |
