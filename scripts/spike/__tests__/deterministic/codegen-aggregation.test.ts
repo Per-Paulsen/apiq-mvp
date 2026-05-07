@@ -191,4 +191,46 @@ describe('codegen-aggregation (Q1)', () => {
     expect(paths[0]).toBe('/paths/~1resource-0/get');
     expect(paths[9]).toBe('/paths/~1resource-9/get');
   });
+
+  // Q8 — affectedEndpoints cap (2026-05-06)
+  it('affectedEndpoints capped at 100 with full count in meta.aggregateAffectedEndpointsTotal', () => {
+    const findings: DetectorFinding[] = [];
+    // Synthesise 200 distinct endpoints across 200 raw codegen-findings (1 each)
+    for (let i = 0; i < 200; i++) {
+      findings.push(
+        makeCodegenFinding('validation-problem', i, {
+          affectedEndpoints: [{ path: `/endpoint-${i}`, method: 'get' }],
+        })
+      );
+    }
+    const aggregated = aggregateCodegenFindings(findings);
+    expect(aggregated.length).toBe(1);
+    const agg = aggregated[0];
+
+    // Cap: array len === 100
+    expect(agg.affectedEndpoints.length).toBe(100);
+    // Full count preserved in meta
+    expect(agg.meta?.aggregateAffectedEndpointsTotal).toBe(200);
+    // Cap-suffix in narration
+    expect(agg.narration).toContain('showing first 100 of 200 affected endpoints');
+    // First 100 endpoints are insertion-order (0..99)
+    expect(agg.affectedEndpoints[0]).toEqual({ path: '/endpoint-0', method: 'get' });
+    expect(agg.affectedEndpoints[99]).toEqual({ path: '/endpoint-99', method: 'get' });
+  });
+
+  it('affectedEndpoints below cap (e.g. 50) is unchanged + no cap-suffix', () => {
+    const findings: DetectorFinding[] = [];
+    for (let i = 0; i < 50; i++) {
+      findings.push(
+        makeCodegenFinding('validation-problem', i, {
+          affectedEndpoints: [{ path: `/endpoint-${i}`, method: 'get' }],
+        })
+      );
+    }
+    const aggregated = aggregateCodegenFindings(findings);
+    expect(aggregated.length).toBe(1);
+    expect(aggregated[0].affectedEndpoints.length).toBe(50);
+    expect(aggregated[0].meta?.aggregateAffectedEndpointsTotal).toBe(50);
+    expect(aggregated[0].narration).not.toContain('showing first');
+  });
 });

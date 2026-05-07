@@ -156,23 +156,43 @@ export function aggregateCodegenFindings(
       }
     }
 
+    // Q8 cap: github-rest can produce up to ~1145 endpoints per aggregated
+    // finding (one per operation when the rule fires spec-wide). Unbounded
+    // affectedEndpoints arrays blow the Phase-B-LLM token budget — a single
+    // codegen-aggregated finding could be ~50KB JSON. Cap to MAX_AGGREGATED_ENDPOINTS
+    // and keep the full count in meta.aggregateAffectedEndpointsTotal so
+    // downstream Phase-B-Cleanup-Layer-3 can reconstruct the full list from
+    // raw findings (via aggregateCodegen: false opt-out) when needed.
+    const MAX_AGGREGATED_ENDPOINTS = 100;
+    const totalEndpoints = dedupedEndpoints.length;
+    const cappedEndpoints =
+      totalEndpoints > MAX_AGGREGATED_ENDPOINTS
+        ? dedupedEndpoints.slice(0, MAX_AGGREGATED_ENDPOINTS)
+        : dedupedEndpoints;
+
     let sev: DetectorFinding['severity'] = first.severity;
     for (let i = 1; i < group.length; i++) sev = maxSeverity(sev, group[i].severity);
 
+    const cappedSuffix =
+      totalEndpoints > MAX_AGGREGATED_ENDPOINTS
+        ? ` (showing first ${MAX_AGGREGATED_ENDPOINTS} of ${totalEndpoints} affected endpoints)`
+        : '';
     const aggregatedNarrationPrefix =
-      `Aggregated from ${group.length} raw codegen findings on ${distinctSourcePaths.length} distinct sourcePaths. ` +
-      `Top sample paths: ${topSourcePaths.join(', ')}.`;
+      `Aggregated from ${group.length} raw codegen findings on ${distinctSourcePaths.length} distinct sourcePaths.` +
+      cappedSuffix +
+      ` Top sample paths: ${topSourcePaths.join(', ')}.`;
 
     aggregated.push({
       ...first,
       title: `${first.title} (aggregated, ${group.length} occurrences)`,
       narration: `${aggregatedNarrationPrefix} ${first.narration}`,
-      affectedEndpoints: dedupedEndpoints,
+      affectedEndpoints: cappedEndpoints,
       severity: sev,
       meta: {
         ...(first.meta ?? {}),
         aggregateOccurrences: group.length,
         aggregateSourcePaths: topSourcePaths,
+        aggregateAffectedEndpointsTotal: totalEndpoints,
       },
     });
   }

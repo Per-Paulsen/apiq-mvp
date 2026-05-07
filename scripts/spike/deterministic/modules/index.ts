@@ -9,17 +9,17 @@
  * spec-diff.ts is intentionally NOT included — it requires two specs, not one.
  * style-classifier.classifyApiStyle is called transitively via per-style-coherence.
  *
- * Layer-tagging note (resolved by Q3): the module-classes historically self-
- * tagged their findings as `walker-statistical` because the `DetectorLayer`
- * union didn't have a `module-class` entry. Q3 added the `module-class` tag
- * and this runner now post-collection-retags any `walker-statistical` findings
- * coming from the wired modules to `module-class`, so `runDeterministicLayer.
- * perLayer['module-class']` reflects the true module contribution. Individual
- * module source files are intentionally unchanged — retagging happens only at
- * the runModules() boundary.
+ * Layer-tagging (resolved by Q3 + robustified by Q7): each ALL_MODULES entry
+ * carries an explicit `layer` field (default `'module-class'`). After each
+ * module runs, runModules() retags every emitted finding to mod.layer — this
+ * means a future module can declare `layer: 'domain-knowledge'` (or any other
+ * DetectorLayer) and its findings won't be silently retagged to module-class.
+ * The Q3-era post-collection retag-loop ("if walker-statistical → module-class")
+ * is replaced by this explicit-layer-per-module pattern. Individual module
+ * source files remain unchanged.
  */
 
-import type { DetectorFinding, DetectorOptions } from '../types.js';
+import type { DetectorFinding, DetectorLayer, DetectorOptions } from '../types.js';
 import { runAjvValidator } from '../ajv-validator.js';
 import { runCodegenValidation } from '../codegen-validation.js';
 import { walkCrossReferenceConsistency } from '../cross-reference-consistency.js';
@@ -38,28 +38,37 @@ import { runStyleCoherenceChecks } from '../per-style-coherence.js';
 
 type ModuleFn = (spec: object, opts?: DetectorOptions) => Promise<DetectorFinding[]>;
 
+interface ModuleEntry {
+  name: string;
+  fn: ModuleFn;
+  /** Layer-tag applied to every finding this module emits. Defaults to
+   *  `'module-class'`. Override to `'domain-knowledge'` (or another) when a
+   *  future module is conceptually outside the standard module-class layer. */
+  layer?: DetectorLayer;
+}
+
 // Adapter for per-style-coherence: runStyleCoherenceChecks is sync and
 // returns CoherenceResult { classification, findings }, not a Promise of
 // DetectorFinding[]. Wrap to extract findings + match the runner signature.
 const runStyleCoherence: ModuleFn = async (spec, opts) =>
   runStyleCoherenceChecks(spec, opts).findings;
 
-const ALL_MODULES: Array<{ name: string; fn: ModuleFn }> = [
-  { name: 'ajv-validator', fn: runAjvValidator },
-  { name: 'codegen-validation', fn: runCodegenValidation },
-  { name: 'cross-reference-consistency', fn: walkCrossReferenceConsistency },
-  { name: 'duplicate-schemas', fn: runDuplicateSchemaDetectors },
-  { name: 'naming-classifier', fn: runNamingClassifier },
-  { name: 'path-template-parser', fn: walkPathTemplates },
-  { name: 'ref-graph', fn: runRefGraphAnalysis },
-  { name: 'secret-scanner', fn: runSecretScanner },
-  { name: 'webhook-signature', fn: runWebhookSignature },
-  { name: 'http-protocol-pairings', fn: walkHttpProtocolPairings },
-  { name: 'problem-json-validator', fn: validateProblemJson },
-  { name: 'oauth2-flow-validator', fn: runOAuth2FlowValidator },
-  { name: 'media-type-iana-validator', fn: runMediaTypeValidator },
-  { name: 'json-schema-draft-detector', fn: runJsonSchemaDraftDetector },
-  { name: 'per-style-coherence', fn: runStyleCoherence },
+const ALL_MODULES: ModuleEntry[] = [
+  { name: 'ajv-validator', fn: runAjvValidator, layer: 'module-class' },
+  { name: 'codegen-validation', fn: runCodegenValidation, layer: 'module-class' },
+  { name: 'cross-reference-consistency', fn: walkCrossReferenceConsistency, layer: 'module-class' },
+  { name: 'duplicate-schemas', fn: runDuplicateSchemaDetectors, layer: 'module-class' },
+  { name: 'naming-classifier', fn: runNamingClassifier, layer: 'module-class' },
+  { name: 'path-template-parser', fn: walkPathTemplates, layer: 'module-class' },
+  { name: 'ref-graph', fn: runRefGraphAnalysis, layer: 'module-class' },
+  { name: 'secret-scanner', fn: runSecretScanner, layer: 'module-class' },
+  { name: 'webhook-signature', fn: runWebhookSignature, layer: 'module-class' },
+  { name: 'http-protocol-pairings', fn: walkHttpProtocolPairings, layer: 'module-class' },
+  { name: 'problem-json-validator', fn: validateProblemJson, layer: 'module-class' },
+  { name: 'oauth2-flow-validator', fn: runOAuth2FlowValidator, layer: 'module-class' },
+  { name: 'media-type-iana-validator', fn: runMediaTypeValidator, layer: 'module-class' },
+  { name: 'json-schema-draft-detector', fn: runJsonSchemaDraftDetector, layer: 'module-class' },
+  { name: 'per-style-coherence', fn: runStyleCoherence, layer: 'module-class' },
 ];
 
 export async function runModules(
@@ -70,8 +79,9 @@ export async function runModules(
   for (const mod of ALL_MODULES) {
     try {
       const findings = await mod.fn(spec, opts);
+      const targetLayer: DetectorLayer = mod.layer ?? 'module-class';
       for (const f of findings) {
-        if (f.layer === 'walker-statistical') f.layer = 'module-class';
+        f.layer = targetLayer;
       }
       all.push(...findings);
     } catch (err) {

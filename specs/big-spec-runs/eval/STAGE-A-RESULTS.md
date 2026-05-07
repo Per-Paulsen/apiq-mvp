@@ -8,7 +8,172 @@
 
 | Spec | Baseline (C-i) | Predicted post-Stage-A | **Measured (Jaccard)** | **Measured (Embedding)** | Delta vs predicted |
 |---|---:|---:|---:|---:|---:|
+| stripe-full | 37.9% | 82.8% | 62.1% (18/29) | **62.1% (18/29)** | -20.7pp |
+| pagerduty-full | 21.7% | 90.9% | 30.4% (7/23) | **69.6% (16/23)** | -21.3pp |
+| dnd5eapi | 28.6% | 85.7% | 35.7% (5/14) | **85.7% (12/14)** | +0.0pp |
 | github-rest | 12.9% | 86.9% | 25.8% (8/31) | **64.5% (20/31)** | -22.4pp |
+
+## stripe-full
+
+Findings emitted by deterministic layer: **9513**
+
+Per-layer breakdown:
+
+| Layer | Findings |
+|---|---:|
+| Spectral (OAS3-default) | 1978 |
+| Spectral (apiq-custom) | 7343 |
+| Walkers (statistical) | 19 |
+| Domain-knowledge | 0 |
+
+Unique clusters: **490** (repetition rate 94.8%)
+
+### Coverage breakdown
+
+| Subset | Covered | Total | Rate |
+|---|---:|---:|---:|
+| Total | 18 | 29 | 62.1% |
+| Substantive (non-lint) | 14 | 23 | 60.9% |
+| Pure-spectral | 15 | 20 | 75.0% |
+| Domain-knowledge | 1 | 4 | 25.0% |
+| LLM-only | 2 | 5 | 40.0% |
+| Knowledge-backed-gap | 7 | 14 | 50.0% |
+
+### Unmatched refs (candidates for Living-Artefact tag review)
+
+- **F4** [lint,pspec] `bearerAuth.bearerFormat` is set to a non-standard value
+- **F5** [pspec] `api_errors.message` is not in `required`
+- **F7** [domk] `Idempotency-Key` header is not declared on any of 293 POST/PUT/PATCH operations
+- **F8** [pspec] POST endpoints accept only `application/x-www-form-urlencoded`; not `application/json`
+- **F9** [domk] `x-stripeBypassValidation` vendor extension exposed on 538 enum fields signals non-authoritative enums
+- **F11** [pspec] 5 unix-epoch integer fields lack `format: "unix-time"` despite 152 consistent usages elsewhere
+- **F12** [domk] `Stripe-Account` and `Stripe-Version` headers are not declared on any operation
+- **F17** [llm-only] `api_errors.code` is typed as a free-form string but is documented as an enumerated value
+- **F18** [llm-only] Error payloads expose full nested PaymentIntent / PaymentMethod / SetupIntent / Source schemas
+- **F21** [llm-only] Parameter-relationship rules embedded spec-wide in prose only, not in JSON-Schema constraints
+- **F26** [lint,pspec] `operationId` values are excessively verbose machine-generated names rather than human-readable identifiers
+
+### Top detectors firing on this spec
+
+| Detector | Count |
+|---|---:|
+| codegen:openapi-typescript:validation-problem | 3430 |
+| spectral:apiq-ev-25-integer-needs-format | 1687 |
+| spectral:oas3-unused-component | 1385 |
+| spectral:apiq-cl1-property-name-reserved-keyword | 1239 |
+| spectral:apiq-ev-23-request-array-needs-maxitems | 669 |
+| spectral:apiq-ev-17-operation-needs-tags | 587 |
+| spectral:operation-tags | 587 |
+| spectral:apiq-description-no-html-markup | 582 |
+
+## pagerduty-full
+
+Findings emitted by deterministic layer: **3896**
+
+Per-layer breakdown:
+
+| Layer | Findings |
+|---|---:|
+| Spectral (OAS3-default) | 1422 |
+| Spectral (apiq-custom) | 2370 |
+| Walkers (statistical) | 13 |
+| Domain-knowledge | 0 |
+
+Unique clusters: **432** (repetition rate 88.9%)
+
+### Coverage breakdown
+
+| Subset | Covered | Total | Rate |
+|---|---:|---:|---:|
+| Total | 7 | 23 | 30.4% |
+| Substantive (non-lint) | 7 | 19 | 36.8% |
+| Pure-spectral | 6 | 17 | 35.3% |
+| Domain-knowledge | 1 | 5 | 20.0% |
+| LLM-only | 0 | 1 | 0.0% |
+| Knowledge-backed-gap | 3 | 12 | 25.0% |
+
+### Unmatched refs (candidates for Living-Artefact tag review)
+
+- **F1** [domk] Only one security scheme declared; OAuth2 path absent despite 363 operations referencing OAuth scopes in prose
+- **F2** [domk] `From` header is required for audit-trailed write operations but declared on only 14 of 224 write operations
+- **F3** [domk] All 24 `/v3/schedules*` operations carry a required `X-EARLY-ACCESS` header — production-unsafe path is not flagged at spec level
+- **F5** [pspec] Two divergent error-envelope shapes coexist: `V3ErrorResponse` (errors as object/map) vs the inline Conflict-derived schema (errors as array of strings)
+- **F6** [pspec] The four `Webhook*` response components carry only a `description`, no `content`/`schema` — webhook error bodies are unparseable from the spec
+- **F8** [pspec] `Accept` header documents versioning via `application/vnd.pagerduty+json;version=2` but the schema is unconstrained string with no other versions enumerated
+- **F9** [pspec] `sre_memories_limit.schema.default` is the string `"20 - incident_summary"` on an integer-typed schema
+- **F10** [pspec] Pagination paradigm split: 37 list-GETs use offset+limit, 14 use cursor — single API, two pagination models
+- **F12** [pspec] 63 cross-resource reference fields (`*_id`) typed as plain `string` with no `$ref` to the referenced resource
+- **F13** [lint,pspec] Tag `Apps` is declared at top level with empty description but is attached to zero operations
+- **F17** [lint,pspec] `info` block is missing `license` and `termsOfService`
+- **F18** [domk] Error `code` field typed as integer but the codespace (`2001`, `2100`, ...) is undocumented
+- **F19** [pspec] `additionalProperties` is omitted on 518 of 520 object schemas — strict-vs-lax serialisation policy is ambiguous
+- **F20** [llm-only] Conditional-validation rules ("Required when X", "mutually exclusive with Y") encoded in prose only on at least 8 schema fields
+- **F22** [lint,pspec] Most response components used 5000+ times share a `$ref` chain into `Conflict.content.application~1json.schema`, creating a fragile schema topology
+- **F23** [lint,pspec] Operation summaries are short enough but 19 of 272 schemas carry `example` (7%); request/response examples are far better-covered (134 of 156 requests, 330 of 401 inline 2xx responses)
+
+### Top detectors firing on this spec
+
+| Detector | Count |
+|---|---:|
+| codegen:openapi-typescript:validation-problem | 4572 |
+| spectral:apiq-cl1-property-name-reserved-keyword | 615 |
+| spectral:oas3-unused-component | 560 |
+| spectral:path-params | 436 |
+| spectral:oas3-schema | 401 |
+| spectral:apiq-ev-16-operation-needs-default-response | 308 |
+| spectral:apiq-ev-25-integer-needs-format | 274 |
+| spectral:apiq-tm-y23-write-op-needs-security | 225 |
+
+## dnd5eapi
+
+Findings emitted by deterministic layer: **483**
+
+Per-layer breakdown:
+
+| Layer | Findings |
+|---|---:|
+| Spectral (OAS3-default) | 217 |
+| Spectral (apiq-custom) | 231 |
+| Walkers (statistical) | 6 |
+| Domain-knowledge | 0 |
+
+Unique clusters: **90** (repetition rate 81.4%)
+
+### Coverage breakdown
+
+| Subset | Covered | Total | Rate |
+|---|---:|---:|---:|
+| Total | 5 | 14 | 35.7% |
+| Substantive (non-lint) | 5 | 12 | 41.7% |
+| Pure-spectral | 3 | 10 | 30.0% |
+| Domain-knowledge | 1 | 2 | 50.0% |
+| LLM-only | 1 | 2 | 50.0% |
+| Knowledge-backed-gap | 1 | 4 | 25.0% |
+
+### Unmatched refs (candidates for Living-Artefact tag review)
+
+- **F1** [pspec] `servers` array exposes a `localhost:3000` development URL alongside production
+- **F2** [pspec] Top-level `tags` declares 2 entries; operations reference 16 distinct tag names
+- **F4** [pspec] 25 of 47 operations are missing `description`
+- **F5** [pspec] OAS 3.0 violation: `$ref` co-occurs with sibling keys in 4 locations
+- **F7** [pspec] Only 1 of 47 operations declares any non-200 response; the catalog of error states is undocumented
+- **F8** [domk] `error-response` schema is not RFC 7807-conformant
+- **F10** [pspec] Pervasive `type: number` on properties that are integers by domain semantics
+- **F13** [lint,pspec] `info.contact.email` is missing
+- **F14** [lint,llm-only] `info.version: "0.1"` does not reflect data-version or follow semver
+
+### Top detectors firing on this spec
+
+| Detector | Count |
+|---|---:|
+| codegen:openapi-typescript:validation-problem | 264 |
+| spectral:oas3-unused-component | 77 |
+| spectral:apiq-cl6-operationid-required | 47 |
+| spectral:apiq-ev-8-operation-needs-operationid | 47 |
+| spectral:operation-operationId | 47 |
+| spectral:apiq-ev-16-operation-needs-default-response | 47 |
+| spectral:operation-tag-defined | 39 |
+| spectral:apiq-cl1-property-name-reserved-keyword | 33 |
 
 ## github-rest
 

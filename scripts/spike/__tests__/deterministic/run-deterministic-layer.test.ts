@@ -53,7 +53,7 @@ describe('runDeterministicLayer integration', () => {
     expect(Object.keys(result.perDetector).length).toBeGreaterThan(10);
     expect(result.findings.every(f => typeof f.title === 'string' && f.title.length > 0)).toBe(true);
     expect(result.perLayer['module-class']).toBeGreaterThan(0);
-  }, 240000);
+  }, 600000); // 10min — generous for CPU/disk-load variance + codegen-typescript on stripe-full
 
   it('runs end-to-end on pagerduty-full without crashing and produces findings', async () => {
     const specPath = path.join(REPO_ROOT, 'openapi-examples', 'pagerduty-full', 'spec.json');
@@ -64,7 +64,7 @@ describe('runDeterministicLayer integration', () => {
     expect(Object.keys(result.perDetector).length).toBeGreaterThan(10);
     expect(result.findings.every(f => typeof f.title === 'string' && f.title.length > 0)).toBe(true);
     expect(result.perLayer['module-class']).toBeGreaterThan(0);
-  }, 180000);
+  }, 600000);
 
   it('runs end-to-end on github-rest without crashing and produces findings', async () => {
     const specPath = path.join(REPO_ROOT, 'openapi-examples', 'github-rest', 'spec.json');
@@ -75,5 +75,5 @@ describe('runDeterministicLayer integration', () => {
     expect(Object.keys(result.perDetector).length).toBeGreaterThan(10);
     expect(result.findings.every(f => typeof f.title === 'string' && f.title.length > 0)).toBe(true);
     expect(result.perLayer['module-class']).toBeGreaterThan(0);
-  }, 300000);
+  }, 900000); // 15min — github-rest is the heaviest spec (21k findings; codegen alone ~5min)
 });

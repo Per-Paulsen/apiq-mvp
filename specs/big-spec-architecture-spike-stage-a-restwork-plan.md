@@ -659,7 +659,7 @@ Wird bei jedem `/dev`-Run aktualisiert.
 
 | Welle | Spec | /dev gelaufen | Tests grün | Commit | Notes |
 |---|---|---|---|---|---|
-| Q | `specs/E09-w-q-code-quality-cleanup.md` | ✓ 2026-05-06 | 802/2 skip | (commit-hash post-commit) | done; 4 parallele Subagents (q1+q3+q2q5+q4); Q1 codegen-aggregation + Q2 env-fix + Q3 module-class layer-tag + Q4 3 integration-tests + Q5 PREDICTIONS stale-marker |
+| Q | `specs/E09-w-q-code-quality-cleanup.md` (+ `*-results.md`) | ✓ 2026-05-06 | 802/2 skip | `c8f8658` (feat) + `4560a2a` (docs) | done; 4 parallele Subagents (q1+q3+q2q5+q4); Q1 codegen-aggregation + Q2 env-fix + Q3 module-class layer-tag + Q4 3 integration-tests + Q5 PREDICTIONS stale-marker |
 | M | TBD (`/spec_ind` mit Brainstorming) | — | — | — | startbar sofort (orthogonal) |
 | F | TBD | — | — | — | wartet auf M |
 | C | TBD | — | — | — | wartet auf F |

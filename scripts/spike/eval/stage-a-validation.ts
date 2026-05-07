@@ -301,6 +301,170 @@ function renderResults(results: SpecResult[], predictions: Map<string, SpecPredi
 }
 
 // =============================================================================
+// Section-aware merge (Welle Q / Q6)
+//
+// When the run covers only a subset of ALL_SPECS (via --specs=...), we MUST
+// NOT overwrite the existing STAGE-A-RESULTS.md with a partial-only render —
+// that would erase coverage for all other specs (which is exactly what
+// happened on 2026-05-06 with Q2-verify and Q4-measurement runs). Instead:
+// parse the existing md, replace only the headline-row + per-spec section
+// for each spec in the run, keep everything else verbatim.
+//
+// A full-spec run (no --specs= flag) does a plain render-and-overwrite, same
+// as before — this branch is the canonical "regenerate everything" path.
+//
+// `--write-output=<path>` argument routes the render to a custom path (e.g.
+// `/tmp/stage-a-experimental.md`) WITHOUT touching STAGE-A-RESULTS.md at all.
+// =============================================================================
+
+const TAIL_HEADING = '## What Phase B measures next';
+
+interface ParsedExistingMd {
+  preamble: string;     // up to (excluding) `## Headline`
+  headlineRows: Map<string, string>; // spec → raw "| spec | baseline | ... |" line
+  specSections: Map<string, string>; // spec → block from "## <spec>" up to next "## "
+  tail: string;         // from `## What Phase B measures next` to end
+}
+
+function parseExistingResults(md: string): ParsedExistingMd | null {
+  if (!md) return null;
+  const lines = md.split('\n');
+
+  let headlineIdx = -1;
+  let tailIdx = -1;
+  for (let i = 0; i < lines.length; i++) {
+    if (headlineIdx < 0 && lines[i].startsWith('## Headline')) headlineIdx = i;
+    if (lines[i].startsWith(TAIL_HEADING)) {
+      tailIdx = i;
+      break;
+    }
+  }
+  if (headlineIdx < 0 || tailIdx < 0) return null;
+
+  const preamble = lines.slice(0, headlineIdx).join('\n');
+  const tail = lines.slice(tailIdx).join('\n');
+
+  // Headline row regex: "| <spec> | <rest> |"
+  const headlineRows = new Map<string, string>();
+  for (let i = headlineIdx; i < tailIdx; i++) {
+    const m = lines[i].match(/^\|\s*([\w-]+)\s*\|/);
+    if (m && ALL_SPECS.includes(m[1])) {
+      headlineRows.set(m[1], lines[i]);
+    }
+  }
+
+  // Per-spec sections: scan from after-headline to tail, split by "## <spec>"
+  const specSections = new Map<string, string>();
+  let currentSpec: string | null = null;
+  let currentStart = -1;
+  for (let i = headlineIdx; i < tailIdx; i++) {
+    const m = lines[i].match(/^##\s+([\w-]+)\s*$/);
+    if (m && ALL_SPECS.includes(m[1])) {
+      if (currentSpec) {
+        specSections.set(currentSpec, lines.slice(currentStart, i).join('\n').replace(/\n+$/, '') + '\n\n');
+      }
+      currentSpec = m[1];
+      currentStart = i;
+    }
+  }
+  if (currentSpec) {
+    specSections.set(currentSpec, lines.slice(currentStart, tailIdx).join('\n').replace(/\n+$/, '') + '\n\n');
+  }
+
+  return { preamble, headlineRows, specSections, tail };
+}
+
+function renderHeadlineRow(r: SpecResult, predictions: Map<string, SpecPrediction>): string {
+  const pred = predictions.get(r.spec);
+  const baselineCell = pred ? PCT(pred.baselineRate) : '—';
+  const predictedCell = pred ? PCT(pred.predictedRate) : '—';
+  const jaccardCell = `${PCT(r.jaccard.coverageRate)} (${r.jaccard.coveredRefs}/${r.jaccard.totalRefs})`;
+  const embeddingCell = r.embedding
+    ? `**${PCT(r.embedding.coverageRate)} (${r.embedding.coveredRefs}/${r.embedding.totalRefs})**`
+    : '—';
+  const bestRate = Math.max(r.jaccard.coverageRate, r.embedding?.coverageRate ?? 0);
+  const deltaCell = pred
+    ? `${(bestRate - pred.predictedRate) * 100 >= 0 ? '+' : ''}${((bestRate - pred.predictedRate) * 100).toFixed(1)}pp`
+    : '—';
+  return `| ${r.spec} | ${baselineCell} | ${predictedCell} | ${jaccardCell} | ${embeddingCell} | ${deltaCell} |`;
+}
+
+function renderSpecSection(r: SpecResult, predictions: Map<string, SpecPrediction>): string {
+  // Render a single per-spec block. Reuse renderResults logic by calling it
+  // with a 1-element results array, then strip preamble/headline/tail to
+  // extract just the per-spec body.
+  void predictions;
+  const wholeMd = renderResults([r], new Map([[r.spec, predictions.get(r.spec)!].filter(Boolean) as [string, SpecPrediction]]));
+  const lines = wholeMd.split('\n');
+  let start = -1;
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i] === `## ${r.spec}`) {
+      start = i;
+      break;
+    }
+  }
+  if (start < 0) return '';
+  let end = lines.length;
+  for (let i = start + 1; i < lines.length; i++) {
+    if (lines[i].startsWith('## ') && !lines[i].startsWith(`## ${r.spec}`)) {
+      end = i;
+      break;
+    }
+  }
+  return lines.slice(start, end).join('\n').replace(/\n+$/, '') + '\n\n';
+}
+
+/** Section-aware merge of new partial results into an existing md. Used when
+ *  --specs=<subset> is given AND the existing file is parseable. */
+export function mergeWithExisting(
+  newResults: SpecResult[],
+  existingMd: string,
+  predictions: Map<string, SpecPrediction>
+): string {
+  const parsed = parseExistingResults(existingMd);
+  if (!parsed) {
+    // Existing md is unparseable; fall back to plain render.
+    return renderResults(newResults, predictions);
+  }
+
+  // Update headline rows in place.
+  for (const r of newResults) {
+    parsed.headlineRows.set(r.spec, renderHeadlineRow(r, predictions));
+  }
+  // Update per-spec sections.
+  for (const r of newResults) {
+    parsed.specSections.set(r.spec, renderSpecSection(r, predictions));
+  }
+
+  // Re-emit headline block in ALL_SPECS order, only including specs we
+  // actually have rows for.
+  const headlineLines: string[] = [];
+  headlineLines.push('## Headline: measured vs predicted coverage');
+  headlineLines.push('');
+  headlineLines.push('| Spec | Baseline (C-i) | Predicted post-Stage-A | **Measured (Jaccard)** | **Measured (Embedding)** | Delta vs predicted |');
+  headlineLines.push('|---|---:|---:|---:|---:|---:|');
+  for (const s of ALL_SPECS) {
+    const row = parsed.headlineRows.get(s);
+    if (row) headlineLines.push(row);
+  }
+  headlineLines.push('');
+
+  // Per-spec sections in ALL_SPECS order.
+  const sectionLines: string[] = [];
+  for (const s of ALL_SPECS) {
+    const block = parsed.specSections.get(s);
+    if (block) sectionLines.push(block);
+  }
+
+  return (
+    parsed.preamble.replace(/\n+$/, '') + '\n\n' +
+    headlineLines.join('\n') + '\n' +
+    sectionLines.join('') +
+    parsed.tail.replace(/\n+$/, '') + '\n'
+  );
+}
+
+// =============================================================================
 // Main
 // =============================================================================
 
@@ -309,6 +473,8 @@ async function main(): Promise<void> {
 
   const args = process.argv.slice(2);
   const specsFlag = args.find((a) => a.startsWith('--specs='))?.slice('--specs='.length);
+  const writeOutputFlag = args.find((a) => a.startsWith('--write-output='))?.slice('--write-output='.length);
+  const isSubsetRun = !!specsFlag;
   const specs = specsFlag ? specsFlag.split(',') : ALL_SPECS;
 
   // Load references.
@@ -333,10 +499,25 @@ async function main(): Promise<void> {
 
   // Render + write.
   const predictions = loadPredictions();
-  const md = renderResults(results, predictions);
-  const outPath = path.join(REPO_ROOT, 'specs', 'big-spec-runs', 'eval', 'STAGE-A-RESULTS.md');
+  const canonicalOutPath = path.join(REPO_ROOT, 'specs', 'big-spec-runs', 'eval', 'STAGE-A-RESULTS.md');
+  const outPath = writeOutputFlag
+    ? path.resolve(writeOutputFlag)
+    : canonicalOutPath;
+
+  // Q6 — section-aware merge for subset runs to canonical path. A full-spec
+  // run (no --specs flag) or a write-output redirect always does a plain
+  // render-and-overwrite of the target.
+  let md: string;
+  const writingToCanonical = path.resolve(outPath) === canonicalOutPath;
+  if (isSubsetRun && writingToCanonical && fs.existsSync(canonicalOutPath)) {
+    const existingMd = fs.readFileSync(canonicalOutPath, 'utf8');
+    md = mergeWithExisting(results, existingMd, predictions);
+    console.log(`\n[stage-a-validation] subset run on [${specs.join(', ')}] — merging into existing ${path.relative(REPO_ROOT, canonicalOutPath)}`);
+  } else {
+    md = renderResults(results, predictions);
+  }
   fs.writeFileSync(outPath, md, 'utf8');
-  console.log(`\n[stage-a-validation] wrote ${path.relative(REPO_ROOT, outPath)}`);
+  console.log(`[stage-a-validation] wrote ${path.relative(REPO_ROOT, outPath)}`);
 
   // Stdout summary.
   console.log('\n=== Stage-A Validation summary ===');
