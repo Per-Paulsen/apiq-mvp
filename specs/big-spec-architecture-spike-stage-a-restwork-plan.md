@@ -8,6 +8,37 @@
 
 ---
 
+## 0. Strategic Vision Constants — apiq's eigentliches Ziel (2026-05-07)
+
+> **Persistent context, NICHT welle-spezifisch.** Diese Constants bleiben über alle Wellen hinweg gültig + müssen in jedem Wellen-Briefing mitschwingen. User-Direktive (2026-05-07): "es ist kein a oder b, sondern alles. und wir dürfen nichts auf kosten des anderen trade-off machen."
+
+**Vision (long-term):** apiq wird **Infrastructure for AI-consumable APIs / Agent Interaction Quality** — nicht nur "OpenAPI-spec-Linter". Putzen-First gilt weiter als Methode (first-in-class deterministic linter ist Foundation, nicht Endziel), aber nicht als Tunnelblick.
+
+**Core-Insight:** "Humans tolerate bad APIs. Agents don't." Empirisch in Round-3 belegt:
+- 22.2% public APIs leave write-ops unsecured (LLM tool-calls scheitern stumm)
+- RFC-7807 0% adoption + Sunset/Deprecation 0% (LLM-error-recovery-impossible)
+- No industry-standard operationId-naming (LLM tool-selection-confidence niedrig)
+
+**Drei Spannungs-Achsen die wir managen müssen** (kein Trade-off — ALLE drei parallel):
+
+1. **Putzen-First-Welle vs Vision-Tracking:** Stage-A-Foundation muss perfekt geputzt werden (Welle F-V), ABER wir dürfen nicht vergessen dass das nur Foundation für Agent-Quality-Layer ist. Welle M2 + Welle Z bringen die agent-zentrische Arbeit nach Welle V (NACH Putzen, vor Phase B).
+
+2. **OpenAPI-spec-eval (today) vs MCP-eval (tomorrow):** OpenAPI ist NICHT legacy (96.1% adoption in 518-spec corpus, vendors shippen weiter). ABER MCP-server tools-schemas werden zweites primary-Eingabeformat. Welle Z addiert MCP-Input-Adapter ohne OpenAPI-support aufzugeben.
+
+3. **Lens-1-4 (mature) vs Lens-9-11 (untergewichtet):** Aktuell 87% der 871 patterns adressieren Lens 1-4 (klassisch human-developer-zentrisch). Lens-9 + Lens-10 zusammen nur 3.4%. Wenn Vision Agent-Interaction-Quality ist, muss diese Verteilung sich verschieben — durch gerichtetes Mining (M2) + neue Lens 11 (Agent-Tool-Disambiguation, conditional).
+
+**Ergänzende Lens-11-Hypothese (decision-pending):** Tool-Collision-Detection + Promptability-Scoring + Tool-Selection-Confidence sind nicht sauber in Lens-9 (consumability) untergebracht — passen besser zu eigener "Agent-Tool-Disambiguation"-Lens. Mining-Welle M2 hat als Acceptance-Criterium: ≥10 Patterns die Lens-11-Existenz rechtfertigen oder negieren.
+
+**Strategic-Constants-Pflicht für jeden Wellen-Briefing:**
+- Subagents wissen, dass Lens-9 + Lens-10 unterbewertet sind und tagging entsprechend skeptical sein
+- Welle F (Schema-Erweiterung) hält apiq-meta-block agent-aware (autoFixSafe + detection-precision + lens-9/10-first-class)
+- Welle V (Cross-Linter-Comparison) hat agent-quality als zusätzliches Differentiator-Kriterium über klassisches lint-coverage hinaus
+- Phase B-design weiß dass Lens-9/10/11 die primary-LLM-territory sind (nicht co-equal mit Lens-1-4)
+
+**Memory-Anchor:** `~/.claude/projects/.../memory/project_apiq_agent_readiness_positioning.md` (2026-05-07)
+
+---
+
 ## 1. Putzen-First-Prinzip
 
 **Regel:** Stage-A-Implementation wird zur eigenen Best-in-class-Vision gebaut, nicht zur Konkurrenz-Lücken-Schließung. Konkurrenz-Vergleiche kommen NACH dem Putzen, als Validation. Wenn ein Vacuum/Redocly-Test vor dem Putzen läuft, wird das Resultat zur Roadmap-Vorlage statt zum Reality-Check — apiq würde zum "Vacuum-aber-mit-extra-stuff" statt zum eigenständigen Produkt.
@@ -91,7 +122,9 @@ Pro Welle entscheiden: was passt besser?
 | **Arch** | Architectural Refactoring (flat → classifiers/aggregators/modules/rules) | F done | — |
 | **R** | Reference-Hardening (R1 isPureSpectralDetectable + R2 Second-LLM-Review) | keine | ✓ orthogonal — parallel zu allem ab Welle C |
 | **V** | 4-way Cross-Linter-Parity (Vacuum + Redocly + IBM-validator + Spectral-OWASP) + Final Stage-A-Run | M+F+C+D+D2+E+Q+T+Doc+Arch+R done |
-| **Phase B** | LLM-Pipeline-Engineering (N=3×4 Runs, eigentlicher Spike-Lock-Test) | V done |
+| **M2** | Stage-B + Agent + MCP-Mining (gerichtetes Mining für Phase B + Welle Z + Lens-9/10/11 expansion) | V done | — |
+| **Z** | MCP-Input-Format-Adapter (zweites Eingabe-Format neben OpenAPI; Tool-Collision-Detection) | V done | ✓ parallel zu Phase B / M2 |
+| **Phase B** | LLM-Pipeline-Engineering (N=3×4 Runs, eigentlicher Spike-Lock-Test) | V + M2 done (M2-patterns als Phase-B-prompt-context-substrate) |
 
 **Total Restwork:** substantial — see per-Welle Acceptance-Criteria.
 
@@ -570,6 +603,91 @@ Per `phase-b-design.md`. Pre-Conditions:
 
 ---
 
+## 16a. Welle M2 — Stage-B + Agent + MCP-Mining (NEU 2026-05-07)
+
+**Pre-Condition:** Welle V done. **Position:** nach V, vor Phase B. **Mode:** brainstorming (Source-Selection braucht Diskussion).
+
+**Begründung:** Mining-Round-3 lieferte 97.7% Stage-A-territory + 2.3% Stage-B-territory patterns aus 871 total. Wenn apiq's Vision Agent-Interaction-Quality ist (siehe §0), dann ist diese Verteilung untertaillered. Plus: Lens-9 (AI-Agent-Consumability) + Lens-10 (Operational-Metadata) zusammen nur 30 patterns = 3.4% des Frameworks. Welle M2 schließt diese Lücke gerichtet.
+
+**Mining-Goals (NICHT unbounded discovery — gerichtetes Mining):**
+
+1. **+30-50 Lens-9-patterns** (AI-Agent-Consumability erweitert):
+   - Tool-naming-quality (ambiguous-verb-detection, generic-name-detection wie `process`/`handle`/`runTask`)
+   - Parameter-ambiguity (synonymous-parameter-detection, unclear-default-detection)
+   - Description-actionability (semantic-richness-für-tool-call, nicht nur length)
+   - Promptability-score (wie einfach kann LLM aus summary+description+param-names korrekten Tool-Call konstruieren)
+   - Hallucination-risk-on-this-spec (welche Felder sind so unklar dass LLMs likely-hallucinieren)
+   - Retry-recovery-quality (sind error-responses informativ genug für agent-self-correction)
+
+2. **+15-20 Lens-10-patterns** (Operational-Metadata erweitert):
+   - Concrete patterns für Sunset-Header (RFC 8594), Deprecation-Header (RFC 9745), X-Request-Id, RateLimit-* (RFC 9745bis)
+   - Per-API-tenant rate-quota-axis (R3-PM-OP-01 Cloudflare-self-DoS als seed-pattern)
+   - Brownout-schedule patterns (R3-PM-EV-07 GitHub als positive-marker)
+
+3. **Lens-11 Discovery (Agent-Tool-Disambiguation, conditional):** mining nach patterns die Tool-Selection-Confidence + Tool-Collision adressieren. Wenn ≥10 patterns gefunden → Lens-11 wird promoviert. Wenn <10 → patterns werden in Lens-9 integriert.
+
+**Sources (curated für gerichtetes Mining — nicht discovery-unbounded):**
+
+- **Anthropic Claude tool-use docs + cookbook** (anti-patterns aus claude-cookbook + tool-use-best-practices)
+- **OpenAI function-calling docs + community-postmortems** (function-calling-failures aus dev-blogs)
+- **MCP-server design discussions** (Anthropic MCP-spec + GitHub MCP-server-Examples + Slack/Linear/Notion MCP-tool-design)
+- **Agent-failure-postmortems:** "we shipped tool-calling, here's what broke" engineering-blog-posts
+- **Cursor / Cline / Continue / Aider tool-design-discussions** (IDE-agents haben extreme tool-collision-experience)
+- **Academic papers 2024-2026:** "tool-use reliability", "agent-API interaction", "function-calling-failures"
+
+**Acceptance Criteria:**
+
+1. ≥30 Lens-9 + ≥15 Lens-10 + Lens-11-Decision (promoviert oder integriert)
+2. ≥80% verbatim-citation-rate (web-verifiable)
+3. ≥5 Stage-A-detectable patterns aus Lens-9-Mining die in Welle C/D/D2 als concrete Spectral-Rules implementierbar sind (sonst würde M2 reine Phase-B-prompt-context-Anreicherung sein, was zu wenig wäre)
+4. Phase-B-prompt-context-bundle: structured retrieval-bundle für Phase B's v6-prompt mit "diese Patterns sind agent-relevant für diese Endpoint-Klasse"
+5. Round-4-Decision (M2 als finaler Mining-Pass) dokumentiert
+
+**Output:**
+
+- `specs/E09-w-m2-agent-mining.md` (spec)
+- `specs/big-spec-architecture-spike-stage-a-mining-round4-{agent,mcp,toolcalling}.md` (3 source-files)
+- Master `rules-brainstorm.md` extended um "Round-4 Additions"-Section
+- `scripts/spike/data/patterns.json` regen mit Lens-9/10/11 expansion
+- Plus eventuell: `scripts/spike/data/agent-prompt-context-bundle.json` als Phase-B-prompt-substrate
+
+**Risk-Mitigation:** Welle M2 ist post-V — wenn Cross-Linter-Validation zeigt dass apiq schon ist agent-quality-leader auch ohne M2, könnte M2 conditionally auf "Phase B braucht es" reduziert werden. Wenn V zeigt dass Konkurrenz agent-quality besser hat, ist M2 verbindlich.
+
+---
+
+## 16b. Welle Z — MCP-Input-Format-Adapter (NEU 2026-05-07)
+
+**Pre-Condition:** Welle V done. **Position:** parallel zu Welle M2 oder Phase B. **Mode:** direkt (klar definiert).
+
+**Begründung:** Wenn in 3-5 Jahren MCP-server-Schema das primary-Distribution-Format für AI-zugängliche APIs wird, wird apiq's MCP-Eingabe-Format-Support load-bearing. Ohne MCP-Eingabe ist apiq dann "Linter für 1-of-3-Input-Formats" statt "Agent-Quality-Infrastructure". Welle Z addiert MCP-Eingabe ohne OpenAPI-support aufzugeben.
+
+**Was Welle Z baut:**
+
+1. **MCP-Server-Adapter:** `scripts/spike/lib/mcp-adapter.ts` — fetched MCP-server's `tools/list` + tool-Schemas, konvertiert in internes `Spec`-Format-equivalent (Pseudo-OpenAPI repräsentation). Oder: MCP als first-class-format mit eigenem Detector-Layer-Path.
+
+2. **Tool-Collision-Detector:** `scripts/spike/deterministic/tool-collision.ts` — embedding-similarity zwischen Tool-Descriptions + Name-Patterns + Parameter-Schemas. Threshold-based collision-flagging. **Wiederverwendung der `findRelatedPatterns`-Infrastruktur aus Welle M5.**
+
+3. **Naming-Quality-Walker für MCP:** `scripts/spike/deterministic/walkers/mcp-naming-quality.ts` — generic-verb-detection, ambiguous-tool-name-flagging, namespace-hygiene-checks.
+
+4. **AI-Readiness-Score (composite):** `scripts/spike/lib/ai-readiness-score.ts` — combines Lens-9 + Lens-10 + Tool-Collision + Naming-Quality findings into 0-100 composite-score. Für UI-Header-Display + benchmarking.
+
+**Acceptance Criteria:**
+
+1. apiq akzeptiert MCP-server-URL als Input neben OpenAPI-spec-File-upload
+2. Tool-Collision-Detector findet ≥1 collision in einem multi-tool-MCP-server (test-fixture)
+3. AI-Readiness-Score ist berechenbar für: einzelne OpenAPI-spec, einzelner MCP-server, Vergleich zwischen beiden
+4. Bestehende OpenAPI-pipeline-tests bleiben grün (Welle Z ist additive, nicht ersetzend)
+5. Welle V (Cross-Linter) weiterhin nur OpenAPI-comparison; MCP-comparison wäre Welle V′ oder v1.1+
+
+**Out of Scope:**
+
+- Runtime simulations (Phase 4 von ChatGPT-Brainstorming) — v2/v3-territory
+- Continuous agent observability (Phase 5) — v2/v3-territory
+- MCP-server-registry / public scoring — out of v1-scope (potentielle v1.5-Marketing-Erweiterung)
+- Live-MCP-server-execution / actual-tool-calling — out of scope (security + latency-Implikationen für statisch-Eval)
+
+---
+
 ## 17. Append-Workflow für Mining-Round-N
 
 Mining-Round-3 wird in `mining-round3.md` geschrieben. Falls nach M1+M2 weitere Rounds sinnvoll sind:
@@ -628,6 +746,15 @@ Mining-Round-3 wird in `mining-round3.md` geschrieben. Falls nach M1+M2 weitere 
 
 **Risiko 6 — `/dev` Skill bei großen Wellen overwhelmed.** Z.B. F4 mit 110 Rule-Migrationen könnte zu groß sein.
 **Mitigation:** Welle in Sub-Specs splitten (F4a F4b F4c F4d je ~28 rules). Wir sehen das nach erstem `/dev`-Run.
+
+**Risiko 7 (NEU 2026-05-07) — Putzen-First-Tunnelblick.** Stage-A-Wellen Q/M/F/C/D/D2/E/T/Doc/Arch/R/V haben hohen Putzfokus; Risiko dass agent-readiness-vision (§0) während dieser Wellen aus dem Blickfeld gerät und nur "linter-shipping" mentality bleibt.
+**Mitigation:** §0 Strategic Vision Constants ist persistent context für ALLE Wellen-Briefings. Welle M2 + Welle Z post-V als verbindlich im Plan-Doc (nicht "stretch-goals"). Memory-anchor `project_apiq_agent_readiness_positioning.md` + `feedback_no_trade_off_against_vision.md` halten Vision in jedem resume-trigger.
+
+**Risiko 8 (NEU 2026-05-07) — MCP-Markt-Timing-Risk.** Wenn MCP-Adoption schneller wächst als erwartet, könnte v1-launch ohne MCP-Input-Format als zu-spät erscheinen. Wenn MCP-Adoption langsamer wächst, könnte Welle Z premature engineering sein.
+**Mitigation:** Welle Z ist post-V positioniert (NACH Putzen) — kein Premature-engineering. Plus Welle Z ist additive, nicht-ersetzend (OpenAPI bleibt primary-input). Plus: AI-Readiness-Score in Welle Z ist eigenständig wertvoll auch wenn MCP-Markt langsam wächst.
+
+**Risiko 9 (NEU 2026-05-07) — Lens-9 + Lens-10 Mining-Untergewichtung.** 87% der 871 Round-1+2+3-patterns sind in Lens 1-4. Wenn Vision Agent-Quality ist, ist diese Verteilung zu stark Linter-zentrisch.
+**Mitigation:** Welle M2 mit explizitem Mining-Goal +30 Lens-9 + +15 Lens-10 + Lens-11-Discovery. Plus: Severity-Schema-Erweiterung in Welle F berücksichtigt Lens-9-first-class statt as-afterthought.
 
 ---
 
@@ -713,4 +840,22 @@ Wird bei jedem `/dev`-Run aktualisiert.
 | Arch | TBD | — | — | — | wartet auf F |
 | R | TBD | — | — | — | startbar ab Welle C |
 | V | TBD | — | — | — | wartet auf alle |
-| Phase B | siehe `phase-b-design.md` | — | — | — | wartet auf V |
+| **M2** (NEU) | TBD — agent + MCP-mining gerichtet | — | — | — | wartet auf V; pre-Phase-B; siehe §16a |
+| **Z** (NEU) | TBD — MCP-Input-Format-Adapter | — | — | — | wartet auf V; parallel zu M2/Phase-B möglich; siehe §16b |
+| Phase B | siehe `phase-b-design.md` | — | — | — | wartet auf V + M2 (M2-patterns als prompt-context-substrate) |
+
+---
+
+## 22. Open Strategic Questions (NEU 2026-05-07)
+
+> Persistent open-questions die NICHT pro-welle resolved werden, sondern strategische Reviews brauchen. Tracked als Plan-Doc-state.
+
+**OQ-Strategic-1 — Lens-10 Split-Decision:** Aktuell ist Lens-10 (Operational-Metadata) heterogen: Deprecation-Policy + Observability-Headers + Rate-Limit + API-Versioning. Sollte das in Lens-10a/10b/10c aufgeteilt werden? **Decision-Trigger:** nach Welle M2 evaluieren — wenn Round-4-Mining ≥10 patterns pro sub-bucket findet, split-würdig. Falls <10, eigenständige Lens-10 mit klar dokumentierten Sub-Sections.
+
+**OQ-Strategic-2 — Lens-11 (Agent-Tool-Disambiguation) Promotion-Decision:** Tool-Collision-Detection + Promptability + Tool-Selection-Confidence sind nicht sauber in Lens-9 (consumability). **Decision-Trigger:** Welle M2 hat als Acceptance-Criterium "Lens-11-Decision dokumentiert" — wenn ≥10 distinct patterns gefunden werden, Lens-11-Promotion + Severity-Schema-Erweiterung in Welle F-Erweiterung. Falls <10, integration in Lens-9.
+
+**OQ-Strategic-3 — Phase-B-Lens-Bias-Correction:** `phase-b-design.md` v6-prompt soll Lens-9 + Lens-10 + (eventuell 11) als primary-territory addressieren statt co-equal mit Lens-1-4. **Decision-Trigger:** post-Welle-M2 — `phase-b-design.md` Update um agent-aware-prompt-engineering. Phase-B-Run nutzt M2-Mining-Output als prompt-context-bundle.
+
+**OQ-Strategic-4 — MCP-Readiness als Marketing/Positioning-Feature:** Soll apiq's Landing-Page + GitHub-README "AI-Readiness-Score" (Welle Z output) als primary value-prop positionieren oder als secondary feature? **Decision-Trigger:** post-Welle-Z + Welle V (wenn Cross-Linter-Validation Differentiator-Position klärt). Tagline-Decision für `prd-launch.md`: "Humans tolerate bad APIs. Agents don't." als Headline-Kandidat.
+
+**OQ-Strategic-5 — v2/v3 Vision-Items NICHT für v1:** Phase 4 (Runtime simulations / agent benchmarking) + Phase 5 (Continuous agent observability) aus ChatGPT-Brainstorming sind out-of-scope für v1-launch — explizit als v2/v3-territory gemarkiert. Soll Plan-Doc post-Phase-B eine v2-Vision-Section haben? **Decision-Trigger:** post-Phase-B Decision — wenn Phase-B PASS, v2-Vision-Plan-Doc als follow-up-spec.
