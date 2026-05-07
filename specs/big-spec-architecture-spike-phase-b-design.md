@@ -2,7 +2,7 @@
 
 > **Zweck:** single source-of-truth für Phase-B-Pipeline-Design. Phase B = LLM v6-Prompt-Test mit Pre-pass via Stage A. Eigentlicher Spike-Lock-Test (Stage A war Vorbereitung). Wird ausgeführt nach Welle E (Stage A komplett).
 >
-> **Status (2026-05-06):** Design-doc, post-W4. Stage-A-Pipeline gewired (W2 done) + ehrlich gemessen (W4 done — siehe `specs/big-spec-runs/eval/STAGE-A-RESULTS.md`). Erwartete Implementierung: post-Pre-Phase-B-Restpunkte (codegen-aggregation, OPENAI_API_KEY-fix, reference-classify, cross-linter-parity). **Token-Budget-Math in §2 ist nach W4-Measurement neu zu rechnen** — codegen-validation emittiert 9.834 single findings pro Spec, blow-out für naive 3-Layer-Cleanup (siehe neue OQ8 in §8). Cost-Schätzung in §10 unverändert (3-5d + ~$25-40 LLM-Cost) aber Pre-Conditions verschoben.
+> **Status (2026-05-06):** Design-doc, post-W4. Stage-A-Pipeline gewired (W2 done) + ehrlich gemessen (W4 done — siehe `specs/big-spec-runs/eval/STAGE-A-RESULTS.md`). Erwartete Implementierung: post-Pre-Phase-B-Restpunkte (codegen-aggregation, OPENAI_API_KEY-fix, reference-classify, cross-linter-parity). **Token-Budget-Math in §2 ist nach W4-Measurement neu zu rechnen** — codegen-validation emittiert 9.834 single findings pro Spec, blow-out für naive 3-Layer-Cleanup (siehe neue OQ8 in §8). Pre-Conditions verschoben.
 >
 > **Beziehung zu anderen specs:**
 > - `big-spec-architecture-spike.md` Draft 0.6+ — original spike-doc mit Two-Call-Architektur und (C-i) Sonnet+Sonnet Decision
@@ -251,16 +251,12 @@ Operation-spec: {operation-block}
 ### N=3 auf 1 well-instrumentierten Spec
 - **Spec:** pagerduty-full (~600 ops, complete API, gut-bekannt)
 - **Runs:** N=3 mit identischem prompt + temperature
-- **Cost:** ~$3-5 per run × 3 = ~$10-15
 - **Goal:** Run-Varianz-Signal — coverage-Werte ±5-8 percentage points expected
 
 ### Plus N=1 auf 3 weiteren Specs für Coverage
 - **Specs:** stripe-full, github-rest, dnd5eapi
 - **Runs:** 1 each
-- **Cost:** ~$5-8 each × 3 = ~$15-24
 - **Goal:** spec-diversity-signal
-
-**Total Phase-B-Cost-Estimate: ~$25-40 für full empirical pass.**
 
 ---
 
@@ -285,7 +281,7 @@ LLM emittiert findings auf "pre-cleaned spec" mit cleaned-Pfaden. User sieht ORI
 
 **Erwartete Cost-Reduction durch caching:**
 - System-prompt: ~3K tokens, used in 600+ phase-1-calls = ~1.8M cached tokens
-- Discount: 90% → ~$3-4 saved per pagerduty-run
+- Discount: 90% auf cached input tokens
 
 ---
 
@@ -319,11 +315,11 @@ LLM emittiert findings auf "pre-cleaned spec" mit cleaned-Pfaden. User sieht ORI
 6. **Prompt-caching-stability:** ändert sich category-summary zwischen Phase-1-calls (sollte nicht), oder muss pro call neu computed werden?
 7. **Stage-A pipeline-wiring (W2):** ✓ RESOLVED 2026-05-06. 15 of 17 module-classes wired in `scripts/spike/deterministic/modules/index.ts` (spec-diff stays orphan, 2-Spec). All 5 custom-functions referenced by active rules. 110 total active spectral rules.
 
-8. **codegen-validation Output-Aggregation (NEW post-W4):** das Modul emittiert per-occurrence findings (9.834 für ein Root-Problem auf github-rest). Phase-B-Token-Budget kann das nicht in 200K-Context stuffen. Optionen: (a) module-side: codegen-validation aggregiert intern + emittiert 1 Finding mit `{occurrences: 9834, locations: [...]}`; (b) output-mapper-side: collapse all `codegen:*` findings zu 1 category-row vor LLM-prompt; (c) findings-compaction: pattern-id-based grouping schon im Compaction-Layer-2. Decision: pragmatisch (b) zuerst — 1-2h work, kein Modul-Code-Change. Pre-Condition für Phase-B-Engineering-Start.
+8. **codegen-validation Output-Aggregation (NEW post-W4):** das Modul emittiert per-occurrence findings (9.834 für ein Root-Problem auf github-rest). Phase-B-Token-Budget kann das nicht in 200K-Context stuffen. Optionen: (a) module-side: codegen-validation aggregiert intern + emittiert 1 Finding mit `{occurrences: 9834, locations: [...]}`; (b) output-mapper-side: collapse all `codegen:*` findings zu 1 category-row vor LLM-prompt; (c) findings-compaction: pattern-id-based grouping schon im Compaction-Layer-2. Decision: pragmatisch (b) zuerst — kein Modul-Code-Change. Pre-Condition für Phase-B-Engineering-Start.
 
-9. **Reference-Findings Authenticity (NEW):** alle 4 Reference-Sets sind LLM-authored, never human-hardened (per `humanHardenedDate: null` in JSON). Coverage-Messung gegen LLM-References ist meta-circular. Empfehlung: dedicated Re-Classification Subagent-Task vor Phase-B (~2-3h) — `isPureSpectralDetectable` ehrlich tagger.
+9. **Reference-Findings Authenticity (NEW):** alle 4 Reference-Sets sind LLM-authored, never human-hardened (per `humanHardenedDate: null` in JSON). Coverage-Messung gegen LLM-References ist meta-circular. Empfehlung: dedicated Re-Classification Subagent-Task vor Phase-B — `isPureSpectralDetectable` ehrlich tagger.
 
-10. **Cross-Linter-Parity Smoke (NEW):** Vacuum/Redocly/Spectral-OWASP comparison nie ausgeführt (siehe `critical-review.md:528`). "Konkurrenz-Pari"-Claims sind un-tested. Smoke-Test (~1h) — wenn Stage-A wirklich Pari erreicht, supports "best-in-class deterministic linter"-Positioning für PRD; wenn nicht, dann positioning braucht Reframe.
+10. **Cross-Linter-Parity Smoke (NEW):** Vacuum/Redocly/Spectral-OWASP comparison nie ausgeführt (siehe `critical-review.md:528`). "Konkurrenz-Pari"-Claims sind un-tested. Smoke-Test — wenn Stage-A wirklich Pari erreicht, supports "best-in-class deterministic linter"-Positioning für PRD; wenn nicht, dann positioning braucht Reframe.
 
 ---
 
@@ -332,27 +328,23 @@ LLM emittiert findings auf "pre-cleaned spec" mit cleaned-Pfaden. User sieht ORI
 - Wenn Welle E (T24 Putz-Niveau-Benchmark) abgeschlossen ist, kann Phase B starten.
 - `autoFixSafe` braucht Severity-Schema-Erweiterung (T23 update — kleiner Patch-Commit).
 - Findings-Compaction-Module + Auto-Apply-Module sind neue Komponenten in `scripts/spike/deterministic/` (oder `scripts/spike/phase-b/`).
-- Phase-B-Cost-Schätzung ($25-40) muss in PRD-Revision (BYOK-decision) einfließen.
+- Phase-B-LLM-Run-Cost muss in PRD-Revision (BYOK-decision) einfließen.
 
 ---
 
-## 10. Implementation-Plan-Estimate
+## 10. Implementation-Plan
 
-| Step | Effort |
-|---|---|
-| Severity-Schema `autoFixSafe`-flag-extension + tag ~30-50 patterns | 0.5 d |
-| Findings-Compaction-Module (~30-50 lines + tests) | 0.5 d |
-| Per-Endpoint Findings-Slicer | 0.5 d |
-| Auto-Apply-Patcher (`apply-safe-only.ts`) | 0.5 d |
-| v6-Prompt-Engineering + iteration | 0.5-1 d |
-| Two-Call-Dispatcher integration mit pre-pass | 0.5-1 d |
-| Map-reduce für Phase-2 (only if needed for github-rest/stripe-full) | 1 d |
-| Output-Merger + apply-trace tracking | 0.5 d |
-| N=3 multi-run + analysis | 0.5 d (mostly wallclock) |
-| **Total Phase-B Engineering vor erstem Run** | **~3-5 days** |
-| **Phase-B Run-Cost** | **~$25-40 LLM-cost** |
-
-(Ursprünglich hatte ich Phase B mit "1 Tag" geschätzt — das war falsch. Realistic mit Stage-A-Integration ist 3-5 Tage Engineering plus Cost.)
+| Step |
+|---|
+| Severity-Schema `autoFixSafe`-flag-extension + tag ~30-50 patterns |
+| Findings-Compaction-Module (~30-50 lines + tests) |
+| Per-Endpoint Findings-Slicer |
+| Auto-Apply-Patcher (`apply-safe-only.ts`) |
+| v6-Prompt-Engineering + iteration |
+| Two-Call-Dispatcher integration mit pre-pass |
+| Map-reduce für Phase-2 (only if needed for github-rest/stripe-full) |
+| Output-Merger + apply-trace tracking |
+| N=3 multi-run + analysis |
 
 **Pre-condition:** Phase B Engineering kann nicht starten bevor (alle DONE 2026-05-06):
 - W1 doc-honesty sync ✓
@@ -361,9 +353,7 @@ LLM emittiert findings auf "pre-cleaned spec" mit cleaned-Pfaden. User sieht ORI
 - W4 stage-a-validation re-run auf 4 Specs ✓
 
 Plus zusätzliche Pre-Conditions aufgrund W4-Findings:
-- **codegen-validation Output-Aggregation** (OQ8 ~1-2h) — Pre-Condition für Token-Budget-Math
-- **OPENAI_API_KEY env-loading fix** (~10min) — Embedding-Scorer für ehrliche Coverage
-- **Reference-Findings Re-Classification** (OQ9 ~2-3h)
-- **Cross-Linter-Parity Smoke** (OQ10 ~1h, optional aber wertvoll für Positioning-Claims)
-
-Total Pre-Phase-B-Restwork: **~5-7h Engineering**. Phase-B-Engineering selbst danach unverändert ~3-5d + ~$25-40 LLM-Cost.
+- **codegen-validation Output-Aggregation** (OQ8) — Pre-Condition für Token-Budget-Math
+- **OPENAI_API_KEY env-loading fix** — Embedding-Scorer für ehrliche Coverage
+- **Reference-Findings Re-Classification** (OQ9)
+- **Cross-Linter-Parity Smoke** (OQ10, optional aber wertvoll für Positioning-Claims)

@@ -211,3 +211,26 @@ Sofort nach Q1-Q5 implementiert (gleiche Welle-Q-Session 2026-05-06 evening), pe
 ## Final Status (2026-05-06 evening)
 
 Welle Q komplett inkl. Q6/Q7/Q8-Follow-ups. Alle Open Questions resolved. Tests grün. Final commit nach Q6/Q7/Q8 Implementation. Plan-Doc + CLAUDE.md + Memory-Handoff bekommen Embedding-Coverage-Numbers + revidierte Strategic-Picture.
+
+---
+
+## Welle Q — User-Confirmed Done (2026-05-06)
+
+User-Confirmation explizit erteilt 2026-05-06 evening: "bitte erstmal jetzt endlich welle q als formal abschließen!". Damit gilt Welle Q per `/dev` workflow als abgeschlossenes Epic.
+
+**Commits-Liste:**
+- `4560a2a` docs: epic 09 — restwork plan v2 + audit reports + doc-sync
+- `c8f8658` feat: epic 09 wellen W2 + W3 + W4 + Q — pipeline-wiring + threat-rules + cleanup
+- `41dd07e` feat: epic 09 / welle Q follow-up — Q6 + Q7 + Q8 + STAGE-A-RESULTS 4-spec regen
+- `0acb02e` docs: epic 09 — sync CLAUDE.md + plan-doc post-Welle-Q
+
+**Test-Stand final:** 806 tests passed / 38 files / 2 skipped / 0 fail.
+
+**Memory-Updates landed:**
+- `feedback_putzen_first_before_validation.md`
+- `feedback_never_defer_fixes.md`
+- `feedback_no_pseudo_questions.md` (verstärkt mit Welle-M-incident)
+- `feedback_no_engineering_time_estimates.md` (neu post-Welle-M-Brainstorming)
+- `MEMORY.md` Epic-09-hook + project_epic09_spike_handoff.md
+
+**Welle Q done.** Nächste Welle: M (Mining-Optimization, Spec ready unter `specs/E09-w-m-mining-optimization.md`).
