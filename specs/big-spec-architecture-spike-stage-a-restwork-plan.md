@@ -633,23 +633,29 @@ Mining-Round-3 wird in `mining-round3.md` geschrieben. Falls nach M1+M2 weitere 
 
 ---
 
-## 20. Status zum 2026-05-06
+## 20. Status zum 2026-05-06 evening
 
-**Welle 0+A+B + W1-W4 done** (siehe `project_epic09_spike_handoff.md`).
+**Welle 0+A+B + W1-W4 + Welle Q (Q1-Q8) done** (siehe `project_epic09_spike_handoff.md` + `specs/E09-w-q-code-quality-cleanup-results.md`).
 
 **Aktuelle Inventur:**
 - 110 active spectral rules (4 yamls)
 - 16 walkers
-- 15 module-classes wired (modules/index.ts)
+- 15 module-classes wired (modules/index.ts) mit explizitem `layer` field per ALL_MODULES entry (Q7)
 - 5 custom spectral-functions (alle aktiv)
-- 791 tests pass / 36 files
+- 806 tests pass / 38 files / 2 skipped / 0 fail
 
-**W4-Coverage** (Jaccard-only, embedding-scorer broken):
-- stripe-full 62.1% / pagerduty 30.4% / dnd5eapi 35.7% / github-rest 25.8%
+**Coverage post-Welle-Q** (4-Spec re-run mit Embedding erstmals dank Q2-fix):
 
-**Strategischer Kontext:** -20 to -61pp Gap zur Phase-0-Prediction ist LLM-territory (Lens 3/5/8/9), nicht deterministic-territory. Welle C/D/E ist value-add für Reputation/Putz-Maximum, nicht load-bearing für Coverage-Lücke-Schließung.
+| Spec | Predicted | Jaccard | Embedding | Delta vs Predicted |
+|---|---:|---:|---:|---:|
+| stripe-full | 82.8% | 62.1% | 62.1% | -20.7pp |
+| pagerduty-full | 90.9% | 30.4% | **69.6%** | -21.3pp |
+| dnd5eapi | 85.7% | 35.7% | **85.7%** | **+0.0pp (= Prediction)** |
+| github-rest | 86.9% | 25.8% | **64.5%** | -22.4pp |
 
-**Nächster Schritt:** Welle Q startet — orthogonal + sofort startbar. `/spec_ind w-q-code-quality-cleanup "..."` + `/dev`. Plus parallel: Welle M `/spec_ind w-m-mining-optimization "..."` (M1 Mining-Round-3 Subagent).
+**Strategischer Update (revidiert post-Embedding):** Vocabulary-Drift war der dominant Gap. Delta vs Predicted shrinkt von -50/-61pp (Jaccard) auf nur **-20/-22pp** (Embedding-best). Stage-A ist deutlich näher an Predictions als die Jaccard-only-Numbers vorher zeigten. Welle C/D/E könnte weitere ~5-10pp lift bringen (nicht 0-3pp wie pre-Embedding-framing). Phase-B bleibt eigentlicher Spike-Lock-Test, **alle Phase-B-Pre-Conditions (Q1 codegen-aggregation, Q6 stage-a-validation regen-cycle, Q7 layer-tag, Q8 endpoints-cap) resolved.**
+
+**Nächster Schritt:** **Welle M starten** — `/spec_ind w-m-mining-optimization "..."` mit Brainstorming weil Source-Selektion (M1 books + postmortems + Round-2-re-audit) + M2-Corpus-Approach (verpflichtend) Discussion-Points haben. Plus Welle-Q-Decision für Round-4-Trigger nach M1+M2.
 
 ---
 
