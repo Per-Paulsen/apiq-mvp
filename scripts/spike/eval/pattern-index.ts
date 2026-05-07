@@ -56,10 +56,14 @@ const BATCH_SIZE = 256;
 
 export type PatternSourceType =
   | 'rfc'
+  | 'rfc-draft'
   | 'owasp'
   | 'book'
   | 'postmortem'
   | 'corpus'
+  | 'conference-talk'
+  | 'vendor-blog'
+  | 'paper'
   | 'spectral-default'
   | 'linter'
   | 'style-guide'
@@ -73,7 +77,7 @@ export interface PatternIndexEntry {
   description: string;
   embedding: number[]; // 1536-dim
   metadata: {
-    round: 1 | 2 | 3;
+    round: 1 | 2 | 3 | 4;
     severityHypothesis: Severity;
     direction?: SeverityDirection;
     detectionPrecision: 'high' | 'medium' | 'low';
@@ -102,7 +106,7 @@ interface RawPattern {
   description: string;
   severityHypothesis: Severity;
   direction?: SeverityDirection;
-  round: 1 | 2 | 3;
+  round: 1 | 2 | 3 | 4;
   detectionPrecision: 'high' | 'medium' | 'low';
   isPureSpectralDetectable: boolean;
   isStageATerritory: boolean;
@@ -313,6 +317,12 @@ const LENS_SECTION_HEADERS: Array<{ heading: RegExp; lens: Lens }> = [
 
 function classifySource(idOrSource: string): PatternSourceType {
   const s = idOrSource.toLowerCase();
+  // Round-4 prefixes
+  if (s.startsWith('r4-ct-') || s.includes('conference-talk:')) return 'conference-talk';
+  if (s.startsWith('r4-vb-') || s.includes('vendor-blog:')) return 'vendor-blog';
+  if (s.startsWith('r4-ietf-')) return 'rfc';
+  if (s.startsWith('r4-ap-') || s.includes('paper:')) return 'paper';
+  // Round-3 prefixes
   if (s.startsWith('r3-bk-') || s.includes('books:')) return 'book';
   if (s.startsWith('r3-pm-') || s.includes('postmortem:')) return 'postmortem';
   if (s.startsWith('r3-co-') || s.includes('corpus:')) return 'corpus';
@@ -422,11 +432,12 @@ export function loadAllPatterns(): RawPattern[] {
   const seenIds = new Set<string>();
 
   // Tracker state
-  let currentRound: 1 | 2 | 3 = 1;
+  let currentRound: 1 | 2 | 3 | 4 = 1;
   let currentLens: Lens | null = null;
   let currentSection: string | null = null; // Round-1 letter (A..X)
   let inRound2Master = false;
   let inRound3Section = false;
+  let inRound4Section = false;
   let currentRound2IsLens3 = false; // Lens 3 has Severity-Direction column
 
   for (let i = 0; i < lines.length; i++) {
@@ -436,6 +447,7 @@ export function loadAllPatterns(): RawPattern[] {
     if (/^## Mining-Round-2 Master-Konsolidierung/.test(line)) {
       inRound2Master = true;
       inRound3Section = false;
+      inRound4Section = false;
       currentRound = 2;
       currentLens = null;
       continue;
@@ -444,7 +456,17 @@ export function loadAllPatterns(): RawPattern[] {
     if (/^## Round-3 Additions/.test(line)) {
       inRound2Master = false;
       inRound3Section = true;
+      inRound4Section = false;
       currentRound = 3;
+      currentLens = null;
+      continue;
+    }
+    // Detect Round-4 section
+    if (/^## Round-4 Additions/.test(line)) {
+      inRound2Master = false;
+      inRound3Section = false;
+      inRound4Section = true;
+      currentRound = 4;
       currentLens = null;
       continue;
     }
@@ -570,6 +592,65 @@ export function loadAllPatterns(): RawPattern[] {
         isStageATerritory: stageAField.includes('true'),
       });
       // Tag with source-prefix variation if explicitly mentioned
+      void source;
+      seenIds.add(patternId);
+      continue;
+    }
+
+    // Round-4 Additions rows
+    if (inRound4Section && currentLens !== null) {
+      // Format A (per-lens): | Pattern-ID | Source | Description | Severity-Hyp | Spectral? | Stage-A? |
+      // Format B (cross-lens): | Pattern-ID | Lenses | Source | Description | Severity-Hyp | Spectral? | Stage-A? |
+      const idMatch = firstCell.match(/^(R4-(?:CT|VB|IETF|AP)-[A-Z0-9-]+)$/);
+      if (!idMatch) continue;
+      if (row.cells.length < 6) continue;
+      const patternId = idMatch[1];
+      if (seenIds.has(patternId)) continue;
+      // Detect cross-lens variant by 7-cell row + presence of "+" in 2nd cell
+      const isCrossLensRow =
+        row.cells.length >= 7 && /^\d/.test((row.cells[1] ?? '').trim());
+      let source: string;
+      let description: string;
+      let severityField: string;
+      let spectralField: string;
+      let stageAField: string;
+      const lenses: Lens[] = [currentLens];
+      if (isCrossLensRow) {
+        const lensesCell = (row.cells[1] ?? '').trim();
+        // Parse "4+8+9" -> lens-numbers -> Lens-names
+        for (const part of lensesCell.split(/[+,\s]+/).filter(Boolean)) {
+          const n = parseInt(part, 10);
+          if (!isNaN(n) && n >= 1 && n <= 10) {
+            const lens = LENS_NAMES[n - 1];
+            if (!lenses.includes(lens)) lenses.push(lens);
+          }
+        }
+        source = row.cells[2] ?? '';
+        description = stripMarkdown(row.cells[3] ?? '');
+        severityField = row.cells[4] ?? '';
+        spectralField = (row.cells[5] ?? '').toLowerCase();
+        stageAField = (row.cells[6] ?? '').toLowerCase();
+      } else {
+        source = row.cells[1] ?? '';
+        description = stripMarkdown(row.cells[2] ?? '');
+        severityField = row.cells[3] ?? '';
+        spectralField = (row.cells[4] ?? '').toLowerCase();
+        stageAField = (row.cells[5] ?? '').toLowerCase();
+      }
+      const sev = parseSeverity(severityField);
+      // Round-4 source-classification: prefer ID-prefix (deterministic) then source-string
+      const sourceType = classifySource(patternId);
+      patterns.push({
+        patternId,
+        lens: lenses,
+        sourceType,
+        description: description || `Round-4 ${patternId}`,
+        severityHypothesis: sev.severity,
+        round: 4,
+        detectionPrecision: 'medium',
+        isPureSpectralDetectable: spectralField.includes('true'),
+        isStageATerritory: stageAField.includes('true'),
+      });
       void source;
       seenIds.add(patternId);
       continue;

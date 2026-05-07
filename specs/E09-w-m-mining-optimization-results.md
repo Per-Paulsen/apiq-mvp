@@ -183,11 +183,17 @@
 1. **Round-4-Mining triggern oder skip?** D14-Trigger erfüllt (122 patterns + 3 neue Source-Familien). ABER: Round-3-Mining-Yield diminishing — Lens-Coverage-Distribution zeigt saturation (alle 10 Lenses adressed mit 5-25 patterns). Round-4 würde aus Conference-Talks / Vendor-Engineering-Blogs / Recent-Papers 2024+ kommen.
    **Recommendation:** **skip Round-4 für jetzt; Welle F priorisieren**. Round-4 candidate-sources sind weniger structured (conference-talks haben oft keine schriftliche Quelle, vendor-blogs sind verschieden curated). Trade-off: weitere ~20-50 patterns vs Welle F + C/D/E sequenz die direkt Coverage lift. Per Memory `feedback_iteration_one_more.md` BIN ich vorsichtig "for now skip" — wenn Welle F findet dass Mining-Lücken existieren, kann Round-4 nachgeholt werden.
 
+do not skip round 4
+
 2. **`scripts/spike/data/healthy-corpus/` re-download-cadence?** APIs.guru aktualisiert weekly; vendor-specs commits-backed. Status-quo: snapshot 2026-05-07. Welle V (cross-linter) refresht, wenn re-run.
    **Recommendation:** **skip routine re-download bis Welle V**. Snapshot-determinism wertvoller als latest-data für reproducibility. Welle V kann re-download als opt-in.
 
+sind wir denn nicht latest?
+
 3. **Patterns-Export verbatim-coverage 12% — enriche oder akzeptieren?** Round-1+2-patterns haben keine inline-verbatim-quotes in Master-tables (nur Source-IDs).
    **Recommendation:** **akzeptieren**. Welle F (110-rule metadata-promotion) braucht primär `source-distinction` + `lens` — verbatim ist nice-to-have. Wenn Phase B prompt-context-relevance verbatim braucht, dann Welle F-Subagents können patterns-export erweitern um Round-2-meta.md-cross-references.
+
+enrich
 
 ## Commits
 
