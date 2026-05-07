@@ -1,6 +1,22 @@
 /**
- * Secret-Scanner Module — Stage A, Welle A T8 (Lens 1 Threat-Modeling +
- * Lens 6 Privacy/Data-Classification).
+ * Secret-Scanner Module — Stage A, Welle A T8 (Module-Class).
+ *
+ * Sources: TruffleHog (https://github.com/trufflesecurity/trufflehog)
+ *          + Gitleaks (https://github.com/gitleaks/gitleaks)
+ *          + OWASP API3:2023 (Broken Object Property Level Authorization)
+ *          + Cloudflare PII-detection guidance
+ *            (https://developers.cloudflare.com/api-shield/security/sensitive-data-detection/)
+ *          + RFC 7515/7519 (JWT) + RSA/SSH/PGP key-format specs
+ * Patterns: 35 SECRET-class regexes (Stripe sk_live, AWS AKIA, GitHub PATs,
+ *           Google AIza, Slack xox*, OpenAI sk-, Anthropic, GitLab, RSA/SSH/PGP)
+ *           + 4 PII-class (SSN, CC-Luhn, passport, bare-email) +
+ *           Shannon-entropy heuristic (40+ char base64-ish strings)
+ * Lens: 1 (Threat-Modeling), 6 (Privacy/Data-Class)
+ * Round: 2 (Welle A)
+ *
+ * Maps to rules-brainstorm.md: TM-A11 (privilege-escalation field-names),
+ * TM-A15 (PII-named fields response, Lens-6 cornerstone), TM-A42 (error-schema
+ * stack-trace), L6-1/L6-3/L6-4 (PII parameters/path-binding/financial-account-id).
  *
  * Walks an OpenAPI spec and applies a curated catalog of TruffleHog +
  * Gitleaks regex-patterns against every value-bearing site where authors

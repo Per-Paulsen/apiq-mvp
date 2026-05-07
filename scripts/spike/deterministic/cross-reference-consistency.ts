@@ -1,4 +1,18 @@
 /**
+ * Cross-Reference-Consistency Module — Stage A, Welle A (Module-Class).
+ *
+ * Sources: OAS 3.0 §3 (Schema Object) + JSON-Schema 2020-12
+ *          + IBM/Microsoft API-design-rule cross-reference patterns
+ *          + apiq W3 cross-reference-consistency walker (Round-2)
+ * Patterns: cross-schema field-name type/format/pattern/enum incompatibility
+ *           detection (heuristic per-property aggregation)
+ * Lens: 8 (Internal-Consistency), 4 (Client-Friction)
+ * Round: 2 (Welle A → Welle B W3 promotion)
+ *
+ * Maps to rules-brainstorm.md: CL-46 (Inconsistent error-shape cross-endpoint),
+ * D3 (Response-Components mit gleichem Status haben gleiches Schema), G6
+ * (Path-Parameter-Naming-Konsistenz), apiq A4/A5 (discriminator-targets).
+ *
  * Walker: cross-reference field-name consistency.
  *
  * Premise: when the same field-name appears in multiple schemas with

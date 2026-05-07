@@ -57,6 +57,10 @@ rules:
   # Heuristic: properties named `*_id` typed as plain string with no
   # `format`, `pattern`, or `$ref` are likely foreign-key references that
   # would benefit from a typed primitive.
+  # Source: apiq-original (Round-1 reference-finding mining; complementary to
+  #         TM-A1 / J2 in rules-brainstorm.md Lens-1/Lens-J)
+  # Lens: 4 (Client-Friction), 8 (Internal-Consistency)
+  # Round: 1
   apiq-fk-fields-need-format-or-pattern:
     description: >-
       Fields named *_id likely reference another resource and should declare
@@ -73,6 +77,10 @@ rules:
   # Heuristic: integer fields named `*_at`, `*_timestamp`, or `*_ts` are
   # likely unix-time and should declare `format: unix-time` (the convention
   # adopted by Stripe's spec for its 152 timestamp fields).
+  # Source: apiq-original + Stripe convention (152 timestamp fields use
+  #         `format: unix-time`); related to I5 in rules-brainstorm.md Lens-I
+  # Lens: 2 (Standards), 4 (Client-Friction)
+  # Round: 1
   apiq-unix-time-format-on-timestamp-fields:
     description: >-
       Integer fields named *_at, *_timestamp, *_ts likely represent unix-time
@@ -93,6 +101,10 @@ rules:
   # Heuristic: properties named `limit` or `*_limit` typed as integer with
   # no `minimum`/`maximum` are pagination/result-cap fields whose bound is
   # a contract surface; they should carry an upper bound.
+  # Source: apiq-original + OWASP API4 (resource-consumption); rules-brainstorm.md
+  #         §C9 + TM-A23 (pagination-param needs maximum, P1)
+  # Lens: 1 (Threat — API4 DoS), 4 (Client-Friction)
+  # Round: 1
   apiq-limit-parameter-needs-bounds:
     description: >-
       `limit`-style integer parameters/properties should declare both a
@@ -107,6 +119,10 @@ rules:
 
   # Companion to the above: covers component-schema properties (not just
   # parameter objects).
+  # Source: apiq-original (Round-1 stripe:F25 + github:F19 + pagerduty:F11
+  #         reference-finding mining); related to TM-A23 + OWASP API4
+  # Lens: 1 (Threat), 4 (Client-Friction)
+  # Round: 1
   apiq-limit-property-needs-bounds:
     description: >-
       Schema properties named `limit` or `*_limit` should declare numeric
@@ -125,6 +141,9 @@ rules:
   # Targets: stripe:F10
   # OAS 3.0 §4.7.10.1: `style: deepObject` is for objects only, NOT arrays.
   # Stripe's `expand` parameter on 270 operations violates this.
+  # Source: OAS 3.0 §4.7.10.1 verbatim "deepObject ... applies to objects"
+  # Lens: 2 (Standards-Compliance — OAS-3 conformance)
+  # Round: 1
   apiq-deepobject-only-on-objects:
     description: >-
       Parameter `style: deepObject` is only valid for object-typed schemas
@@ -140,6 +159,10 @@ rules:
   # Targets: dnd:F5
   # OAS 3.0 §3.0 (Reference Object): `$ref` MUST be the only key; siblings
   # are silently dropped.
+  # Source: OAS 3.0 §3.0 (Reference Object); rules-brainstorm.md CL-81 +
+  #         apiq-A1 (Lens 4 / syntax)
+  # Lens: 2 (Standards-Compliance), 4 (Client-Friction)
+  # Round: 1
   apiq-no-ref-siblings:
     description: >-
       Per OAS 3.0 §3.0 (Reference Object), `$ref` MUST be the only key in
@@ -163,6 +186,10 @@ rules:
   # Targets: stripe:F3
   # OAS 3 §3 specifies CommonMark; HTML markup defeats cross-renderer
   # compatibility.
+  # Source: OAS 3.0 §3 (description fields are CommonMark) + rules-brainstorm.md
+  #         CL-39 (Description has HTML or complex Markdown — Lens 4)
+  # Lens: 4 (Client-Friction)
+  # Round: 1
   apiq-description-no-html-markup:
     description: >-
       OpenAPI description fields support CommonMark (OAS 3.0 §3). HTML
@@ -185,6 +212,10 @@ rules:
   # Targets: dnd:F11
   # Stub descriptions like "`Spell`\n" or "WeaponProperty" that just echo
   # the schema name carry no information.
+  # Source: apiq-original (Round-1 dnd:F11 reference-finding); related to
+  #         rules-brainstorm.md M2 / EV-26 (TODO/FIXME placeholder)
+  # Lens: 4 (Client-Friction), 9 (AI-Agent-Consumability)
+  # Round: 1
   apiq-schema-description-not-stub:
     description: >-
       Component-schema `description` should not be a stub that just echoes
@@ -201,6 +232,10 @@ rules:
   # Targets: github:F10
   # Heuristic: info.description shorter than ~80 chars on a multi-op API
   # is almost certainly a placeholder.
+  # Source: apiq-original (Round-1 github:F10 reference-finding); related to
+  #         TM-A52 (info.description SHOULD have Security section, P3)
+  # Lens: 9 (AI-Agent-Consumability), 10 (Operational-Metadata)
+  # Round: 1
   apiq-info-description-substantive:
     description: >-
       `info.description` should be a substantive overview (auth, base URL,
@@ -222,6 +257,9 @@ rules:
   # from top-level array). Note: spectral:oas already includes
   # `operation-tag-defined` (warns on operation tags absent from top-level
   # tags array). This rule complements by flagging the spec-level absence.
+  # Source: apiq-original (Round-1) + rules-brainstorm.md Q1 + EV-17
+  # Lens: 4 (Client-Friction), 10 (Operational-Metadata)
+  # Round: 1
   apiq-spec-needs-tags-array:
     description: >-
       Top-level `tags` array should be present and non-empty so operations
@@ -241,6 +279,10 @@ rules:
   # non-empty description (the OAS3-default `oas3-tag-no-empty-description`
   # check is included in `spectral:oas` but only warns; we strengthen the
   # signal by also requiring description-length >= 5).
+  # Source: rules-brainstorm.md Q2 (Top-level Tags Description, Lens 4) +
+  #         spectral:oas oas3-tag-no-empty-description
+  # Lens: 4 (Client-Friction), 10 (Operational-Metadata)
+  # Round: 1
   apiq-tag-meaningful-description:
     description: >-
       Each top-level tag should carry a non-trivially-short description
@@ -260,6 +302,10 @@ rules:
 
   # Targets: pagerduty:F14, github:F26
   # `oneOf` without a `discriminator` forces consumers to runtime-probe.
+  # Source: OAS 3.0 §4.7.25 (discriminator); rules-brainstorm.md CL-12 +
+  #         M14 + apiq-O2 (Round-1 universal pattern)
+  # Lens: 4 (Client-Friction), 8 (Internal-Consistency)
+  # Round: 1
   apiq-oneof-needs-discriminator:
     description: >-
       `oneOf` schemas should declare a `discriminator` to enable
@@ -278,6 +324,10 @@ rules:
   # Targets: dnd:F10
   # Properties named like counts/levels/sizes with `type: number` are
   # almost certainly integers semantically.
+  # Source: apiq-original (Round-1 dnd:F10 reference-finding); related to
+  #         rules-brainstorm.md M-* schema-hygiene patterns
+  # Lens: 4 (Client-Friction), 8 (Internal-Consistency)
+  # Round: 1
   apiq-count-fields-should-be-integer:
     description: >-
       Properties whose name signals a count/level/index (count, level,
@@ -298,6 +348,10 @@ rules:
 
   # Targets: dnd:F1
   # Localhost server URLs should not appear in published specs.
+  # Source: apiq-original (Round-1 dnd:F1) + rules-brainstorm.md CL-73
+  #         (servers[].url placeholder example.com/localhost, P1)
+  # Lens: 1 (Threat — env-leak), 4 (Client-Friction)
+  # Round: 1
   apiq-no-localhost-servers:
     description: >-
       `servers[].url` should not include `localhost`, `127.0.0.1`, or
@@ -317,6 +371,10 @@ rules:
   # Targets: pagerduty:F6
   # Response components with only `description` and no `content` advertise
   # an empty body — usually a contract-loss bug.
+  # Source: apiq-original (Round-1 pagerduty:F6) + rules-brainstorm.md D4
+  #         (Empty description-only Response-Components)
+  # Lens: 4 (Client-Friction), 8 (Internal-Consistency)
+  # Round: 1
   apiq-response-needs-content:
     description: >-
       Response components used by operations that return a body should
@@ -332,6 +390,10 @@ rules:
   # Targets: pagerduty:F7
   # OAS 3 derives request `Content-Type` from `requestBody.content` keys;
   # declaring `Content-Type` as a header parameter is a Swagger-2 holdover.
+  # Source: OAS 3.0 §4.7.13 + rules-brainstorm.md T4 + EV-32
+  #         (Authorization/Content-Type/Accept as explicit param, P1)
+  # Lens: 2 (Standards), 3 (Evolution-Friction)
+  # Round: 1
   apiq-no-content-type-header-parameter:
     description: >-
       Per OAS 3.0 §4.7.13, request `Content-Type` is derived from
@@ -348,6 +410,10 @@ rules:
   # POST endpoints should accept application/json (de-facto modern REST
   # transport) in addition to or in lieu of application/x-www-form-urlencoded.
   # We flag the case where the ONLY body type is x-www-form-urlencoded.
+  # Source: apiq-original (Round-1 stripe:F8) + rules-brainstorm.md EV-30
+  #         (requestBody without application/json, P2 [SP-G-AYWH-10 + SPS + OPTIC])
+  # Lens: 3 (Evolution-Friction), 5 (Style-Coherence)
+  # Round: 1
   apiq-post-should-accept-json:
     description: >-
       POST endpoints with a request body should accept application/json
@@ -367,6 +433,10 @@ rules:
   # version vocabulary)
   # When a parameter description includes the word "version" or "enum",
   # an `enum` constraint should be present on its schema.
+  # Source: apiq-original (Round-1 pagerduty:F8); related to rules-brainstorm.md
+  #         EV-54 (version param without enum, Lens 3) + H2 (info.version semver)
+  # Lens: 3 (Evolution-Friction), 4 (Client-Friction)
+  # Round: 1
   apiq-versioning-headers-need-enum:
     description: >-
       Header parameters whose name or description mentions versioning
@@ -386,6 +456,10 @@ rules:
   # JSON Schema §6.2 / OAS 3.0 §3.7: `default` must match the schema's
   # type. spectral:oas does NOT include this check; oas3-valid-schema-example
   # only validates `example`, not `default`.
+  # Source: JSON Schema §6.2 / OAS 3.0 §3.7 + rules-brainstorm.md N2
+  #         (Defaults gegen Schema validieren) + CL-70 (default value violates schema, P1)
+  # Lens: 2 (Standards-Compliance), 4 (Client-Friction)
+  # Round: 1
   apiq-default-type-matches-integer:
     description: >-
       A `default` on a `type: integer` schema must be an integer, not a
@@ -401,6 +475,9 @@ rules:
         schema:
           type: integer
 
+  # Source: JSON Schema §6.2 / OAS 3.0 §3.7; rules-brainstorm.md N2 + CL-70
+  # Lens: 2 (Standards-Compliance), 4 (Client-Friction)
+  # Round: 1
   apiq-default-type-matches-number:
     description: >-
       A `default` on a `type: number` schema must be a number.
@@ -414,6 +491,9 @@ rules:
         schema:
           type: number
 
+  # Source: JSON Schema §6.2 / OAS 3.0 §3.7; rules-brainstorm.md N2 + CL-70
+  # Lens: 2 (Standards-Compliance), 4 (Client-Friction)
+  # Round: 1
   apiq-default-type-matches-boolean:
     description: >-
       A `default` on a `type: boolean` schema must be a boolean.
@@ -427,6 +507,9 @@ rules:
         schema:
           type: boolean
 
+  # Source: JSON Schema §6.2 / OAS 3.0 §3.7; rules-brainstorm.md N2 + CL-70
+  # Lens: 2 (Standards-Compliance), 4 (Client-Friction)
+  # Round: 1
   apiq-default-type-matches-string:
     description: >-
       A `default` on a `type: string` schema must be a string.
@@ -446,6 +529,10 @@ rules:
 
   # Targets: github:F31
   # `text/x-markdown` was deprecated by RFC 7763 in favour of `text/markdown`.
+  # Source: RFC 7763 (text/markdown registration); rules-brainstorm.md
+  #         RFC2-79 (Top-level media-type IANA-registered)
+  # Lens: 2 (Standards-Compliance)
+  # Round: 1
   apiq-prefer-iana-markdown-mediatype:
     description: >-
       Use the IANA-registered `text/markdown` (RFC 7763) rather than the
@@ -466,6 +553,10 @@ rules:
   # Targets: stripe:F27
   # Operations with a request body should provide at least one example
   # for codegen and documentation portals.
+  # Source: apiq-original (Round-1 stripe:F27); rules-brainstorm.md N3
+  #         (Operations mit requestBody haben Examples, Lens N)
+  # Lens: 4 (Client-Friction), 9 (AI-Agent-Consumability)
+  # Round: 1
   apiq-request-body-needs-example:
     description: >-
       Operations with a `requestBody` should provide an `example` or
@@ -499,6 +590,10 @@ rules:
   # Targets: github:F28
   # Parameters described as comma-separated should be typed as arrays,
   # not strings.
+  # Source: apiq-original (Round-1 github:F28); related to OAS 3.0 §4.7.10
+  #         (style: form, explode: false for comma-separated arrays)
+  # Lens: 4 (Client-Friction), 5 (Style-Coherence)
+  # Round: 1
   apiq-comma-separated-should-be-array:
     description: >-
       Parameters described as "comma-separated" should be typed as arrays
@@ -519,6 +614,10 @@ rules:
   # `components.schemas`. We add coverage for `components.headers`, which
   # the default rule does NOT cover and which is targeted by github:F5
   # (X-RateLimit headers defined but referenced by zero operations).
+  # Source: apiq-original (Round-1 github:F5); rules-brainstorm.md O1
+  #         (Unused Components — alle 8 Component-Klassen abdecken)
+  # Lens: 3 (Evolution-Friction — dead code), 4 (Client-Friction)
+  # Round: 1
   apiq-unused-component-headers:
     description: >-
       Header objects in `components.headers` should be referenced from at
@@ -533,6 +632,9 @@ rules:
       functionOptions:
         reusableObjectsLocation: "#/components/headers"
 
+  # Source: apiq-original; rules-brainstorm.md O1 (Unused Components — 8 classes)
+  # Lens: 3 (Evolution-Friction), 4 (Client-Friction)
+  # Round: 1
   apiq-unused-component-examples:
     description: >-
       Example objects in `components.examples` should be referenced from

@@ -1,5 +1,20 @@
 /**
- * $ref-Graph-Analyse — Stage-A deterministic detector (Task A1.3 #3).
+ * Ref-Graph-Analyse Module — Stage A, Welle A T3 (Module-Class).
+ *
+ * Sources: JSON-Pointer RFC 6901 + JSON-Schema $ref RFC + OAS 3.0 §3
+ *          (Reference Object) + spectral:oas oas3-unused-component
+ *          + apiq A1/A2/O1 (Round-1)
+ * Patterns: 4+ finding-classes ($ref-cycle detection, orphan-components
+ *           across all 9 OAS-3 component-classes, dangling-$ref-targets,
+ *           graph-connectivity)
+ * Lens: 2 (Standards-Compliance), 3 (Evolution-Friction — dead code),
+ *       4 (Client-Friction), 8 (Internal-Consistency)
+ * Round: 1 (Round-1 A1/A2/O1) + 2 (Round-2 EV-19/EV-22 refinement)
+ *
+ * Maps to rules-brainstorm.md: A1 ($ref-Targets müssen existieren),
+ * A2 ($ref-Cycles als reportable Finding), O1 (Unused Components — alle 8
+ * Component-Klassen), EV-19 (unused-securityschemes), EV-22 ($ref-cycle
+ * without max-depth), CL-17/CL-18 (recursive-schema termination).
  *
  * Builds the $ref-graph of an OpenAPI spec (nodes = component-objects,
  * edges = `$ref` pointers) and emits four classes of finding:

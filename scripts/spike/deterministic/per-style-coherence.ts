@@ -1,5 +1,22 @@
 /**
- * Per-Style Coherence-Checker — Stage 2 of T15 (Lens-5).
+ * Per-Style-Coherence Module — Stage A, Welle B T15 (Module-Class, Stage-2).
+ *
+ * Sources: JSON:API v1.1 spec (https://jsonapi.org/format/1.1/)
+ *          + HAL spec (Hypertext Application Language)
+ *          + Siren spec
+ *          + OData v4.01 (https://docs.oasis-open.org/odata/odata/v4.01)
+ *          + Google AIPs (api-design-patterns, AIP-121..160)
+ *          + Microsoft REST API guidelines
+ *          + Roy Fielding REST dissertation + Richardson maturity model
+ * Patterns: ~25 generic SC-* coherence-checks + 17 SCF-* style-conformance
+ *           checks (JSON:API SCF-1..6, HAL SCF-7..8, Siren SCF-9..10,
+ *           OData SCF-11..12, AIP SCF-13..17)
+ * Lens: 5 (Style-Coherence), 4 (Client-Friction), 8 (Internal-Consistency)
+ * Round: 2 (Welle B / T15 Stage-2 — Mining-Round-2 Phase E)
+ *
+ * Maps to rules-brainstorm.md: SC-1..25 (generic style-coherence patterns from
+ * Phase E mining), SCF-1..17 (style-conformance per declared style — only fires
+ * when classifier confirms style declaration). SC-5/SC-6/SC-8/SC-9 are P1.
  *
  * Once classifyApiStyle() has classified a spec, this module dispatches to
  * the appropriate coherence-checks:

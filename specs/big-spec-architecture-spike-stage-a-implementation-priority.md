@@ -5,9 +5,9 @@
 > **Purpose.** This file is the source-of-truth for Wave 2 ticket-allocation: it lists ALL ~290 take-into-apiq Stage-A patterns (after dedup across Round-2 phases A-F + against Round-1) ordered by implementation-priority. Priority-tagging is implementation-order, NOT inclusion-filter — every pattern listed below is implemented in Stage A. P1 first, P2 next, P3 third; P4 / P5 trail.
 >
 > **Source documents.**
-> - Pattern definitions + sources: `big-spec-architecture-spike-stage-a-rules-brainstorm.md` (Round-1 + Round-2 Master-Konsolidierung).
+> - **Pattern-Source-of-truth:** master `specs/big-spec-architecture-spike-stage-a-rules-brainstorm.md` (lens-Tabellen + Round-2 + Round-3-Additions sections). Source-files (`mining-spectral`, `mining-linters`, `mining-style-guides`, `mining-round2-{threat,standards,evolution,client,style}`) are STUBS as of 2026-05-07 (Welle M / M3-Konsolidierung). `mining-round2-meta.md` bleibt eigenständig (Lens-10 + Springer-Delphi-Mapping load-bearing).
+> - Source-files für Round-3: `mining-round3-{books,postmortems,reaudit,corpus,corpus-download}.md` (eigenständig, NICHT stub).
 > - Lens framework + meta-axis: `big-spec-architecture-spike-stage-a-meta-insights.md` (Round-1 + Round-2 Validation).
-> - Per-phase mining details: `mining-round2-{threat,standards,evolution,client,style,meta}.md`.
 
 ---
 

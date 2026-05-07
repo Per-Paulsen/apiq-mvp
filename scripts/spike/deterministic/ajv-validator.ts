@@ -1,5 +1,20 @@
 /**
  * Stage-A AJV validator — deeper-than-Spectral schema-validity checks.
+ * Stage A, Welle A T7 (Module-Class).
+ *
+ * Sources: AJV JSON-Schema validator (https://ajv.js.org)
+ *          + JSON-Schema Draft 2020-12 / 2019-09 / draft-07 spec
+ *          + OAS 3.0 §3.7 (default validation) + OAS 3.1 §4.7 (Schema Object)
+ *          + JSON Schema §6.2 ("default value MUST validate against the schema")
+ * Patterns: ~5 finding-classes (schema-compile-fail, example-validation,
+ *           default-validation, required-conflict, polymorphism-keywords)
+ * Lens: 2 (Standards-Compliance), 4 (Client-Friction)
+ * Round: 2 (Welle A)
+ *
+ * Maps to rules-brainstorm.md: A6 (pattern-Regex valid), A11 (required+
+ * additionalProperties), N1 (Examples gegen Schema validieren), N2 (Defaults
+ * gegen Schema validieren), CL-25 (pattern Regex unsupported by ECMA/Java/Python),
+ * CL-69/CL-70 (example/default value violates schema).
  *
  * Stage-A pre-pass detector. Compiles JSON-Schema sub-schemas via AJV (the
  * canonical JSON-Schema validator) and emits findings for four classes of

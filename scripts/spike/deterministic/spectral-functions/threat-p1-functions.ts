@@ -17,6 +17,16 @@
  *                                             declare a WWW-Authenticate header
  *                                             per RFC 9110 §11.6.1.
  *
+ * Sources (file-level, see per-callable headers below for verbatim cite):
+ *   - OWASP API Top-10 (2023): https://owasp.org/API-Security/editions/2023/en/
+ *   - 42Crunch security-rules: https://docs.42crunch.com/latest/content/concepts/audit_score.htm
+ *   - RFC 9110 (HTTP Semantics, 2022): https://www.rfc-editor.org/rfc/rfc9110
+ *   - OWASP CORS Web-Security-Testing-Guide
+ *   - Stripe + GitHub rate-limit-header conventions
+ *
+ * Lens: 1 (Threat-Modeling), with Lens-2 cross-cuts (RFC2-40 / RFC2-94)
+ * Round: 2 (Welle B)
+ *
  * Usage:
  *   const spectral = new Spectral();
  *   spectral.setRuleset({
@@ -108,6 +118,15 @@ function getResolvedTarget<T = unknown>(target: unknown): T | undefined {
 // emit a finding.
 // =============================================================================
 
+/**
+ * TM-A22 — list-endpoint pagination check.
+ *
+ * Source: OWASP API4:2023 (Resource-Consumption / DoS) + 42Crunch
+ *         pagination-rule + Stripe/GitHub list-endpoint conventions.
+ *         rules-brainstorm.md TM-A22 (P1, Lens-1, mech).
+ * Lens: 1 (Threat-Modeling), 5 (Style-Coherence)
+ * Round: 2 (Welle B / T16a)
+ */
 export const listEndpointHasPagination: IFunction = function (
   targetVal,
   _opts,
@@ -204,6 +223,16 @@ export const listEndpointHasPagination: IFunction = function (
 // (X-RateLimit-*, RateLimit-*, Retry-After).
 // =============================================================================
 
+/**
+ * TM-A32 — sensitive-business-flow rate-limit-header check.
+ *
+ * Source: OWASP API6:2023 (Unrestricted Access to Sensitive Business Flows) +
+ *         draft-ietf-httpapi-ratelimit-headers + RFC 9110 §10.2.3 (Retry-After) +
+ *         Stripe + GitHub rate-limit conventions.
+ *         rules-brainstorm.md TM-A32 (P2, severity error in spectral coverage).
+ * Lens: 1 (Threat-Modeling)
+ * Round: 2 (Welle B / T16a)
+ */
 export const sensitiveFlowNeedsRateLimitHeaders: IFunction = function (
   targetVal,
   _opts,
@@ -267,6 +296,15 @@ export const sensitiveFlowNeedsRateLimitHeaders: IFunction = function (
 // `Access-Control-Allow-Origin` with literal '*', flag.
 // =============================================================================
 
+/**
+ * TM-A39 — CORS credentials+wildcard mutually-exclusive check.
+ *
+ * Source: OWASP CORS Web-Security-Testing-Guide + Fetch Living-Standard
+ *         (CORS-spec rejection of credentials:true + Allow-Origin:*).
+ *         rules-brainstorm.md TM-A39 (P1, mutually-exclusive per CORS-spec).
+ * Lens: 1 (Threat-Modeling), 2 (Standards-Compliance)
+ * Round: 2 (Welle B / T16a)
+ */
 export const corsCredentialsWildcardConflict: IFunction = function (
   targetVal,
   _opts,
@@ -337,6 +375,16 @@ export const corsCredentialsWildcardConflict: IFunction = function (
 // `WWW-Authenticate` header per RFC 9110 §11.6.1 verbatim "MUST send".
 // =============================================================================
 
+/**
+ * TM-A53 / RFC2-40 — 401-WWW-Authenticate-header check.
+ *
+ * Source: RFC 9110 §11.6.1 verbatim "the server generating a 401 (Unauthorized)
+ *         response MUST send a WWW-Authenticate header field containing at
+ *         least one challenge". rules-brainstorm.md TM-A53 / RFC2-40 (P1,
+ *         severity-upgrade Round-2 to error).
+ * Lens: 1 (Threat-Modeling), 2 (Standards-Compliance)
+ * Round: 2 (Welle B / T16a)
+ */
 export const responseHasWwwAuthenticateHeader: IFunction = function (
   targetVal,
   _opts,

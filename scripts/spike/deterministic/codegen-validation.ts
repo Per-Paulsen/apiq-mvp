@@ -1,5 +1,18 @@
 /**
- * Codegen-Validation runner — Stage-A deterministic detector.
+ * Codegen-Validation runner — Stage-A, Welle B T18b (Module-Class).
+ *
+ * Sources: openapi-typescript (https://openapi-ts.dev)
+ *          + Redocly lintDocument/bundle pipeline
+ *          + TypeScript compiler API (tsc)
+ *          + openapi-generator multi-issue tracker (validation classes)
+ * Patterns: 5 finding-classes (validation-problems, ref-resolution-warnings,
+ *           discriminator-mapping-warnings, TS-compile-errors, timeouts)
+ * Lens: 4 (Client-Friction — codegen-output reputation-load-bearing)
+ * Round: 2 (Welle B / W1 codegen-output-aggregation post-Welle-Q)
+ *
+ * Maps to rules-brainstorm.md: CL-1 (reserved-keywords), CL-22 (type:object
+ * without properties), CL-25 (pattern unsupported), CL-37 (component naming
+ * special chars), CL-66 (discriminator missing schemas).
  *
  * Runs `openapi-typescript` (https://openapi-ts.dev) against the spec and
  * surfaces any validation problem, $ref-resolution failure, or downstream

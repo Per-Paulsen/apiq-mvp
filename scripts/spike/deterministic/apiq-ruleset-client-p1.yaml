@@ -38,6 +38,11 @@ rules:
   # =========================================================================
 
   # CL-1a — properties named after a reserved keyword in any of 7 SDK targets.
+  # Source: openapi-generator multi-issue (#1831, #7100) + swagger-codegen
+  #         #4805 + per-language reserved-keyword catalogs (Java/Go/Python/JS/
+  #         Rust/C#/Kotlin); rules-brainstorm.md CL-1 (P1, load-bearing)
+  # Lens: 4 (Client-Friction)
+  # Round: 2
   apiq-cl1-property-name-reserved-keyword:
     description: >-
       [CL-1] Property name collides with a reserved keyword / built-in
@@ -54,6 +59,10 @@ rules:
         kind: property
 
   # CL-1b — operationId values that collide.
+  # Source: openapi-generator multi-issue + per-language reserved-keyword catalogs;
+  #         rules-brainstorm.md CL-1 (P1)
+  # Lens: 4 (Client-Friction)
+  # Round: 2
   apiq-cl1-operationid-reserved-keyword:
     description: >-
       [CL-1] operationId collides with a reserved keyword / built-in
@@ -75,6 +84,10 @@ rules:
   # python (reserved name-mangling).
   # =========================================================================
 
+  # Source: swagger-codegen #4805 + openapi-generator (multi-language
+  #         compile-fail / collision); rules-brainstorm.md CL-2 (P1)
+  # Lens: 4 (Client-Friction)
+  # Round: 2
   apiq-cl2-property-name-leading-underscore-or-digit:
     description: >-
       [CL-2] Property names with a leading underscore or leading digit
@@ -97,6 +110,10 @@ rules:
   # the apiq finding-mapping can carry the CL-6 pattern-tag).
   # =========================================================================
 
+  # Source: openapi-generator + spectral:oas operation-operationId;
+  #         rules-brainstorm.md CL-6 (P1) + EV-8 (P1, drift)
+  # Lens: 4 (Client-Friction), 3 (Evolution-Friction)
+  # Round: 2
   apiq-cl6-operationid-required:
     description: >-
       [CL-6] Every operation MUST declare an `operationId`. SDK-codegen
@@ -116,6 +133,10 @@ rules:
   # CL-12 confirms upgrade to warn for P1.
   # =========================================================================
 
+  # Source: OAS 3.0 §4.7.25 + Redocly + multi-codegen;
+  #         rules-brainstorm.md CL-12 (P1, severity-upgrade hint→warn)
+  # Lens: 4 (Client-Friction)
+  # Round: 2
   apiq-cl12-oneof-needs-discriminator:
     description: >-
       [CL-12] `oneOf` schemas should declare a `discriminator` to enable
@@ -136,6 +157,10 @@ rules:
   # Targets: * (renderer + codegen).
   # =========================================================================
 
+  # Source: RFC 9110 §15.3.5 verbatim "MUST NOT include content" + OAI #3536;
+  #         rules-brainstorm.md CL-20 (P1)
+  # Lens: 4 (Client-Friction), 2 (Standards-Compliance)
+  # Round: 2
   apiq-cl20-204-must-not-have-content:
     description: >-
       [CL-20] HTTP 204 No Content responses MUST NOT carry a body
@@ -158,6 +183,10 @@ rules:
   # Targets: *.
   # =========================================================================
 
+  # Source: MIN-2 IBM ibm-anchored-patterns + Speakeasy + ECMA-262 partial-match
+  #         semantics; rules-brainstorm.md CL-26 (P1) + EV-24 (P1, tighten)
+  # Lens: 4 (Client-Friction), 1 (Threat-Modeling)
+  # Round: 2
   apiq-cl26-pattern-needs-anchors:
     description: >-
       [CL-26] `pattern` strings should start with `^` and end with `$` to
@@ -179,6 +208,10 @@ rules:
   # keys cannot represent a top-level-array body well.
   # =========================================================================
 
+  # Source: openapi-generator #17877 + multi-codegen;
+  #         rules-brainstorm.md CL-31 (P1, extends EV-4)
+  # Lens: 4 (Client-Friction), 3 (Evolution-Friction)
+  # Round: 2
   apiq-cl31-no-bare-array-request-body:
     description: >-
       [CL-31] Request bodies typed as bare arrays produce awkward SDK
@@ -200,6 +233,10 @@ rules:
   # Targets: * (codegen falls back to Object/Any/Map).
   # =========================================================================
 
+  # Source: MIN-11 Vacuum + openapi-generator;
+  #         rules-brainstorm.md CL-33 (P1)
+  # Lens: 4 (Client-Friction)
+  # Round: 2
   apiq-cl33-schema-needs-type:
     description: >-
       [CL-33] Inline schemas with `properties` should declare `type:
@@ -220,6 +257,10 @@ rules:
   # pattern-id and severity-upgrade to error.
   # =========================================================================
 
+  # Source: OAS 3.0 §4.7.18 (xor) + MIN-48 Redocly;
+  #         rules-brainstorm.md CL-36 (P1, syntax-error)
+  # Lens: 4 (Client-Friction), 2 (Standards-Compliance)
+  # Round: 2
   apiq-cl36-example-value-xor-externalvalue:
     description: >-
       [CL-36] An example object MUST declare either `value` or
@@ -238,6 +279,10 @@ rules:
   # Targets: * (codegen produces invalid identifier).
   # =========================================================================
 
+  # Source: MIN-47 IBM + MIN-49 Redocly;
+  #         rules-brainstorm.md CL-37 (P1)
+  # Lens: 4 (Client-Friction)
+  # Round: 2
   apiq-cl37-component-name-identifier-safe:
     description: >-
       [CL-37] Component-keys (`components.schemas`, `components.responses`,
@@ -266,6 +311,10 @@ rules:
   # CL-40 pattern-id.
   # =========================================================================
 
+  # Source: SP-G-SPS-17 + spectral:oas path-not-include-query + RFC 3986 §3.4;
+  #         rules-brainstorm.md CL-40 (P1) + RFC2-68 (P1)
+  # Lens: 4 (Client-Friction), 2 (Standards-Compliance)
+  # Round: 2
   apiq-cl40-path-must-not-have-query:
     description: >-
       [CL-40] Path-template strings MUST NOT contain `?` — query
@@ -295,6 +344,10 @@ rules:
   # the cross-op aggregation.
   # =========================================================================
 
+  # Source: Speakeasy + Postman + Lens-4 mining;
+  #         rules-brainstorm.md CL-45 (P1, sentinel — full detector in walker)
+  # Lens: 4 (Client-Friction)
+  # Round: 2
   apiq-cl45-pagination-cursor-and-offset-cooccur:
     description: >-
       [CL-45] Operations that mix cursor-style and offset-style pagination
@@ -317,6 +370,10 @@ rules:
   # documented Problem schema — the cross-op clustering is in the walker.
   # =========================================================================
 
+  # Source: Speakeasy + Lens-4 mining + RFC 7807/9457;
+  #         rules-brainstorm.md CL-46 (P1, sentinel — walker does cross-op)
+  # Lens: 4 (Client-Friction), 2 (Standards-Compliance)
+  # Round: 2
   apiq-cl46-error-response-needs-shape:
     description: >-
       [CL-46] 4xx response objects should reference a shared error
@@ -348,6 +405,10 @@ rules:
   # CL-50 — Path file-extension (`/users.json`). Targets: * (router-fail).
   # =========================================================================
 
+  # Source: SG-5 + SP-G-SPS-13;
+  #         rules-brainstorm.md CL-50 (P1) + EV-27 (P1)
+  # Lens: 4 (Client-Friction), 2 (Standards-Compliance), 3 (Evolution-Friction)
+  # Round: 2
   apiq-cl50-path-no-file-extension:
     description: >-
       [CL-50] Path segments MUST NOT end in a file-extension
@@ -370,6 +431,10 @@ rules:
   # function that inspects the array as a whole.
   # =========================================================================
 
+  # Source: SG-37 + apiq M12 (Round-1);
+  #         rules-brainstorm.md CL-55 (P1)
+  # Lens: 4 (Client-Friction)
+  # Round: 2
   apiq-cl55-enum-casing-uniform:
     description: >-
       [CL-55] Enum value-arrays should be uniform-case (all UPPERCASE,
@@ -400,6 +465,10 @@ rules:
   # CL-57 pattern-id.
   # =========================================================================
 
+  # Source: spectral:oas duplicated-entry-in-enum (default);
+  #         rules-brainstorm.md CL-57 (P1, syntax-error)
+  # Lens: 4 (Client-Friction)
+  # Round: 2
   apiq-cl57-enum-no-duplicates:
     description: >-
       [CL-57] `enum` arrays MUST contain unique values. Duplicates are
@@ -424,6 +493,10 @@ rules:
   # the `path-template-parser` module.
   # =========================================================================
 
+  # Source: MIN-7 + MIN-8 Vacuum;
+  #         rules-brainstorm.md CL-58 (P1, sentinel)
+  # Lens: 4 (Client-Friction)
+  # Round: 2
   apiq-cl58-path-no-mixed-case-segments:
     description: >-
       [CL-58] Path-template static segments should be lowercase to avoid
@@ -445,6 +518,10 @@ rules:
   # here for the CL-59 pattern-id with stricter regex.
   # =========================================================================
 
+  # Source: SP-G-SD-5 + spectral:oas operation-operationId-valid-in-url;
+  #         rules-brainstorm.md CL-59 (P1)
+  # Lens: 4 (Client-Friction)
+  # Round: 2
   apiq-cl59-operationid-url-friendly:
     description: >-
       [CL-59] `operationId` should match `^[A-Za-z][A-Za-z0-9_-]*$` so it
@@ -465,6 +542,10 @@ rules:
   # `operation-summary`; CL-63 enforces "at least one MUST be present".
   # =========================================================================
 
+  # Source: spectral:oas operation-description + operation-summary + Speakeasy;
+  #         rules-brainstorm.md CL-63 (P1)
+  # Lens: 4 (Client-Friction), 9 (AI-Agent-Consumability)
+  # Round: 2
   apiq-cl63-operation-summary-or-description:
     description: >-
       [CL-63] Every operation should have at least one of `summary` or
@@ -489,6 +570,10 @@ rules:
   # `cross-reference-consistency` walker.
   # =========================================================================
 
+  # Source: OAS 3.0 §4.7.25 (discriminator.mapping) + apiq A4/A5 +
+  #         swagger-ui #9832; rules-brainstorm.md CL-66 (P1)
+  # Lens: 4 (Client-Friction)
+  # Round: 2
   apiq-cl66-discriminator-mapping-shape:
     description: >-
       [CL-66] `discriminator.mapping` values MUST be strings that look
@@ -508,6 +593,10 @@ rules:
   # /foo/{a}/{b} is fine. /foo/{a}{b} is not — they collide.
   # =========================================================================
 
+  # Source: MIN-6 IBM ibm-no-consecutive-path-parameter-segments;
+  #         rules-brainstorm.md CL-68 (P1) + EV-35 (P1)
+  # Lens: 4 (Client-Friction), 3 (Evolution-Friction)
+  # Round: 2
   apiq-cl68-path-no-adjacent-params:
     description: >-
       [CL-68] Two path-template parameters cannot be adjacent without a
@@ -527,6 +616,10 @@ rules:
   # `oas3-valid-schema-example`; tagged here for CL-69 pattern-id.
   # =========================================================================
 
+  # Source: spectral:oas oas3-valid-media-example + AJV-layer; Stripe convention
+  #         (maxLength=5000); rules-brainstorm.md CL-69 (P1)
+  # Lens: 4 (Client-Friction)
+  # Round: 2
   apiq-cl69-example-respects-maxlength:
     description: >-
       [CL-69] When a string-typed schema declares `maxLength`, the
@@ -551,6 +644,10 @@ rules:
   # objects (default value must satisfy `required`).
   # =========================================================================
 
+  # Source: apiq-original (default-validation extension) + multi-codegen;
+  #         rules-brainstorm.md CL-70 (P1)
+  # Lens: 4 (Client-Friction)
+  # Round: 2
   apiq-cl70-default-respects-required:
     description: >-
       [CL-70] When a `type: object` schema has `required: [...]`, the
@@ -572,6 +669,10 @@ rules:
   # apiq-no-localhost-servers covers localhost; CL-73 widens to example.com.
   # =========================================================================
 
+  # Source: SP-G-SD-4 + apiq P-SP-1;
+  #         rules-brainstorm.md CL-73 (P1)
+  # Lens: 4 (Client-Friction)
+  # Round: 2
   apiq-cl73-server-url-no-placeholder:
     description: >-
       [CL-73] `servers[].url` MUST NOT contain placeholder hostnames
@@ -595,6 +696,10 @@ rules:
   # catalog-visibility.
   # =========================================================================
 
+  # Source: MIN-8 Vacuum (catalog-visibility sentinel; walker does the
+  #         real detection); rules-brainstorm.md CL-76 (P1, syntax-error)
+  # Lens: 4 (Client-Friction)
+  # Round: 2
   apiq-cl76-path-method-uniqueness:
     description: >-
       [CL-76] Each (path, method) pair must be declared exactly once.
@@ -613,6 +718,11 @@ rules:
   # apiq-no-ref-siblings already covers; tagged for CL-81.
   # =========================================================================
 
+  # Source: OAS 3.0 §3.0 (Reference Object) + apiq-original;
+  #         rules-brainstorm.md CL-81 (P1, syntax-error) + apiq-A1 stronger
+  #         variant
+  # Lens: 4 (Client-Friction), 2 (Standards-Compliance)
+  # Round: 2
   apiq-cl81-no-ref-siblings:
     description: >-
       [CL-81] Per OAS 3.0 §3.0 (Reference Object), `$ref` MUST be the

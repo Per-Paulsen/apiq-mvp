@@ -1,4 +1,22 @@
 /**
+ * Naming-Pattern-Klassifikator Module — Stage A, Welle A T5 (Module-Class).
+ *
+ * Sources: Mining-round2-style.md naming-conventions catalog
+ *          + AIP-140/AIP-122 (Google API-Improvement-Proposals)
+ *          + JSON:API field-name conventions + Microsoft REST guidelines
+ *          + apiq G1-G8 + Q (Round-1)
+ * Patterns: 7 case-buckets (camelCase / snake_case / PascalCase / kebab-case /
+ *           SCREAMING_SNAKE / lowercase / mixed) × 6 identifier-classes
+ *           (property / schema / operationId / path-segment / param / header)
+ * Lens: 5 (Style-Coherence), 4 (Client-Friction), 8 (Internal-Consistency)
+ * Round: 1 (Round-1 G1-G8) + 2 (Round-2 SCF-16 + Lens-5 refinement)
+ *
+ * Maps to rules-brainstorm.md: G1 (Property-Naming-Konsistenz),
+ * G2 (Schema-Naming-Konsistenz), G3 (operationId-Naming-Pattern),
+ * G4 (Path-Segments lowercase), G6 (Path-Parameter-Naming-Konsistenz),
+ * G7 (Tag-Naming-Konsistenz), G8 (Header-Parameter-Naming),
+ * SCF-16 (AIP field-names lower_snake_case + lowerCamelCase).
+ *
  * Stage-A Naming-Pattern-Klassifikator (Task #5).
  *
  * Spec-agnostic: classifies every identifier in the spec (property names,

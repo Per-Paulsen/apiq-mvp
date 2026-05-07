@@ -1,5 +1,22 @@
 /**
- * Media-Type IANA Validator (T13) — Lens 2 Standards-Compliance Module.
+ * Media-Type IANA Validator Module — Stage A, Welle B T13 (Module-Class).
+ *
+ * Sources: IANA media-types registry snapshot (T22, 2026-01)
+ *          + RFC 6838 (Media Type Specifications and Registration)
+ *          + RFC 8259 §8.1 (JSON charset redundancy)
+ *          + RFC 7578 (multipart/form-data)
+ *          + RFC 7763 (text/markdown registration, supersedes text/x-markdown)
+ *          + IETF JSON-suffix-tree (+json) conventions
+ * Patterns: ~8 media-type checks (RFC2-75 to RFC2-80 + RFC2-100/101);
+ *           IANA-registry lookup + structured-suffix (+json/+xml) checks
+ * Lens: 2 (Standards-Compliance)
+ * Round: 2 (Welle B / T13)
+ *
+ * Maps to rules-brainstorm.md: RFC2-75 (Custom JSON media-type +json suffix),
+ * RFC2-76 (vendor-specific vnd. tree), RFC2-77 (prs. tree smell),
+ * RFC2-78 (wildcard star-slash-star forbidden), RFC2-79 (top-level IANA-registered),
+ * RFC2-80 (charset on application/json redundant), RFC2-100/101 (multipart
+ * shape), apiq-prefer-iana-markdown-mediatype (text/markdown vs x-markdown).
  *
  * Validates every media-type used as a `content` key in the spec
  * (`requestBody.content[*]`, `responses.*.content[*]`, and any other

@@ -3,6 +3,13 @@
  *
  * Pattern: CL-1 (Lens 4 Client-Friction, P1, Konkurrenz-Pari-Pflicht).
  *
+ * Source: openapi-generator multi-issue (https://github.com/OpenAPITools/openapi-generator/issues?q=label%3A%22reserved+word%22)
+ *         + swagger-codegen #4805 + per-language reserved-keyword catalogs
+ *         (Java, Go, Python, JavaScript/ECMA-262, Rust 2024, C# spec, Kotlin reference).
+ *         See rules-brainstorm.md CL-1 (Lens-4) for the load-bearing classification.
+ * Lens: 4 (Client-Friction)
+ * Round: 2 (Welle B / T18a — activated)
+ *
  * Generated SDK code suffers when OpenAPI property names or operationIds
  * collide with reserved keywords / built-in identifiers in the target
  * language. openapi-generator silently renames (e.g. `type` -> `_type` in

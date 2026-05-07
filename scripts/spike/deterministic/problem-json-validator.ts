@@ -1,5 +1,19 @@
 /**
- * Module: problem-json-validator (Task T11, Wave 2)
+ * Problem-JSON-Validator Module — Stage A, Welle B T11 (Module-Class).
+ *
+ * Sources: RFC 9457 (Problem Details for HTTP APIs, 2024 — obsoletes RFC 7807)
+ *          + apiq-USP cross-class type-URI-uniqueness (RFC2-5, no other linter)
+ *          + RFC 9457 §3.1/§3.2 + §4 (extension members)
+ * Patterns: 6 finding-classes (RFC2-1 type-required, RFC2-2 type-URI-format,
+ *           RFC2-3 status-matches-HTTP, RFC2-4 reserved-names not redefined,
+ *           RFC2-5 type-URI cross-spec uniqueness [USP], RFC2-6 7807→9457 migration)
+ * Lens: 2 (Standards-Compliance), 8 (Internal-Consistency)
+ * Round: 2 (Welle B / T11 — Mining-Round-2 Phase B)
+ *
+ * Maps to rules-brainstorm.md: RFC2-1 to RFC2-6 (problem+json conformance),
+ * D6 (application/problem+json error-schema consistent), K2 (RFC 7807 if errors
+ * consistently typed). RFC2-5 is apiq's first single-spec USP (no mature linter
+ * does cross-class type-URI uniqueness).
  *
  * Validates RFC 9457 ("Problem Details for HTTP APIs", obsoletes RFC 7807)
  * conformance + an apiq-USP differentiator: cross-class `type`-URI uniqueness.

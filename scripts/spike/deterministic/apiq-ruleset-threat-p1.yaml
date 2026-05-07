@@ -38,6 +38,10 @@ rules:
   # Heuristic: parameters named like api_key/apikey/api-key/access_token in
   # `path` or `query` location are credentials-in-URL.
   # =========================================================================
+  # Source: OWASP API2:2023 (Broken Authentication) + RFC 6750 §2.3
+  #         "clients MUST NOT use the URI"; rules-brainstorm.md Y-2 (P1)
+  # Lens: 1 (Threat-Modeling)
+  # Round: 1
   apiq-tm-y2-api-key-in-url:
     description: >-
       Parameters named like an API key (api_key, apikey, api-key, access_token,
@@ -52,6 +56,9 @@ rules:
       field: name
 
   # Companion at component-parameter level
+  # Source: OWASP API2:2023 + RFC 6750 §2.3; rules-brainstorm.md Y-2 (P1)
+  # Lens: 1 (Threat-Modeling)
+  # Round: 1
   apiq-tm-y2-api-key-in-url-components:
     description: >-
       Component-parameter named like an API key MUST NOT be passed in `path`
@@ -71,6 +78,10 @@ rules:
   # Covered by Y-2 above for parameters; this rule additionally flags
   # path-template segments that bake credentials in.
   # =========================================================================
+  # Source: OWASP API2 + RFC 6750 §2.3 verbatim "NOT RECOMMENDED";
+  #         rules-brainstorm.md Y-3 + RFC2-56 (P1, multi-confirm)
+  # Lens: 1 (Threat-Modeling), 2 (Standards-Compliance)
+  # Round: 1
   apiq-tm-y3-credentials-in-path-template:
     description: >-
       Path-template segments MUST NOT name credential-bearing parameters
@@ -91,6 +102,10 @@ rules:
   # Heuristic: any server with `http://` (not localhost) when securitySchemes
   # contains a `basic`/`bearer` http scheme.
   # =========================================================================
+  # Source: OWASP API2 + RFC 7617 (HTTP-Basic) + RFC 9110;
+  #         rules-brainstorm.md Y-4 / RFC2-43 (P1, verbatim-conditional)
+  # Lens: 1 (Threat-Modeling), 2 (Standards-Compliance)
+  # Round: 1
   apiq-tm-y4-http-basic-on-insecure-server:
     description: >-
       Servers using plain `http://` (not localhost) violate RFC 7617 / OWASP
@@ -108,6 +123,10 @@ rules:
   # Y-5 / RFC2-62 — OAuth2 *Url MUST be HTTPS
   # RFC 6749 §3.1 (verbatim "MUST utilize TLS"); severity: error
   # =========================================================================
+  # Source: RFC 6749 §3.1 verbatim "MUST utilize TLS";
+  #         rules-brainstorm.md Y-5 / RFC2-62 (P1)
+  # Lens: 1 (Threat-Modeling), 2 (Standards-Compliance)
+  # Round: 1
   apiq-tm-y5-oauth2-authorization-url-https:
     description: >-
       RFC 6749 §3.1 requires TLS — `authorizationUrl` MUST use https://.
@@ -119,6 +138,10 @@ rules:
       functionOptions:
         match: "^https://"
 
+  # Source: RFC 6749 §3.2 verbatim "MUST utilize TLS"; rules-brainstorm.md
+  #         Y-5 / RFC2-62 (P1)
+  # Lens: 1 (Threat-Modeling), 2 (Standards-Compliance)
+  # Round: 1
   apiq-tm-y5-oauth2-token-url-https:
     description: >-
       RFC 6749 §3.2 requires TLS — `tokenUrl` MUST use https://.
@@ -130,6 +153,9 @@ rules:
       functionOptions:
         match: "^https://"
 
+  # Source: RFC 6749 + RFC 9700 §4.1.5 (BCP-240); rules-brainstorm.md Y-5/Y-6
+  # Lens: 1 (Threat-Modeling), 2 (Standards-Compliance)
+  # Round: 1
   apiq-tm-y5-oauth2-refresh-url-https:
     description: >-
       OAuth2 `refreshUrl` MUST use https:// — refresh tokens are long-lived
@@ -146,6 +172,10 @@ rules:
   # Y-7 / RFC2-60/61 — OAuth2 implicit + password flows forbidden (BCP-240)
   # RFC 9700 BCP-240 (2025, verbatim "MUST NOT"); severity: error
   # =========================================================================
+  # Source: RFC 9700 BCP-240 §2.1.2 verbatim "MUST NOT";
+  #         rules-brainstorm.md Y-7 / RFC2-60 (P1, severity-upgrade Round-2)
+  # Lens: 1 (Threat-Modeling), 2 (Standards-Compliance), 3 (Evolution-Friction)
+  # Round: 2
   apiq-tm-y7-oauth2-implicit-flow-forbidden:
     description: >-
       RFC 9700 BCP-240 (2025) §2.1.2 deprecates the OAuth2 implicit flow
@@ -157,6 +187,10 @@ rules:
       function: undefined
       field: implicit
 
+  # Source: RFC 9700 BCP-240 §2.4 verbatim "MUST NOT"; rules-brainstorm.md
+  #         Y-7 / RFC2-61 (P1)
+  # Lens: 1 (Threat-Modeling), 2 (Standards-Compliance), 3 (Evolution-Friction)
+  # Round: 2
   apiq-tm-y7-oauth2-password-flow-forbidden:
     description: >-
       RFC 9700 BCP-240 §2.4 deprecates the OAuth2 resource-owner-password
@@ -172,6 +206,9 @@ rules:
   # Y-17 — Server URLs MUST be HTTPS (warn — http:// localhost permitted)
   # OWASP API8; severity: warn
   # =========================================================================
+  # Source: OWASP API8 + RFC 9110 §17.1; rules-brainstorm.md Y-17 (P1)
+  # Lens: 1 (Threat-Modeling)
+  # Round: 1
   apiq-tm-y17-server-url-https-only:
     description: >-
       Production server URLs SHOULD use https:// (OWASP API8). Plaintext
@@ -191,6 +228,9 @@ rules:
   # spec-level security — flagged. (Note: the `security: []` empty-array
   # override that disables auth on a single op is also flagged here.)
   # =========================================================================
+  # Source: OWASP API2:2023 + API5:2023; rules-brainstorm.md Y-23 (P1, H-freq)
+  # Lens: 1 (Threat-Modeling), 2 (Standards-Compliance)
+  # Round: 1
   apiq-tm-y23-write-op-needs-security:
     description: >-
       POST/PUT/PATCH/DELETE operations should declare `security` (or inherit
@@ -207,6 +247,10 @@ rules:
   # TM-A6 — OpenIdConnect openIdConnectUrl HTTPS-only
   # RFC 6749 + APIMatic; severity: error
   # =========================================================================
+  # Source: RFC 6749 §3.1 verbatim "MUST utilize TLS" + APIMatic guidance;
+  #         rules-brainstorm.md TM-A6 (P1)
+  # Lens: 1 (Threat-Modeling), 2 (Standards-Compliance)
+  # Round: 2
   apiq-tm-a6-openid-connect-url-https:
     description: >-
       OpenIdConnect `openIdConnectUrl` MUST use https:// — discovery doc
@@ -226,6 +270,10 @@ rules:
   # Covered partially by Y-2 (parameter-name match); this rule emphasises
   # bearer-tokens specifically and fires on parameter-description heuristics.
   # =========================================================================
+  # Source: OWASP API2 + RFC 6750 §2.3 verbatim "clients MUST NOT use the URI";
+  #         rules-brainstorm.md TM-A10 (P1)
+  # Lens: 1 (Threat-Modeling), 2 (Standards-Compliance)
+  # Round: 2
   apiq-tm-a10-bearer-token-in-url:
     description: >-
       Parameters described as carrying a bearer/access token MUST NOT be
@@ -245,6 +293,10 @@ rules:
   # Fields named `is_admin`, `role`, `permissions`, `roles`, `is_superuser`,
   # `account_balance`, `credits` etc. in REQUEST schemas (not response).
   # =========================================================================
+  # Source: OWASP API3:2023 (Broken Object Property Level Authorization);
+  #         rules-brainstorm.md TM-A11 (P1, apiq-config-driven, high-value)
+  # Lens: 1 (Threat-Modeling)
+  # Round: 2
   apiq-tm-a11-mass-assignment-fields:
     description: >-
       Request schemas with privilege-escalation field-names (is_admin, role,
@@ -265,6 +317,10 @@ rules:
   # Fields with names matching a curated PII list in response schemas
   # without `writeOnly: true` declaration.
   # =========================================================================
+  # Source: OWASP API3 + Cloudflare PII-detection guidance + OAI #2190;
+  #         rules-brainstorm.md TM-A15 (P1, Lens-6 cornerstone, high-value)
+  # Lens: 1 (Threat-Modeling), 6 (Privacy/Data-Class)
+  # Round: 2
   apiq-tm-a15-pii-named-fields-response:
     description: >-
       Response schemas exposing PII-named fields (ssn, social_security_number,
@@ -284,6 +340,10 @@ rules:
   # OWASP API3; severity: warn
   # Spectral DSL — flag schemas in requestBody that have additionalProperties:true.
   # =========================================================================
+  # Source: OWASP API3:2023 (mass-assignment); rules-brainstorm.md TM-A17 (P1,
+  #         sharper than Y-10)
+  # Lens: 1 (Threat-Modeling)
+  # Round: 2
   apiq-tm-a17-additional-properties-true-request:
     description: >-
       Request-body schemas with `additionalProperties: true` accept
@@ -308,6 +368,10 @@ rules:
   # NOTE: Pure-DSL detection is approximate; we use a custom JS function
   # (`list-endpoint-has-pagination`) registered in spectral-runner.ts.
   # =========================================================================
+  # Source: OWASP API4:2023 + 42Crunch security-rules + Stripe convention;
+  #         rules-brainstorm.md TM-A22 (P1)
+  # Lens: 1 (Threat-Modeling), 5 (Style-Coherence)
+  # Round: 2
   apiq-tm-a22-list-endpoint-pagination:
     description: >-
       GET endpoints returning array bodies SHOULD declare a pagination query
@@ -325,6 +389,10 @@ rules:
   # OWASP API4; severity: error
   # Query parameters named limit/per_page/page_size MUST declare maximum.
   # =========================================================================
+  # Source: OWASP API4:2023 (resource-consumption); rules-brainstorm.md
+  #         TM-A23 (P1, error-severity)
+  # Lens: 1 (Threat-Modeling)
+  # Round: 2
   apiq-tm-a23-pagination-param-needs-maximum:
     description: >-
       Pagination parameters (limit, per_page, page_size, pageSize, count, top)
@@ -343,6 +411,10 @@ rules:
   # Schema with `type: string, format: binary` (or contentEncoding base64)
   # MUST declare `maxLength` (resource-consumption — request-body-size cap).
   # =========================================================================
+  # Source: OWASP API4:2023 + OAS-3 multipart spec; rules-brainstorm.md
+  #         TM-A24 (P1, error-severity)
+  # Lens: 1 (Threat-Modeling)
+  # Round: 2
   apiq-tm-a24-binary-upload-needs-maxlength:
     description: >-
       Binary upload schemas (`type: string, format: binary`) MUST declare
@@ -363,6 +435,10 @@ rules:
   # headers (X-RateLimit-* / RateLimit-* / Retry-After). Custom function
   # `sensitive-flow-needs-rate-limit-headers` registered in spectral-runner.ts.
   # =========================================================================
+  # Source: OWASP API6:2023 (Sensitive Business-Flows); rules-brainstorm.md
+  #         TM-A32 (P2 promoted to P1 spectral-coverage)
+  # Lens: 1 (Threat-Modeling)
+  # Round: 2
   apiq-tm-a32-sensitive-flow-rate-limit-headers:
     description: >-
       Sensitive business-flow operations (purchase / checkout / order /
@@ -381,6 +457,10 @@ rules:
   # Properties with names like `url`, `webhook_url`, `callback_url`, `redirect_url`,
   # `image_url` MUST declare BOTH format:uri AND pattern (scheme/host allowlist).
   # =========================================================================
+  # Source: OWASP API7:2023 + OWASP SSRF Cheat-Sheet;
+  #         rules-brainstorm.md TM-A34 (P1, extends Y-15)
+  # Lens: 1 (Threat-Modeling), 2 (Standards-Compliance)
+  # Round: 2
   apiq-tm-a34-url-property-format-and-pattern:
     description: >-
       URL-handling properties (url, webhook_url, callback_url, redirect_url,
@@ -404,6 +484,10 @@ rules:
   # Response-header definition where Access-Control-Allow-Origin schema
   # default/example/enum is literal '*'.
   # =========================================================================
+  # Source: OWASP API8:2023 + OWASP CORS-Misconfig;
+  #         rules-brainstorm.md TM-A38 (P1)
+  # Lens: 1 (Threat-Modeling), 2 (Standards-Compliance)
+  # Round: 2
   apiq-tm-a38-cors-allow-origin-wildcard:
     description: >-
       Response header `Access-Control-Allow-Origin` literal `*` is forbidden
@@ -426,6 +510,10 @@ rules:
   # function `cors-credentials-wildcard-conflict` does the cross-header
   # check (registered in spectral-runner.ts).
   # =========================================================================
+  # Source: OWASP CORS Web-Security-Testing-Guide + Fetch-Living-Standard;
+  #         rules-brainstorm.md TM-A39 (P1, mutually-exclusive per CORS-spec)
+  # Lens: 1 (Threat-Modeling), 2 (Standards-Compliance)
+  # Round: 2
   apiq-tm-a39-cors-credentials-wildcard-conflict:
     description: >-
       `Access-Control-Allow-Credentials: true` combined with
@@ -443,6 +531,10 @@ rules:
   # OWASP API8 verbose-error; severity: warn
   # Component-schemas exposing internal stack-traces leak debugging info.
   # =========================================================================
+  # Source: OWASP API8:2023 (Security Misconfiguration — verbose-error);
+  #         rules-brainstorm.md TM-A42 (P1, high-value catch)
+  # Lens: 1 (Threat-Modeling)
+  # Round: 2
   apiq-tm-a42-error-schema-no-stack-trace:
     description: >-
       Error schemas MUST NOT expose stack/trace/exception fields (OWASP API8
@@ -460,6 +552,10 @@ rules:
   # OWASP API8/9; severity: error
   # Path keys matching debug/test/internal patterns.
   # =========================================================================
+  # Source: OWASP API8/API9:2023; rules-brainstorm.md TM-A44 (P1, common
+  #         breach-vector — stale debug endpoints)
+  # Lens: 1 (Threat-Modeling)
+  # Round: 2
   apiq-tm-a44-no-debug-paths:
     description: >-
       Production spec MUST NOT declare paths matching `/debug`, `/_debug`,
@@ -481,6 +577,11 @@ rules:
   # operation: if `responses[401]` exists, it MUST declare a
   # `WWW-Authenticate` header (registered in spectral-runner.ts).
   # =========================================================================
+  # Source: RFC 9110 §11.6.1 verbatim "MUST send WWW-Authenticate";
+  #         rules-brainstorm.md TM-A53 / RFC2-40 (P1, severity-upgrade
+  #         hint→error post Round-2)
+  # Lens: 1 (Threat-Modeling), 2 (Standards-Compliance)
+  # Round: 2
   apiq-tm-a53-401-www-authenticate:
     description: >-
       401 responses MUST declare a `WWW-Authenticate` header per RFC 9110

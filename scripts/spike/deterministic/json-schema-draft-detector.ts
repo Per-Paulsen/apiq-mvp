@@ -1,5 +1,20 @@
 /**
- * JSON-Schema Draft-Version Detector — Stage A Module (Task T14, Welle A).
+ * JSON-Schema Draft-Version Detector Module — Stage A, Welle A T14 (Module-Class).
+ *
+ * Sources: JSON Schema 2020-12 spec (https://json-schema.org/draft/2020-12/release-notes)
+ *          + OAS 3.0 binding (subset of JSON-Schema-2017 / Wright-00)
+ *          + OAS 3.1 binding (full JSON-Schema-2020-12 alignment)
+ *          + apiq X-MIN-3 Round-2 (Swagger 2 detection)
+ * Patterns: 3 finding-classes (OAS-3.0 + 2020-12-only-keywords [error per RFC2-84],
+ *           OAS-3.1 missing jsonSchemaDialect [hint per RFC2-85], 7807→9457
+ *           definitions→$defs migration smell [RFC2-86/87])
+ * Lens: 2 (Standards-Compliance), 3 (Evolution-Friction)
+ * Round: 2 (Welle A / T14)
+ *
+ * Maps to rules-brainstorm.md: RFC2-84 (OAS 3.0 + 2020-12-only-keywords = error
+ * P1), RFC2-85 (OAS 3.1 jsonSchemaDialect required), RFC2-86 (definitions → $defs
+ * porting smell), RFC2-87 (id → $id), RFC2-88 (Boolean exclusiveMin/Max in 3.1),
+ * RFC2-89 (contentEncoding/contentMediaType in 3.0).
  *
  * Detects mismatches between the OpenAPI version a spec declares and the
  * JSON-Schema draft its keywords actually require. This is "load-bearing"

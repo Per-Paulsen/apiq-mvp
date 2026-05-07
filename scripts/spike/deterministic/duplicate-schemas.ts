@@ -1,4 +1,19 @@
 /**
+ * Duplicate-Schemas Module — Stage A, Welle A (Module-Class).
+ *
+ * Sources: Stoplight/Spectral oas3-unused-component pattern
+ *          + Redocly bundling/dedup heuristics + apiq M7/O2 (Round-1)
+ *          + Speakeasy + Lens-4 mining (CL-48 near-duplicate)
+ * Patterns: M7 (Duplicate Schemas via canonical-form-hash) +
+ *           O2 (case-insensitive naming-collision: User vs user)
+ * Lens: 4 (Client-Friction), 8 (Internal-Consistency), 3 (Evolution-Friction)
+ * Round: 1 (Round-1 reference) + 2 (Round-2 refined patterns)
+ *
+ * Maps to rules-brainstorm.md: M7 (Duplicate Schemas — Hash-basiert), O2
+ * (Naming-Collisions case-insensitive), O3 (Duplicate Components canonical-form),
+ * CL-48 (Multiple similar-not-identical schemas), EV-40 (Schema-name reuse
+ * case-insensitive, P1).
+ *
  * Hash-basierte Schema-Duplicate-Detection (M7) + case-insensitive Naming-
  * Collision-Detection (O2) für Stage A.
  *

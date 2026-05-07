@@ -1795,3 +1795,281 @@ The Springer Delphi study (arXiv 2108.00033) ranked 82 RESTful API design rules 
   8. `webhook-signature-detector.ts` — TM-A50 dedicated module (sleeper-killer rule)
 - **Convergence signal:** Round-1 → 5 lenses; Round-2 A-E → +4 lenses; Round-2 F → +1 lens (10). Each round adds fewer lenses; pattern-mining declared converged at **10 lenses**.
 - **Implementation:** Wave 2 ticket-allocation per `big-spec-architecture-spike-stage-a-implementation-priority.md`.
+
+
+## Round-3 Additions (2026-05-07)
+
+> Round-3-Mining lieferte 122 candidate-patterns aus 4 Source-Familien (Books, Postmortems, API-Corpus, Round-2-Re-Audit-Orphans). Source-Files: `mining-round3-{books,postmortems,reaudit,corpus,corpus-download}.md`. Strict-citation-gating per D1+D3 (≤200 chars verbatim + web-verifiable URL). Per D13 integriert in eigene Section am Ende, NICHT in-line in existing Lens-Tabellen. Pattern-IDs behalten ihre source-prefixes (R3-BK-* / R3-PM-* / R3-CO-* / R3-RA-*) per D17. 100%-Duplikate sind im source-file als "extends-X" markiert; sie tauchen in der Pattern-Tabelle mit `relates-to-existing` Spalte auf, aber sind kein neuer master-row.
+
+### Source-Family-Stats
+
+| Family | Patterns emitted | Avg. citation-quality | Stop-Reason |
+|---|---:|---|---|
+| Books | 51 | 100% verbatim+URL | Plausibility (21 books surveyed, 14 discovered) |
+| Postmortems | 42 | 100% verbatim+URL | Plausibility (36 postmortems surveyed, 28 discovered) |
+| API-Corpus | 11 derived + 10 statistics | manifest-anchored | Corpus-saturation (518 healthy specs) |
+| Re-Audit Orphans | 18 (4 active + 5 OOS + 9 doc) | source-traced | Audit-saturation (97.5% adoption) |
+| **Total** | **122 candidates** | | |
+
+### Lens-Coverage-Lift-Tabelle
+
+| Lens | Round-2-Master | Round-3-Books | Round-3-Postmortems | Round-3-Corpus | Round-3-ReAudit | Round-3-Total |
+|---|---:|---:|---:|---:|---:|---:|
+| 1 Threat-Modeling | ~70 | 5 | 8 | 2 | 0 | +15 |
+| 2 Standards-Compliance | ~95 | 5 | 0 | 2 | 0 | +7 |
+| 3 Evolution-Friction | ~58 | 6 | 16 | 1 | 0 | +23 |
+| 4 Client-Friction | ~78 | 11 | 0 | 2 | 0 | +13 |
+| 5 Style-Coherence | 42 | 5 | 0 | 2 | 4 OOS | +7 active +4 OOS |
+| 6 Privacy-Data-Class | 6 | 3 | 4 | 0 | 0 | +7 |
+| 7 Operations | ~5 (cross-tagged) | 4 | 4 | 1 | 1 | +10 |
+| 8 Internal-Consistency | ~8 (cross-tagged) | 5 | 4 | 0 | 0 | +9 |
+| 9 AI-Agent | 8 | 3 | 3 | 0 | 1 | +7 |
+| 10 Operational-Metadata | 6 | 4 | 3 | 1 | 1 | +9 |
+
+> Notes: Re-Audit-Orphan-Spalte zählt nur die `R3-RA-*` integration-vorschläge (4 active = R3-RA-7-1, R3-RA-9-1, R3-RA-10-1, R3-RA-10-2). Lens 5 OOS-Cluster (U-SC-3/4/5/8 + CL-71) ist Cluster aus 5 OOS-orphans, separat gezählt.
+
+### Patterns per Lens
+
+#### Lens 1 — Threat-Modeling
+
+| Pattern-ID | Source | Description (≤80 chars) | Severity-Hyp | Spectral? | Stage-A? | relates-to-existing |
+|---|---|---|---|---|---|---|
+| R3-BK-TM-01 | books:Madden API Sec | Specs without rate-limit declaration violate Madden's first-decision principle | warn | true | true | C9, C-SP-1, Y-1 |
+| R3-BK-TM-02 | books:Jin/Sahni/Shevat | Webhook ops without signature-verification header leak replay/forgery | warn | true | true | U1, U2, U-SP-1 |
+| R3-BK-TM-03 | books:Jin/Sahni/Shevat | OAuth scopes only `*`/`all`/`admin` violates least-privilege | hint | true | true | F5, F-SP-1, F-SP-3 |
+| R3-BK-TM-04 | books:Jin/Sahni/Shevat | OAuth2 flows without `refreshUrl` = no token-rotation | warn | true | true | F-SP-2, Y-6 |
+| R3-BK-TM-05 | books:MAP API Key | API-Key in `query` (not header) = URL-logging-leak vector | hint | true | true | Y-2, F-SP-1 |
+| R3-PM-TM-01 | postmortem:PayPal IPN | Webhook receivers using legacy MD5/SHA-1 sigs = weak crypto drift | warn | true | true | TM-A50, RFC2-58 |
+| R3-PM-TM-02 | postmortem:AWS SigV2→V4 | Pre-signed URL ops should document max-validity-window | hint | false | false | Y-2, Y-3, RFC2-21 |
+| R3-PM-TM-03 | postmortem:Optus breach | PII-returning ops MUST declare non-empty `security` array | error | true | true | TM-A15, F2, F4, F10 |
+| R3-PM-TM-04 | postmortem:Parler | Sequential int-IDs on user-content paths = enumeration-attractive | warn | true | true | J3, CL-15, CL-16 |
+| R3-PM-TM-05 | postmortem:USPS | Wildcard search-params without per-tenant scope = mass-extraction | warn | false | false | E1, E6, TM-A26 |
+| R3-PM-TM-06 | postmortem:OWASP API1 BOLA | Path `/users/{id}` without scope-binding = BOLA-attractive | hint | false | false | F4, F10, TM-A15 |
+| R3-PM-TM-07 | postmortem:GraphQL/Shopify | GraphQL endpoints should warn introspection-disabled-in-prod | hint | true | true | (new) |
+| R3-PM-TM-08 | postmortem:0ktapus | SMS-MFA security-schemes flagged as weakened | hint | false | false | F-20, RFC2-57 |
+| R3-CO-TM-01 | corpus:518-specs | 23.4% public APIs declare no `securitySchemes` (corpus-stat) | warn | true | true | TM-A-1, TM-A-7 |
+| R3-CO-TM-02 | corpus:518-specs | 22.2% healthy APIs leave write-ops unsecured (corpus-stat) | warn | true | true | TM-A-2, TM-A-9 |
+
+#### Lens 2 — Standards-Compliance
+
+| Pattern-ID | Source | Description (≤80 chars) | Severity-Hyp | Spectral? | Stage-A? | relates-to-existing |
+|---|---|---|---|---|---|---|
+| R3-BK-ST-01 | books:Massé Rulebook | Path-segments with underscore violate Massé URI-rule | hint | true | true | G4, S1, S-SP-9 |
+| R3-BK-ST-02 | books:Massé | Path-segments not kebab-case (camelCase/snake_case) suboptimal | hint | true | true | G4, S-SP-9 |
+| R3-BK-ST-03 | books:Massé | Trailing slash in URIs MUST NOT exist (extends-S3) | warn | true | true | S3 |
+| R3-BK-ST-04 | books:Massé | Pseudo-hierarchy via `.`/`:` (e.g. `/users.123`) is RPC-leak | hint | true | true | S8, S-MIN-1 |
+| R3-BK-ST-05 | books:Massé | Spec-wide error-shape MUST be consistent (extends-K2) | warn | true | true | K2, K1, EV-11 |
+| R3-CO-SC-01 | corpus:518-specs | RFC-7807 adoption=0.0%; 58.5% specs declare no 4xx (downgrade to hint) | hint | true | true | SC-7, SC-12 |
+| R3-CO-SC-02 | corpus:518-specs | JSON-only=60.6%; `*/*` catch-all 0.6% = ambiguous-parsing anti-pattern | hint | true | true | SC-3, SC-9 |
+
+#### Lens 3 — Evolution-Friction
+
+| Pattern-ID | Source | Description (≤80 chars) | Severity-Hyp | Spectral? | Stage-A? | relates-to-existing |
+|---|---|---|---|---|---|---|
+| R3-BK-EV-01 | books:MAP SemVer | `info.version` not X.Y.Z = MAP SemanticVersioning violation | warn | true | true | H2, EV-9, EV-13 |
+| R3-BK-EV-02 | books:MAP Aggressive Obs | `deprecated:true` without sunset+replacement = fail (extends-EV-1) | warn | true | true | EV-1, R4, H4 |
+| R3-BK-EV-03 | books:MAP LLG | `deprecated`-marker without SLA-link = no expiration-date pointer | hint | false | true | V1, V2, EV-1 |
+| R3-BK-EV-04 | books:MAP Two-in-Prod | Multi-version-coexistence detection (positive marker) | hint | false | true | H1, H-SP-1, EV-10 |
+| R3-BK-EV-05 | books:MAP Exp Preview | "beta"/"preview" prose without `x-experimental` per-op marker | hint | true | true | EV-26 |
+| R3-BK-EV-06 | books:Geewax | Versioning-strategy categorization (3 strategies, prose-required) | hint | false | false | EV-9, EV-13 |
+| R3-PM-EV-01 | postmortem:Twitter v2 | Sunset <30d before EOL = anti-pattern (compound EV-1) | warn | true | true | EV-1, F-1, L10-3 |
+| R3-PM-EV-02 | postmortem:Twitter v2 | `info.x-pricing-tier` positive-marker for tier-change-introspection | hint | true | true | F-10, L10-1 |
+| R3-PM-EV-03 | postmortem:Twitter | Multi-version-coexist v1+v2 without Sunset on v1 = fragile | warn | true | true | EV-1, EV-10, H1 |
+| R3-PM-EV-04 | postmortem:Reddit | Pricing-discontinuity → declare `x-rate-limit-cost-per-request` | hint | false | true | F-10, L10-1 |
+| R3-PM-EV-05 | postmortem:Reddit Apollo | `info.termsOfService` enables ToS-change diff-detection | hint | true | true | F-8 (analog) |
+| R3-PM-EV-06 | postmortem:PayPal IPN | Multi-year EOL-runway as positive-marker (info-tier) | hint | true | true | EV-1, F-1, L10-3 |
+| R3-PM-EV-07 | postmortem:GitHub brownouts | `x-brownout-schedule` industry-best deprecation-validator | hint | true | true | EV-1, F-1, L10-3 |
+| R3-PM-EV-08 | postmortem:Stripe | Date-based versioning (`2024-09-30`) = positive-marker info-tier | hint | true | true | EV-13, H2 |
+| R3-PM-EV-09 | postmortem:Stripe pinning | Account-pinning needs `Stripe-Version`-header param documented | hint | true | true | EV-10, RFC2-69 |
+| R3-PM-EV-10 | postmortem:Heroku free | Tier-removal-without-replacement = evolution-disaster (extends F-10) | hint | false | true | F-10 |
+| R3-PM-EV-11 | postmortem:Slack RTM | Graceful-deprecation phasing (`x-deprecation-phase`) positive-marker | warn | true | true | EV-1, EV-10, F-1 |
+| R3-PM-EV-12 | postmortem:Atlassian | Multi-phase deprecation (deprecated→hybrid→shutdown) positive-marker | hint | true | true | EV-1, F-1 |
+| R3-PM-EV-13 | postmortem:Mandrill | Auth-flow-substitution (independent→linked-parent) = disaster | hint | false | false | F1, F8 |
+| R3-PM-EV-14 | postmortem:Azure AD Graph | Multi-year deprecation w/ extension-checkpoints positive-marker | hint | true | true | EV-1, F-1, L10-3 |
+| R3-PM-EV-15 | postmortem:Twilio 2008 | Path-version-prefix span >5 years = accumulated migration-debt | warn | true | true | EV-10, EV-53, H1 |
+| R3-PM-EV-16 | postmortem:Imgur ToS | Content-revocation policy in op-description for content-URLs | hint | false | false | (new) |
+| R3-CO-EV-01 | corpus:518-specs | Versioning bimodal: 51.5% none vs 43.2% url-path; header=0% | hint | true | true | EV-1, EV-3 |
+
+#### Lens 4 — Client-Friction
+
+| Pattern-ID | Source | Description (≤80 chars) | Severity-Hyp | Spectral? | Stage-A? | relates-to-existing |
+|---|---|---|---|---|---|---|
+| R3-BK-CL-01 | books:MAP WishList | Heavy GETs (>20 props) without `fields`/`expand` query-param | hint | true | true | (new) |
+| R3-BK-CL-02 | books:MAP WishTemplate | Deeply-nested resp (>4 levels) without request-body shaping | hint | false | true | M4 |
+| R3-BK-CL-03 | books:MAP Pagination | List-endpoints without pagination (extends-E1, MAP-confirmed warn) | warn | true | true | E1, E2, E3 |
+| R3-BK-CL-04 | books:Geewax Ch.21 | `pageSize`/`limit` without `maximum`+default = unbound contract | warn | true | true | apiq-limit-parameter-needs-bounds, E6 |
+| R3-BK-CL-05 | books:MAP Embedded | Deeply-embedded sub-entities = transfer-cost outlier | hint | false | false | M4 |
+| R3-BK-CL-06 | books:MAP LinkedIH | `*_id` props without `_links` envelope = unfollowable refs | hint | true | true | J2, FK-rule |
+| R3-BK-CL-07 | books:MAP Conditional | Heavy GETs without `If-None-Match`+`ETag` = bandwidth-waste | hint | true | true | C10, C-MIN-1, C-MIN-2 |
+| R3-BK-CL-08 | books:Geewax Ch.10 | LRO-suggesting POSTs with sync-200-only (need 202+/operations/) | hint | true | true | B5 |
+| R3-BK-CL-09 | books:Geewax Ch.8 | PATCH without `update_mask`/`fields` param = no targeted updates | hint | true | true | L-SP-2, B-MIN-3 |
+| R3-BK-CL-10 | books:Geewax Ch.6 | Path-param IDs string without `format:uuid` AND no pattern | hint | true | true | J2, J-SG-1, T-SP-1 |
+| R3-BK-CL-11 | books:Geewax Ch.6 | Checksum-bearing IDs without `pattern` validation | hint | false | false | J2 |
+| R3-CO-CL-01 | corpus:518-specs | List-endpoints without recognized pagination (57% modal) hint-only | hint | true | true | E1, E2, E3 |
+| R3-CO-CL-02 | corpus:518-specs | No industry-std operationId-naming; only flag intra-spec mix | hint | true | true | CL-2 |
+
+#### Lens 5 — Style-Coherence
+
+| Pattern-ID | Source | Description (≤80 chars) | Severity-Hyp | Spectral? | Stage-A? | relates-to-existing |
+|---|---|---|---|---|---|---|
+| R3-BK-SC-01 | books:Continuous API Mgmt | Mixed verb-paths + resource-paths = style-coherence violation | hint | true | true | S8, S-MIN-1, B8 |
+| R3-BK-SC-02 | books:Continuous API Mgmt | Half-hypermedia/half-resource style across response-schemas | hint | true | true | (new) |
+| R3-BK-SC-03 | books:Higginbotham ADDR | ADDR-process style-marker (borderline LLM) | hint | false | false | (new) |
+| R3-BK-SC-04 | books:MAP STO | PUT `change`/`set` without state-machine doc = state-axis missing | hint | false | false | B8 |
+| R3-BK-SC-05 | books:MAP Atomic-Param | `deepObject`+`explode:true`+complex-schema = ambig query-encoding | hint | true | true | apiq-deepobject-only-on-objects, T1 |
+| R3-CO-ST-01 | corpus:518-specs | REST-L2 industry-std at 85.9%; flag rpc/mixed at hint-level | hint | true | true | ST-1, ST-2 |
+| R3-RA-OOS-1 | reaudit:U-SC-3 | LRO shape detection (AIP-151) — niche, OOS | OOS | n/a | OOS | (Lens-5 OOS) |
+| R3-RA-OOS-2 | reaudit:U-SC-4 | Annotations/labels K8s-style markers (AIP-148) — OOS | OOS | n/a | OOS | (Lens-5 OOS) |
+| R3-RA-OOS-3 | reaudit:U-SC-5 | Filter-language conformance (AIP-160) — runtime-only OOS | OOS | n/a | OOS | (Lens-5 OOS) |
+| R3-RA-OOS-4 | reaudit:U-SC-8 | Resource-vs-Singleton distinction (AIP-156) — OOS | OOS | n/a | OOS | (Lens-5 OOS) |
+
+#### Lens 6 — Privacy / Data-Class
+
+| Pattern-ID | Source | Description (≤80 chars) | Severity-Hyp | Spectral? | Stage-A? | relates-to-existing |
+|---|---|---|---|---|---|---|
+| R3-BK-PR-01 | books:Madden | Sensitive props (password/ssn/cc_number) without writeOnly+format | hint | true | true | (new) |
+| R3-BK-PR-02 | books:Geewax Ch.25 | DELETE+204 without soft/hard semantics + no `deleted_at` | hint | true | true | (new) |
+| R3-BK-PR-03 | books:Geewax Ch.19 | Bulk-Delete (purge) without `force`/`count`-preview = unsafe | warn | true | true | (new) |
+| R3-PM-PR-01 | postmortem:Peloton | Health-metric fields (weight/bmi/heart_rate) on unauth-ops = PHI | warn | true | true | L6-1, L6-3, TM-A15 |
+| R3-PM-PR-02 | postmortem:Venmo | List-ops on user-content without privacy-scope param = opt-out | hint | false | false | L6-1, L6-2 |
+| R3-PM-PR-03 | postmortem:Atlassian | Path-param `{username}` (mutable PII as ID-key) = GDPR-anti-pattern | hint | true | true | L6-1, J3 |
+| R3-PM-PR-04 | postmortem:Cash App | Financial-account-id fields without writeOnly/readOnly masking | warn | true | true | L6-1, L6-4, TM-A15 |
+
+#### Lens 7 — Operations
+
+| Pattern-ID | Source | Description (≤80 chars) | Severity-Hyp | Spectral? | Stage-A? | relates-to-existing |
+|---|---|---|---|---|---|---|
+| R3-BK-OP-01 | books:MAP RateLimit | No rate-limit headers + no 429 = ops-blindness (extends C-SP-1) | warn | true | true | C-SP-1, C-SP-2, C9 |
+| R3-BK-OP-02 | books:MAP SLA | `info.x-sla` absent + no SLA-prose-mention | hint | false | true | V1, V2 |
+| R3-BK-OP-03 | books:MAP Pricing | Public-API without `info.x-pricing` + no externalDocs = blind | hint | false | false | V1 |
+| R3-BK-OP-04 | books:Continuous API Mgmt | Spec without `info.x-lifecycle-stage` = no governance signal | hint | false | false | (new) |
+| R3-PM-OP-01 | postmortem:Cloudflare 2025 | Per-tenant rate-quota distinct from per-client = self-DoS-protector | hint | true | true | F-7, L10-1, L10-2 |
+| R3-PM-OP-02 | postmortem:AWS S3 2017 | Bulk-mutation w/o `confirm`/`dry_run` = runbook-incident-attractive | hint | false | false | B7, R3 |
+| R3-PM-OP-03 | postmortem:Coinbase | List on volume-sensitive resource without hard-cap (severity-up) | hint | true | true | E1, A6, apiq-limit-parameter-needs-bounds |
+| R3-PM-OP-04 | postmortem:TLS-expiry | `servers[].url` http:// (non-localhost) = HSTS-defeat | error | true | true | TM-Y17, P-SP-2, EV-28 |
+| R3-CO-OP-01 | corpus:518-specs | 93.4% specs declare zero ops/diagnostic-headers (largest gap) | hint | true | true | OP-2, OP-5, OM-1, OM-3 |
+| R3-RA-7-1 | reaudit:SG-44 | ETag/Last-Modified on cacheable GET (read-side cache-validator) | hint | true | true | RFC2-29 (write-side) |
+
+#### Lens 8 — Internal-Consistency
+
+| Pattern-ID | Source | Description (≤80 chars) | Severity-Hyp | Spectral? | Stage-A? | relates-to-existing |
+|---|---|---|---|---|---|---|
+| R3-BK-IC-01 | books:Geewax Ch.7 | Standard-method predictability via uniform operationId-prefix | warn | true | true | B8, R-SP-5 |
+| R3-BK-IC-02 | books:MAP MasterDH | Resource referenced ≥3× via `*_id` w/o GET-by-id endpoint | hint | true | true | O1 |
+| R3-BK-IC-03 | books:MAP RetrievalOp | GET with requestBody OR description "creates/updates" = read/write blur | hint | true | true | B1, B-SP-1 |
+| R3-BK-IC-04 | books:MAP StateCreationOp | POST `update*`/`replace*` op = breaks append-only contract | hint | true | true | B8, B3 |
+| R3-BK-IC-05 | books:MAP CompFn | GET `/compute`/`/calculate` = pure-fn (RPC-style legitimate) | hint | true | true | S8 |
+| R3-PM-IC-01 | postmortem:Stripe idempotency | Side-effect POST/PUT/PATCH should declare `Idempotency-Key` header | warn | true | true | RFC2-58, RFC2-59, F-7 |
+| R3-PM-IC-02 | postmortem:GitLab DB | Backup endpoints should pair `/verify`/`/restore-test` | hint | false | false | (new) |
+| R3-PM-IC-03 | postmortem:WhatsApp/OneUptime | Webhook-receiver ops should declare signature-header parameter | warn | true | true | TM-A50, U1, RFC2-58 |
+| R3-PM-IC-04 | postmortem:RFC 9700 (2025) | OAuth2 `flows.implicit`/`flows.password` deprecated → severity-up | warn | true | true | RFC2-60, RFC2-61, Y-7 |
+
+#### Lens 9 — AI-Agent-Consumability
+
+| Pattern-ID | Source | Description (≤80 chars) | Severity-Hyp | Spectral? | Stage-A? | relates-to-existing |
+|---|---|---|---|---|---|---|
+| R3-BK-AI-01 | books:MAP API-Description | Behavioral-prose missing in op-descriptions = AI cannot compose | hint | false | false | Z5 |
+| R3-BK-AI-02 | books:MAP Context-Repr | Metadata scattered (request_id) across params/headers/body = inconsist | hint | true | true | (new) |
+| R3-BK-AI-03 | books:Geewax Ch.16 | Polymorphic resp-schemas oneOf without discriminator | hint | true | true | M14, EV-6 |
+| R3-PM-AI-01 | postmortem:Slack Events | Deprecated ops should declare `x-replacement-operation` extension | hint | true | true | EV-1, F-1, L9-3 |
+| R3-PM-AI-02 | postmortem:Log4Shell | `info.x-vulnerability-disclosure-policy` URL positive-marker | hint | true | true | F-8, F-9 |
+| R3-PM-AI-03 | postmortem:npm left-pad | DELETE ops without grace-period response-header (recoverability) | hint | false | false | (new) |
+| R3-RA-9-1 | reaudit:SG-1 | API root path `/` declared (capability-discovery positive marker) | hint | true | true | F-4, F-16, L9-7 |
+
+#### Lens 10 — Operational-Metadata
+
+| Pattern-ID | Source | Description (≤80 chars) | Severity-Hyp | Spectral? | Stage-A? | relates-to-existing |
+|---|---|---|---|---|---|---|
+| R3-BK-OM-01 | books:MAP ErrorReport | Extends-K1 (error robustness/i18n/security-target-audience) | warn | true | true | K1, K2 |
+| R3-BK-OM-02 | books:MAP PublicAPI | `info.x-audience` (Public/Community/Internal) governance-marker | hint | false | false | (new) |
+| R3-BK-OM-03 | books:Geewax Ch.28 | Resource-revisions: `revisionId`/`If-Match` audit-trail | hint | true | true | C-MIN-2, C-MIN-1 |
+| R3-BK-OM-04 | books:Geewax Ch.27 | Mutation-ops without `dryRun`/`validate_only` = no safe-mode | hint | true | true | (new) |
+| R3-PM-OM-01 | postmortem:Reddit | `x-pricing-per-request`/`x-pricing-tier` for AI-cost-monitoring | hint | true | true | F-10, L10-1, L10-2 |
+| R3-PM-OM-02 | postmortem:GitHub 410 | Deprecated path-versions should declare 410-Gone-response per-op | warn | true | true | EV-1, F-1, L10-3 |
+| R3-PM-OM-03 | postmortem:Snowflake UNC5537 | securitySchemes lacking `x-mfa-required`/MFA-prose | hint | false | false | F1, F8, RFC2-57 |
+| R3-CO-OP-02 | corpus:518-specs | Sunset/Deprecation headers (RFC-8594) at 0% — diff-opportunity | hint | true | true | OM-3, EV-9 |
+| R3-CO-EV-02 | corpus:518-specs | OAS 3.0=96.1% / 3.1=3.9%; rules MUST handle BOTH idioms | info | true | true | EV-2 |
+| R3-RA-10-1 | reaudit:SG-2 | `/health` endpoint declared (operational-readiness signal) | hint | true | true | F-4 (analog) |
+| R3-RA-10-2 | reaudit:SG-47 | `Request-Id`/`X-Request-Id` response header for traceability | hint | true | true | F-7 (analog) |
+
+### Severity-Hypothesis-Distribution
+
+> Counted across 122 emitted patterns (excludes 5 OOS-marked Lens-5 reaudit-orphans which carry no severity).
+
+| Severity | Count |
+|---|---:|
+| error | 2 |
+| warn | 33 |
+| hint | 81 |
+| info | 1 |
+| OOS (no severity) | 5 |
+| **Total** | **122** |
+
+### Spectral-Detectable-Distribution
+
+| Spectral-detectable? | Count |
+|---|---:|
+| true | 90 |
+| false (Phase-B-territory or runtime) | 27 |
+| n/a (OOS) | 5 |
+| **Total** | **122** |
+
+### Stage-A-territory-Distribution
+
+| Stage-A? | Count |
+|---|---:|
+| true | 95 |
+| false (Phase-B-territory) | 22 |
+| OOS | 5 |
+| **Total** | **122** |
+
+### Round-4-Decision (D14)
+
+**Trigger Conditions** (any-of triggers Round-4):
+- M1+M2 zusammen >40 neue Patterns: **MET** (122 patterns total Round-3)
+- Neue Source-Familie verfügbar: **MET** (Books + Postmortems + Corpus = 3 neue Familien beyond Round-2)
+- PRD-Reframe öffnet neuen Lens-Bereich: not applicable
+
+**Decision: Round-3 saturates Stage-A pattern-mining for Welle M.** Round-4 wäre conditional auf:
+- Conference-Talks (recht-resourced)
+- Vendor-Engineering-Blogs deeper (Stripe/GitHub/Twilio internal-docs)
+- Recent papers (2024+ ICSE/FSE/ESE)
+- Non-English-vendor postmortems (Alibaba/Yandex/Naver/Mercado-Libre)
+- Governmental-API postmortems (HMRC, HealthCare.gov, EU-eIDAS)
+
+**Conditional**: User entscheidet nach Welle-M-Done ob Round-4 lohnt oder ob Stage-A pattern-mining bei diesem Round-3-Total declared-done ist. Per Welle-M Plan-Doc §4: Mining declared-done after Round-3 → Welle F (Framework-Optimization) ist next.
+
+### Top Round-3 Highlights (für Plan-Doc Memory)
+
+1. **R3-PM-EV-07 — GitHub brownouts as deprecation-validator** — industry-best `x-brownout-schedule` positive-marker, neu für Lens-3
+2. **R3-CO-SC-01 — RFC-7807 0% adoption in 518 healthy specs** — apiq-Lens-2 muss `hint` statt `warn` setzen (post-Round-3 calibration)
+3. **R3-BK-CL-01..11 — 11 client-friction patterns from Wilde/Geewax/Massé** — Lens 4 maximalistisch erweitert
+4. **R3-PM-OP-01 — Cloudflare runaway useEffect self-DoS** — neue Per-tenant-rate-quota-axis, Lens-7
+5. **R3-PM-TM-04 — Sequential int-IDs as enumeration-attractive (Parler 70TB-leak)** — Lens-1 erweitert
+6. **R3-PM-PR-01 — Peloton fitness-metric leak (HIPAA-narrow → expanded)** — Lens-6 generalized auf health-adjacent fields
+7. **R3-CO-TM-01 — 23.4% public APIs without securitySchemes** — Lens-1 catch-all opportunity (corpus-empirical)
+8. **R3-PM-IC-04 — RFC 9700 (Jan 2025) deprecates OAuth2 implicit/password** — severity-upgrade auf `warn` IETF-formally-justified
+9. **R3-CO-OP-02 — Sunset/Deprecation headers 0% adoption** — strongest empirical-gap; high-precision Stage-A finding-class
+10. **R3-PM-EV-08 — Stripe date-based versioning** — positive-marker info-tier; AI-agent-Konsumabilität-Signal
+
+### Source-Files (Provenance)
+
+- `specs/big-spec-architecture-spike-stage-a-mining-round3-books.md` (1046 lines, 51 patterns)
+- `specs/big-spec-architecture-spike-stage-a-mining-round3-postmortems.md` (894 lines, 42 patterns)
+- `specs/big-spec-architecture-spike-stage-a-mining-round3-reaudit.md` (430 lines, 18 orphans)
+- `specs/big-spec-architecture-spike-stage-a-mining-round3-corpus.md` (533 lines, 11 patterns + 10 statistics)
+- `scripts/spike/data/healthy-corpus/manifest.json` (518 specs corpus)
+- `scripts/spike/eval/api-corpus-analyzer.ts` (608 lines, library — corpus-stat tool)
+- `scripts/spike/eval/run-api-corpus-analysis.ts` (CLI wrapper, ~13s for 518 specs)
+- `scripts/spike/data/healthy-corpus/_analyzer-output.json` (machine-readable distributions)
+
+### Status — Mining-Round-3 Master-Konsolidierung
+
+- **Konsolidiert:** 2026-05-07 (Welle M / M3-Subagent).
+- **Total Round-3 patterns surveyed:** 122 (51 Books + 42 Postmortems + 11 Corpus + 18 Re-Audit).
+- **Adoption into Stage-A active rules:** ~95 (excl. 22 Phase-B-territory + 5 OOS).
+- **Adoption into Phase-B-territory:** 22 (preserved as deferred-LLM patterns).
+- **Adoption into OOS:** 5 (4 Lens-5 AIP-niche + 1 CL-71 diff-mode).
+- **Cumulative Stage-A pattern-corpus (Round-1+2+3):** ~290 (Round-2 baseline) + ~95 (Round-3 active) = **~385 take-into-apiq Stage-A patterns**.
+- **Round-4-Decision:** declared-done unter D14 Plausibility-Erschöpfung; conditional re-trigger vom user nach Welle-M-Done.
+- **Implementation-Trail:** Round-3-Patterns werden in Welle F (Framework-Optimization) und Welle C/D (P2/P3 Spectral-Wiring) operationalized. Rule-IDs müssen apiq-Kategorie-Prefix-Convention folgen wenn implementiert (R3-* prefixes für source-traceability beibehalten in metadata).

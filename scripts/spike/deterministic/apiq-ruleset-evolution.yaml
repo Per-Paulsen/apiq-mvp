@@ -48,6 +48,11 @@ rules:
   # EV-1 — `deprecated: true` operation/parameter without sunset/replacement
   # [drift] [warn] sources: OASDIFF + OAS-3.3-PROP + RFC 8594 + API-Platform + Zalando #189
   # ------------------------------------------------------------------------
+  # Source: OASDIFF endpoint-deprecated-no-sunset + RFC 8594 (Sunset header) +
+  #         API-Platform x-deprecation-details + Zalando #189;
+  #         rules-brainstorm.md EV-1 (P1, drift)
+  # Lens: 3 (Evolution-Friction), 4 (Client-Friction)
+  # Round: 2
   apiq-ev-1-deprecated-needs-sunset:
     description: >-
       [lens-3 | drift] EV-1: An operation flagged `deprecated: true` should also
@@ -67,6 +72,10 @@ rules:
   # EV-4 — Bare-array request/response body
   # [tighten] [warn] sources: OASDIFF + already-cross-source consensus
   # ------------------------------------------------------------------------
+  # Source: OASDIFF body-type-changed-from-array-to-object + apiq §1;
+  #         rules-brainstorm.md EV-4 (P1, tighten)
+  # Lens: 3 (Evolution-Friction), 4 (Client-Friction)
+  # Round: 2
   apiq-ev-4-bare-array-response-body:
     description: >-
       [lens-3 | tighten] EV-4: A response body schema typed `array` (no envelope)
@@ -80,6 +89,10 @@ rules:
       function: undefined
       field: type
 
+  # Source: OASDIFF body-type-changed (request-side mirror);
+  #         rules-brainstorm.md EV-4 (P1, request variant)
+  # Lens: 3 (Evolution-Friction), 4 (Client-Friction)
+  # Round: 2
   apiq-ev-4-bare-array-request-body:
     description: >-
       [lens-3 | tighten] EV-4 (request-side): A request-body schema typed `array`
@@ -98,6 +111,10 @@ rules:
   # NOTE: Statistical M8 walker handles spec-wide aggregation; this rule fires
   # per-component-schema so each violation is locatable.
   # ------------------------------------------------------------------------
+  # Source: OASDIFF additionalProperties-changed + Microsoft rest-fail-for-
+  #         unknown-fields + Zalando #225 + SG-42; rules-brainstorm.md EV-5 (P1)
+  # Lens: 3 (Evolution-Friction), 4 (Client-Friction), 1 (Threat-Modeling)
+  # Round: 2
   apiq-ev-5-response-schema-additionalproperties-undeclared:
     description: >-
       [lens-3 | tighten] EV-5: Response component schemas should declare
@@ -118,6 +135,10 @@ rules:
   # NOTE: spectral:oas already includes `operation-operationId`; we re-state it
   # at warn to bind the Lens-3 framing (path-rename without operationId is breaking).
   # ------------------------------------------------------------------------
+  # Source: OPTIC operationId-required + OASDIFF operationId-removed-is-breaking +
+  #         spectral:oas operation-operationId; rules-brainstorm.md EV-8 (P1)
+  # Lens: 3 (Evolution-Friction), 4 (Client-Friction)
+  # Round: 2
   apiq-ev-8-operation-needs-operationid:
     description: >-
       [lens-3 | drift] EV-8: Without `operationId`, the only stable identity for
@@ -144,6 +165,10 @@ rules:
   # NOTE: Statistical Walker handles spec-wide; this DSL rule fires per-property
   # for string-typed request properties without maxLength.
   # ------------------------------------------------------------------------
+  # Source: OASDIFF schema-pattern-added (request) + maxLength-decreased;
+  #         rules-brainstorm.md EV-23 (P1, tighten)
+  # Lens: 3 (Evolution-Friction), 1 (Threat-Modeling)
+  # Round: 2
   apiq-ev-23-request-string-needs-maxlength:
     description: >-
       [lens-3 | tighten] EV-23: Request-string property without `maxLength` —
@@ -157,6 +182,10 @@ rules:
       function: defined
       field: maxLength
 
+  # Source: OASDIFF schema-tightening (array variant);
+  #         rules-brainstorm.md EV-23 (P1, tighten)
+  # Lens: 3 (Evolution-Friction), 1 (Threat-Modeling)
+  # Round: 2
   apiq-ev-23-request-array-needs-maxitems:
     description: >-
       [lens-3 | tighten] EV-23 (array variant): Request-array property without
@@ -172,6 +201,10 @@ rules:
   # EV-24 — Request pattern without ^/$ anchors
   # [tighten] [warn] sources: MIN-2 IBM + OASDIFF
   # ------------------------------------------------------------------------
+  # Source: IBM ibm-anchored-patterns (MIN-2) + OASDIFF pattern-tightened;
+  #         rules-brainstorm.md EV-24 (P1, tighten) + CL-26
+  # Lens: 3 (Evolution-Friction), 2 (Standards-Compliance)
+  # Round: 2
   apiq-ev-24-pattern-needs-anchors:
     description: >-
       [lens-3 | tighten] EV-24: A `pattern` constraint without `^...$` anchors
@@ -190,6 +223,11 @@ rules:
   # EV-25 — type:integer without format:int32/int64
   # [tighten] [warn] sources: SP-G-OWASP-21 + Zalando + OASDIFF + JSON-Schema-evolution
   # ------------------------------------------------------------------------
+  # Source: SP-G-OWASP-21 must-define-a-format-for-integer-types + Zalando
+  #         integer-format + OASDIFF format-changed + JSON-Schema-evolution
+  #         int->long->float->double; rules-brainstorm.md EV-25 (P1, drift)
+  # Lens: 3 (Evolution-Friction), 2 (Standards-Compliance), 4 (Client-Friction)
+  # Round: 2
   apiq-ev-25-integer-needs-format:
     description: >-
       [lens-3 | tighten] EV-25: An untyped `integer` (no `format: int32` /
@@ -209,6 +247,10 @@ rules:
   # EV-27 — Path-segment file-extension
   # [drift] [error] sources: SP-G-AYWH-14 + SG-5 + SPS
   # ------------------------------------------------------------------------
+  # Source: SP-G-AYWH-14 + SG-5 + SPS sps-paths-expose-extension;
+  #         rules-brainstorm.md EV-27 (P1, drift) + CL-50
+  # Lens: 3 (Evolution-Friction), 5 (Style-Coherence)
+  # Round: 2
   apiq-ev-27-path-no-file-extension:
     description: >-
       [lens-3 | drift] EV-27: A path segment with file-extension (`.json`,
@@ -228,6 +270,10 @@ rules:
   # EV-28 — Server URL contains environment name
   # [drift] [error] sources: SP-G-SPS-10
   # ------------------------------------------------------------------------
+  # Source: SP-G-SPS-10 (no-environment-in-server-url);
+  #         rules-brainstorm.md EV-28 (P1, drift)
+  # Lens: 3 (Evolution-Friction), 1 (Threat-Modeling — env-leak)
+  # Round: 2
   apiq-ev-28-server-url-no-environment:
     description: >-
       [lens-3 | drift] EV-28: Server URL contains environment name (`/dev/`,
@@ -257,6 +303,10 @@ rules:
   # NOTE: Existing apiq-no-content-type-header-parameter covers Content-Type.
   # We add Authorization / Accept variants here.
   # ------------------------------------------------------------------------
+  # Source: Azure G-AZ-7 + SPS sps-no-explicit-headers + IBM + SG-46;
+  #         rules-brainstorm.md EV-32 (P1, drift)
+  # Lens: 3 (Evolution-Friction), 2 (Standards-Compliance)
+  # Round: 2
   apiq-ev-32-no-authorization-header-parameter:
     description: >-
       [lens-3 | drift] EV-32: `Authorization` declared as an explicit header
@@ -270,6 +320,10 @@ rules:
       function: undefined
       field: name
 
+  # Source: Azure G-AZ-7 + SPS + IBM (Accept variant);
+  #         rules-brainstorm.md EV-32 (P1, drift)
+  # Lens: 3 (Evolution-Friction), 2 (Standards-Compliance)
+  # Round: 2
   apiq-ev-32-no-accept-header-parameter:
     description: >-
       [lens-3 | drift] EV-32: `Accept` declared as an explicit header parameter
@@ -286,6 +340,10 @@ rules:
   # EV-34 — Spec uses Swagger-2 (vs OAS 3.x)
   # [drift] [error] sources: SP-G-TD-3 + Red-Hat
   # ------------------------------------------------------------------------
+  # Source: SP-G-TD-3 Team-D no-swagger-2 + Red-Hat rhoas-oas3minimum;
+  #         rules-brainstorm.md EV-34 (P1, drift)
+  # Lens: 3 (Evolution-Friction)
+  # Round: 2
   apiq-ev-34-no-swagger-2:
     description: >-
       [lens-3 | drift] EV-34: Document declares `swagger: 2.0` instead of
@@ -303,6 +361,10 @@ rules:
   # EV-35 — Adjacent path-template-segments with no separator
   # [drift] [error] sources: MIN-6 IBM
   # ------------------------------------------------------------------------
+  # Source: MIN-6 IBM ibm-no-consecutive-path-parameter-segments;
+  #         rules-brainstorm.md EV-35 (P1, drift) + CL-68
+  # Lens: 3 (Evolution-Friction), 4 (Client-Friction)
+  # Round: 2
   apiq-ev-35-no-consecutive-path-parameters:
     description: >-
       [lens-3 | drift] EV-35: Two adjacent path-template segments without a
@@ -331,6 +393,10 @@ rules:
   # NOTE: spectral:oas3-schema enforces this (OAS3 schema requires info.version);
   # we re-state at error severity as a Lens-3 finding for explicit framing.
   # ------------------------------------------------------------------------
+  # Source: OAS-3 schema (info.version required); spectral:oas3-schema enforces;
+  #         rules-brainstorm.md EV-37 (P1, drift)
+  # Lens: 3 (Evolution-Friction)
+  # Round: 2
   apiq-ev-37-info-version-required:
     description: >-
       [lens-3 | drift] EV-37: `info.version` is required by OAS-3 and indicates
@@ -357,6 +423,10 @@ rules:
   # incomplete migration. Spectral default catches the OAS schema violation.
   # We flag the residual fields explicitly.
   # ------------------------------------------------------------------------
+  # Source: SP-G-TD-3 + pb33f migration-warnings;
+  #         rules-brainstorm.md EV-43 (P1, drift) — half-migrated spec
+  # Lens: 3 (Evolution-Friction), 2 (Standards-Compliance)
+  # Round: 2
   apiq-ev-43-no-swagger-2-residue-consumes:
     description: >-
       [lens-3 | drift] EV-43: Document declares `consumes` (Swagger-2 only) on
@@ -369,6 +439,10 @@ rules:
       function: undefined
       field: consumes
 
+  # Source: SP-G-TD-3 + pb33f migration-warnings (produces variant);
+  #         rules-brainstorm.md EV-43 (P1, drift)
+  # Lens: 3 (Evolution-Friction), 2 (Standards-Compliance)
+  # Round: 2
   apiq-ev-43-no-swagger-2-residue-produces:
     description: >-
       [lens-3 | drift] EV-43 (companion): Top-level `produces` is a Swagger-2
@@ -396,6 +470,11 @@ rules:
   # EV-3 — Closed enum without extensibility hook
   # [loosen] [hint] sources: Zalando + Speakeasy + OASDIFF + OPTIC
   # ------------------------------------------------------------------------
+  # Source: Zalando x-extensible-enum + Speakeasy x-speakeasy-unknown-values +
+  #         OASDIFF added-enum-value-on-response is breaking-for-strict-clients +
+  #         OPTIC removed-enum-value-breaking; rules-brainstorm.md EV-3 (P2, loosen)
+  # Lens: 3 (Evolution-Friction), 4 (Client-Friction)
+  # Round: 2
   apiq-ev-3-response-enum-needs-extensibility:
     description: >-
       [lens-3 | loosen] EV-3: A `enum` on a response schema without an
@@ -418,6 +497,11 @@ rules:
   # NOTE: Existing apiq-oneof-needs-discriminator covers warning-on-absent-discriminator.
   # We add a stricter variant: discriminator present but no mapping table.
   # ------------------------------------------------------------------------
+  # Source: OASDIFF discriminator-mapping-changed-breaking +
+  #         Bump.sh discriminator-redundancy-analysis;
+  #         rules-brainstorm.md EV-6 (P2, loosen)
+  # Lens: 3 (Evolution-Friction), 4 (Client-Friction)
+  # Round: 2
   apiq-ev-6-discriminator-needs-mapping:
     description: >-
       [lens-3 | loosen] EV-6: `discriminator` is declared but no `mapping` table
@@ -450,6 +534,10 @@ rules:
   # EV-14 — requestBody.required not explicit
   # [drift] [warn] sources: SP-G-AZ-9 + IBM ibm-content-contains-schema
   # ------------------------------------------------------------------------
+  # Source: SP-G-AZ-9 + IBM ibm-content-contains-schema;
+  #         rules-brainstorm.md EV-14 (P2, drift)
+  # Lens: 3 (Evolution-Friction), 5 (Style-Coherence)
+  # Round: 2
   apiq-ev-14-requestbody-required-explicit:
     description: >-
       [lens-3 | drift] EV-14: `requestBody` should declare `required: true` or
@@ -467,6 +555,10 @@ rules:
   # EV-16 — 5xx/default response missing
   # [drift] [warn] sources: SP-G-OWASP-28 + Azure az-default-response + Zalando
   # ------------------------------------------------------------------------
+  # Source: SP-G-OWASP-28 + Azure az-default-response + Zalando
+  #         must-specify-default-response; rules-brainstorm.md EV-16 (P2, drift)
+  # Lens: 3 (Evolution-Friction), 4 (Client-Friction)
+  # Round: 2
   apiq-ev-16-operation-needs-default-response:
     description: >-
       [lens-3 | drift] EV-16: Operation has no `default` and no 5xx response
@@ -495,6 +587,10 @@ rules:
   # NOTE: spectral:oas operation-tags warns at info-level. We re-state at
   # warn for Lens-3 framing.
   # ------------------------------------------------------------------------
+  # Source: SG-41 + spectral:oas operation-tag-defined;
+  #         rules-brainstorm.md EV-17 (P2, drift) + Q1
+  # Lens: 3 (Evolution-Friction), 4 (Client-Friction), 10 (Operational-Metadata)
+  # Round: 2
   apiq-ev-17-operation-needs-tags:
     description: >-
       [lens-3 | drift] EV-17: An operation without `tags` cannot be moved into
@@ -515,6 +611,11 @@ rules:
   # EV-18 — additionalProperties:true on REQUEST body without explicit allow-list
   # [tighten] [warn] sources: OWASP + Stripe + MS-AZ
   # ------------------------------------------------------------------------
+  # Source: OWASP API3 (mass-assignment) + STRIPE-strict-by-design +
+  #         MS-AZ rest-fail-for-unknown-fields; rules-brainstorm.md EV-18 (P2,
+  #         tighten — inverse EV-5)
+  # Lens: 3 (Evolution-Friction), 1 (Threat-Modeling)
+  # Round: 2
   apiq-ev-18-request-additionalproperties-true:
     description: >-
       [lens-3 | tighten] EV-18: A request schema with `additionalProperties: true`
@@ -534,6 +635,10 @@ rules:
   # NOTE: spectral:oas3 has `oas3-unused-component` for unused schemas; it
   # does NOT cover securitySchemes. We use unreferencedReusableObject.
   # ------------------------------------------------------------------------
+  # Source: OASDIFF security-removed-or-added-is-breaking + apiq F3 (Round-1
+  #         dead-scheme-detection); rules-brainstorm.md EV-19 (P2, drift)
+  # Lens: 3 (Evolution-Friction), 1 (Threat-Modeling)
+  # Round: 2
   apiq-ev-19-unused-securityschemes:
     description: >-
       [lens-3 | drift] EV-19: Security scheme is defined but no operation (or
@@ -568,6 +673,10 @@ rules:
   # EV-46 — readOnly in request OR writeOnly in response
   # [drift] [warn] sources: SP-G-AZ-24 + OASDIFF
   # ------------------------------------------------------------------------
+  # Source: SP-G-AZ-24 + OASDIFF readOnly-flag-changed;
+  #         rules-brainstorm.md EV-46 (P2, drift)
+  # Lens: 3 (Evolution-Friction), 4 (Client-Friction)
+  # Round: 2
   apiq-ev-46-readonly-in-request:
     description: >-
       [lens-3 | drift] EV-46: A property marked `readOnly: true` should NOT
@@ -580,6 +689,10 @@ rules:
       function: undefined
       field: readOnly
 
+  # Source: SP-G-AZ-24 + OASDIFF (writeOnly mirror);
+  #         rules-brainstorm.md EV-46 (P2, drift)
+  # Lens: 3 (Evolution-Friction), 4 (Client-Friction)
+  # Round: 2
   apiq-ev-46-writeonly-in-response:
     description: >-
       [lens-3 | drift] EV-46 (mirror): A property marked `writeOnly: true`
@@ -595,6 +708,11 @@ rules:
   # EV-48 — PATCH accepts application/json (RFC errata 3169)
   # [drift] [warn] sources: SP-G-TD-4 + Azure az-patch-content-type + IBM
   # ------------------------------------------------------------------------
+  # Source: SP-G-TD-4 + Azure az-patch-content-type + IBM MIN-30 + RFC 7396
+  #         (merge-patch+json) + RFC 6902 (json-patch+json) + RFC errata 3169;
+  #         rules-brainstorm.md EV-48 (P2, drift) + RFC2-97
+  # Lens: 3 (Evolution-Friction), 2 (Standards-Compliance)
+  # Round: 2
   apiq-ev-48-patch-content-type:
     description: >-
       [lens-3 | drift] EV-48: `PATCH` operation accepts `application/json`
@@ -631,6 +749,10 @@ rules:
   # EV-55 — Required parameter shows default
   # [drift] [warn] sources: Azure G-AZ-9 + IBM ibm-no-default-for-required-parameter
   # ------------------------------------------------------------------------
+  # Source: Azure G-AZ-9 + IBM ibm-no-default-for-required-parameter +
+  #         OASDIFF default-changed; rules-brainstorm.md EV-55 (P2, drift)
+  # Lens: 3 (Evolution-Friction)
+  # Round: 2
   apiq-ev-55-required-param-no-default:
     description: >-
       [lens-3 | drift] EV-55: A parameter with `required: true` should NOT
@@ -648,6 +770,10 @@ rules:
   # EV-56 — servers array missing or empty
   # [drift] [warn] sources: SP-Redocly no-empty-servers
   # ------------------------------------------------------------------------
+  # Source: SP-Redocly no-empty-servers;
+  #         rules-brainstorm.md EV-56 (P2, drift)
+  # Lens: 3 (Evolution-Friction), 5 (Style-Coherence)
+  # Round: 2
   apiq-ev-56-servers-required:
     description: >-
       [lens-3 | drift] EV-56: `servers` array missing or empty — clients hard-code

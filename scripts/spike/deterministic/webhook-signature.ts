@@ -1,5 +1,22 @@
 /**
- * Webhook-Signature — Stage-A deterministic Module (Task T9 / Welle 2).
+ * Webhook-Signature Module — Stage A, Welle A T9 (Module-Class).
+ *
+ * Sources: GitHub webhook docs (X-Hub-Signature-256)
+ *          + Stripe webhook signing docs (Stripe-Signature, t/v1 scheme)
+ *          + RFC 9421 (HTTP Message Signatures)
+ *          + Twilio + WhatsApp webhook-receiver docs (postmortem R3-PM-IC-03)
+ *          + OWASP API10:2023 (Unsafe Consumption of APIs)
+ * Patterns: 3 finding-classes (webhook-no-signature-header / signature-format-
+ *           undocumented / payload-schema-undocumented) detected via path-prefix
+ *           heuristic (+ summary/description) + header-name allowlist
+ * Lens: 1 (Threat-Modeling), 2 (Standards-Compliance), 8 (Internal-Consistency)
+ * Round: 2 (Welle A — Mining-Round-2 sleeper-killer M-6)
+ *
+ * Maps to rules-brainstorm.md: TM-A50 (Webhook endpoint MUST declare
+ * signature-header — P1, "highest-value Round-2 catch"), TM-A51 (Webhook
+ * accepts wildcard star-slash-star content-type), CL-74 (callbacks without
+ * webhooks-3.1 OR webhooks no signature), U1 (webhooks-Definitionen haben
+ * request-Schemas).
  *
  * Detector for the "webhook endpoint MUST declare a signature-verification
  * header parameter" pattern (TM-A50) plus two related rules

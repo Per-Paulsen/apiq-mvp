@@ -1,5 +1,21 @@
 /**
- * Path-Template-Parser — Stage-A deterministic walker (Task #4).
+ * Path-Template-Parser Module — Stage A, Welle A T4 (Module-Class).
+ *
+ * Sources: RFC 6570 (URI-Template Level-1) + RFC 3986 §3.3 (Path)
+ *          + OAS 3.0 §4.7.10 (Parameter Object)
+ *          + IBM/Microsoft path-naming-rule catalogs (S1-S8 conventions)
+ *          + apiq P3/P4/S1-S8 (Round-1)
+ * Patterns: 7+ finding-classes (template-without-param, param-without-template,
+ *           naming-drift, depth, trailing-slash mix, RPC-verb-prevalence,
+ *           mixed-versioning); cross-spec aggregation
+ * Lens: 2 (Standards-Compliance), 4 (Client-Friction), 5 (Style-Coherence),
+ *       8 (Internal-Consistency)
+ * Round: 1 (Round-1 P3/P4/S1-S8) + 2 (Round-2 RFC2-66/67/68/70 refinement)
+ *
+ * Maps to rules-brainstorm.md: P3/P4 (Path-Templates valid), S1-S8 (path
+ * conventions), CL-58 (Duplicate paths case-insensitive), CL-68 (consecutive
+ * params), EV-35/EV-36 (path-template ambiguity), RFC2-66/67/70 (path-segment
+ * encoding + URI-template Level-1).
  *
  * Single-pass module that parses every path-key in a spec, extracts the
  * `{template}` parameter slots, and cross-checks them against

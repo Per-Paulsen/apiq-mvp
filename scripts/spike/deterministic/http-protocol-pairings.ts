@@ -1,5 +1,23 @@
 /**
- * http-protocol-pairings — Stage-A deterministic detector.
+ * HTTP-Protocol-Pairings Module — Stage A, Welle B T16b (Module-Class).
+ *
+ * Sources: RFC 9110 (HTTP Semantics, 2022)
+ *          + RFC 9111 (HTTP Caching) + RFC 7232 (Conditional Requests)
+ *          + RFC 7233/9110 (Range Requests) + RFC 6585 (Additional HTTP Status)
+ *          + RFC 7240 (Prefer Header) + RFC 8288 (Web Linking)
+ *          + draft-ietf-httpapi-ratelimit-headers
+ *          + RFC 6750 (Bearer Token, §3 challenge)
+ * Patterns: ~30 pairings (RFC2-* per mining-round2-standards.md);
+ *           verbatim "MUST" → error, "SHOULD" → warn per Severity-Schema-Final
+ * Lens: 2 (Standards-Compliance), 7 (Operations)
+ * Round: 2 (Welle B / T16b)
+ *
+ * Maps to rules-brainstorm.md: RFC2-7 (HTTP method tokens uppercase), RFC2-8
+ * (GET/HEAD/OPTIONS/TRACE/DELETE no body), RFC2-14 (405 → Allow header),
+ * RFC2-20-26 (conditional pairings), RFC2-30-34 (Range), RFC2-40 (401 →
+ * WWW-Authenticate, P1), RFC2-41 (407 → Proxy-Authenticate), RFC2-46-48 (Prefer),
+ * RFC2-94 (429 → Retry-After / RateLimit-* P1, severity-upgrade Round-2),
+ * RFC2-96 (503 → Retry-After), C9/C10 (rate-limit + 304 conditional).
  *
  * Lens 2 (Standards-Compliance) + Lens 7 (Operations).
  *

@@ -1,6 +1,20 @@
 /**
- * OAuth2-Flow-Validator (Stage-A T12) - RFC 9700 BCP-240 + RFC 6749 + RFC 8725
- * compliance for `securitySchemes` declarations.
+ * OAuth2-Flow-Validator Module — Stage A, Welle B T12 (Module-Class).
+ *
+ * Sources: RFC 9700 BCP-240 (2025-Jan, OAuth 2.0 Security Best Current Practice)
+ *          + RFC 6749 (OAuth 2.0 Authorization Framework, §3.1 verbatim TLS)
+ *          + RFC 8725 (JWT Best Current Practices)
+ *          + RFC 7636 (PKCE) — recommended for authorizationCode
+ *          + APIMatic / Stoplight OpenIdConnect-validation guidance
+ * Patterns: ~8 OAuth2-class checks (Y-5/Y-7 + RFC2-58..65 + TM-A6/A7);
+ *           BCP-240 forbids implicit + password flows (verbatim "MUST NOT")
+ * Lens: 1 (Threat-Modeling), 2 (Standards-Compliance), 3 (Evolution-Friction)
+ * Round: 2 (Welle B / T12)
+ *
+ * Maps to rules-brainstorm.md: Y-5 (OAuth2 tokenUrl HTTPS, P1), Y-7 (implicit/
+ * password forbidden BCP-240, P1, severity-upgrade Round-2), TM-A6 (OpenIdConnect
+ * URL HTTPS), TM-A7 (authCode + PKCE), RFC2-58 (JWT bearerFormat), RFC2-60-65
+ * (BCP-240 + scope-descriptions + clientCredentials).
  *
  * Spec-agnostic - works on any OpenAPI 3.x spec. No vendor knowledge.
  *
