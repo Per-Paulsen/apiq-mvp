@@ -103,34 +103,63 @@ export const LENS_TO_NUMBER: Record<Lens, number> = {
 // 4. Source-distinction (NEW Phase B)
 // =============================================================================
 
+/**
+ * ISO-8601 date string (YYYY-MM-DD). Used for `verifiedAt` audit-trail on
+ * RuleSource entries (Welle F).
+ */
+const IsoDateSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, 'verifiedAt must be ISO-8601 YYYY-MM-DD');
+
+/**
+ * Verbatim quote (≤200 chars) from the cited source. Welle F adds this so
+ * `findings` can surface the exact RFC / BCP / ISO / IANA / vendor / mining
+ * text that backs a rule, not just a citation pointer.
+ */
+const VerbatimSchema = z
+  .string()
+  .max(200, 'verbatim must be ≤200 chars (exact quote, not paraphrase)');
+
 export const RuleSourceSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('rfc'),
     number: z.number().int().positive(),
     section: z.string().optional(),
+    verbatim: VerbatimSchema.optional(),
+    verifiedAt: IsoDateSchema.optional(),
   }),
   z.object({
     type: z.literal('bcp'),
     number: z.number().int().positive(),
     rfc: z.number().int().positive().optional(),
+    verbatim: VerbatimSchema.optional(),
+    verifiedAt: IsoDateSchema.optional(),
   }),
   z.object({
     type: z.literal('iso'),
     standard: z.literal('25010'),
     characteristic: z.string().min(1),
+    verbatim: VerbatimSchema.optional(),
+    verifiedAt: IsoDateSchema.optional(),
   }),
   z.object({
     type: z.literal('iana-registry'),
     registry: z.string().min(1),
+    verbatim: VerbatimSchema.optional(),
+    verifiedAt: IsoDateSchema.optional(),
   }),
   z.object({
     type: z.literal('vendor'),
     name: z.string().min(1),
+    verbatim: VerbatimSchema.optional(),
+    verifiedAt: IsoDateSchema.optional(),
   }),
   z.object({
     type: z.literal('mining'),
     phase: z.enum(['round1', 'round2']),
     subagent: z.string().min(1),
+    verbatim: VerbatimSchema.optional(),
+    verifiedAt: IsoDateSchema.optional(),
   }),
 ]);
 export type RuleSource = z.infer<typeof RuleSourceSchema>;
@@ -172,16 +201,19 @@ export const StakeholderSchema = z.enum([
   'codegen-tool',
   'docs-tool',
   'self',
+  'ai-agent', // NEW Welle F (Lens-9 USP — strategic-vision coupling)
 ]);
 export type Stakeholder = z.infer<typeof StakeholderSchema>;
 
 export const LifecyclePhaseSchema = z.enum([
+  'authoring-time', // NEW Welle F (spec being written/edited)
   'build-time',
   'test-time',
+  'validation-time', // NEW Welle F (CI lint/contract-test phase)
   'deploy-time',
   'runtime-happy',
   'runtime-edge',
-  'runtime-scale',
+  'runtime-at-scale', // RENAMED from 'runtime-scale' (Welle F naming consistency)
   'evolution-time',
   'documentation-time',
 ]);
@@ -191,9 +223,11 @@ export const DefectClassSchema = z.enum([
   'syntax',
   'semantic',
   'norm',
-  'ergonomics',
-  'incompleteness',
+  'ergonomic', // RENAMED from 'ergonomics' (Welle F — singular adjective form)
+  'incomplete', // RENAMED from 'incompleteness' (Welle F — singular adjective form)
   'over-specification',
+  'privacy-leakage', // NEW Welle F (Lens-6 dedicated class)
+  'operational-metadata-missing', // NEW Welle F (Lens-10 dedicated class)
 ]);
 export type DefectClass = z.infer<typeof DefectClassSchema>;
 
@@ -229,6 +263,46 @@ export const PRIORITY_DOCS: Record<Priority, string> = {
 };
 
 // =============================================================================
+// 8b. Cost / MTTR / Agent-Readiness impact (NEW Welle F — F10 + F-NEU)
+// =============================================================================
+
+export const ImpactLevelSchema = z.enum(['low', 'medium', 'high']);
+export type ImpactLevel = z.infer<typeof ImpactLevelSchema>;
+
+export const COST_IMPACT_DOCS: Record<ImpactLevel, string> = {
+  low: 'Trivial fix (add field, add description, fix typo) — minutes per occurrence.',
+  medium:
+    'Moderate fix (add header support, add error-shape, add pagination) — hours per occurrence.',
+  high: 'Significant rework (restructure schema, add auth-flow, refactor versioning) — days per occurrence.',
+};
+
+export const MTTR_IMPACT_DOCS: Record<ImpactLevel, string> = {
+  low: 'Developer-experience only, no prod-impact.',
+  medium: 'Client-integration-quality, hours-MTTR.',
+  high: 'Security/correctness, days-MTTR (data-loss/security-incident risk).',
+};
+
+export const AgentReadinessImpactSchema = z.enum([
+  'high',
+  'medium',
+  'low',
+  'none',
+]);
+export type AgentReadinessImpact = z.infer<typeof AgentReadinessImpactSchema>;
+
+export const AGENT_READINESS_IMPACT_DOCS: Record<AgentReadinessImpact, string> =
+  {
+    high: 'Finding directly causes agent tool-call-failure (ambiguous-name, unclear-description, missing-required-field).',
+    medium:
+      'Finding causes agent retry-loop or error-recovery-difficulty.',
+    low: 'Finding affects agent-quality but not blocking.',
+    none: 'Finding is human-developer-only.',
+  };
+
+export const DetectionPrecisionSchema = z.enum(['high', 'medium', 'low']);
+export type DetectionPrecision = z.infer<typeof DetectionPrecisionSchema>;
+
+// =============================================================================
 // 9. Combined RuleMetadata
 // =============================================================================
 
@@ -260,14 +334,75 @@ export const RuleMetadataSchema = z.object({
   /** What kind of defect. */
   defectClass: DefectClassSchema,
 
-  /** ISO/IEC 25010 quality-characteristic — severity-justification + marketing. */
-  iso25010: IsoIec25010Schema,
+  /**
+   * ISO/IEC 25010 quality-characteristics — array of 1+ characteristics
+   * (Welle F: migrated from single-value to array, since rules often span
+   * multiple quality-characteristics, e.g. security + reliability).
+   */
+  iso25010: z.array(IsoIec25010Schema).min(1),
 
   /** P1..P5 from implementation-priority.md. Optional. */
   priority: PrioritySchema.optional(),
 
   /** Origin tag — e.g. 'TM-A50', 'RFC2-5', 'CL-1'. Optional but recommended. */
   patternId: z.string().min(1).optional(),
+
+  // -------------------------------------------------------------------------
+  // Welle F additions (F1, F9, F10, F-NEU)
+  // -------------------------------------------------------------------------
+
+  /**
+   * F1 — Whether `apiq fix` can apply this rule's auto-fix without human
+   * review. Conservative default `false` — rules must opt-in after a fix
+   * implementation has been validated.
+   */
+  autoFixSafe: z.boolean().optional().default(false),
+
+  /**
+   * F1 — Detector confidence in the finding. `high` = false-positives are
+   * rare; `medium` = some false-positives expected; `low` = heuristic, often
+   * needs human disambiguation. Conservative default `medium`.
+   */
+  detectionPrecision: DetectionPrecisionSchema.optional().default('medium'),
+
+  /**
+   * F9 — Regulatory / control-framework mapping. Each axis is an array of
+   * control-IDs that the rule helps enforce. All axes optional.
+   */
+  regulatoryMapping: z
+    .object({
+      /** NIST CSF 2.0 control IDs — e.g. ['PR.DS-2', 'GV.OC-01']. */
+      nist: z.array(z.string().min(1)).optional(),
+      /** OWASP ASVS 5.0 verification-IDs — e.g. ['V9.1.1']. */
+      asvs: z.array(z.string().min(1)).optional(),
+      /** CIS Controls 8.1 IDs — e.g. ['CIS-3.10']. */
+      cis: z.array(z.string().min(1)).optional(),
+      /** GDPR Article references — e.g. ['Art-5', 'Art-32']. */
+      gdpr: z.array(z.string().min(1)).optional(),
+      /** SOC 2 Trust Services Criteria — e.g. ['CC6.1', 'CC7.2']. */
+      soc2: z.array(z.string().min(1)).optional(),
+    })
+    .optional(),
+
+  /**
+   * F10 — Cost-of-fix per occurrence. Conservative default `medium`.
+   * See `COST_IMPACT_DOCS` for tier semantics.
+   */
+  costImpact: ImpactLevelSchema.optional().default('medium'),
+
+  /**
+   * F10 — Mean-Time-To-Recovery if fired in production (i.e. the cost of
+   * NOT fixing). Conservative default `medium`.
+   * See `MTTR_IMPACT_DOCS` for tier semantics.
+   */
+  mttrImpact: ImpactLevelSchema.optional().default('medium'),
+
+  /**
+   * F-NEU — Strategic-vision coupling: how badly does this finding hurt
+   * agent tool-call success? Conservative default `none` (most rules are
+   * developer-only). See `AGENT_READINESS_IMPACT_DOCS` for tier semantics.
+   */
+  agentReadinessImpact: AgentReadinessImpactSchema.optional().default('none'),
 });
 /**
  * Public type for rule-metadata. We use the OUTPUT type of the Zod schema
@@ -407,7 +542,7 @@ export interface LegacySeverityOnly {
  *     build/lint time.
  *   - `defectClass`: `'norm'` — RFC-style normative violation fits the
  *     Round-1 spectral-default tier.
- *   - `iso25010`: `'maintainability'` — generic mappable default.
+ *   - `iso25010`: `['maintainability']` — generic mappable default.
  *
  * Optionally accept partial overrides so callers who know more can supply it
  * inline.
@@ -418,7 +553,7 @@ export interface LegacySeverityOnly {
  *
  *   migrateLegacyRule(
  *     { severity: 'warn' },
- *     { lenses: ['client-friction'], iso25010: 'usability' }
+ *     { lenses: ['client-friction'], iso25010: ['usability'] }
  *   )
  */
 export function migrateLegacyRule(
@@ -433,7 +568,13 @@ export function migrateLegacyRule(
     stakeholders: ['spec-author'],
     lifecyclePhase: 'build-time',
     defectClass: 'norm',
-    iso25010: 'maintainability',
+    iso25010: ['maintainability'], // Welle F — migrated to array
+    // Welle F — conservative defaults for new fields:
+    costImpact: 'medium',
+    mttrImpact: 'medium',
+    agentReadinessImpact: 'none',
+    detectionPrecision: 'medium',
+    autoFixSafe: false,
     ...(legacy.patternId ? { patternId: legacy.patternId } : {}),
     ...overrides,
   };
@@ -464,3 +605,20 @@ void _SEVERITY_DOCS_EXHAUSTIVE;
 const _SEVERITY_DIRECTION_DOCS_EXHAUSTIVE: Record<SeverityDirection, string> =
   SEVERITY_DIRECTION_DOCS;
 void _SEVERITY_DIRECTION_DOCS_EXHAUSTIVE;
+
+/**
+ * Welle F — compile-time exhaustiveness for new docs Records.
+ */
+const _COST_IMPACT_DOCS_EXHAUSTIVE: Record<ImpactLevel, string> =
+  COST_IMPACT_DOCS;
+void _COST_IMPACT_DOCS_EXHAUSTIVE;
+
+const _MTTR_IMPACT_DOCS_EXHAUSTIVE: Record<ImpactLevel, string> =
+  MTTR_IMPACT_DOCS;
+void _MTTR_IMPACT_DOCS_EXHAUSTIVE;
+
+const _AGENT_READINESS_IMPACT_DOCS_EXHAUSTIVE: Record<
+  AgentReadinessImpact,
+  string
+> = AGENT_READINESS_IMPACT_DOCS;
+void _AGENT_READINESS_IMPACT_DOCS_EXHAUSTIVE;

@@ -31,6 +31,14 @@ import { walkAiAgentConsumability } from './ai-agent-consumability.js';
 import { walkEvolutionStatistical } from './evolution-statistical.js';
 import { walkOperationalMetadata } from './operational-metadata.js';
 import { walkPrivacyDataClass } from './privacy-data-class.js';
+// Welle F (F6) — info-tier positive-marker walkers
+import { walkSla4oaiPresence } from './info-tier-sla4oai.js';
+import { walkCapabilityDiscoveryEndpoint } from './info-tier-capability-discovery.js';
+import { walkRfc9727ApiCatalog } from './info-tier-rfc9727-api-catalog.js';
+import { walkRfc9728OauthProtectedResource } from './info-tier-rfc9728-oauth-protected-resource.js';
+import { walkBrownoutSchedule } from './info-tier-brownout-schedule.js';
+import { walkRateLimitTier } from './info-tier-rate-limit-tier.js';
+import { walkArazzoWorkflowDocument } from './info-tier-arazzo-workflow.js';
 
 type WalkerFn = (spec: object, opts?: DetectorOptions) => Promise<DetectorFinding[]>;
 
@@ -51,6 +59,14 @@ const ALL_WALKERS: WalkerFn[] = [
   walkEvolutionStatistical,
   walkOperationalMetadata,
   walkPrivacyDataClass,
+  // Welle F (F6) — info-tier positive-marker walkers (7 walkers)
+  walkSla4oaiPresence,
+  walkCapabilityDiscoveryEndpoint,
+  walkRfc9727ApiCatalog,
+  walkRfc9728OauthProtectedResource,
+  walkBrownoutSchedule,
+  walkRateLimitTier,
+  walkArazzoWorkflowDocument,
 ];
 
 export async function runWalkers(

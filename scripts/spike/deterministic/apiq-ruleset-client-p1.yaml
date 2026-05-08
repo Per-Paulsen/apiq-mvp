@@ -57,6 +57,30 @@ rules:
       function: multi-lang-reserved-keywords
       functionOptions:
         kind: property
+    apiq-meta:
+      pattern-id: CL-1
+      lenses: [client-friction]
+      sources:
+        - type: vendor
+          name: openapi-generator multi-issue (#1831, #7100)
+          verbatim: 'reserved word collides with target-language identifier'
+          verifiedAt: '2026-05-08'
+        - type: vendor
+          name: swagger-codegen #4805
+          verifiedAt: '2026-05-08'
+        - type: mining
+          phase: round2
+          subagent: t18a-client
+      stakeholders: [client-dev, codegen-tool, ai-agent]
+      lifecycle-phase: build-time
+      defect-class: ergonomic
+      iso25010: [usability, compatibility]
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: medium
 
   # CL-1b — operationId values that collide.
   # Source: openapi-generator multi-issue + per-language reserved-keyword catalogs;
@@ -77,6 +101,30 @@ rules:
       function: multi-lang-reserved-keywords
       functionOptions:
         kind: operationId
+    apiq-meta:
+      pattern-id: CL-1
+      lenses: [client-friction]
+      sources:
+        - type: vendor
+          name: openapi-generator multi-issue (#1831, #7100)
+          verbatim: 'reserved word collides with target-language identifier'
+          verifiedAt: '2026-05-08'
+        - type: vendor
+          name: swagger-codegen #4805
+          verifiedAt: '2026-05-08'
+        - type: mining
+          phase: round2
+          subagent: t18a-client
+      stakeholders: [client-dev, codegen-tool, ai-agent]
+      lifecycle-phase: build-time
+      defect-class: ergonomic
+      iso25010: [usability, compatibility]
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: medium
 
   # =========================================================================
   # CL-2 — Property-name with leading underscore or leading digit.
@@ -102,6 +150,29 @@ rules:
       function: pattern
       functionOptions:
         match: "^[A-Za-z][A-Za-z0-9_]*$"
+    apiq-meta:
+      pattern-id: CL-2
+      lenses: [client-friction]
+      sources:
+        - type: vendor
+          name: swagger-codegen #4805
+          verifiedAt: '2026-05-08'
+        - type: vendor
+          name: openapi-generator (multi-language compile-fail/collision)
+          verifiedAt: '2026-05-08'
+        - type: mining
+          phase: round2
+          subagent: t18a-client
+      stakeholders: [client-dev, codegen-tool]
+      lifecycle-phase: build-time
+      defect-class: ergonomic
+      iso25010: [usability, compatibility]
+      codegen-targets: [java, go, python]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: low
 
   # =========================================================================
   # CL-6 — operationId missing entirely.
@@ -126,6 +197,30 @@ rules:
     then:
       field: operationId
       function: defined
+    apiq-meta:
+      pattern-id: CL-6
+      lenses: [client-friction, evolution-friction, ai-agent-consumability]
+      sources:
+        - type: vendor
+          name: openapi-generator (operation-operationId)
+          verbatim: 'operationId is the canonical method-naming key'
+          verifiedAt: '2026-05-08'
+        - type: vendor
+          name: spectral:oas operation-operationId
+          verifiedAt: '2026-05-08'
+        - type: mining
+          phase: round2
+          subagent: t18a-client
+      stakeholders: [client-dev, codegen-tool, docs-tool, ai-agent]
+      lifecycle-phase: build-time
+      defect-class: incomplete
+      iso25010: [usability, maintainability]
+      codegen-targets: ['*']
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: high
 
   # =========================================================================
   # CL-12 — oneOf without discriminator.
@@ -150,6 +245,30 @@ rules:
     then:
       field: discriminator
       function: defined
+    apiq-meta:
+      pattern-id: CL-12
+      lenses: [client-friction, standards-compliance]
+      sources:
+        - type: vendor
+          name: 'OAS 3.0 §4.7.25 (Discriminator)'
+          verbatim: 'discriminator hint to alternative schemas'
+          verifiedAt: '2026-05-08'
+        - type: vendor
+          name: Redocly + multi-codegen
+          verifiedAt: '2026-05-08'
+        - type: mining
+          phase: round2
+          subagent: t18a-client
+      stakeholders: [client-dev, codegen-tool, ai-agent]
+      lifecycle-phase: build-time
+      defect-class: incomplete
+      iso25010: [usability, compatibility]
+      codegen-targets: [typescript, java, csharp, kotlin, go]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: medium
+      mttr-impact: low
+      agent-readiness-impact: medium
 
   # =========================================================================
   # CL-20 — 204 response declared with content body (RFC violation).
@@ -174,6 +293,31 @@ rules:
     then:
       field: content
       function: undefined
+    apiq-meta:
+      pattern-id: CL-20
+      lenses: [client-friction, standards-compliance]
+      sources:
+        - type: rfc
+          number: 9110
+          section: '15.3.5'
+          verbatim: 'A 204 response is terminated by the end of the header section; it cannot contain content'
+          verifiedAt: '2026-05-08'
+        - type: vendor
+          name: OAI #3536
+          verifiedAt: '2026-05-08'
+        - type: mining
+          phase: round2
+          subagent: t18a-client
+      stakeholders: [client-dev, codegen-tool, spec-author]
+      lifecycle-phase: build-time
+      defect-class: norm
+      iso25010: [compatibility, reliability]
+      codegen-targets: ['*']
+      detection-precision: high
+      auto-fix-safe: true
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: medium
 
   # =========================================================================
   # CL-26 — pattern without ^ / $ anchors.
@@ -201,6 +345,30 @@ rules:
       function: pattern
       functionOptions:
         match: "^\\^.*\\$$"
+    apiq-meta:
+      pattern-id: CL-26
+      lenses: [client-friction, threat-modeling]
+      sources:
+        - type: vendor
+          name: IBM ibm-anchored-patterns (MIN-2)
+          url: 'https://github.com/IBM/openapi-validator'
+          verifiedAt: '2026-05-08'
+        - type: vendor
+          name: Speakeasy + ECMA-262 partial-match semantics
+          verifiedAt: '2026-05-08'
+        - type: mining
+          phase: round2
+          subagent: t18a-client
+      stakeholders: [client-dev, security, spec-author]
+      lifecycle-phase: build-time
+      defect-class: incomplete
+      iso25010: [security, usability]
+      codegen-targets: ['*']
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: medium
+      agent-readiness-impact: low
 
   # =========================================================================
   # CL-31 — Bare-array request body.
@@ -227,6 +395,26 @@ rules:
       function: pattern
       functionOptions:
         notMatch: "^array$"
+    apiq-meta:
+      pattern-id: CL-31
+      lenses: [client-friction, evolution-friction]
+      sources:
+        - type: vendor
+          name: openapi-generator #17877
+          verifiedAt: '2026-05-08'
+        - type: mining
+          phase: round2
+          subagent: t18a-client
+      stakeholders: [client-dev, codegen-tool, spec-author]
+      lifecycle-phase: build-time
+      defect-class: ergonomic
+      iso25010: [usability, compatibility]
+      codegen-targets: [java, csharp, kotlin, go]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: medium
+      mttr-impact: low
+      agent-readiness-impact: medium
 
   # =========================================================================
   # CL-33 — schema without type.
@@ -249,6 +437,30 @@ rules:
     then:
       field: type
       function: defined
+    apiq-meta:
+      pattern-id: CL-33
+      lenses: [client-friction]
+      sources:
+        - type: vendor
+          name: 'Vacuum (MIN-11)'
+          url: 'https://quobix.com/vacuum/'
+          verifiedAt: '2026-05-08'
+        - type: vendor
+          name: openapi-generator
+          verifiedAt: '2026-05-08'
+        - type: mining
+          phase: round2
+          subagent: t18a-client
+      stakeholders: [client-dev, codegen-tool, spec-author]
+      lifecycle-phase: build-time
+      defect-class: incomplete
+      iso25010: [usability, compatibility]
+      codegen-targets: [java, csharp, kotlin, go]
+      detection-precision: high
+      auto-fix-safe: true
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: medium
 
   # =========================================================================
   # CL-36 — example with value AND externalValue.
@@ -273,6 +485,32 @@ rules:
     then:
       field: value
       function: undefined
+    apiq-meta:
+      pattern-id: CL-36
+      lenses: [client-friction, standards-compliance]
+      sources:
+        - type: vendor
+          name: 'OAS 3.0 §4.7.18 (Example Object)'
+          verbatim: 'value field and externalValue field are mutually exclusive'
+          url: 'https://spec.openapis.org/oas/v3.0.3#example-object'
+          verifiedAt: '2026-05-08'
+        - type: vendor
+          name: 'Redocly (MIN-48)'
+          url: 'https://redocly.com/docs/cli/rules/'
+          verifiedAt: '2026-05-08'
+        - type: mining
+          phase: round2
+          subagent: t18a-client
+      stakeholders: [client-dev, codegen-tool, docs-tool, spec-author]
+      lifecycle-phase: build-time
+      defect-class: syntax
+      iso25010: [compatibility, usability]
+      codegen-targets: ['*']
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: low
 
   # =========================================================================
   # CL-37 — Component naming uses spaces or special chars.
@@ -304,6 +542,31 @@ rules:
       function: pattern
       functionOptions:
         match: "^[A-Za-z_][A-Za-z0-9_-]*$"
+    apiq-meta:
+      pattern-id: CL-37
+      lenses: [client-friction]
+      sources:
+        - type: vendor
+          name: 'IBM (MIN-47)'
+          url: 'https://github.com/IBM/openapi-validator'
+          verifiedAt: '2026-05-08'
+        - type: vendor
+          name: 'Redocly (MIN-49)'
+          url: 'https://redocly.com/docs/cli/rules/'
+          verifiedAt: '2026-05-08'
+        - type: mining
+          phase: round2
+          subagent: t18a-client
+      stakeholders: [client-dev, codegen-tool, spec-author]
+      lifecycle-phase: build-time
+      defect-class: ergonomic
+      iso25010: [usability, compatibility]
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin, php, ruby]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: medium
+      mttr-impact: low
+      agent-readiness-impact: low
 
   # =========================================================================
   # CL-40 — Path with `?` query in path-template.
@@ -328,6 +591,31 @@ rules:
       function: pattern
       functionOptions:
         notMatch: "\\?"
+    apiq-meta:
+      pattern-id: CL-40
+      lenses: [client-friction, standards-compliance]
+      sources:
+        - type: rfc
+          number: 3986
+          section: '3.4'
+          verbatim: 'The query component is indicated by the first question mark'
+          verifiedAt: '2026-05-08'
+        - type: vendor
+          name: 'spectral:oas path-not-include-query'
+          verifiedAt: '2026-05-08'
+        - type: mining
+          phase: round2
+          subagent: t18a-client
+      stakeholders: [client-dev, codegen-tool, spec-author]
+      lifecycle-phase: build-time
+      defect-class: syntax
+      iso25010: [compatibility, usability]
+      codegen-targets: ['*']
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: low
 
   # =========================================================================
   # CL-45 — Pagination mixed conventions cross-spec.
@@ -361,6 +649,27 @@ rules:
     given: "$.paths[*][*].parameters[?(@.name && @.name.match(/^(cursor|page_token|next_token)$/))]^^"
     then:
       function: truthy
+    apiq-meta:
+      pattern-id: CL-45
+      lenses: [client-friction]
+      sources:
+        - type: vendor
+          name: Speakeasy + Postman (pagination-style guidance)
+          url: 'https://www.speakeasy.com/openapi'
+          verifiedAt: '2026-05-08'
+        - type: mining
+          phase: round2
+          subagent: t18a-client
+      stakeholders: [client-dev, codegen-tool, spec-author]
+      lifecycle-phase: build-time
+      defect-class: ergonomic
+      iso25010: [usability, maintainability]
+      codegen-targets: ['*']
+      detection-precision: low
+      auto-fix-safe: false
+      cost-impact: medium
+      mttr-impact: low
+      agent-readiness-impact: medium
 
   # =========================================================================
   # CL-46 — Inconsistent error-shape cross-endpoint.
@@ -400,6 +709,31 @@ rules:
           properties:
             $ref:
               type: string
+    apiq-meta:
+      pattern-id: CL-46
+      lenses: [client-friction, standards-compliance, ai-agent-consumability]
+      sources:
+        - type: rfc
+          number: 9457
+          verbatim: 'Problem Details for HTTP APIs (supersedes RFC 7807)'
+          verifiedAt: '2026-05-08'
+        - type: vendor
+          name: Speakeasy (cross-endpoint error-coherence)
+          url: 'https://www.speakeasy.com/openapi'
+          verifiedAt: '2026-05-08'
+        - type: mining
+          phase: round2
+          subagent: t18a-client
+      stakeholders: [client-dev, codegen-tool, ai-agent]
+      lifecycle-phase: build-time
+      defect-class: ergonomic
+      iso25010: [usability, maintainability]
+      codegen-targets: ['*']
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: medium
+      mttr-impact: medium
+      agent-readiness-impact: high
 
   # =========================================================================
   # CL-50 — Path file-extension (`/users.json`). Targets: * (router-fail).
@@ -422,6 +756,30 @@ rules:
       function: pattern
       functionOptions:
         notMatch: "\\.(json|xml|html|yaml|yml|csv|txt|pdf)(/|$)"
+    apiq-meta:
+      pattern-id: CL-50
+      lenses: [client-friction, standards-compliance, evolution-friction]
+      sources:
+        - type: vendor
+          name: 'SPS API standards (SP-G-SPS-13)'
+          url: 'https://github.com/SPSCommerce/sps-api-standards'
+          verifiedAt: '2026-05-08'
+        - type: vendor
+          name: 'SG-5 (style-guide consensus)'
+          verifiedAt: '2026-05-08'
+        - type: mining
+          phase: round2
+          subagent: t18a-client
+      stakeholders: [client-dev, codegen-tool, spec-author]
+      lifecycle-phase: build-time
+      defect-class: ergonomic
+      iso25010: [usability, compatibility]
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin, php, ruby]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: medium
+      mttr-impact: low
+      agent-readiness-impact: medium
 
   # =========================================================================
   # CL-55 — Uppercase mixed lowercase enum values.
@@ -458,6 +816,26 @@ rules:
               - contains:
                   type: string
                   pattern: "^[a-z][a-z0-9_]*$"
+    apiq-meta:
+      pattern-id: CL-55
+      lenses: [client-friction, style-coherence]
+      sources:
+        - type: vendor
+          name: 'SG-37 (style-guide enum-casing consensus)'
+          verifiedAt: '2026-05-08'
+        - type: mining
+          phase: round1
+          subagent: m12-naming
+      stakeholders: [client-dev, codegen-tool, spec-author]
+      lifecycle-phase: build-time
+      defect-class: ergonomic
+      iso25010: [usability]
+      codegen-targets: [go, rust]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: low
 
   # =========================================================================
   # CL-57 — enum with duplicate values.
@@ -483,6 +861,27 @@ rules:
         schema:
           type: array
           uniqueItems: true
+    apiq-meta:
+      pattern-id: CL-57
+      lenses: [client-friction]
+      sources:
+        - type: vendor
+          name: 'spectral:oas duplicated-entry-in-enum'
+          url: 'https://github.com/stoplightio/spectral'
+          verifiedAt: '2026-05-08'
+        - type: mining
+          phase: round2
+          subagent: t18a-client
+      stakeholders: [client-dev, codegen-tool, spec-author]
+      lifecycle-phase: build-time
+      defect-class: syntax
+      iso25010: [compatibility, reliability]
+      codegen-targets: [typescript, java, rust]
+      detection-precision: high
+      auto-fix-safe: true
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: low
 
   # =========================================================================
   # CL-58 — Duplicate paths case-insensitive.
@@ -511,6 +910,27 @@ rules:
       function: pattern
       functionOptions:
         notMatch: "/[A-Z][A-Za-z0-9]*(/|$)"
+    apiq-meta:
+      pattern-id: CL-58
+      lenses: [client-friction, style-coherence]
+      sources:
+        - type: vendor
+          name: 'Vacuum (MIN-7 + MIN-8)'
+          url: 'https://quobix.com/vacuum/'
+          verifiedAt: '2026-05-08'
+        - type: mining
+          phase: round2
+          subagent: t18a-client
+      stakeholders: [client-dev, spec-author, operations]
+      lifecycle-phase: build-time
+      defect-class: ergonomic
+      iso25010: [usability, reliability]
+      codegen-targets: ['*']
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: medium
+      agent-readiness-impact: low
 
   # =========================================================================
   # CL-59 — operationId not URL-friendly.
@@ -535,6 +955,26 @@ rules:
       function: pattern
       functionOptions:
         match: "^[A-Za-z][A-Za-z0-9_-]*$"
+    apiq-meta:
+      pattern-id: CL-59
+      lenses: [client-friction]
+      sources:
+        - type: vendor
+          name: 'SP-G-SD-5 + spectral:oas operation-operationId-valid-in-url'
+          verifiedAt: '2026-05-08'
+        - type: mining
+          phase: round2
+          subagent: t18a-client
+      stakeholders: [client-dev, codegen-tool, docs-tool]
+      lifecycle-phase: build-time
+      defect-class: ergonomic
+      iso25010: [usability, compatibility]
+      codegen-targets: ['*']
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: medium
 
   # =========================================================================
   # CL-63 — Operations missing both summary AND description.
@@ -560,6 +1000,30 @@ rules:
         properties:
           - summary
           - description
+    apiq-meta:
+      pattern-id: CL-63
+      lenses: [client-friction, ai-agent-consumability]
+      sources:
+        - type: vendor
+          name: 'spectral:oas operation-description + operation-summary'
+          url: 'https://github.com/stoplightio/spectral'
+          verifiedAt: '2026-05-08'
+        - type: vendor
+          name: Speakeasy
+          verifiedAt: '2026-05-08'
+        - type: mining
+          phase: round2
+          subagent: t18a-client
+      stakeholders: [client-dev, docs-tool, ai-agent, end-user]
+      lifecycle-phase: documentation-time
+      defect-class: incomplete
+      iso25010: [usability, maintainability]
+      codegen-targets: ['*']
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: high
 
   # =========================================================================
   # CL-66 — Discriminator mapping references missing schemas.
@@ -587,6 +1051,30 @@ rules:
       function: pattern
       functionOptions:
         match: "^#/components/(schemas|responses|requestBodies)/[A-Za-z0-9_-]+$"
+    apiq-meta:
+      pattern-id: CL-66
+      lenses: [client-friction, internal-consistency]
+      sources:
+        - type: vendor
+          name: 'OAS 3.0 §4.7.25 (discriminator.mapping)'
+          url: 'https://spec.openapis.org/oas/v3.0.3#discriminator-object'
+          verifiedAt: '2026-05-08'
+        - type: vendor
+          name: swagger-ui #9832
+          verifiedAt: '2026-05-08'
+        - type: mining
+          phase: round2
+          subagent: t18a-client
+      stakeholders: [client-dev, codegen-tool, spec-author]
+      lifecycle-phase: build-time
+      defect-class: syntax
+      iso25010: [compatibility, reliability]
+      codegen-targets: ['*']
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: medium
 
   # =========================================================================
   # CL-68 — Path consecutive parameters no separator.
@@ -609,6 +1097,27 @@ rules:
       function: pattern
       functionOptions:
         notMatch: "\\}\\{"
+    apiq-meta:
+      pattern-id: CL-68
+      lenses: [client-friction, evolution-friction]
+      sources:
+        - type: vendor
+          name: 'IBM ibm-no-consecutive-path-parameter-segments (MIN-6)'
+          url: 'https://github.com/IBM/openapi-validator'
+          verifiedAt: '2026-05-08'
+        - type: mining
+          phase: round2
+          subagent: t18a-client
+      stakeholders: [client-dev, codegen-tool, operations, spec-author]
+      lifecycle-phase: build-time
+      defect-class: syntax
+      iso25010: [compatibility, reliability]
+      codegen-targets: ['*']
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: medium
+      agent-readiness-impact: medium
 
   # =========================================================================
   # CL-69 — example value violates schema constraints.
@@ -636,6 +1145,30 @@ rules:
       functionOptions:
         schema:
           type: string
+    apiq-meta:
+      pattern-id: CL-69
+      lenses: [client-friction]
+      sources:
+        - type: vendor
+          name: 'spectral:oas oas3-valid-media-example + AJV-layer'
+          url: 'https://github.com/stoplightio/spectral'
+          verifiedAt: '2026-05-08'
+        - type: vendor
+          name: 'Stripe convention (maxLength=5000)'
+          verifiedAt: '2026-05-08'
+        - type: mining
+          phase: round2
+          subagent: t18a-client
+      stakeholders: [client-dev, codegen-tool, docs-tool, spec-author]
+      lifecycle-phase: build-time
+      defect-class: semantic
+      iso25010: [usability, reliability]
+      codegen-targets: ['*']
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: medium
 
   # =========================================================================
   # CL-70 — default value violates schema constraints.
@@ -663,6 +1196,29 @@ rules:
       functionOptions:
         schema:
           type: object
+    apiq-meta:
+      pattern-id: CL-70
+      lenses: [client-friction, internal-consistency]
+      sources:
+        - type: vendor
+          name: 'apiq-original (default-validation extension)'
+          verifiedAt: '2026-05-08'
+        - type: vendor
+          name: multi-codegen
+          verifiedAt: '2026-05-08'
+        - type: mining
+          phase: round2
+          subagent: t18a-client
+      stakeholders: [client-dev, codegen-tool, spec-author]
+      lifecycle-phase: build-time
+      defect-class: semantic
+      iso25010: [reliability, compatibility]
+      codegen-targets: ['*']
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: medium
+      agent-readiness-impact: medium
 
   # =========================================================================
   # CL-73 — servers[].url placeholder example.com / localhost.
@@ -686,6 +1242,29 @@ rules:
       function: pattern
       functionOptions:
         notMatch: "(localhost|127\\.0\\.0\\.1|0\\.0\\.0\\.0|::1|example\\.(com|org|net)|your-domain|api\\.example|host\\.tld)"
+    apiq-meta:
+      pattern-id: CL-73
+      lenses: [client-friction, operations]
+      sources:
+        - type: vendor
+          name: SP-G-SD-4
+          verifiedAt: '2026-05-08'
+        - type: vendor
+          name: 'apiq P-SP-1'
+          verifiedAt: '2026-05-08'
+        - type: mining
+          phase: round2
+          subagent: t18a-client
+      stakeholders: [client-dev, end-user, operations, spec-author]
+      lifecycle-phase: deploy-time
+      defect-class: incomplete
+      iso25010: [usability, reliability]
+      codegen-targets: ['*']
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: medium
+      agent-readiness-impact: medium
 
   # =========================================================================
   # CL-76 — Same path+method declared multiple times.
@@ -712,6 +1291,27 @@ rules:
     given: "$.paths[*][get,put,post,delete,options,head,patch,trace]"
     then:
       function: truthy
+    apiq-meta:
+      pattern-id: CL-76
+      lenses: [client-friction, internal-consistency]
+      sources:
+        - type: vendor
+          name: 'Vacuum (MIN-8) — sentinel; walker does real detection'
+          url: 'https://quobix.com/vacuum/'
+          verifiedAt: '2026-05-08'
+        - type: mining
+          phase: round2
+          subagent: t18a-client
+      stakeholders: [client-dev, codegen-tool, spec-author]
+      lifecycle-phase: build-time
+      defect-class: syntax
+      iso25010: [reliability, maintainability]
+      codegen-targets: ['*']
+      detection-precision: low
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: medium
+      agent-readiness-impact: low
 
   # =========================================================================
   # CL-81 — $ref siblings in same object (3.0 violation).
@@ -746,3 +1346,28 @@ rules:
         function: undefined
       - field: deprecated
         function: undefined
+    apiq-meta:
+      pattern-id: CL-81
+      lenses: [client-friction, standards-compliance]
+      sources:
+        - type: vendor
+          name: 'OAS 3.0 §3.0 (Reference Object)'
+          verbatim: 'any other properties of a Reference Object SHALL be ignored'
+          url: 'https://spec.openapis.org/oas/v3.0.3#reference-object'
+          verifiedAt: '2026-05-08'
+        - type: vendor
+          name: apiq-original (apiq-A1 stronger variant)
+          verifiedAt: '2026-05-08'
+        - type: mining
+          phase: round2
+          subagent: t18a-client
+      stakeholders: [client-dev, codegen-tool, spec-author]
+      lifecycle-phase: build-time
+      defect-class: syntax
+      iso25010: [compatibility, reliability]
+      codegen-targets: ['*']
+      detection-precision: high
+      auto-fix-safe: true
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: low

@@ -869,7 +869,7 @@ function buildRuleMetadata(p: SecretMatch): RuleMetadata {
     stakeholders: isPII ? ["security", "end-user", "spec-author"] : ["security", "spec-author"],
     lifecyclePhase: "documentation-time",
     defectClass: "semantic",
-    iso25010: "security",
+    iso25010: ["security"],
     priority: "P1",
     patternId: p.patternId,
   });

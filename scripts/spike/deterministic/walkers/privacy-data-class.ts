@@ -351,7 +351,7 @@ function metaL6_1(severity: 'warn' | 'hint'): RuleMetadata {
     stakeholders: ['security', 'end-user', 'spec-author'],
     lifecyclePhase: 'documentation-time',
     defectClass: 'semantic',
-    iso25010: 'security',
+    iso25010: ['security'],
     priority: 'P2',
     patternId: 'L6-1',
   });
@@ -369,7 +369,7 @@ function metaL6_2(): RuleMetadata {
     stakeholders: ['security', 'spec-author'],
     lifecyclePhase: 'documentation-time',
     defectClass: 'semantic',
-    iso25010: 'security',
+    iso25010: ['security'],
     priority: 'P5',
     patternId: 'L6-2',
   });
@@ -388,7 +388,7 @@ function metaL6_3(): RuleMetadata {
     stakeholders: ['security', 'spec-author'],
     lifecyclePhase: 'documentation-time',
     defectClass: 'semantic',
-    iso25010: 'security',
+    iso25010: ['security'],
     priority: 'P3',
     patternId: 'L6-3',
   });
@@ -405,7 +405,7 @@ function metaL6_4(): RuleMetadata {
     stakeholders: ['security', 'spec-author'],
     lifecyclePhase: 'documentation-time',
     defectClass: 'semantic',
-    iso25010: 'security',
+    iso25010: ['security'],
     priority: 'P2',
     patternId: 'L6-4',
   });

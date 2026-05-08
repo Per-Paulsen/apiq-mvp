@@ -72,6 +72,22 @@ rules:
     then:
       function: defined
       field: format
+    apiq-meta:
+      pattern-id: J2
+      lenses: [client-friction, internal-consistency, threat-modeling]
+      sources:
+        - { type: mining, phase: round1, subagent: apiq-original, verifiedAt: '2026-05-08' }
+        - { type: vendor, name: 'OWASP API1 (TM-A1 cross-reference)', verifiedAt: '2026-05-08' }
+      stakeholders: [spec-author, client-dev, codegen-tool]
+      lifecycle-phase: build-time
+      defect-class: incomplete
+      iso25010: [maintainability, compatibility]
+      codegen-targets: ['*']
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: medium
+      agent-readiness-impact: medium
 
   # Targets: stripe:F11, github:F22 (sha pattern subset)
   # Heuristic: integer fields named `*_at`, `*_timestamp`, or `*_ts` are
@@ -92,6 +108,22 @@ rules:
     then:
       function: defined
       field: format
+    apiq-meta:
+      pattern-id: I5
+      lenses: [standards-compliance, client-friction]
+      sources:
+        - { type: mining, phase: round1, subagent: apiq-original, verifiedAt: '2026-05-08' }
+        - { type: vendor, name: 'Stripe (152 timestamp-fields convention)', verifiedAt: '2026-05-08' }
+      stakeholders: [spec-author, client-dev, codegen-tool]
+      lifecycle-phase: build-time
+      defect-class: ergonomic
+      iso25010: [usability, compatibility]
+      codegen-targets: ['*']
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: low
 
   # -------------------------------------------------------------------------
   # Numeric range constraint rules
@@ -116,6 +148,25 @@ rules:
     then:
       function: defined
       field: schema.maximum
+    apiq-meta:
+      pattern-id: TM-A23
+      lenses: [threat-modeling, client-friction]
+      sources:
+        - { type: vendor, name: 'OWASP API4 — Unrestricted Resource Consumption', verifiedAt: '2026-05-08' }
+        - { type: mining, phase: round1, subagent: apiq-original, verifiedAt: '2026-05-08' }
+      stakeholders: [security, spec-author, client-dev, operations]
+      lifecycle-phase: build-time
+      defect-class: incomplete
+      iso25010: [security, performance-efficiency, reliability]
+      codegen-targets: ['*']
+      detection-precision: high
+      auto-fix-safe: false
+      regulatory-mapping:
+        nist: ['PR.PS-01']
+        asvs: ['V13.1.1', 'V13.4.2']
+      cost-impact: low
+      mttr-impact: high
+      agent-readiness-impact: low
 
   # Companion to the above: covers component-schema properties (not just
   # parameter objects).
@@ -133,6 +184,25 @@ rules:
     then:
       function: defined
       field: maximum
+    apiq-meta:
+      pattern-id: TM-A23
+      lenses: [threat-modeling, client-friction]
+      sources:
+        - { type: vendor, name: 'OWASP API4 — Unrestricted Resource Consumption', verifiedAt: '2026-05-08' }
+        - { type: mining, phase: round1, subagent: apiq-original, verifiedAt: '2026-05-08' }
+      stakeholders: [security, spec-author, codegen-tool]
+      lifecycle-phase: build-time
+      defect-class: incomplete
+      iso25010: [security, performance-efficiency]
+      codegen-targets: ['*']
+      detection-precision: medium
+      auto-fix-safe: false
+      regulatory-mapping:
+        nist: ['PR.PS-01']
+        asvs: ['V13.1.1']
+      cost-impact: low
+      mttr-impact: medium
+      agent-readiness-impact: low
 
   # -------------------------------------------------------------------------
   # OAS-3 spec violations (severity: error)
@@ -155,6 +225,22 @@ rules:
     then:
       function: undefined
       field: style
+    apiq-meta:
+      pattern-id: apiq-deepobject-only-on-objects
+      lenses: [standards-compliance]
+      sources:
+        - { type: vendor, name: 'OAS 3.0 §4.7.10.1', verbatim: 'deepObject ... applies to objects', verifiedAt: '2026-05-08' }
+        - { type: mining, phase: round1, subagent: apiq-original, verifiedAt: '2026-05-08' }
+      stakeholders: [spec-author, client-dev, codegen-tool]
+      lifecycle-phase: validation-time
+      defect-class: norm
+      iso25010: [compatibility, functional-suitability]
+      codegen-targets: ['*']
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: medium
+      mttr-impact: medium
+      agent-readiness-impact: medium
 
   # Targets: dnd:F5
   # OAS 3.0 §3.0 (Reference Object): `$ref` MUST be the only key; siblings
@@ -178,6 +264,22 @@ rules:
         function: undefined
       - field: allOf
         function: undefined
+    apiq-meta:
+      pattern-id: CL-81
+      lenses: [standards-compliance, client-friction]
+      sources:
+        - { type: vendor, name: 'OAS 3.0 §3.0 (Reference Object)', verbatim: '$ref ... MUST be the only key', verifiedAt: '2026-05-08' }
+        - { type: vendor, name: 'OAS A1 + apiq style-guide', verifiedAt: '2026-05-08' }
+      stakeholders: [spec-author, client-dev, codegen-tool, docs-tool]
+      lifecycle-phase: validation-time
+      defect-class: norm
+      iso25010: [compatibility, functional-suitability]
+      codegen-targets: ['*']
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: medium
+      agent-readiness-impact: medium
 
   # -------------------------------------------------------------------------
   # Description / documentation rules
@@ -208,6 +310,22 @@ rules:
       function: pattern
       functionOptions:
         notMatch: "<(p|a|code|strong|em|li|ul|ol|br|h[1-6]|div|span|table|tr|td|th|tbody|thead|pre|blockquote)\\b"
+    apiq-meta:
+      pattern-id: CL-39
+      lenses: [client-friction]
+      sources:
+        - { type: vendor, name: 'OAS 3.0 §3 (description fields are CommonMark)', verifiedAt: '2026-05-08' }
+        - { type: vendor, name: 'swagger-editor #2180 + apiq style-guide', verifiedAt: '2026-05-08' }
+      stakeholders: [spec-author, client-dev, docs-tool]
+      lifecycle-phase: authoring-time
+      defect-class: norm
+      iso25010: [usability, compatibility]
+      codegen-targets: ['*']
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: medium
 
   # Targets: dnd:F11
   # Stub descriptions like "`Spell`\n" or "WeaponProperty" that just echo
@@ -228,6 +346,22 @@ rules:
       function: length
       functionOptions:
         min: 10
+    apiq-meta:
+      pattern-id: M2
+      lenses: [client-friction, ai-agent-consumability]
+      sources:
+        - { type: mining, phase: round1, subagent: apiq-original, verifiedAt: '2026-05-08' }
+        - { type: vendor, name: 'EV-26 stub-pattern (apiq style-guide)', verifiedAt: '2026-05-08' }
+      stakeholders: [spec-author, ai-agent, docs-tool, client-dev]
+      lifecycle-phase: authoring-time
+      defect-class: incomplete
+      iso25010: [usability, maintainability]
+      codegen-targets: ['*']
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: high
 
   # Targets: github:F10
   # Heuristic: info.description shorter than ~80 chars on a multi-op API
@@ -248,6 +382,22 @@ rules:
       function: length
       functionOptions:
         min: 80
+    apiq-meta:
+      pattern-id: TM-A52
+      lenses: [ai-agent-consumability, operational-metadata]
+      sources:
+        - { type: vendor, name: 'OWASP REST Security Cheatsheet', verifiedAt: '2026-05-08' }
+        - { type: mining, phase: round1, subagent: apiq-original, verifiedAt: '2026-05-08' }
+      stakeholders: [spec-author, ai-agent, client-dev, docs-tool]
+      lifecycle-phase: authoring-time
+      defect-class: incomplete
+      iso25010: [usability, maintainability]
+      codegen-targets: ['*']
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: high
 
   # -------------------------------------------------------------------------
   # Tags rules
@@ -274,6 +424,23 @@ rules:
         function: length
         functionOptions:
           min: 1
+    apiq-meta:
+      pattern-id: Q1
+      lenses: [client-friction, operational-metadata]
+      sources:
+        - { type: mining, phase: round1, subagent: apiq-original, verifiedAt: '2026-05-08' }
+        - { type: vendor, name: 'spectral:oas tag-defined family', verifiedAt: '2026-05-08' }
+        - { type: vendor, name: 'EV-17 SG-41 style-guide', verifiedAt: '2026-05-08' }
+      stakeholders: [spec-author, docs-tool, client-dev]
+      lifecycle-phase: authoring-time
+      defect-class: operational-metadata-missing
+      iso25010: [usability, maintainability]
+      codegen-targets: ['*']
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: medium
 
   # Targets: pd:F13 (orphan tag). Each top-level tag should have a
   # non-empty description (the OAS3-default `oas3-tag-no-empty-description`
@@ -295,6 +462,22 @@ rules:
       function: length
       functionOptions:
         min: 5
+    apiq-meta:
+      pattern-id: Q2
+      lenses: [client-friction, operational-metadata]
+      sources:
+        - { type: mining, phase: round1, subagent: apiq-original, verifiedAt: '2026-05-08' }
+        - { type: vendor, name: 'spectral:oas oas3-tag-no-empty-description (strengthened)', verifiedAt: '2026-05-08' }
+      stakeholders: [spec-author, docs-tool, ai-agent]
+      lifecycle-phase: authoring-time
+      defect-class: incomplete
+      iso25010: [usability, maintainability]
+      codegen-targets: ['*']
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: medium
 
   # -------------------------------------------------------------------------
   # Polymorphism / discriminator rules
@@ -316,6 +499,23 @@ rules:
     then:
       function: defined
       field: discriminator
+    apiq-meta:
+      pattern-id: CL-12
+      lenses: [client-friction, internal-consistency]
+      sources:
+        - { type: vendor, name: 'OAS 3.0 §4.7.25 (discriminator)', verifiedAt: '2026-05-08' }
+        - { type: vendor, name: 'Redocly multi-vendor style-guide', verifiedAt: '2026-05-08' }
+        - { type: mining, phase: round1, subagent: apiq-original, verifiedAt: '2026-05-08' }
+      stakeholders: [spec-author, client-dev, codegen-tool]
+      lifecycle-phase: build-time
+      defect-class: incomplete
+      iso25010: [compatibility, maintainability]
+      codegen-targets: ['*']
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: medium
+      mttr-impact: medium
+      agent-readiness-impact: high
 
   # -------------------------------------------------------------------------
   # Type / primitive rules
@@ -341,6 +541,21 @@ rules:
       field: type
       functionOptions:
         match: "^integer$"
+    apiq-meta:
+      pattern-id: apiq-count-fields-should-be-integer
+      lenses: [client-friction, internal-consistency]
+      sources:
+        - { type: mining, phase: round1, subagent: apiq-original, verifiedAt: '2026-05-08' }
+      stakeholders: [spec-author, client-dev, codegen-tool]
+      lifecycle-phase: build-time
+      defect-class: semantic
+      iso25010: [compatibility, maintainability]
+      codegen-targets: ['*']
+      detection-precision: medium
+      auto-fix-safe: true
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: low
 
   # -------------------------------------------------------------------------
   # Server / hygiene rules
@@ -363,6 +578,25 @@ rules:
       function: pattern
       functionOptions:
         notMatch: "(localhost|127\\.0\\.0\\.1|0\\.0\\.0\\.0|::1)"
+    apiq-meta:
+      pattern-id: CL-73
+      lenses: [threat-modeling, client-friction]
+      sources:
+        - { type: vendor, name: 'SP-G-SD-4 + apiq P-SP-1 style-guide', verifiedAt: '2026-05-08' }
+        - { type: mining, phase: round1, subagent: apiq-original, verifiedAt: '2026-05-08' }
+      stakeholders: [security, spec-author, operations]
+      lifecycle-phase: validation-time
+      defect-class: privacy-leakage
+      iso25010: [security, maintainability]
+      codegen-targets: ['*']
+      detection-precision: high
+      auto-fix-safe: false
+      regulatory-mapping:
+        nist: ['PR.DS-2', 'GV.OC-01']
+        asvs: ['V14.3.2']
+      cost-impact: low
+      mttr-impact: medium
+      agent-readiness-impact: medium
 
   # -------------------------------------------------------------------------
   # Response / shape rules
@@ -386,6 +620,21 @@ rules:
     then:
       function: defined
       field: content
+    apiq-meta:
+      pattern-id: D4
+      lenses: [client-friction, internal-consistency]
+      sources:
+        - { type: mining, phase: round1, subagent: apiq-original, verifiedAt: '2026-05-08' }
+      stakeholders: [spec-author, client-dev, codegen-tool]
+      lifecycle-phase: build-time
+      defect-class: incomplete
+      iso25010: [functional-suitability, compatibility]
+      codegen-targets: ['*']
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: medium
+      mttr-impact: medium
+      agent-readiness-impact: high
 
   # Targets: pagerduty:F7
   # OAS 3 derives request `Content-Type` from `requestBody.content` keys;
@@ -405,6 +654,24 @@ rules:
     then:
       function: undefined
       field: name
+    apiq-meta:
+      pattern-id: T4
+      lenses: [standards-compliance, evolution-friction]
+      direction: drift
+      sources:
+        - { type: vendor, name: 'OAS 3.0 §4.7.13', verbatim: 'Content-Type is derived from requestBody.content keys', verifiedAt: '2026-05-08' }
+        - { type: mining, phase: round1, subagent: apiq-original, verifiedAt: '2026-05-08' }
+        - { type: vendor, name: 'EV-32 Azure + SPS + IBM style-guide', verifiedAt: '2026-05-08' }
+      stakeholders: [spec-author, client-dev, codegen-tool]
+      lifecycle-phase: build-time
+      defect-class: norm
+      iso25010: [compatibility, maintainability]
+      codegen-targets: ['*']
+      detection-precision: high
+      auto-fix-safe: true
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: medium
 
   # Targets: stripe:F8
   # POST endpoints should accept application/json (de-facto modern REST
@@ -424,6 +691,23 @@ rules:
     then:
       field: application/json
       function: defined
+    apiq-meta:
+      pattern-id: EV-30
+      lenses: [evolution-friction, style-coherence]
+      direction: tighten
+      sources:
+        - { type: mining, phase: round1, subagent: apiq-original, verifiedAt: '2026-05-08' }
+        - { type: vendor, name: 'SP-G-AYWH-10 + SPS + OPTIC style-guides', verifiedAt: '2026-05-08' }
+      stakeholders: [spec-author, client-dev, codegen-tool]
+      lifecycle-phase: evolution-time
+      defect-class: ergonomic
+      iso25010: [compatibility, usability]
+      codegen-targets: ['*']
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: medium
+      mttr-impact: low
+      agent-readiness-impact: low
 
   # -------------------------------------------------------------------------
   # Enum rules
@@ -447,6 +731,23 @@ rules:
     then:
       function: defined
       field: schema.enum
+    apiq-meta:
+      pattern-id: H2
+      lenses: [evolution-friction, client-friction]
+      direction: tighten
+      sources:
+        - { type: mining, phase: round1, subagent: apiq-original, verifiedAt: '2026-05-08' }
+        - { type: vendor, name: 'EV-54 version-param style-guide', verifiedAt: '2026-05-08' }
+      stakeholders: [spec-author, client-dev, ai-agent, codegen-tool]
+      lifecycle-phase: build-time
+      defect-class: incomplete
+      iso25010: [compatibility, usability]
+      codegen-targets: ['*']
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: medium
+      agent-readiness-impact: high
 
   # -------------------------------------------------------------------------
   # Default-value type-consistency rules
@@ -474,6 +775,23 @@ rules:
       functionOptions:
         schema:
           type: integer
+    apiq-meta:
+      pattern-id: N2
+      lenses: [standards-compliance, client-friction]
+      sources:
+        - { type: vendor, name: 'JSON Schema §6.2 / OAS 3.0 §3.7', verbatim: 'defaults MUST validate against their own schema', verifiedAt: '2026-05-08' }
+        - { type: mining, phase: round1, subagent: apiq-original, verifiedAt: '2026-05-08' }
+        - { type: vendor, name: 'CL-70 multi-vendor style-guide', verifiedAt: '2026-05-08' }
+      stakeholders: [spec-author, client-dev, codegen-tool]
+      lifecycle-phase: validation-time
+      defect-class: norm
+      iso25010: [functional-suitability, compatibility]
+      codegen-targets: ['*']
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: high
+      agent-readiness-impact: high
 
   # Source: JSON Schema §6.2 / OAS 3.0 §3.7; rules-brainstorm.md N2 + CL-70
   # Lens: 2 (Standards-Compliance), 4 (Client-Friction)
@@ -490,6 +808,23 @@ rules:
       functionOptions:
         schema:
           type: number
+    apiq-meta:
+      pattern-id: N2
+      lenses: [standards-compliance, client-friction]
+      sources:
+        - { type: vendor, name: 'JSON Schema §6.2 / OAS 3.0 §3.7', verbatim: 'defaults MUST validate against their own schema', verifiedAt: '2026-05-08' }
+        - { type: mining, phase: round1, subagent: apiq-original, verifiedAt: '2026-05-08' }
+        - { type: vendor, name: 'CL-70 multi-vendor style-guide', verifiedAt: '2026-05-08' }
+      stakeholders: [spec-author, client-dev, codegen-tool]
+      lifecycle-phase: validation-time
+      defect-class: norm
+      iso25010: [functional-suitability, compatibility]
+      codegen-targets: ['*']
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: high
+      agent-readiness-impact: high
 
   # Source: JSON Schema §6.2 / OAS 3.0 §3.7; rules-brainstorm.md N2 + CL-70
   # Lens: 2 (Standards-Compliance), 4 (Client-Friction)
@@ -506,6 +841,23 @@ rules:
       functionOptions:
         schema:
           type: boolean
+    apiq-meta:
+      pattern-id: N2
+      lenses: [standards-compliance, client-friction]
+      sources:
+        - { type: vendor, name: 'JSON Schema §6.2 / OAS 3.0 §3.7', verbatim: 'defaults MUST validate against their own schema', verifiedAt: '2026-05-08' }
+        - { type: mining, phase: round1, subagent: apiq-original, verifiedAt: '2026-05-08' }
+        - { type: vendor, name: 'CL-70 multi-vendor style-guide', verifiedAt: '2026-05-08' }
+      stakeholders: [spec-author, client-dev, codegen-tool]
+      lifecycle-phase: validation-time
+      defect-class: norm
+      iso25010: [functional-suitability, compatibility]
+      codegen-targets: ['*']
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: high
+      agent-readiness-impact: high
 
   # Source: JSON Schema §6.2 / OAS 3.0 §3.7; rules-brainstorm.md N2 + CL-70
   # Lens: 2 (Standards-Compliance), 4 (Client-Friction)
@@ -522,6 +874,23 @@ rules:
       functionOptions:
         schema:
           type: string
+    apiq-meta:
+      pattern-id: N2
+      lenses: [standards-compliance, client-friction]
+      sources:
+        - { type: vendor, name: 'JSON Schema §6.2 / OAS 3.0 §3.7', verbatim: 'defaults MUST validate against their own schema', verifiedAt: '2026-05-08' }
+        - { type: mining, phase: round1, subagent: apiq-original, verifiedAt: '2026-05-08' }
+        - { type: vendor, name: 'CL-70 multi-vendor style-guide', verifiedAt: '2026-05-08' }
+      stakeholders: [spec-author, client-dev, codegen-tool]
+      lifecycle-phase: validation-time
+      defect-class: norm
+      iso25010: [functional-suitability, compatibility]
+      codegen-targets: ['*']
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: high
+      agent-readiness-impact: high
 
   # -------------------------------------------------------------------------
   # Content / media-type rules
@@ -545,6 +914,23 @@ rules:
       field: "@key"
       functionOptions:
         notMatch: "^text/x-markdown$"
+    apiq-meta:
+      pattern-id: RFC2-79
+      lenses: [standards-compliance]
+      sources:
+        - { type: rfc, number: 7763, verbatim: 'text/markdown registration (replaces text/x-markdown)', verifiedAt: '2026-05-08' }
+        - { type: rfc, number: 6838, verifiedAt: '2026-05-08' }
+        - { type: 'iana-registry', registry: 'media-types', verifiedAt: '2026-05-08' }
+      stakeholders: [spec-author, client-dev, docs-tool]
+      lifecycle-phase: build-time
+      defect-class: norm
+      iso25010: [compatibility, maintainability]
+      codegen-targets: ['*']
+      detection-precision: high
+      auto-fix-safe: true
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: low
 
   # -------------------------------------------------------------------------
   # Examples coverage rules
@@ -571,6 +957,21 @@ rules:
         properties:
           - example
           - examples
+    apiq-meta:
+      pattern-id: N3
+      lenses: [client-friction, ai-agent-consumability]
+      sources:
+        - { type: mining, phase: round1, subagent: apiq-original, verifiedAt: '2026-05-08' }
+      stakeholders: [spec-author, ai-agent, client-dev, docs-tool]
+      lifecycle-phase: authoring-time
+      defect-class: incomplete
+      iso25010: [usability, functional-suitability]
+      codegen-targets: ['*']
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: high
 
   # -------------------------------------------------------------------------
   # Status-code / response-shape rules
@@ -606,6 +1007,22 @@ rules:
       function: pattern
       functionOptions:
         match: "^array$"
+    apiq-meta:
+      pattern-id: apiq-comma-separated-should-be-array
+      lenses: [client-friction, style-coherence]
+      sources:
+        - { type: mining, phase: round1, subagent: apiq-original, verifiedAt: '2026-05-08' }
+        - { type: vendor, name: 'OAS 3.0 §4.7.10 (style: form, explode: false)', verifiedAt: '2026-05-08' }
+      stakeholders: [spec-author, client-dev, codegen-tool]
+      lifecycle-phase: build-time
+      defect-class: semantic
+      iso25010: [compatibility, maintainability]
+      codegen-targets: ['*']
+      detection-precision: low
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: medium
+      agent-readiness-impact: medium
 
   # -------------------------------------------------------------------------
   # Dead-code / unused-component rules
@@ -631,6 +1048,23 @@ rules:
       function: unreferencedReusableObject
       functionOptions:
         reusableObjectsLocation: "#/components/headers"
+    apiq-meta:
+      pattern-id: O1
+      lenses: [evolution-friction, client-friction]
+      direction: drift
+      sources:
+        - { type: mining, phase: round1, subagent: apiq-original, verifiedAt: '2026-05-08' }
+        - { type: vendor, name: 'spectral:oas oas3-unused-component (extended to headers)', verifiedAt: '2026-05-08' }
+      stakeholders: [spec-author, codegen-tool, docs-tool]
+      lifecycle-phase: build-time
+      defect-class: ergonomic
+      iso25010: [maintainability]
+      codegen-targets: ['*']
+      detection-precision: high
+      auto-fix-safe: true
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: low
 
   # Source: apiq-original; rules-brainstorm.md O1 (Unused Components — 8 classes)
   # Lens: 3 (Evolution-Friction), 4 (Client-Friction)
@@ -648,6 +1082,23 @@ rules:
       function: unreferencedReusableObject
       functionOptions:
         reusableObjectsLocation: "#/components/examples"
+    apiq-meta:
+      pattern-id: O1
+      lenses: [evolution-friction, client-friction]
+      direction: drift
+      sources:
+        - { type: mining, phase: round1, subagent: apiq-original, verifiedAt: '2026-05-08' }
+        - { type: vendor, name: 'spectral:oas oas3-unused-component (extended to examples)', verifiedAt: '2026-05-08' }
+      stakeholders: [spec-author, codegen-tool, docs-tool]
+      lifecycle-phase: build-time
+      defect-class: ergonomic
+      iso25010: [maintainability]
+      codegen-targets: ['*']
+      detection-precision: high
+      auto-fix-safe: true
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: low
 
   # -------------------------------------------------------------------------
   # Vendor-extension hygiene

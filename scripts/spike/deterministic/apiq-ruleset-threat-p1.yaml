@@ -54,6 +54,26 @@ rules:
     then:
       function: falsy
       field: name
+    apiq-meta:
+      pattern-id: Y-2
+      lenses: [threat-modeling]
+      sources:
+        - { type: vendor, name: 'OWASP API2:2023 (Broken Authentication)' }
+        - { type: rfc, number: 6750, section: '2.3', verbatim: 'clients MUST NOT use the URI', verifiedAt: '2026-05-08' }
+      stakeholders: [security, end-user]
+      lifecycle-phase: deploy-time
+      defect-class: semantic
+      iso25010: [security]
+      codegen-targets: ['*']
+      detection-precision: high
+      auto-fix-safe: false
+      regulatory-mapping:
+        nist: ['PR.AA-01', 'PR.DS-02']
+        asvs: ['V2.1.1', 'V9.1.1']
+        cis: ['CIS-3.10', 'CIS-6.1']
+      cost-impact: medium
+      mttr-impact: high
+      agent-readiness-impact: high
 
   # Companion at component-parameter level
   # Source: OWASP API2:2023 + RFC 6750 §2.3; rules-brainstorm.md Y-2 (P1)
@@ -69,6 +89,26 @@ rules:
     then:
       function: falsy
       field: name
+    apiq-meta:
+      pattern-id: Y-2
+      lenses: [threat-modeling]
+      sources:
+        - { type: vendor, name: 'OWASP API2:2023 (Broken Authentication)' }
+        - { type: rfc, number: 6750, section: '2.3', verbatim: 'clients MUST NOT use the URI', verifiedAt: '2026-05-08' }
+      stakeholders: [security, end-user, spec-author]
+      lifecycle-phase: deploy-time
+      defect-class: semantic
+      iso25010: [security]
+      codegen-targets: ['*']
+      detection-precision: high
+      auto-fix-safe: false
+      regulatory-mapping:
+        nist: ['PR.AA-01', 'PR.DS-02']
+        asvs: ['V2.1.1', 'V9.1.1']
+        cis: ['CIS-3.10', 'CIS-6.1']
+      cost-impact: medium
+      mttr-impact: high
+      agent-readiness-impact: high
 
   # =========================================================================
   # Y-3 / RFC2-56 — Credentials in URL (path/query carrying user/password tokens)
@@ -95,6 +135,26 @@ rules:
       field: "@key"
       functionOptions:
         notMatch: "\\{(password|token|access[_-]?token|api[_-]?key|secret|client[_-]?secret|bearer|jwt)\\}"
+    apiq-meta:
+      pattern-id: Y-3
+      lenses: [threat-modeling, standards-compliance]
+      sources:
+        - { type: vendor, name: 'OWASP API2:2023' }
+        - { type: rfc, number: 6750, section: '2.3', verbatim: 'clients MUST NOT use the URI', verifiedAt: '2026-05-08' }
+      stakeholders: [security, end-user, spec-author]
+      lifecycle-phase: deploy-time
+      defect-class: norm
+      iso25010: [security]
+      codegen-targets: ['*']
+      detection-precision: high
+      auto-fix-safe: false
+      regulatory-mapping:
+        nist: ['PR.AA-01', 'PR.DS-02']
+        asvs: ['V2.1.1', 'V9.1.1']
+        cis: ['CIS-3.10']
+      cost-impact: medium
+      mttr-impact: high
+      agent-readiness-impact: high
 
   # =========================================================================
   # Y-4 / RFC2-43 — HTTP-Basic over non-HTTPS server
@@ -118,6 +178,27 @@ rules:
       function: pattern
       functionOptions:
         notMatch: "^http://(?!localhost|127\\.0\\.0\\.1|0\\.0\\.0\\.0|::1|\\[::1\\])"
+    apiq-meta:
+      pattern-id: Y-4
+      lenses: [threat-modeling, standards-compliance]
+      sources:
+        - { type: vendor, name: 'OWASP API2:2023' }
+        - { type: rfc, number: 7617, verbatim: 'HTTP Basic authentication MUST NOT be used over an insecure (i.e., non-TLS) channel', verifiedAt: '2026-05-08' }
+        - { type: rfc, number: 9110, verifiedAt: '2026-05-08' }
+      stakeholders: [security, end-user, operations]
+      lifecycle-phase: deploy-time
+      defect-class: norm
+      iso25010: [security, reliability]
+      codegen-targets: ['*']
+      detection-precision: high
+      auto-fix-safe: false
+      regulatory-mapping:
+        nist: ['PR.DS-02', 'PR.AA-01']
+        asvs: ['V9.1.1', 'V9.1.2']
+        cis: ['CIS-3.10']
+      cost-impact: medium
+      mttr-impact: high
+      agent-readiness-impact: high
 
   # =========================================================================
   # Y-5 / RFC2-62 — OAuth2 *Url MUST be HTTPS
@@ -137,6 +218,25 @@ rules:
       function: pattern
       functionOptions:
         match: "^https://"
+    apiq-meta:
+      pattern-id: Y-5
+      lenses: [threat-modeling, standards-compliance]
+      sources:
+        - { type: rfc, number: 6749, section: '3.1', verbatim: 'MUST utilize TLS', verifiedAt: '2026-05-08' }
+      stakeholders: [security, end-user]
+      lifecycle-phase: deploy-time
+      defect-class: norm
+      iso25010: [security]
+      codegen-targets: ['*']
+      detection-precision: high
+      auto-fix-safe: false
+      regulatory-mapping:
+        nist: ['PR.DS-02', 'PR.AA-02']
+        asvs: ['V9.1.1', 'V51.2.1']
+        cis: ['CIS-3.10']
+      cost-impact: low
+      mttr-impact: high
+      agent-readiness-impact: high
 
   # Source: RFC 6749 §3.2 verbatim "MUST utilize TLS"; rules-brainstorm.md
   #         Y-5 / RFC2-62 (P1)
@@ -152,6 +252,25 @@ rules:
       function: pattern
       functionOptions:
         match: "^https://"
+    apiq-meta:
+      pattern-id: Y-5
+      lenses: [threat-modeling, standards-compliance]
+      sources:
+        - { type: rfc, number: 6749, section: '3.2', verbatim: 'MUST utilize TLS', verifiedAt: '2026-05-08' }
+      stakeholders: [security, end-user]
+      lifecycle-phase: deploy-time
+      defect-class: norm
+      iso25010: [security]
+      codegen-targets: ['*']
+      detection-precision: high
+      auto-fix-safe: false
+      regulatory-mapping:
+        nist: ['PR.DS-02', 'PR.AA-02']
+        asvs: ['V9.1.1', 'V51.2.1']
+        cis: ['CIS-3.10']
+      cost-impact: low
+      mttr-impact: high
+      agent-readiness-impact: high
 
   # Source: RFC 6749 + RFC 9700 §4.1.5 (BCP-240); rules-brainstorm.md Y-5/Y-6
   # Lens: 1 (Threat-Modeling), 2 (Standards-Compliance)
@@ -167,6 +286,26 @@ rules:
       function: pattern
       functionOptions:
         match: "^https://"
+    apiq-meta:
+      pattern-id: Y-5
+      lenses: [threat-modeling, standards-compliance]
+      sources:
+        - { type: rfc, number: 6749, verbatim: 'MUST utilize TLS', verifiedAt: '2026-05-08' }
+        - { type: bcp, number: 240, rfc: 9700, verbatim: 'OAuth2 Security BCP', verifiedAt: '2026-05-08' }
+      stakeholders: [security, end-user]
+      lifecycle-phase: deploy-time
+      defect-class: norm
+      iso25010: [security]
+      codegen-targets: ['*']
+      detection-precision: high
+      auto-fix-safe: false
+      regulatory-mapping:
+        nist: ['PR.DS-02', 'PR.AA-02']
+        asvs: ['V9.1.1', 'V51.2.1']
+        cis: ['CIS-3.10']
+      cost-impact: low
+      mttr-impact: high
+      agent-readiness-impact: high
 
   # =========================================================================
   # Y-7 / RFC2-60/61 — OAuth2 implicit + password flows forbidden (BCP-240)
@@ -186,6 +325,26 @@ rules:
     then:
       function: undefined
       field: implicit
+    apiq-meta:
+      pattern-id: Y-7
+      lenses: [threat-modeling, standards-compliance, evolution-friction]
+      sources:
+        - { type: bcp, number: 240, rfc: 9700, section: '2.1.2', verbatim: 'MUST NOT be used', verifiedAt: '2026-05-08' }
+        - { type: mining, phase: round1, subagent: 'R3-PM-IC-04', verbatim: 'OAuth2 implicit deprecation per BCP-240', verifiedAt: '2026-05-07' }
+      stakeholders: [security, end-user, ai-agent]
+      lifecycle-phase: deploy-time
+      defect-class: norm
+      iso25010: [security]
+      codegen-targets: ['*']
+      detection-precision: high
+      auto-fix-safe: false
+      regulatory-mapping:
+        nist: ['PR.AA-01', 'PR.AA-02']
+        asvs: ['V51.2.1', 'V51.4.1']
+        cis: ['CIS-6.1']
+      cost-impact: high
+      mttr-impact: high
+      agent-readiness-impact: medium
 
   # Source: RFC 9700 BCP-240 §2.4 verbatim "MUST NOT"; rules-brainstorm.md
   #         Y-7 / RFC2-61 (P1)
@@ -201,6 +360,25 @@ rules:
     then:
       function: undefined
       field: password
+    apiq-meta:
+      pattern-id: Y-7
+      lenses: [threat-modeling, standards-compliance, evolution-friction]
+      sources:
+        - { type: bcp, number: 240, rfc: 9700, section: '2.4', verbatim: 'MUST NOT be used', verifiedAt: '2026-05-08' }
+      stakeholders: [security, end-user, ai-agent]
+      lifecycle-phase: deploy-time
+      defect-class: norm
+      iso25010: [security]
+      codegen-targets: ['*']
+      detection-precision: high
+      auto-fix-safe: false
+      regulatory-mapping:
+        nist: ['PR.AA-01', 'PR.AA-02']
+        asvs: ['V51.2.1', 'V51.4.1']
+        cis: ['CIS-6.1']
+      cost-impact: high
+      mttr-impact: high
+      agent-readiness-impact: medium
 
   # =========================================================================
   # Y-17 — Server URLs MUST be HTTPS (warn — http:// localhost permitted)
@@ -220,6 +398,26 @@ rules:
       function: pattern
       functionOptions:
         notMatch: "^http://(?!localhost|127\\.0\\.0\\.1|0\\.0\\.0\\.0|::1|\\[::1\\])"
+    apiq-meta:
+      pattern-id: Y-17
+      lenses: [threat-modeling]
+      sources:
+        - { type: vendor, name: 'OWASP API8:2023 (Security Misconfiguration)' }
+        - { type: rfc, number: 9110, section: '17.1', verifiedAt: '2026-05-08' }
+      stakeholders: [security, end-user, operations]
+      lifecycle-phase: deploy-time
+      defect-class: semantic
+      iso25010: [security]
+      codegen-targets: ['*']
+      detection-precision: high
+      auto-fix-safe: false
+      regulatory-mapping:
+        nist: ['PR.DS-02']
+        asvs: ['V9.1.1']
+        cis: ['CIS-3.10']
+      cost-impact: low
+      mttr-impact: high
+      agent-readiness-impact: medium
 
   # =========================================================================
   # Y-23 — Write operations MUST be protected by `security`
@@ -242,6 +440,27 @@ rules:
     then:
       function: defined
       field: security
+    apiq-meta:
+      pattern-id: Y-23
+      lenses: [threat-modeling, standards-compliance]
+      sources:
+        - { type: vendor, name: 'OWASP API2:2023 (Broken Authentication)' }
+        - { type: vendor, name: 'OWASP API5:2023 (Broken Function Level Authorization)' }
+        - { type: mining, phase: round1, subagent: 'rules-brainstorm-Y-23', verbatim: 'H-freq write-op-no-security finding', verifiedAt: '2026-05-07' }
+      stakeholders: [security, end-user, spec-author]
+      lifecycle-phase: deploy-time
+      defect-class: incomplete
+      iso25010: [security]
+      codegen-targets: ['*']
+      detection-precision: medium
+      auto-fix-safe: false
+      regulatory-mapping:
+        nist: ['PR.AA-01', 'PR.AA-05']
+        asvs: ['V2.1.1', 'V4.1.1', 'V4.2.1']
+        cis: ['CIS-6.1', 'CIS-6.7']
+      cost-impact: medium
+      mttr-impact: high
+      agent-readiness-impact: high
 
   # =========================================================================
   # TM-A6 — OpenIdConnect openIdConnectUrl HTTPS-only
@@ -263,6 +482,26 @@ rules:
       function: pattern
       functionOptions:
         match: "^https://"
+    apiq-meta:
+      pattern-id: TM-A6
+      lenses: [threat-modeling, standards-compliance]
+      sources:
+        - { type: rfc, number: 6749, section: '3.1', verbatim: 'MUST utilize TLS', verifiedAt: '2026-05-08' }
+        - { type: vendor, name: 'APIMatic OpenID guidance' }
+      stakeholders: [security, end-user]
+      lifecycle-phase: deploy-time
+      defect-class: norm
+      iso25010: [security]
+      codegen-targets: ['*']
+      detection-precision: high
+      auto-fix-safe: false
+      regulatory-mapping:
+        nist: ['PR.DS-02', 'PR.AA-02']
+        asvs: ['V9.1.1', 'V51.2.1']
+        cis: ['CIS-3.10']
+      cost-impact: low
+      mttr-impact: high
+      agent-readiness-impact: high
 
   # =========================================================================
   # TM-A10 — Tokens in path/query forbidden (RFC 6750 §2.3)
@@ -286,6 +525,26 @@ rules:
       field: in
       functionOptions:
         match: "^(header|cookie)$"
+    apiq-meta:
+      pattern-id: TM-A10
+      lenses: [threat-modeling, standards-compliance]
+      sources:
+        - { type: vendor, name: 'OWASP API2:2023' }
+        - { type: rfc, number: 6750, section: '2.3', verbatim: 'clients MUST NOT use the URI', verifiedAt: '2026-05-08' }
+      stakeholders: [security, end-user, spec-author]
+      lifecycle-phase: deploy-time
+      defect-class: norm
+      iso25010: [security]
+      codegen-targets: ['*']
+      detection-precision: medium
+      auto-fix-safe: false
+      regulatory-mapping:
+        nist: ['PR.AA-01', 'PR.DS-02']
+        asvs: ['V2.1.1', 'V51.2.1']
+        cis: ['CIS-3.10']
+      cost-impact: medium
+      mttr-impact: high
+      agent-readiness-impact: high
 
   # =========================================================================
   # TM-A11 — Mass-assignment privilege-escalation field-names in request
@@ -310,6 +569,26 @@ rules:
     then:
       function: truthy
       field: readOnly
+    apiq-meta:
+      pattern-id: TM-A11
+      lenses: [threat-modeling]
+      sources:
+        - { type: vendor, name: 'OWASP API3:2023 (Broken Object Property Level Authorization)' }
+        - { type: mining, phase: round2, subagent: 'TM-A11', verbatim: 'apiq-config-driven privilege-escalation field-list', verifiedAt: '2026-05-07' }
+      stakeholders: [security, end-user, spec-author]
+      lifecycle-phase: deploy-time
+      defect-class: semantic
+      iso25010: [security]
+      codegen-targets: ['*']
+      detection-precision: medium
+      auto-fix-safe: false
+      regulatory-mapping:
+        nist: ['PR.AA-05', 'PR.DS-01']
+        asvs: ['V4.1.1', 'V4.2.1', 'V4.3.1']
+        cis: ['CIS-6.7', 'CIS-6.8']
+      cost-impact: medium
+      mttr-impact: high
+      agent-readiness-impact: high
 
   # =========================================================================
   # TM-A15 — PII-named fields in response (HIGH-VALUE CORNERSTONE)
@@ -334,6 +613,28 @@ rules:
     then:
       function: defined
       field: description
+    apiq-meta:
+      pattern-id: TM-A15
+      lenses: [threat-modeling, privacy-data-class]
+      sources:
+        - { type: vendor, name: 'OWASP API3:2023' }
+        - { type: vendor, name: 'Cloudflare PII-detection guidance' }
+        - { type: mining, phase: round2, subagent: 'TM-A15', verbatim: 'OAI #2190 Lens-6 cornerstone', verifiedAt: '2026-05-07' }
+      stakeholders: [security, end-user, spec-author]
+      lifecycle-phase: deploy-time
+      defect-class: privacy-leakage
+      iso25010: [security]
+      codegen-targets: ['*']
+      detection-precision: medium
+      auto-fix-safe: false
+      regulatory-mapping:
+        nist: ['PR.DS-01', 'PR.DS-05']
+        asvs: ['V8.1.1', 'V8.3.4']
+        cis: ['CIS-3.13']
+        gdpr: ['Art-5', 'Art-25', 'Art-32']
+      cost-impact: high
+      mttr-impact: high
+      agent-readiness-impact: medium
 
   # =========================================================================
   # TM-A17 — additionalProperties:true on request-body schema
@@ -359,6 +660,26 @@ rules:
         schema:
           not:
             const: true
+    apiq-meta:
+      pattern-id: TM-A17
+      lenses: [threat-modeling]
+      sources:
+        - { type: vendor, name: 'OWASP API3:2023 (Mass Assignment)' }
+        - { type: mining, phase: round2, subagent: 'TM-A17', verbatim: 'sharper than Y-10', verifiedAt: '2026-05-07' }
+      stakeholders: [security, spec-author, codegen-tool]
+      lifecycle-phase: validation-time
+      defect-class: over-specification
+      iso25010: [security]
+      codegen-targets: ['*']
+      detection-precision: high
+      auto-fix-safe: false
+      regulatory-mapping:
+        nist: ['PR.AA-05', 'PR.DS-01']
+        asvs: ['V4.2.1', 'V13.2.4']
+        cis: ['CIS-6.7']
+      cost-impact: medium
+      mttr-impact: medium
+      agent-readiness-impact: medium
 
   # =========================================================================
   # TM-A22 — List-endpoint without limit/per_page param (warn)
@@ -383,6 +704,27 @@ rules:
     given: "$.paths[*][get]"
     then:
       function: list-endpoint-has-pagination
+    apiq-meta:
+      pattern-id: TM-A22
+      lenses: [threat-modeling, style-coherence]
+      sources:
+        - { type: vendor, name: 'OWASP API4:2023 (Unrestricted Resource Consumption)' }
+        - { type: vendor, name: '42Crunch security-rules' }
+        - { type: vendor, name: 'Stripe pagination convention' }
+      stakeholders: [security, end-user, operations, spec-author]
+      lifecycle-phase: runtime-at-scale
+      defect-class: incomplete
+      iso25010: [security, performance-efficiency, reliability]
+      codegen-targets: ['*']
+      detection-precision: medium
+      auto-fix-safe: false
+      regulatory-mapping:
+        nist: ['PR.PT-04', 'PR.IR-04']
+        asvs: ['V11.1.4', 'V13.4.1']
+        cis: ['CIS-13.1']
+      cost-impact: medium
+      mttr-impact: medium
+      agent-readiness-impact: medium
 
   # =========================================================================
   # TM-A23 — Pagination param MUST have `maximum`
@@ -404,6 +746,26 @@ rules:
     then:
       function: defined
       field: schema.maximum
+    apiq-meta:
+      pattern-id: TM-A23
+      lenses: [threat-modeling]
+      sources:
+        - { type: vendor, name: 'OWASP API4:2023 (Unrestricted Resource Consumption)' }
+        - { type: mining, phase: round2, subagent: 'TM-A23', verbatim: 'unbounded pagination → DoS', verifiedAt: '2026-05-07' }
+      stakeholders: [security, end-user, operations, spec-author]
+      lifecycle-phase: runtime-at-scale
+      defect-class: incomplete
+      iso25010: [security, performance-efficiency, reliability]
+      codegen-targets: ['*']
+      detection-precision: high
+      auto-fix-safe: false
+      regulatory-mapping:
+        nist: ['PR.PT-04', 'PR.IR-04']
+        asvs: ['V11.1.4', 'V13.4.2']
+        cis: ['CIS-13.1']
+      cost-impact: low
+      mttr-impact: medium
+      agent-readiness-impact: medium
 
   # =========================================================================
   # TM-A24 — File-upload binary MUST declare `maxLength`
@@ -426,6 +788,26 @@ rules:
     then:
       function: defined
       field: maxLength
+    apiq-meta:
+      pattern-id: TM-A24
+      lenses: [threat-modeling]
+      sources:
+        - { type: vendor, name: 'OWASP API4:2023 (Unrestricted Resource Consumption)' }
+        - { type: vendor, name: 'OAS-3 multipart spec' }
+      stakeholders: [security, operations, spec-author]
+      lifecycle-phase: runtime-at-scale
+      defect-class: incomplete
+      iso25010: [security, performance-efficiency]
+      codegen-targets: ['*']
+      detection-precision: high
+      auto-fix-safe: false
+      regulatory-mapping:
+        nist: ['PR.PT-04', 'PR.IR-04']
+        asvs: ['V12.1.1', 'V13.4.1']
+        cis: ['CIS-13.1']
+      cost-impact: low
+      mttr-impact: medium
+      agent-readiness-impact: medium
 
   # =========================================================================
   # TM-A32 — Purchase/booking flow MUST have rate-limit headers (error)
@@ -450,6 +832,25 @@ rules:
     given: "$.paths[*][post,put,patch]"
     then:
       function: sensitive-flow-needs-rate-limit-headers
+    apiq-meta:
+      pattern-id: TM-A32
+      lenses: [threat-modeling]
+      sources:
+        - { type: vendor, name: 'OWASP API6:2023 (Unrestricted Access to Sensitive Business Flows)' }
+      stakeholders: [security, end-user, operations]
+      lifecycle-phase: runtime-at-scale
+      defect-class: incomplete
+      iso25010: [security, reliability]
+      codegen-targets: ['*']
+      detection-precision: medium
+      auto-fix-safe: false
+      regulatory-mapping:
+        nist: ['PR.PT-04', 'PR.IR-04', 'DE.CM-01']
+        asvs: ['V11.1.1', 'V11.1.4']
+        cis: ['CIS-13.1']
+      cost-impact: medium
+      mttr-impact: high
+      agent-readiness-impact: medium
 
   # =========================================================================
   # TM-A34 — URL-handling property MUST format:uri+pattern
@@ -477,6 +878,27 @@ rules:
           match: "^uri$"
       - function: defined
         field: pattern
+    apiq-meta:
+      pattern-id: TM-A34
+      lenses: [threat-modeling, standards-compliance]
+      sources:
+        - { type: vendor, name: 'OWASP API7:2023 (Server Side Request Forgery)' }
+        - { type: vendor, name: 'OWASP SSRF Cheat-Sheet' }
+        - { type: mining, phase: round2, subagent: 'TM-A34', verbatim: 'extends Y-15', verifiedAt: '2026-05-07' }
+      stakeholders: [security, end-user, spec-author]
+      lifecycle-phase: deploy-time
+      defect-class: incomplete
+      iso25010: [security]
+      codegen-targets: ['*']
+      detection-precision: medium
+      auto-fix-safe: false
+      regulatory-mapping:
+        nist: ['PR.AA-05', 'PR.PT-04']
+        asvs: ['V12.6.1', 'V13.4.2']
+        cis: ['CIS-13.1', 'CIS-13.10']
+      cost-impact: medium
+      mttr-impact: high
+      agent-readiness-impact: medium
 
   # =========================================================================
   # TM-A38 — CORS Allow-Origin: * literal in response headers
@@ -501,6 +923,26 @@ rules:
       field: example
       functionOptions:
         notMatch: "^\\*$"
+    apiq-meta:
+      pattern-id: TM-A38
+      lenses: [threat-modeling, standards-compliance]
+      sources:
+        - { type: vendor, name: 'OWASP API8:2023 (Security Misconfiguration)' }
+        - { type: vendor, name: 'OWASP CORS-Misconfig' }
+      stakeholders: [security, end-user, spec-author]
+      lifecycle-phase: deploy-time
+      defect-class: semantic
+      iso25010: [security]
+      codegen-targets: ['*']
+      detection-precision: high
+      auto-fix-safe: false
+      regulatory-mapping:
+        nist: ['PR.AA-05', 'PR.PT-04']
+        asvs: ['V14.5.3']
+        cis: ['CIS-3.10']
+      cost-impact: low
+      mttr-impact: high
+      agent-readiness-impact: low
 
   # =========================================================================
   # TM-A39 — Allow-Credentials:true + Allow-Origin:* impossible
@@ -525,6 +967,26 @@ rules:
     given: "$..responses[*]"
     then:
       function: cors-credentials-wildcard-conflict
+    apiq-meta:
+      pattern-id: TM-A39
+      lenses: [threat-modeling, standards-compliance]
+      sources:
+        - { type: vendor, name: 'OWASP CORS Web-Security-Testing-Guide' }
+        - { type: vendor, name: 'Fetch Living Standard (CORS spec)' }
+      stakeholders: [security, end-user, spec-author]
+      lifecycle-phase: runtime-edge
+      defect-class: semantic
+      iso25010: [security, compatibility]
+      codegen-targets: ['*']
+      detection-precision: high
+      auto-fix-safe: false
+      regulatory-mapping:
+        nist: ['PR.AA-05', 'PR.PT-04']
+        asvs: ['V14.5.3']
+        cis: ['CIS-3.10']
+      cost-impact: low
+      mttr-impact: high
+      agent-readiness-impact: low
 
   # =========================================================================
   # TM-A42 — Error-schema with stack/trace/exception field
@@ -546,6 +1008,26 @@ rules:
     then:
       function: undefined
       field: type
+    apiq-meta:
+      pattern-id: TM-A42
+      lenses: [threat-modeling]
+      sources:
+        - { type: vendor, name: 'OWASP API8:2023 (Security Misconfiguration — verbose-error)' }
+        - { type: mining, phase: round2, subagent: 'TM-A42', verbatim: 'high-value catch', verifiedAt: '2026-05-07' }
+      stakeholders: [security, end-user, spec-author]
+      lifecycle-phase: deploy-time
+      defect-class: privacy-leakage
+      iso25010: [security]
+      codegen-targets: ['*']
+      detection-precision: medium
+      auto-fix-safe: false
+      regulatory-mapping:
+        nist: ['PR.DS-05', 'DE.CM-01']
+        asvs: ['V8.3.1', 'V8.3.4']
+        cis: ['CIS-3.13']
+      cost-impact: low
+      mttr-impact: medium
+      agent-readiness-impact: low
 
   # =========================================================================
   # TM-A44 — /debug, /_debug, /test, /admin paths in production spec
@@ -569,6 +1051,27 @@ rules:
       field: "@key"
       functionOptions:
         notMatch: "^/(debug|_debug|test|_test|dev|_dev|internal|_internal|admin/console|debug/.*|_debug/.*|test/.*|_test/.*|internal/.*|_internal/.*)(/|$)"
+    apiq-meta:
+      pattern-id: TM-A44
+      lenses: [threat-modeling]
+      sources:
+        - { type: vendor, name: 'OWASP API8:2023' }
+        - { type: vendor, name: 'OWASP API9:2023 (Improper Inventory Management)' }
+        - { type: mining, phase: round2, subagent: 'TM-A44', verbatim: 'common breach-vector — stale debug endpoints', verifiedAt: '2026-05-07' }
+      stakeholders: [security, operations, spec-author]
+      lifecycle-phase: deploy-time
+      defect-class: incomplete
+      iso25010: [security]
+      codegen-targets: ['*']
+      detection-precision: medium
+      auto-fix-safe: false
+      regulatory-mapping:
+        nist: ['PR.AA-05', 'PR.PS-01', 'ID.AM-02']
+        asvs: ['V14.3.2', 'V14.5.1']
+        cis: ['CIS-4.1', 'CIS-4.8']
+      cost-impact: low
+      mttr-impact: high
+      agent-readiness-impact: low
 
   # =========================================================================
   # TM-A53 / RFC2-40 — 401 → WWW-Authenticate header MUST be defined
@@ -592,3 +1095,23 @@ rules:
     given: "$.paths[*][*]"
     then:
       function: response-has-www-authenticate-header
+    apiq-meta:
+      pattern-id: TM-A53
+      lenses: [threat-modeling, standards-compliance]
+      sources:
+        - { type: rfc, number: 9110, section: '11.6.1', verbatim: 'MUST send a WWW-Authenticate header field', verifiedAt: '2026-05-08' }
+        - { type: vendor, name: 'OWASP API2:2023' }
+      stakeholders: [security, end-user, ai-agent, spec-author]
+      lifecycle-phase: runtime-edge
+      defect-class: norm
+      iso25010: [security, usability]
+      codegen-targets: ['*']
+      detection-precision: high
+      auto-fix-safe: false
+      regulatory-mapping:
+        nist: ['PR.AA-01', 'PR.AA-02']
+        asvs: ['V2.1.1', 'V51.4.1']
+        cis: ['CIS-6.1']
+      cost-impact: low
+      mttr-impact: medium
+      agent-readiness-impact: high

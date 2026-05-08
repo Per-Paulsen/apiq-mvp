@@ -167,6 +167,51 @@ interface YamlRule {
   then?: YamlThen | YamlThen[];
   formats?: string[];
   resolved?: boolean;
+  // Welle F — apiq-meta block (read-only passthrough; stripped before handing
+  // the rule definition to Spectral, since Spectral's ruleset-validator rejects
+  // unknown top-level keys on rule objects).
+  'apiq-meta'?: ApiqMetaYamlBlock;
+}
+
+/**
+ * apiq-meta YAML-block shape (Welle F).
+ *
+ * Allows YAML-rules to declare richer metadata (lens-membership, source-of-truth
+ * citations, regulatory-mapping, agent-readiness-impact, etc.) inline next to
+ * the rule definition — read at YAML-load time and propagated to
+ * `DetectorFinding.meta.apiqMeta` so downstream consumers (output-mapper,
+ * scoring, telemetry) can route findings on these axes.
+ *
+ * The shape MUST stay consistent with `RuleMetadata` in `severity-schema.ts`
+ * (Phase 1A schema); fields here are kebab-case YAML-style while the Zod-schema
+ * over there uses camelCase. This is an IO-boundary type — Phase 2 (F4) will
+ * add `apiq-meta` blocks to all 110 YAML-rules.
+ */
+export interface ApiqMetaYamlBlock {
+  'pattern-id'?: string;
+  lenses?: string[];
+  direction?: 'tighten' | 'loosen' | 'drift';
+  sources?: Array<{
+    type: 'rfc' | 'bcp' | 'iso' | 'iana-registry' | 'vendor' | 'mining';
+    [key: string]: unknown;
+  }>;
+  stakeholders?: string[];
+  'lifecycle-phase'?: string;
+  'defect-class'?: string;
+  iso25010?: string[];
+  'codegen-targets'?: string[];
+  'detection-precision'?: 'high' | 'medium' | 'low';
+  'auto-fix-safe'?: boolean;
+  'regulatory-mapping'?: {
+    nist?: string[];
+    asvs?: string[];
+    cis?: string[];
+    gdpr?: string[];
+    soc2?: string[];
+  };
+  'cost-impact'?: 'low' | 'medium' | 'high';
+  'mttr-impact'?: 'low' | 'medium' | 'high';
+  'agent-readiness-impact'?: 'high' | 'medium' | 'low' | 'none';
 }
 
 interface YamlThen {
@@ -236,6 +281,12 @@ const RULE_CRASH_BLOCKLIST: ReadonlySet<string> = new Set([
 // mapper can pull them into the rationale (Spectral diagnostics carry only the
 // message, not the description).
 const customRuleDescriptions = new Map<string, string>();
+
+// Welle F — collect apiq-meta blocks from YAML-rules at load-time so the
+// diagnostic-mapper can propagate them into DetectorFinding.meta.apiqMeta.
+// Keyed by rule-code; populated in `buildRulesAccFromYaml`. Empty until any
+// YAML-rule declares an `apiq-meta` block (Phase 2 / F4 migration adds these).
+const customRuleApiqMeta = new Map<string, ApiqMetaYamlBlock>();
 
 function buildRulesAccFromYaml(
   yamlText: string,
@@ -310,6 +361,12 @@ function buildRulesAccFromYaml(
 
     rulesAcc[code] = built;
     if (rule.description) customRuleDescriptions.set(code, rule.description);
+    // Welle F — capture apiq-meta block if present. Note: we deliberately do
+    // NOT include `apiq-meta` in the `built` object handed to Spectral, since
+    // Spectral's ruleset-validator rejects unknown rule-level keys.
+    if (rule['apiq-meta']) {
+      customRuleApiqMeta.set(code, rule['apiq-meta']);
+    }
   }
   /* eslint-enable @typescript-eslint/no-explicit-any */
 
@@ -346,9 +403,30 @@ let cachedSpectral: SpectralCore.Spectral | null = null;
 /**
  * Reset the cached Spectral instance — used by tests that mutate the
  * filesystem-loaded ruleset and need a fresh build.
+ *
+ * Welle F — also clears the description- and apiq-meta-maps so test-isolation
+ * holds across test files (the maps would otherwise accumulate entries from
+ * every prior buildSpectral call in the same vitest worker).
  */
 export function _resetSpectralCacheForTests(): void {
   cachedSpectral = null;
+  customRuleDescriptions.clear();
+  customRuleApiqMeta.clear();
+}
+
+/**
+ * Public read accessor for tests + downstream-consumers. Returns the parsed
+ * `apiq-meta` block for a rule-code, or `undefined` if the rule didn't declare
+ * one (e.g. pre-Phase-2 / OAS3-default rules / external rulesets).
+ *
+ * NOTE: returns the YAML-shape (kebab-case keys), NOT the camelCase
+ * `RuleMetadata` shape from severity-schema.ts. Consumers wanting the
+ * canonical schema should validate with `RuleMetadataSchema` first.
+ */
+export function getApiqMetaForRule(
+  ruleCode: string
+): ApiqMetaYamlBlock | undefined {
+  return customRuleApiqMeta.get(ruleCode);
 }
 
 /**
@@ -426,6 +504,31 @@ function buildSpectral(): SpectralCore.Spectral {
       '[spectral-runner] no apiq custom rules loaded; using OAS3-default only'
     );
     spectral.setRuleset(oas3Ruleset as unknown as RulesetDefinition);
+  }
+
+  // Welle F — log apiq-meta coverage across the merged custom-ruleset. Target
+  // is ≥95% post-F4 migration (Phase 2). Pre-F4 the coverage is 0% by design.
+  let rulesWithApiqMeta = 0;
+  let rulesWithoutApiqMeta = 0;
+  for (const code of Object.keys(merged)) {
+    if (customRuleApiqMeta.has(code)) {
+      rulesWithApiqMeta++;
+    } else {
+      rulesWithoutApiqMeta++;
+    }
+  }
+  const totalCustomRules = rulesWithApiqMeta + rulesWithoutApiqMeta;
+  const apiqMetaCoverage =
+    totalCustomRules > 0 ? rulesWithApiqMeta / totalCustomRules : 0;
+  // eslint-disable-next-line no-console
+  console.log(
+    `[spectral-runner] apiq-meta coverage: ${rulesWithApiqMeta}/${totalCustomRules} ` +
+      `(${(apiqMetaCoverage * 100).toFixed(1)}%)`
+  );
+  if (totalCustomRules > 0 && apiqMetaCoverage < 0.95) {
+    console.warn(
+      `[spectral-runner] apiq-meta coverage below 95% target — Welle F migration incomplete?`
+    );
   }
 
   cachedSpectral = spectral;
@@ -637,6 +740,13 @@ export function mapDiagnosticToDetectorFinding(d: ISpectralDiagnostic): Detector
   const rationale = buildRationale(ruleCode, category, !isOas3Default);
   const patchSummary = patchSummaryFor(ruleCode, messageRaw);
 
+  // Welle F — propagate the rule's apiq-meta block (if present) into the
+  // finding's free-form `meta` field. DetectorFinding.meta accepts arbitrary
+  // keys, so this is a passthrough — downstream consumers (output-mapper,
+  // scoring, telemetry) can route on `meta.apiqMeta.lenses` /
+  // `meta.apiqMeta['agent-readiness-impact']` / etc.
+  const apiqMeta = customRuleApiqMeta.get(ruleCode);
+
   return {
     detectorId: `spectral:${ruleCode}`,
     layer,
@@ -654,6 +764,7 @@ export function mapDiagnosticToDetectorFinding(d: ISpectralDiagnostic): Detector
       ruleCode,
       severity: d.severity,
       range: d.range,
+      ...(apiqMeta ? { apiqMeta } : {}),
     },
   };
 }
