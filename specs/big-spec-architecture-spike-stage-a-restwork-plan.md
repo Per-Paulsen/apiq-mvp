@@ -758,16 +758,19 @@ Mining-Round-3 wird in `mining-round3.md` geschrieben. Falls nach M1+M2 weitere 
 
 ---
 
-## 20. Status zum 2026-05-07
+## 20. Status zum 2026-05-08
 
-**Welle 0+A+B + W1-W4 + Welle Q + Welle M done** (siehe `project_epic09_spike_handoff.md`).
+**Welle 0+A+B + W1-W4 + Welle Q + Welle M + Welle F done** (siehe `project_epic09_spike_handoff.md`).
 
-**Aktuelle Inventur (post-Welle-M Round-3+4):**
-- 110 active spectral rules (4 yamls) — 100% mit Source-Mapping-Comments (M4)
-- 16 walkers
+**Aktuelle Inventur (post-Welle-F):**
+- 110 active spectral rules (4 yamls) — 100% mit Source-Mapping-Comments (M4) + **100% mit `apiq-meta`-Block** (F4)
+- **23 walkers** (16 baseline + 7 info-tier neu in F: SLA4OAI / capability-discovery / RFC-9727 api-catalog / RFC-9728 OAuth Protected Resource Metadata / GitHub brownout-schedule / Slack rate-limit-tier / Arazzo workflow-document)
 - 15 module-classes wired (modules/index.ts) — 100% mit erweiterten JSDoc-Headers (Lens + Round + Sources)
 - 5 custom spectral-functions — 100% mit JSDoc-Source-Mapping
-- **845 tests pass / 41 files / 2 skipped / 0 fail** (war 806 baseline — +39 neue Tests inkl. 27 für Eval-Tools + 6 verbatim-enrich + 6 Round-4)
+- **Schema-Erweiterungen in `severity-schema.ts`** (Welle F): autoFixSafe, detectionPrecision, ai-agent-stakeholder, privacy-leakage/operational-metadata-missing-defectclass, RuleSourceSchema (verbatim + verifiedAt), regulatoryMapping (NIST/ASVS/CIS/GDPR/SOC2), costImpact, mttrImpact, agentReadinessImpact (Strategic-Vision-Coupling per §0), iso25010 single→array
+- **Spectral-runner apiq-meta-Block read+propagate** (Welle F): customRuleApiqMeta map, buildRulesAccFromYaml propagiert apiq-meta in DetectorFinding.meta, coverage-logging mit warn-mode
+- **F5 CI-coverage-gate** (`apiq-meta-coverage-gate.test.ts`): 9 tests assert ≥95% coverage per yaml + cross-yaml + alle required-fields populated
+- **944 tests pass / 50 files / 2 skipped / 0 fail** (war 845 baseline post-Welle-M — +99 neue Tests aus Welle F: 45+7+41+9 inkl. severity-schema + spectral-runner-apiq-meta + 7 info-tier-walkers + F5 coverage-gate)
 - **NEU**: **959 patterns** in `scripts/spike/data/patterns.json` (Round-1 388 + Round-2 375 + Round-3 108 + **Round-4 88**)
   - **Citation-coverage 80.4%** (war 12% pre-enrich) — verbatim-enrich-pass appended Source-Citations + URL für Round-1+2 patterns
   - **URL-coverage 72.4%** (war ~12%)
@@ -828,9 +831,11 @@ Mining-Round-3 wird in `mining-round3.md` geschrieben. Falls nach M1+M2 weitere 
 | dnd5eapi | 85.7% | 35.7% | **85.7%** | **+0.0pp (= Prediction)** |
 | github-rest | 86.9% | 25.8% | **64.5%** | -22.4pp |
 
-**Strategischer Update post-M:** Welle M war Putzen-First-Maximierung von Mining-Coverage, NICHT Coverage-lifter (Master-rules unverändert). Mining ist jetzt ehrlich maxed-out für Stage-A. Welle F (Framework-Optimization) als nächste Welle nutzt 122 Round-3-Patterns + patterns.json + pattern-index als Substrate für 110-rule-metadata-promotion + autoFixSafe-tagging + Schema-Erweiterungen.
+**Strategischer Update post-M:** Welle M war Putzen-First-Maximierung von Mining-Coverage, NICHT Coverage-lifter (Master-rules unverändert). Mining ist jetzt ehrlich maxed-out für Stage-A. Welle F (Framework-Optimization) hat 122 Round-3-Patterns + patterns.json + pattern-index als Substrate für 110-rule-metadata-promotion + autoFixSafe-tagging + Schema-Erweiterungen genutzt.
 
-**Nächster Schritt:** **Welle F `/spec_ind` + `/dev` starten** — F1-F10 mit 10 Sub-Items inkl. 110-rule metadata-promotion (per Plan-Doc §5). Pre-Condition Welle-M done ist erfüllt. Resume-Trigger neue Session: "welle f starten" oder "weiter mit restwork-plan v2 — welle f".
+**Strategischer Update post-F:** Welle F hat das Stage-A-Framework auf Maximum gebracht: **110/110 rules mit vollständigem apiq-meta-Block** (pattern-id + lenses + sources + stakeholders + lifecycle-phase + defect-class + iso25010-array + codegen-targets + cost-impact + mttr-impact + agent-readiness-impact, plus für security/privacy-rules regulatoryMapping NIST/ASVS/CIS/GDPR/SOC2). 7 neue info-tier walkers für positive-marker-detection (SLA4OAI / capability-discovery / RFC-9727 api-catalog / RFC-9728 OAuth Protected Resource Metadata / GitHub brownout-schedule / Slack rate-limit-tier / Arazzo workflow-document) bringen Lens-9/10-coverage. Schema-Erweiterungen in `severity-schema.ts` (autoFixSafe + detectionPrecision + RuleSourceSchema verbatim/verifiedAt + agentReadinessImpact strategic-vision-coupling) + spectral-runner apiq-meta-Block read+propagate sind Pre-Conditions für Phase-B. F5 CI-coverage-gate fail't bei <95% (aktuell 100%, ein Lock gegen Regression). Welle F war Framework-Optimization, NICHT Coverage-lifter — Stage-A-Coverage unverändert.
+
+**Nächster Schritt:** **Welle C `/spec_ind` + `/dev` starten** — P2-Pattern-Implementations auf neuem Schema (alle neue rules nutzen finalisiertes apiq-meta-Schema). Pre-Condition Welle-F done ist erfüllt. Resume-Trigger neue Session: "welle c starten" oder "weiter mit restwork-plan v2 — welle c".
 
 ---
 
@@ -842,8 +847,8 @@ Wird bei jedem `/dev`-Run aktualisiert.
 |---|---|---|---|---|---|
 | Q | `specs/E09-w-q-code-quality-cleanup.md` (+ `*-results.md`) | ✓ 2026-05-06 | 802/2 skip | `c8f8658` (feat) + `4560a2a` (docs) | done; 4 parallele Subagents (q1+q3+q2q5+q4); Q1 codegen-aggregation + Q2 env-fix + Q3 module-class layer-tag + Q4 3 integration-tests + Q5 PREDICTIONS stale-marker |
 | M | `specs/E09-w-m-mining-optimization.md` (+ `*-brainstorming.md` + `*-results.md`) | ✓ 2026-05-07 R3 + R4 | 845/2 skip (war 806 baseline) | `465177f` (R3-feat) + `593d6b7` (R4-feat) | done; 12 parallele Subagent-Phasen (R3: 8 + R4: 4); **R3: 122 patterns** (51 books + 42 postmortems + 11 corpus + 18 reaudit) + **R4: 88 patterns** (19 conferences + 33 vendor-blogs + 32 papers); Total 959 patterns in patterns.json (Round-1+2+3+4); Citation-coverage 80.4% post verbatim-enrich; Pattern-Knowledge-Index 763 entries; 110/110 YAML rules + 5/5 functions + 15/15 module-headers mit Source-Mapping; 8 alte Mining-Files zu Stubs konsolidiert; Round-5-Decision: skip (Mining maxed-out aus discovery-unbounded; Welle M2 post-V bleibt geplant für gerichtetes mining) |
-| F | TBD | — | — | — | wartet auf M ✓ |
-| C | TBD | — | — | — | wartet auf F |
+| F | `specs/E09-w-f-framework-optimization.md` (+ `*-brainstorming.md` + `*-results.md`) | ✓ 2026-05-08 | 944/2 skip (war 845 baseline) | `c635ac3` (feat) | done; 8 parallele Subagent-Phasen über 4 Phases; **Phase 1A** severity-schema +158 lines (+45 tests, autoFixSafe + detectionPrecision + ai-agent stakeholder + privacy-leakage/operational-metadata-missing defect-classes + RuleSourceSchema verbatim/verifiedAt + regulatoryMapping NIST/ASVS/CIS/GDPR/SOC2 + costImpact/mttrImpact + agentReadinessImpact strategic-vision-coupling + iso25010 single→array migration); **Phase 1B** spectral-runner +95 lines (+7 tests, ApiqMetaYamlBlock interface + customRuleApiqMeta map + buildRulesAccFromYaml propagiert apiq-meta + coverage-logging + warn-mode); **Phase 1C** 7 info-tier walkers +650 lines (+41 tests; SLA4OAI + capability-discovery + RFC-9727 api-catalog + RFC-9728 OAuth Protected Resource Metadata + GitHub brownout-schedule + Slack rate-limit-tier + Arazzo workflow-document); **Phase 1D** 6 walker/module files migrated (18 enum-renames + 23 iso25010-array-wraps); **Phase 2A-D** 110 YAML rules apiq-meta-promotion (4 parallele Subagents per yaml: apiq-ruleset.yaml 27/27 + threat-p1 26/26 mit regulatoryMapping NIST/ASVS/CIS + client-p1 27/27 mit konkretem codegen-targets per F7 + evolution 30/30 mit direction structured per F3); **Phase 3 F5** apiq-meta-coverage-gate.test.ts CI-gate ≥95% coverage (+9 tests); **Phase 4** full-suite-verify + commit + doc-sync; Round-3+4 severity-upgrades applied (EV-1/F-1 hint→warn per RFC 9745, EV-5/6/14/17/23 hint→warn, EV-18 warn→hint); 110/110 = 100% YAML-rules tragen apiq-meta-Block |
+| C | TBD | — | — | — | wartet auf F ✓ |
 | D | TBD | — | — | — | wartet auf C |
 | D2 | TBD | — | — | — | wartet auf D |
 | E | TBD | — | — | — | wartet auf D2 |
