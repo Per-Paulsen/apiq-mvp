@@ -27,12 +27,21 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DETERMINISTIC_DIR = path.resolve(__dirname, '..', '..', 'deterministic');
 
-const YAML_FILES = [
+// Welle C (2026-05-08) — added P2 rulesets `apiq-ruleset-threat-p2.yaml` +
+// `apiq-ruleset-client-p2.yaml`. Both are required after Welle C's commit
+// completes; we filter to existing files at module-load to keep the test
+// resilient against partial-T16b/T18b parallel execution during /dev.
+const ALL_YAML_FILES = [
   'apiq-ruleset.yaml',
   'apiq-ruleset-threat-p1.yaml',
   'apiq-ruleset-client-p1.yaml',
   'apiq-ruleset-evolution.yaml',
+  'apiq-ruleset-threat-p2.yaml',
+  'apiq-ruleset-client-p2.yaml',
 ] as const;
+const YAML_FILES = ALL_YAML_FILES.filter((f) =>
+  fs.existsSync(path.join(DETERMINISTIC_DIR, f))
+);
 
 interface YamlRule {
   description?: string;

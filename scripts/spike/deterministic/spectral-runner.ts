@@ -1,11 +1,17 @@
 /**
  * Spectral runner — Stage-A pre-pass detector.
  *
- * Loads:
+ * Loads (in this order; later files overwrite earlier rule-codes if duplicated):
  *   1. OAS3-default ruleset (`@stoplight/spectral-rulesets`'s `oas` export)
- *   2. apiq-custom ruleset YAML (`./apiq-ruleset.yaml`) if present — falls back
- *      gracefully to OAS3-default-only when the file doesn't yet exist (Task A1.2
- *      runs in parallel with this).
+ *   2. apiq-ruleset.yaml                  (Welle A — base apiq custom rules)
+ *   3. apiq-ruleset-client-p1.yaml        (Welle B P1 — Client-Friction CL-x)
+ *   4. apiq-ruleset-threat-p1.yaml        (Welle B P1 — Threat-Modeling Y-x/TM-Ax)
+ *   5. apiq-ruleset-evolution.yaml        (Welle B — Evolution-Friction EV-x)
+ *   6. apiq-ruleset-client-p2.yaml        (Welle C P2 — Client-Friction P2 + F-x)
+ *   7. apiq-ruleset-threat-p2.yaml        (Welle C P2 — Threat-Modeling P2 + RFC2-x)
+ *
+ *   Each file is loaded best-effort: missing files emit a warn + skip
+ *   (the runner falls back to OAS3-default-only when no apiq YAML loads).
  *
  * Maps Spectral diagnostics → DetectorFinding shape so downstream output-mapper
  * can validate them against FindingSchema and feed them through the same Apply /
@@ -66,6 +72,30 @@ import {
   corsCredentialsWildcardConflict,
   responseHasWwwAuthenticateHeader,
 } from './spectral-functions/threat-p1-functions.js';
+import {
+  schemaNestingDepth,
+  regexMultiEngineUnsupported,
+  allOfHeavyNonRefObjects,
+  linguisticAmorphousUri,
+  linguisticTinyResource,
+} from './spectral-functions/client-p2-functions.js';
+import {
+  objectIdWriteOpNeedsSecurity,
+  oauth2AuthCodePkceRecommended,
+  loginEndpointRateLimit,
+  schemaReuseWithoutReadOnlyWriteOnly,
+  recursiveSchemaNeedsMaxDepth,
+  adminDescriptionWithoutSecurity,
+  upstreamUrlNeedsErrorResponses,
+  multiVersionServersNeedDeprecation,
+  deprecatedNeedsSunsetReplacement,
+  infoVersionServerUrlDrift,
+  problemDetailsStatusMatchesHttpStatus,
+  conditionalRequestCorrectness,
+  partialContentNeedsContentRange,
+  bearer401WwwAuthenticateRealm,
+  patchContentTypeCorrect,
+} from './spectral-functions/threat-p2-functions.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -110,6 +140,33 @@ const APIQ_RULESET_EVOLUTION_PATH = path.join(
 );
 
 /**
+ * Welle C P2 Client-Friction (Lens 4 + Lens 5) ruleset — 25 P2 CL-* /
+ * F-* rules covering the apiq differentiator-pattern set (codegen-quality,
+ * linguistic-anti-patterns, regex-multi-engine, schema-nesting). Uses 5
+ * custom Spectral functions registered below: schema-nesting-depth,
+ * regex-multi-engine-unsupported, allof-heavy-non-ref-objects,
+ * linguistic-amorphous-uri, linguistic-tiny-resource.
+ */
+const APIQ_RULESET_CLIENT_P2_PATH = path.join(
+  __dirname,
+  'apiq-ruleset-client-p2.yaml'
+);
+
+/**
+ * Welle C P2 Threat-Modeling (Lens 1) ruleset — 36 P2 Y-* / TM-A* / RFC2-*
+ * differentiator rules covering BOLA-via-int-id, OAuth2-PKCE, login-rate-limit,
+ * schema-reuse-readOnly/writeOnly, recursive-schema-depth, admin-no-security,
+ * RFC-7807 status-correctness, conditional-request bundles, RFC-9745
+ * Sunset/Deprecation, RFC-7233 Range/206, www-authenticate realm, and PATCH
+ * content-type correctness. Uses 15 custom Spectral functions registered
+ * below.
+ */
+const APIQ_RULESET_THREAT_P2_PATH = path.join(
+  __dirname,
+  'apiq-ruleset-threat-p2.yaml'
+);
+
+/**
  * Custom Spectral functions registered in addition to `@stoplight/spectral-functions`.
  * Function-name (as it appears in YAML `function:` field) → callable.
  *
@@ -130,6 +187,58 @@ const APIQ_CUSTOM_FUNCTIONS: Record<string, (...args: any[]) => any> = {
     corsCredentialsWildcardConflict as unknown as (...args: any[]) => any,
   'response-has-www-authenticate-header':
     responseHasWwwAuthenticateHeader as unknown as (...args: any[]) => any,
+  // T18b Client-P2 custom functions (Lens 4 + Lens 5):
+  'schema-nesting-depth': schemaNestingDepth as unknown as (
+    ...args: any[]
+  ) => any,
+  'regex-multi-engine-unsupported': regexMultiEngineUnsupported as unknown as (
+    ...args: any[]
+  ) => any,
+  'allof-heavy-non-ref-objects': allOfHeavyNonRefObjects as unknown as (
+    ...args: any[]
+  ) => any,
+  'linguistic-amorphous-uri': linguisticAmorphousUri as unknown as (
+    ...args: any[]
+  ) => any,
+  'linguistic-tiny-resource': linguisticTinyResource as unknown as (
+    ...args: any[]
+  ) => any,
+  // T16b Threat-P2 custom functions (Lens 1):
+  'object-id-write-op-needs-security': objectIdWriteOpNeedsSecurity as unknown as (
+    ...args: any[]
+  ) => any,
+  'oauth2-authcode-pkce-recommended': oauth2AuthCodePkceRecommended as unknown as (
+    ...args: any[]
+  ) => any,
+  'login-endpoint-rate-limit': loginEndpointRateLimit as unknown as (
+    ...args: any[]
+  ) => any,
+  'schema-reuse-without-readonly-writeonly':
+    schemaReuseWithoutReadOnlyWriteOnly as unknown as (...args: any[]) => any,
+  'recursive-schema-needs-max-depth':
+    recursiveSchemaNeedsMaxDepth as unknown as (...args: any[]) => any,
+  'admin-description-without-security':
+    adminDescriptionWithoutSecurity as unknown as (...args: any[]) => any,
+  'upstream-url-needs-error-responses':
+    upstreamUrlNeedsErrorResponses as unknown as (...args: any[]) => any,
+  'multi-version-servers-need-deprecation':
+    multiVersionServersNeedDeprecation as unknown as (...args: any[]) => any,
+  'deprecated-needs-sunset-replacement':
+    deprecatedNeedsSunsetReplacement as unknown as (...args: any[]) => any,
+  'info-version-server-url-drift': infoVersionServerUrlDrift as unknown as (
+    ...args: any[]
+  ) => any,
+  'problem-details-status-matches-http-status':
+    problemDetailsStatusMatchesHttpStatus as unknown as (...args: any[]) => any,
+  'conditional-request-correctness':
+    conditionalRequestCorrectness as unknown as (...args: any[]) => any,
+  'partial-content-needs-content-range':
+    partialContentNeedsContentRange as unknown as (...args: any[]) => any,
+  'bearer-401-www-authenticate-realm':
+    bearer401WwwAuthenticateRealm as unknown as (...args: any[]) => any,
+  'patch-content-type-correct': patchContentTypeCorrect as unknown as (
+    ...args: any[]
+  ) => any,
 };
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
@@ -245,6 +354,28 @@ const SUPPORTED_FUNCTIONS = new Set([
   'sensitive-flow-needs-rate-limit-headers',
   'cors-credentials-wildcard-conflict',
   'response-has-www-authenticate-header',
+  // T18b Client-P2 custom functions:
+  'schema-nesting-depth',
+  'regex-multi-engine-unsupported',
+  'allof-heavy-non-ref-objects',
+  'linguistic-amorphous-uri',
+  'linguistic-tiny-resource',
+  // T16b Threat-P2 custom functions:
+  'object-id-write-op-needs-security',
+  'oauth2-authcode-pkce-recommended',
+  'login-endpoint-rate-limit',
+  'schema-reuse-without-readonly-writeonly',
+  'recursive-schema-needs-max-depth',
+  'admin-description-without-security',
+  'upstream-url-needs-error-responses',
+  'multi-version-servers-need-deprecation',
+  'deprecated-needs-sunset-replacement',
+  'info-version-server-url-drift',
+  'problem-details-status-matches-http-status',
+  'conditional-request-correctness',
+  'partial-content-needs-content-range',
+  'bearer-401-www-authenticate-realm',
+  'patch-content-type-correct',
 ]);
 
 /**
@@ -442,6 +573,32 @@ export function getClientP1RuleCodes(): string[] {
   return acc ? Object.keys(acc) : [];
 }
 
+/**
+ * Read-only inspection of the apiq client-friction P2 ruleset (Welle C) —
+ * exposed for tests that check the YAML round-trips and contains all
+ * expected pattern-IDs.
+ */
+export function getClientP2RuleCodes(): string[] {
+  const acc = loadYamlRules(
+    APIQ_RULESET_CLIENT_P2_PATH,
+    'apiq-ruleset-client-p2.yaml'
+  );
+  return acc ? Object.keys(acc) : [];
+}
+
+/**
+ * Read-only inspection of the apiq threat-modeling P2 ruleset (Welle C) —
+ * exposed for tests that check the YAML round-trips and contains all
+ * expected pattern-IDs.
+ */
+export function getThreatP2RuleCodes(): string[] {
+  const acc = loadYamlRules(
+    APIQ_RULESET_THREAT_P2_PATH,
+    'apiq-ruleset-threat-p2.yaml'
+  );
+  return acc ? Object.keys(acc) : [];
+}
+
 function loadYamlRules(
   filePath: string,
   fileLabel: string,
@@ -484,6 +641,14 @@ function buildSpectral(): SpectralCore.Spectral {
     APIQ_RULESET_EVOLUTION_PATH,
     'apiq-ruleset-evolution.yaml'
   );
+  const clientP2Rules = loadYamlRules(
+    APIQ_RULESET_CLIENT_P2_PATH,
+    'apiq-ruleset-client-p2.yaml'
+  );
+  const threatP2Rules = loadYamlRules(
+    APIQ_RULESET_THREAT_P2_PATH,
+    'apiq-ruleset-threat-p2.yaml'
+  );
 
   /* eslint-disable @typescript-eslint/no-explicit-any */
   const merged: Record<string, any> = {};
@@ -491,6 +656,8 @@ function buildSpectral(): SpectralCore.Spectral {
   if (clientP1Rules) Object.assign(merged, clientP1Rules);
   if (threatP1Rules) Object.assign(merged, threatP1Rules);
   if (evolutionRules) Object.assign(merged, evolutionRules);
+  if (clientP2Rules) Object.assign(merged, clientP2Rules);
+  if (threatP2Rules) Object.assign(merged, threatP2Rules);
   /* eslint-enable @typescript-eslint/no-explicit-any */
 
   if (Object.keys(merged).length > 0) {

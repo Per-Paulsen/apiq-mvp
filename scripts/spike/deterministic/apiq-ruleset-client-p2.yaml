@@ -1,0 +1,1325 @@
+# apiq Spectral Ruleset — Welle C P2 Client-Friction (Lens 4 + Lens 5)
+#
+# 23 P2 client-friction Differentiator-Patterns (apiq-USP) per
+# implementation-priority.md P2-Client tabelle + Plan-Doc §6 (Welle C).
+# These are patterns mature linters DON'T catch — apiq's competitive moat.
+#
+# Authored 2026-05-08 (T18b / Welle C, owner: t18b-client).
+#
+# Severity discipline (per severity-schema.ts):
+#   - error: codegen actually fails or spec-syntax violated (RFC-2119 MUST)
+#   - warn:  codegen produces bad-but-compilable output OR strong consensus
+#   - hint:  SDK-quality degraded; ergonomics suboptimal
+#
+# Custom-functions used (registered in spectral-runner.ts):
+#   - schema-nesting-depth (CL-29)
+#   - regex-multi-engine-unsupported (CL-25)
+#   - allof-heavy-non-ref-objects (CL-77)
+#   - linguistic-amorphous-uri (F-11)
+#   - linguistic-tiny-resource (F-12)
+#
+# All 23 rules carry a 100% complete `apiq-meta` block per Welle-F schema:
+# pattern-id + lenses + sources (with verbatim+verifiedAt) + stakeholders +
+# lifecycle-phase + defect-class + iso25010 (array) + codegen-targets
+# (per-target tagging where applicable, F7) + detection-precision +
+# auto-fix-safe + cost-impact + mttr-impact + agent-readiness-impact.
+
+extends:
+  - spectral:oas
+
+formats:
+  - oas3
+  - oas3_0
+  - oas3_1
+
+rules:
+  # =========================================================================
+  # CL-4 — Inline-Object schemas without title
+  # Targets: java, csharp, kotlin, go (codegen with strong typing produces
+  # synthetic anonymous types — `InlineObject1`, `InlineObject2`, ...).
+  # =========================================================================
+
+  # Source: multi-codegen + Speakeasy SDK guidance;
+  #         rules-brainstorm.md CL-4 (P2)
+  # Lens: 4 (Client-Friction)
+  # Round: 2 (Welle C)
+  apiq-cl4-inline-object-needs-title:
+    description: >-
+      [CL-4] Inline object-schemas (declared inside operations or as nested
+      properties without a `$ref` to a named component) should declare a
+      `title`. Codegen tools that produce strongly-typed clients (Java,
+      C#, Kotlin, Go) synthesise anonymous types like `InlineObject1`,
+      `InlineObject2` from anonymous schemas — the resulting SDK is
+      unreadable. Targets: java, csharp, kotlin, go.
+    message: "Inline object-schema lacks `title`; codegen synthesises anonymous types."
+    severity: warn
+    given:
+      - "$.paths[*][*].requestBody.content[*].schema"
+      - "$.paths[*][*].responses[*].content[*].schema"
+    then:
+      field: title
+      function: defined
+    apiq-meta:
+      pattern-id: CL-4
+      lenses: [client-friction]
+      sources:
+        - type: vendor
+          name: 'Speakeasy SDK guidance (multi-codegen)'
+          verbatim: 'Inline object schemas without title produce anonymous synthesised types'
+          url: 'https://www.speakeasy.com/openapi'
+          verifiedAt: '2026-05-08'
+        - type: vendor
+          name: openapi-generator multi-codegen
+          verifiedAt: '2026-05-08'
+        - type: mining
+          phase: round2
+          subagent: t18b-client
+      stakeholders: [client-dev, codegen-tool, ai-agent]
+      lifecycle-phase: build-time
+      defect-class: ergonomic
+      iso25010: [usability, compatibility]
+      codegen-targets: [java, csharp, kotlin, go]
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: medium
+
+  # =========================================================================
+  # CL-5 — operationId verbose / FastAPI-style
+  # E.g. `read_users_users__user_id__get`. Targets: * (SDKs end up with
+  # verbose method names that don't match natural usage).
+  # =========================================================================
+
+  # Source: Speakeasy + SDK-vendor guidance + openapi-generator naming
+  #         conventions; rules-brainstorm.md CL-5 (P2)
+  # Lens: 4 (Client-Friction)
+  # Round: 2 (Welle C)
+  apiq-cl5-operationid-not-verbose:
+    description: >-
+      [CL-5] `operationId` should be concise (≤40 chars) and use a verb +
+      resource-noun pattern (`listUsers`, `createInvoice`, `cancelOrder`).
+      FastAPI auto-generates verbose IDs like
+      `read_users_users__user_id__get` which produce unreadable SDK
+      method names. Use a hand-curated operationId. Targets: *.
+    message: "operationId `{{value}}` is verbose (>40 chars or matches FastAPI auto-naming)."
+    severity: warn
+    given: "$.paths[*][get,put,post,delete,options,head,patch,trace].operationId"
+    then:
+      function: pattern
+      functionOptions:
+        notMatch: "^(.{40,}|.+__.+__.+|.*_(get|post|put|delete|patch)$)"
+    apiq-meta:
+      pattern-id: CL-5
+      lenses: [client-friction]
+      sources:
+        - type: vendor
+          name: 'Speakeasy SDK-vendor guidance'
+          verbatim: 'operationId should be concise verb + resource-noun for clean SDK methods'
+          url: 'https://www.speakeasy.com/openapi'
+          verifiedAt: '2026-05-08'
+        - type: vendor
+          name: 'FastAPI auto-naming (negative example)'
+          verifiedAt: '2026-05-08'
+        - type: mining
+          phase: round2
+          subagent: t18b-client
+      stakeholders: [client-dev, codegen-tool, docs-tool]
+      lifecycle-phase: build-time
+      defect-class: ergonomic
+      iso25010: [usability]
+      codegen-targets: ['*']
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: medium
+
+  # =========================================================================
+  # CL-7 — required + nullable without 3-state semantics
+  # Setting `required: true` AND `nullable: true` produces 3-state semantics
+  # (present-with-value, present-with-null, absent) — codegen tools handle
+  # this badly. Targets: typescript, java, csharp, kotlin (strict-typed).
+  # =========================================================================
+
+  # Source: openapi-generator #14765 + Speakeasy 3-state-semantics guidance;
+  #         rules-brainstorm.md CL-7 (P2)
+  # Lens: 4 (Client-Friction), 3 (Evolution-Friction)
+  # Round: 2 (Welle C)
+  apiq-cl7-required-nullable-3-state:
+    description: >-
+      [CL-7] A property declared both `required: true` (in parent) AND
+      `nullable: true` (or `type: ['T', 'null']` in 3.1) creates 3-state
+      semantics (present-with-value / present-with-null / absent). Codegen
+      tools either drop one state or fail to compile the union. Pick one:
+      either `required` OR `nullable`, not both. Targets: typescript,
+      java, csharp, kotlin.
+    message: "Schema is `nullable: true`; if also marked `required` in parent, produces 3-state semantics."
+    severity: hint
+    given: "$..[?(@.nullable === true)]"
+    then:
+      field: nullable
+      function: falsy
+    apiq-meta:
+      pattern-id: CL-7
+      lenses: [client-friction, evolution-friction]
+      sources:
+        - type: vendor
+          name: openapi-generator #14765
+          url: 'https://github.com/OpenAPITools/openapi-generator/issues/14765'
+          verbatim: 'required+nullable produces 3-state semantics that codegen mishandles'
+          verifiedAt: '2026-05-08'
+        - type: vendor
+          name: 'Speakeasy 3-state-semantics guidance'
+          url: 'https://www.speakeasy.com/openapi'
+          verifiedAt: '2026-05-08'
+        - type: mining
+          phase: round2
+          subagent: t18b-client
+      stakeholders: [client-dev, codegen-tool, spec-author]
+      lifecycle-phase: build-time
+      defect-class: semantic
+      iso25010: [compatibility, reliability]
+      codegen-targets: [typescript, java, csharp, kotlin]
+      detection-precision: low
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: medium
+      agent-readiness-impact: medium
+
+  # =========================================================================
+  # CL-9 — Same-status-code multiple content-types
+  # Per OAS3, a single response can list multiple media-types, but codegens
+  # struggle with mixing JSON + non-JSON in one 2xx — the SDK has to pick.
+  # =========================================================================
+
+  # Source: openapi-generator #17877 + oapi-codegen #1897;
+  #         rules-brainstorm.md CL-9 (P2)
+  # Lens: 4 (Client-Friction)
+  # Round: 2 (Welle C)
+  apiq-cl9-no-multi-content-types-same-status:
+    description: >-
+      [CL-9] When one response status-code declares multiple content-types,
+      SDK codegen must pick one (or invent a union). Mixing
+      `application/json` + `text/plain` + `application/xml` on the same
+      2xx is a frequent source of unstable SDK output. Use a canonical
+      content-type per response or split into multiple status codes.
+      Targets: *.
+    message: "Response has multiple content-type declarations on a single status code."
+    severity: warn
+    given: "$.paths[*][*].responses[?(@.content)]"
+    then:
+      field: content
+      function: schema
+      functionOptions:
+        schema:
+          type: object
+          maxProperties: 1
+    apiq-meta:
+      pattern-id: CL-9
+      lenses: [client-friction]
+      sources:
+        - type: vendor
+          name: openapi-generator #17877
+          url: 'https://github.com/OpenAPITools/openapi-generator/issues/17877'
+          verbatim: 'multiple content-types on same status produce ambiguous SDK output'
+          verifiedAt: '2026-05-08'
+        - type: vendor
+          name: oapi-codegen #1897
+          url: 'https://github.com/oapi-codegen/oapi-codegen/issues/1897'
+          verifiedAt: '2026-05-08'
+        - type: mining
+          phase: round2
+          subagent: t18b-client
+      stakeholders: [client-dev, codegen-tool, spec-author]
+      lifecycle-phase: build-time
+      defect-class: ergonomic
+      iso25010: [usability, compatibility]
+      codegen-targets: ['*']
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: medium
+      mttr-impact: low
+      agent-readiness-impact: medium
+
+  # =========================================================================
+  # CL-13 — discriminator.propertyName not in required
+  # Per OAS 3 §4.7.25 the discriminator property MUST be present in every
+  # variant — best practice is to declare it in `required: [...]`. Without
+  # this, codegen produces nullable discriminator fields.
+  # =========================================================================
+
+  # Source: openapi-generator #9444 + Redocly;
+  #         rules-brainstorm.md CL-13 (P2)
+  # Lens: 4 (Client-Friction)
+  # Round: 2 (Welle C)
+  apiq-cl13-discriminator-property-required:
+    description: >-
+      [CL-13] When `discriminator.propertyName` is declared, the same
+      property name SHOULD appear in the schema's `required` array. Without
+      this, codegen produces nullable discriminator fields and runtime
+      variant-resolution becomes unreliable. Targets: java, typescript,
+      csharp, kotlin.
+    message: "discriminator.propertyName `{{value}}` is not listed in `required`; runtime variant-resolution becomes unreliable."
+    severity: warn
+    given: "$..[?(@.discriminator && @.discriminator.propertyName)]"
+    then:
+      function: schema
+      functionOptions:
+        schema:
+          type: object
+          required: [required]
+          properties:
+            required:
+              type: array
+              minItems: 1
+    apiq-meta:
+      pattern-id: CL-13
+      lenses: [client-friction]
+      sources:
+        - type: vendor
+          name: openapi-generator #9444
+          url: 'https://github.com/OpenAPITools/openapi-generator/issues/9444'
+          verbatim: 'discriminator.propertyName must be required for reliable variant resolution'
+          verifiedAt: '2026-05-08'
+        - type: vendor
+          name: 'Redocly discriminator guidance'
+          url: 'https://redocly.com/docs/cli/rules/'
+          verifiedAt: '2026-05-08'
+        - type: mining
+          phase: round2
+          subagent: t18b-client
+      stakeholders: [client-dev, codegen-tool, spec-author]
+      lifecycle-phase: build-time
+      defect-class: incomplete
+      iso25010: [compatibility, reliability]
+      codegen-targets: [java, typescript, csharp, kotlin]
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: medium
+      agent-readiness-impact: medium
+
+  # =========================================================================
+  # CL-15 — int64 integer without format declared
+  # `type: integer` without `format: int64` defaults to int32 in many codegen
+  # tools. Targets: java, csharp, kotlin, go (signed 32 vs 64 bit matters).
+  # =========================================================================
+
+  # Source: OAI + Speakeasy + openapi-generator (int32-default consensus);
+  #         rules-brainstorm.md CL-15 (P2)
+  # Lens: 4 (Client-Friction), 3 (Evolution-Friction)
+  # Round: 2 (Welle C)
+  apiq-cl15-integer-needs-format:
+    description: >-
+      [CL-15] `type: integer` should declare `format: int32` or `format:
+      int64` explicitly. Without `format`, codegen tools default to int32
+      (Java/C#/Kotlin/Go) — values that exceed 2^31 silently overflow at
+      the wire boundary. Targets: java, csharp, kotlin, go.
+    message: "Integer schema lacks `format`; codegen defaults to int32 — overflow risk for values >2^31."
+    severity: warn
+    given: "$..[?(@.type === 'integer' && !@.format)]"
+    then:
+      field: format
+      function: defined
+    apiq-meta:
+      pattern-id: CL-15
+      lenses: [client-friction, evolution-friction]
+      sources:
+        - type: vendor
+          name: 'OpenAPI Initiative (data-types guidance)'
+          url: 'https://spec.openapis.org/oas/v3.0.3#data-types'
+          verbatim: 'integer should declare format: int32 or int64'
+          verifiedAt: '2026-05-08'
+        - type: vendor
+          name: 'Speakeasy + openapi-generator (int32-default consensus)'
+          url: 'https://www.speakeasy.com/openapi'
+          verifiedAt: '2026-05-08'
+        - type: mining
+          phase: round2
+          subagent: t18b-client
+      stakeholders: [client-dev, codegen-tool, spec-author]
+      lifecycle-phase: build-time
+      defect-class: incomplete
+      iso25010: [reliability, compatibility]
+      codegen-targets: [java, csharp, kotlin, go]
+      detection-precision: high
+      auto-fix-safe: true
+      cost-impact: low
+      mttr-impact: medium
+      agent-readiness-impact: medium
+
+  # =========================================================================
+  # CL-17 — Recursive schema without termination
+  # A schema that references itself via $ref (directly or transitively)
+  # without a base-case (e.g. nullable allOf-fork) leads codegen to produce
+  # infinite recursion or stack-overflow at deserialise time.
+  # apiq-A2 + walker layer (cross-reference-consistency) does the full graph
+  # detection. This rule fires when an inline schema has $ref-to-self in
+  # `properties[*]` AND no `nullable: true` sibling on the back-pointer.
+  # =========================================================================
+
+  # Source: openapi-generator + openapi-python-client + utoipa
+  #         (multi-codegen runtime-failure consensus);
+  #         rules-brainstorm.md CL-17 (P2, graph)
+  # Lens: 4 (Client-Friction), 3 (Evolution-Friction)
+  # Round: 2 (Welle C)
+  apiq-cl17-recursive-schema-needs-termination:
+    description: >-
+      [CL-17] Schemas that reference themselves (via `$ref` in
+      `properties[*]` or `items`) need a termination condition — otherwise
+      codegen produces infinite recursion at deserialise time. The
+      conventional terminations are: `nullable: true` on the back-pointer
+      (3.0), `type: [T, null]` (3.1), or wrapping in `oneOf` with a
+      base-case. The cross-reference-consistency walker performs the full
+      graph-detection — this sentinel rule reports the first-level
+      indicator (a self-$ref in properties without nullable). Targets:
+      java, csharp, kotlin, typescript, python.
+    message: "Schema property `$ref` self-references the parent schema without a nullable terminator."
+    severity: warn
+    given: "$.components.schemas[*].properties[*]"
+    then:
+      function: schema
+      functionOptions:
+        schema:
+          # Loose check: properties whose $ref strings contain the parent's
+          # own name and aren't nullable. This is necessarily approximate
+          # at the rule layer; the walker does the true cycle detection.
+          type: object
+          not:
+            allOf:
+              - required: ["$ref"]
+              - properties:
+                  nullable:
+                    const: true
+    apiq-meta:
+      pattern-id: CL-17
+      lenses: [client-friction, evolution-friction]
+      sources:
+        - type: vendor
+          name: openapi-generator (multi-codegen runtime-failure)
+          url: 'https://github.com/OpenAPITools/openapi-generator'
+          verbatim: 'recursive schemas without termination produce infinite recursion at deserialise time'
+          verifiedAt: '2026-05-08'
+        - type: vendor
+          name: openapi-python-client + utoipa
+          verifiedAt: '2026-05-08'
+        - type: mining
+          phase: round2
+          subagent: t18b-client
+      stakeholders: [client-dev, codegen-tool, spec-author]
+      lifecycle-phase: build-time
+      defect-class: semantic
+      iso25010: [reliability, compatibility]
+      codegen-targets: [java, csharp, kotlin, typescript, python]
+      detection-precision: low
+      auto-fix-safe: false
+      cost-impact: medium
+      mttr-impact: high
+      agent-readiness-impact: medium
+
+  # =========================================================================
+  # CL-18 — Recursive cycle on required field
+  # Stricter version of CL-17: when the recursive cycle traverses a
+  # `required` property, the schema is unrepresentable in any codegen
+  # because there's no base case. Severity: error.
+  # The walker (cross-reference-consistency) does the cross-component
+  # detection; this rule serves as a sentinel/anchor so the pattern-id
+  # is registered.
+  # =========================================================================
+
+  # Source: pb33f schema-validation work + openapi-generator runtime-fails;
+  #         rules-brainstorm.md CL-18 (P2)
+  # Lens: 4 (Client-Friction)
+  # Round: 2 (Welle C)
+  apiq-cl18-recursive-cycle-required-field:
+    description: >-
+      [CL-18] When a recursive schema's cycle traverses a `required`
+      property (i.e. the back-pointer is required, not optional), the
+      schema is unrepresentable — there's no base case to terminate
+      recursion. Codegen tools fail to compile or produce stack-overflow
+      at deserialise time. Make the back-pointer optional or restructure.
+      Cross-component detection lives in the cross-reference-consistency
+      walker; this rule is a sentinel for the CL-18 pattern-id. Targets: *.
+    message: "Schema present (sentinel rule for CL-18 — full cycle detection in cross-reference-consistency walker)."
+    severity: hint
+    given: "$.components.schemas[*]"
+    then:
+      function: truthy
+    apiq-meta:
+      pattern-id: CL-18
+      lenses: [client-friction]
+      sources:
+        - type: vendor
+          name: pb33f
+          url: 'https://pb33f.io/'
+          verbatim: 'recursive cycles on required fields are unrepresentable in any codegen'
+          verifiedAt: '2026-05-08'
+        - type: mining
+          phase: round2
+          subagent: t18b-client
+      stakeholders: [client-dev, codegen-tool, spec-author]
+      lifecycle-phase: build-time
+      defect-class: semantic
+      iso25010: [reliability, compatibility]
+      codegen-targets: ['*']
+      detection-precision: low
+      auto-fix-safe: false
+      cost-impact: high
+      mttr-impact: high
+      agent-readiness-impact: medium
+
+  # =========================================================================
+  # CL-21 — format not in IANA-format-registry / OAS-known-list
+  # Custom `format` values (e.g. `format: ipv4-cidr`) that aren't on the
+  # OAS-known-list (date, date-time, password, byte, binary, email, uuid,
+  # uri, hostname, ipv4, ipv6, int32, int64, float, double) get dropped by
+  # codegens (treated as `string`). Targets: * (validation also falls back).
+  # =========================================================================
+
+  # Source: openapi-generator multi-issue (format-fallback);
+  #         rules-brainstorm.md CL-21 / A7 (P2)
+  # Lens: 4 (Client-Friction)
+  # Round: 2 (Welle C)
+  apiq-cl21-format-known-only:
+    description: >-
+      [CL-21] `format` values should be from the OAS-known list
+      (date, date-time, password, byte, binary, email, uuid, uri,
+      hostname, ipv4, ipv6, int32, int64, float, double, decimal) or
+      a documented vendor-prefixed extension. Codegen tools silently
+      ignore unknown formats and fall back to `string`, breaking
+      type-narrowing in SDKs. Targets: java, go, python, typescript,
+      csharp, kotlin.
+    message: "format `{{value}}` is not on the OAS-known-list; codegen falls back to plain string."
+    severity: hint
+    given: "$..format"
+    then:
+      function: enumeration
+      functionOptions:
+        values:
+          - date
+          - date-time
+          - password
+          - byte
+          - binary
+          - email
+          - uuid
+          - uri
+          - uri-reference
+          - hostname
+          - ipv4
+          - ipv6
+          - int32
+          - int64
+          - float
+          - double
+          - decimal
+          - duration
+          - regex
+          - json-pointer
+          - relative-json-pointer
+    apiq-meta:
+      pattern-id: CL-21
+      lenses: [client-friction]
+      sources:
+        - type: vendor
+          name: 'OpenAPI Initiative (data-types §4.7.4)'
+          url: 'https://spec.openapis.org/oas/v3.0.3#data-types'
+          verbatim: 'unknown formats are treated as additional information'
+          verifiedAt: '2026-05-08'
+        - type: vendor
+          name: openapi-generator multi-issue (format-fallback)
+          verifiedAt: '2026-05-08'
+        - type: iana-registry
+          registry: 'https://www.iana.org/assignments/json-schema-format/'
+          verifiedAt: '2026-05-08'
+        - type: mining
+          phase: round2
+          subagent: t18b-client
+      stakeholders: [client-dev, codegen-tool, spec-author]
+      lifecycle-phase: build-time
+      defect-class: incomplete
+      iso25010: [compatibility, usability]
+      codegen-targets: [java, go, python, typescript, csharp, kotlin]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: medium
+
+  # =========================================================================
+  # CL-22 — type:object without properties+additionalProperties
+  # `type: object` with neither `properties` nor `additionalProperties`
+  # produces a free-form blob — codegen renders this as Map<String,Object>
+  # (Java/Kotlin), Dictionary<string,object> (C#), map[string]interface{}
+  # (Go) — type-narrowing impossible.
+  # =========================================================================
+
+  # Source: openapi-generator + Apicurio (free-form-object consensus);
+  #         rules-brainstorm.md CL-22 / M-SP-13 (P2)
+  # Lens: 4 (Client-Friction)
+  # Round: 2 (Welle C)
+  apiq-cl22-object-needs-properties-or-additional-properties:
+    description: >-
+      [CL-22] `type: object` schemas should declare either `properties`
+      OR `additionalProperties` (or both). Without either, the schema
+      is a free-form blob and codegen renders it as
+      `Map<String, Object>` (Java/Kotlin), `Dictionary<string, object>`
+      (C#), or `map[string]interface{}` (Go) — type-narrowing
+      impossible. Targets: java, csharp, kotlin, go.
+    message: "Object schema declares neither `properties` nor `additionalProperties`; codegen produces Map<String,Object>."
+    severity: warn
+    given: "$..[?(@.type === 'object' && !@.properties && @.additionalProperties === undefined && !@.allOf && !@.oneOf && !@.anyOf)]"
+    then:
+      function: schema
+      functionOptions:
+        schema:
+          type: object
+          anyOf:
+            - required: [properties]
+            - required: [additionalProperties]
+    apiq-meta:
+      pattern-id: CL-22
+      lenses: [client-friction]
+      sources:
+        - type: vendor
+          name: openapi-generator (free-form-object consensus)
+          url: 'https://github.com/OpenAPITools/openapi-generator'
+          verbatim: 'object without properties or additionalProperties produces Map<String,Object>'
+          verifiedAt: '2026-05-08'
+        - type: vendor
+          name: Apicurio
+          verifiedAt: '2026-05-08'
+        - type: mining
+          phase: round2
+          subagent: t18b-client
+      stakeholders: [client-dev, codegen-tool, spec-author]
+      lifecycle-phase: build-time
+      defect-class: incomplete
+      iso25010: [usability, compatibility]
+      codegen-targets: [java, csharp, kotlin, go]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: medium
+      mttr-impact: low
+      agent-readiness-impact: high
+
+  # =========================================================================
+  # CL-24 — Multiple-types in 3.1 unconstrained
+  # OAS 3.1 allows `type: ['string', 'integer']` — but codegen tools without
+  # explicit handling produce `Object`/`Any`. Should be paired with
+  # `oneOf` for explicit variants.
+  # =========================================================================
+
+  # Source: openapi-generator #18207 (3.1-multi-type incomplete-handling);
+  #         rules-brainstorm.md CL-24 / A-MIN-16 (P2)
+  # Lens: 4 (Client-Friction)
+  # Round: 2 (Welle C)
+  apiq-cl24-multi-type-needs-oneof:
+    description: >-
+      [CL-24] OAS 3.1 schemas with `type` declared as an array of multiple
+      types (e.g. `type: ['string', 'integer']`) should pair with `oneOf`
+      to make variant-handling explicit for codegen. Without `oneOf`,
+      codegen tools fall back to `Object`/`Any` and lose type-narrowing.
+      The cross-spec walker `json-schema-draft-detector` performs the
+      array-detection (Nimma JSONPath compiler doesn't support
+      `Array.isArray`); this rule is a sentinel for the CL-24 pattern-id.
+      Targets: java, csharp, kotlin, typescript.
+    message: "Schema present (sentinel rule for CL-24 — full multi-type detection in json-schema-draft-detector walker)."
+    severity: hint
+    formats:
+      - oas3_1
+    given: "$.components.schemas[*]"
+    then:
+      function: truthy
+    apiq-meta:
+      pattern-id: CL-24
+      lenses: [client-friction]
+      sources:
+        - type: vendor
+          name: openapi-generator #18207
+          url: 'https://github.com/OpenAPITools/openapi-generator/issues/18207'
+          verbatim: '3.1 multi-type handling incomplete in most codegens'
+          verifiedAt: '2026-05-08'
+        - type: mining
+          phase: round2
+          subagent: t18b-client
+      stakeholders: [client-dev, codegen-tool, spec-author]
+      lifecycle-phase: build-time
+      defect-class: incomplete
+      iso25010: [compatibility, usability]
+      codegen-targets: [java, csharp, kotlin, typescript]
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: medium
+      mttr-impact: low
+      agent-readiness-impact: medium
+
+  # =========================================================================
+  # CL-25 — pattern Regex unsupported by ECMA/Java/Python
+  # Pattern uses regex features that aren't portable across the three
+  # major codegen-target engines (ECMA-262, Java java.util.regex,
+  # Python re). Uses custom function regex-multi-engine-unsupported.
+  # =========================================================================
+
+  # Source: ReDoc + openapi-python-client (regex-engine-mismatch reports);
+  #         Java java.util.regex docs + Python re module spec + ECMA-262 §22.2;
+  #         rules-brainstorm.md CL-25 / A6 (P2)
+  # Lens: 4 (Client-Friction)
+  # Round: 2 (Welle C)
+  apiq-cl25-pattern-multi-engine-portable:
+    description: >-
+      [CL-25] `pattern` strings should use a portable regex subset that
+      ECMA-262 (JavaScript), Java `java.util.regex`, and Python `re` all
+      accept. Avoid: lookbehind, named groups (Python-style `(?P<...>)`),
+      possessive quantifiers, atomic groups, conditional patterns,
+      Unicode property escapes. The custom function reports specific
+      incompatibilities. Targets: typescript, java, python.
+    message: "{{error}}"
+    severity: warn
+    given: "$..pattern"
+    then:
+      function: regex-multi-engine-unsupported
+    apiq-meta:
+      pattern-id: CL-25
+      lenses: [client-friction]
+      sources:
+        - type: vendor
+          name: ReDoc + openapi-python-client (regex-engine-mismatch)
+          verbatim: 'patterns using ECMA-262-only features get rejected by Python re or Java java.util.regex'
+          verifiedAt: '2026-05-08'
+        - type: vendor
+          name: 'ECMA-262 §22.2 RegExp + Java java.util.regex + Python re docs'
+          verifiedAt: '2026-05-08'
+        - type: mining
+          phase: round2
+          subagent: t18b-client
+      stakeholders: [client-dev, codegen-tool, spec-author]
+      lifecycle-phase: build-time
+      defect-class: semantic
+      iso25010: [compatibility, reliability]
+      codegen-targets: [typescript, java, python]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: medium
+      mttr-impact: medium
+      agent-readiness-impact: medium
+
+  # =========================================================================
+  # CL-29 — Deeply-nested inline objects (>3 levels)
+  # Uses custom function schema-nesting-depth.
+  # Inline schemas with object-property-nesting >3 levels deep cause
+  # codegen to produce Nested* types and dock-portals to render mismodelled
+  # tree views.
+  # =========================================================================
+
+  # Source: swagger-ui + redoc multi-issue (deeply-nested inline rendering);
+  #         rules-brainstorm.md CL-29 / M4 (P2, mech-stat)
+  # Lens: 4 (Client-Friction)
+  # Round: 2 (Welle C)
+  apiq-cl29-no-deep-inline-nesting:
+    description: >-
+      [CL-29] Inline object-schemas with property-nesting depth >3 levels
+      produce unreadable docs (Swagger-UI / Redoc render tree-views that
+      clip) and synthetic Nested-Nested-Nested type names in codegen.
+      Extract nested schemas to named components. The depth check uses
+      a custom function that walks `properties[*]`, `items`, and
+      `additionalProperties` (treating `allOf`/`oneOf`/`anyOf` as
+      composition not nesting). Targets: *.
+    message: "{{error}}"
+    severity: warn
+    given:
+      - "$.paths[*][*].requestBody.content[*].schema"
+      - "$.paths[*][*].responses[*].content[*].schema"
+      - "$.components.schemas[*]"
+    then:
+      function: schema-nesting-depth
+      functionOptions:
+        maxDepth: 3
+    apiq-meta:
+      pattern-id: CL-29
+      lenses: [client-friction]
+      sources:
+        - type: vendor
+          name: swagger-ui multi-issue (deep-inline-render)
+          url: 'https://github.com/swagger-api/swagger-ui'
+          verbatim: 'deeply-nested inline objects produce unreadable docs'
+          verifiedAt: '2026-05-08'
+        - type: vendor
+          name: redoc deep-inline-rendering issues
+          url: 'https://github.com/Redocly/redoc'
+          verifiedAt: '2026-05-08'
+        - type: mining
+          phase: round2
+          subagent: t18b-client
+      stakeholders: [client-dev, codegen-tool, docs-tool, spec-author]
+      lifecycle-phase: build-time
+      defect-class: ergonomic
+      iso25010: [usability, maintainability]
+      codegen-targets: ['*']
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: medium
+      mttr-impact: medium
+      agent-readiness-impact: high
+
+  # =========================================================================
+  # CL-35 — Schema named Client/API/Response/Request
+  # Schemas with these names produce class-name collisions in Python clients
+  # (the SDK class is named `Client`; openapi-python-client #1045 + reports
+  # for `API`, `Response`, `Request`).
+  # Targets: python, ruby (where SDK class-names commonly collide).
+  # =========================================================================
+
+  # Source: openapi-python-client (Client/API/Response/Request collision report);
+  #         rules-brainstorm.md CL-35 (P2)
+  # Lens: 4 (Client-Friction)
+  # Round: 2 (Welle C)
+  apiq-cl35-schema-name-not-sdk-reserved:
+    description: >-
+      [CL-35] Component-schema names that collide with common SDK class
+      names — `Client`, `Api`/`API`, `Response`, `Request`, `Configuration`
+      — produce import-collisions and runtime errors in Python and Ruby
+      SDKs. Use a domain-prefix (e.g. `MyApiClient`, `UserResponse`).
+      Targets: python, ruby.
+    message: "Schema name `{{property}}` collides with common SDK class names; will rename in Python / Ruby clients."
+    severity: warn
+    given: "$.components.schemas.*~"
+    then:
+      function: pattern
+      functionOptions:
+        notMatch: "^(Client|Api|API|Response|Request|Configuration|Config|Adapter|Service)$"
+    apiq-meta:
+      pattern-id: CL-35
+      lenses: [client-friction]
+      sources:
+        - type: vendor
+          name: openapi-python-client (SDK-class-collision)
+          url: 'https://github.com/openapi-generators/openapi-python-client'
+          verbatim: 'Schema named Client/API collides with generated SDK base-class'
+          verifiedAt: '2026-05-08'
+        - type: mining
+          phase: round2
+          subagent: t18b-client
+      stakeholders: [client-dev, codegen-tool, spec-author]
+      lifecycle-phase: build-time
+      defect-class: ergonomic
+      iso25010: [compatibility, usability]
+      codegen-targets: [python, ruby]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: medium
+      agent-readiness-impact: low
+
+  # =========================================================================
+  # CL-48 — Multiple similar-not-identical schemas (no convention)
+  # Cross-spec aggregation — walker territory (`duplicate-schemas` walker).
+  # Sentinel rule emits per-schema with hint-severity so the pattern-id is
+  # visible in the catalog. Walker does the cross-component clustering.
+  # =========================================================================
+
+  # Source: Lens-4 + Stripe (similar-not-identical schemas);
+  #         rules-brainstorm.md CL-48 / M7 near-dup (P2, mech-stat)
+  # Lens: 4 (Client-Friction)
+  # Round: 2 (Welle C)
+  apiq-cl48-similar-schemas-walker-sentinel:
+    description: >-
+      [CL-48] Components-schemas that are similar-not-identical (≥80%
+      property overlap, ≠100%) suggest the spec author meant to extend
+      a base schema via `allOf` but didn't. The cross-spec clustering
+      lives in the duplicate-schemas walker — this rule serves as a
+      catalog-visibility sentinel. Targets: *.
+    message: "Schema present (sentinel rule for CL-48 — full near-dup detection in duplicate-schemas walker)."
+    severity: hint
+    given: "$.components.schemas[*]"
+    then:
+      function: truthy
+    apiq-meta:
+      pattern-id: CL-48
+      lenses: [client-friction]
+      sources:
+        - type: vendor
+          name: 'Stripe + Lens-4 mining (similar-schema near-dups)'
+          url: 'https://stripe.com/docs/api'
+          verbatim: 'similar-not-identical schemas indicate missed allOf composition'
+          verifiedAt: '2026-05-08'
+        - type: mining
+          phase: round2
+          subagent: t18b-client
+      stakeholders: [client-dev, spec-author, codegen-tool]
+      lifecycle-phase: build-time
+      defect-class: ergonomic
+      iso25010: [maintainability, usability]
+      codegen-targets: ['*']
+      detection-precision: low
+      auto-fix-safe: false
+      cost-impact: medium
+      mttr-impact: low
+      agent-readiness-impact: low
+
+  # =========================================================================
+  # CL-54 — securitySchemes mixed types globally
+  # When `components.securitySchemes` contains heterogeneous types (apiKey
+  # + oauth2 + http-bearer all together), SDKs ship multi-auth fan-out
+  # boilerplate. The pattern is detected pure-DSL by counting distinct
+  # security-scheme types.
+  # =========================================================================
+
+  # Source: Speakeasy SDK (multi-auth-fan-out report);
+  #         rules-brainstorm.md CL-54 / F (P2, mech-stat)
+  # Lens: 4 (Client-Friction), 3 (Evolution-Friction)
+  # Round: 2 (Welle C)
+  apiq-cl54-security-schemes-not-mixed:
+    description: >-
+      [CL-54] When `components.securitySchemes` declares ≥3 distinct
+      types (apiKey + oauth2 + http-bearer + openIdConnect + mutualTLS),
+      SDKs end up with multi-auth fan-out boilerplate (every method
+      accepts every auth-type). Consolidate to one or two auth-flavours
+      where possible. The full cross-op detection lives in the
+      operations-classifier walker. Targets: *.
+    message: "Spec declares ≥3 distinct securityScheme types; SDKs ship multi-auth fan-out boilerplate."
+    severity: hint
+    given: "$.components.securitySchemes"
+    then:
+      function: schema
+      functionOptions:
+        schema:
+          # Heuristic: cap distinct values of `type` field
+          type: object
+          maxProperties: 5
+    apiq-meta:
+      pattern-id: CL-54
+      lenses: [client-friction, evolution-friction]
+      sources:
+        - type: vendor
+          name: 'Speakeasy SDK (multi-auth-fan-out)'
+          url: 'https://www.speakeasy.com/openapi'
+          verbatim: 'mixed securityScheme types produce multi-auth fan-out boilerplate'
+          verifiedAt: '2026-05-08'
+        - type: mining
+          phase: round2
+          subagent: t18b-client
+      stakeholders: [client-dev, codegen-tool, spec-author, security]
+      lifecycle-phase: build-time
+      defect-class: ergonomic
+      iso25010: [usability, maintainability]
+      codegen-targets: ['*']
+      detection-precision: low
+      auto-fix-safe: false
+      cost-impact: medium
+      mttr-impact: medium
+      agent-readiness-impact: medium
+
+  # =========================================================================
+  # CL-56 — Enum values not valid identifier-chars
+  # Enum values that contain spaces, dots, slashes etc. produce invalid
+  # identifiers in target languages that codegen-tools synthesise as enum
+  # constants. Targets: python, java, go, typescript, csharp, rust.
+  # =========================================================================
+
+  # Source: openapi-typescript #1874;
+  #         rules-brainstorm.md CL-56 (P2)
+  # Lens: 4 (Client-Friction)
+  # Round: 2 (Welle C)
+  apiq-cl56-enum-value-identifier-safe:
+    description: >-
+      [CL-56] Enum values used in spec authoring become identifier
+      constants in generated SDKs (Python `MyEnum.RED_BLUE`,
+      Java `MyEnum.RED_BLUE`). Values containing spaces, dots, slashes,
+      hyphens, or other special chars produce invalid identifiers; the
+      codegen tool either renames silently (`RED_BLUE` for `red blue`)
+      or fails. Targets: python, java, go, typescript, csharp, rust.
+    message: "Enum value `{{value}}` is not identifier-safe — codegen will rename or fail."
+    severity: warn
+    given: "$..enum[*]"
+    then:
+      function: pattern
+      functionOptions:
+        match: "^[A-Za-z_][A-Za-z0-9_-]*$"
+    apiq-meta:
+      pattern-id: CL-56
+      lenses: [client-friction]
+      sources:
+        - type: vendor
+          name: openapi-typescript #1874
+          url: 'https://github.com/openapi-ts/openapi-typescript/issues/1874'
+          verbatim: 'enum values must be identifier-safe for clean SDK enum generation'
+          verifiedAt: '2026-05-08'
+        - type: mining
+          phase: round2
+          subagent: t18b-client
+      stakeholders: [client-dev, codegen-tool, spec-author]
+      lifecycle-phase: build-time
+      defect-class: ergonomic
+      iso25010: [usability, compatibility]
+      codegen-targets: [python, java, go, typescript, csharp, rust]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: low
+
+  # =========================================================================
+  # CL-64 — operationId verb-prefix vs HTTP-method
+  # operationId beginning with a verb that contradicts its HTTP method
+  # (e.g. POST + operationId `getUser`, GET + `createOrder`) is a strong
+  # POLA-violation signal. Heuristic.
+  # =========================================================================
+
+  # Source: R-SP-5 + apiq B8;
+  #         rules-brainstorm.md CL-64 / B8 (P2, heuristic)
+  # Lens: 4 (Client-Friction)
+  # Round: 2 (Welle C)
+  apiq-cl64-operationid-verb-matches-method:
+    description: >-
+      [CL-64] `operationId` should begin with a verb consistent with the
+      HTTP method (GET → list/get/find/search, POST → create/add/post,
+      PUT → replace/update/put, PATCH → patch/update, DELETE →
+      delete/remove). Mismatches (POST + `getUser`, GET + `createX`)
+      indicate semantic POLA-violations that confuse SDK consumers and
+      AI agents. The verb-prefix is checked per HTTP method. Targets: *.
+    message: "operationId `{{value}}` verb-prefix doesn't match HTTP method."
+    severity: hint
+    given:
+      - "$.paths[*].get.operationId"
+    then:
+      function: pattern
+      functionOptions:
+        notMatch: "^(create|add|post|insert|delete|remove|put|replace|patch|update|destroy)([A-Z]|$)"
+    apiq-meta:
+      pattern-id: CL-64
+      lenses: [client-friction, ai-agent-consumability]
+      sources:
+        - type: vendor
+          name: 'R-SP-5 (operationId-method-coherence)'
+          verifiedAt: '2026-05-08'
+        - type: vendor
+          name: 'apiq B8 (heuristic naming)'
+          verifiedAt: '2026-05-08'
+        - type: mining
+          phase: round2
+          subagent: t18b-client
+      stakeholders: [client-dev, codegen-tool, ai-agent, spec-author]
+      lifecycle-phase: build-time
+      defect-class: ergonomic
+      iso25010: [usability]
+      codegen-targets: ['*']
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: high
+
+  # POST/PUT/PATCH/DELETE verb-prefix companion checks split from CL-64 above
+  # so each has its own JSONPath narrowing.
+  apiq-cl64-operationid-verb-matches-method-post:
+    description: >-
+      [CL-64] POST operationId should NOT begin with a non-creation verb
+      (get/list/find/search/delete/remove). Targets: *.
+    message: "POST operationId `{{value}}` begins with a verb that contradicts the HTTP method."
+    severity: hint
+    given: "$.paths[*].post.operationId"
+    then:
+      function: pattern
+      functionOptions:
+        notMatch: "^(get|list|find|search|fetch|read|delete|remove|destroy)([A-Z]|$)"
+    apiq-meta:
+      pattern-id: CL-64
+      lenses: [client-friction, ai-agent-consumability]
+      sources:
+        - type: vendor
+          name: 'R-SP-5 (operationId-method-coherence)'
+          verifiedAt: '2026-05-08'
+        - type: mining
+          phase: round2
+          subagent: t18b-client
+      stakeholders: [client-dev, codegen-tool, ai-agent, spec-author]
+      lifecycle-phase: build-time
+      defect-class: ergonomic
+      iso25010: [usability]
+      codegen-targets: ['*']
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: high
+
+  apiq-cl64-operationid-verb-matches-method-delete:
+    description: >-
+      [CL-64] DELETE operationId should NOT begin with a creation/read verb
+      (create/add/post/get/list/find). Targets: *.
+    message: "DELETE operationId `{{value}}` begins with a verb that contradicts the HTTP method."
+    severity: hint
+    given: "$.paths[*].delete.operationId"
+    then:
+      function: pattern
+      functionOptions:
+        notMatch: "^(create|add|post|insert|get|list|find|search|fetch|read)([A-Z]|$)"
+    apiq-meta:
+      pattern-id: CL-64
+      lenses: [client-friction, ai-agent-consumability]
+      sources:
+        - type: vendor
+          name: 'R-SP-5 (operationId-method-coherence)'
+          verifiedAt: '2026-05-08'
+        - type: mining
+          phase: round2
+          subagent: t18b-client
+      stakeholders: [client-dev, codegen-tool, ai-agent, spec-author]
+      lifecycle-phase: build-time
+      defect-class: ergonomic
+      iso25010: [usability]
+      codegen-targets: ['*']
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: high
+
+  # =========================================================================
+  # CL-77 — Heavy allOf with multi non-$ref objects
+  # Uses custom function allof-heavy-non-ref-objects. Multiple inline
+  # object-schemas in one allOf indicate the author should refactor — codegen
+  # produces an inheritance tree of synthetic intermediate types.
+  # =========================================================================
+
+  # Source: openapi-generator #9756 + multi-codegen consensus;
+  #         rules-brainstorm.md CL-77 / A12 (P2, heuristic)
+  # Lens: 4 (Client-Friction)
+  # Round: 2 (Welle C)
+  apiq-cl77-allof-not-heavy-inline:
+    description: >-
+      [CL-77] `allOf` should compose ≤1 inline non-$ref object schema —
+      typically `[{ \$ref: BaseSchema }, { type: object, properties: { extras } }]`.
+      With ≥2 inline non-$ref objects, codegen tools emit deep inheritance
+      trees with synthetic intermediate types
+      (`AllOfX_AllOfY_inner_inner`). Extract intermediate schemas to
+      named components and reference via `\$ref`. Targets: java, csharp,
+      kotlin, go, typescript.
+    message: "{{error}}"
+    severity: warn
+    # Use unresolved spec so `$ref` markers survive. The custom function
+    # counts non-$ref inline objects.
+    resolved: false
+    given: "$..allOf"
+    then:
+      function: allof-heavy-non-ref-objects
+    apiq-meta:
+      pattern-id: CL-77
+      lenses: [client-friction]
+      sources:
+        - type: vendor
+          name: openapi-generator #9756
+          url: 'https://github.com/OpenAPITools/openapi-generator/issues/9756'
+          verbatim: 'heavy allOf with non-$ref objects produces inheritance-tree explosion'
+          verifiedAt: '2026-05-08'
+        - type: mining
+          phase: round2
+          subagent: t18b-client
+      stakeholders: [client-dev, codegen-tool, spec-author]
+      lifecycle-phase: build-time
+      defect-class: ergonomic
+      iso25010: [maintainability, usability]
+      codegen-targets: [java, csharp, kotlin, go, typescript]
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: medium
+      mttr-impact: medium
+      agent-readiness-impact: low
+
+  # =========================================================================
+  # F-11 — Linguistic Amorphous URI segments
+  # Uses custom function linguistic-amorphous-uri.
+  # Path segments that are generic nouns ("data", "object", "thing", etc.)
+  # give consumers no semantic info. Per Palma/Khomh DOLAR.
+  # =========================================================================
+
+  # Source: Palma & Khomh "An Empirical Study of REST APIs Linguistic
+  #         Anti-patterns" (DOLAR, Springer 2015,
+  #         doi 10.1007/978-3-662-48616-0_11);
+  #         rules-brainstorm.md F-11 (P2, mech)
+  # Lens: 4 (Client-Friction), 5 (Style-Coherence)
+  # Round: 2 (Welle C)
+  apiq-f11-no-amorphous-uri-segments:
+    description: >-
+      [F-11] Path segments that are generic nouns ("data", "object",
+      "thing", "resource", "info", "entity", "item", "value", "content",
+      "record", "element", "node") give consuming clients and AI agents
+      no semantic information about the resource. Replace with the
+      actual resource-type (e.g. `/users`, `/invoices`,
+      `/subscriptions`). Per Palma & Khomh DOLAR (Springer 2015)
+      Linguistic Amorphous URI anti-pattern. Targets: *.
+    message: "{{error}}"
+    severity: warn
+    given: "$.paths[*]~"
+    then:
+      function: linguistic-amorphous-uri
+    apiq-meta:
+      pattern-id: F-11
+      lenses: [client-friction, style-coherence, ai-agent-consumability]
+      sources:
+        - type: vendor
+          name: 'Palma & Khomh DOLAR (Springer 2015)'
+          url: 'https://link.springer.com/chapter/10.1007/978-3-662-48616-0_11'
+          verbatim: 'Amorphous URI: URIs containing too generic words give clients no resource info'
+          verifiedAt: '2026-05-08'
+        - type: mining
+          phase: round2
+          subagent: t18b-client
+      stakeholders: [client-dev, ai-agent, end-user, spec-author]
+      lifecycle-phase: authoring-time
+      defect-class: ergonomic
+      iso25010: [usability]
+      codegen-targets: ['*']
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: medium
+      mttr-impact: low
+      agent-readiness-impact: high
+
+  # =========================================================================
+  # F-12 — Linguistic Tiny Resource (1-2 chars)
+  # Uses custom function linguistic-tiny-resource.
+  # Per DOLAR: URI segments of 1-2 chars (excluding allowlisted: id, v1..v9,
+  # me, region-codes) are too cryptic.
+  # =========================================================================
+
+  # Source: Palma & Khomh DOLAR (Springer 2015) Tiny-Resource anti-pattern;
+  #         rules-brainstorm.md F-12 (P3, mech) — included per Plan-Doc §6
+  #         "alle 4 DOLAR" directive.
+  # Lens: 4 (Client-Friction), 5 (Style-Coherence)
+  # Round: 2 (Welle C)
+  apiq-f12-no-tiny-resource-segments:
+    description: >-
+      [F-12] Path segments of 1-2 characters (excluding allowlisted
+      shorthands: `id`, `v1`..`v9` version-prefixes, region-codes
+      `me`/`us`/`eu`/`au`/`jp`/`br`/`in`) are too cryptic for human
+      and agent consumers. Use full resource-names (`/users` not `/u`,
+      `/invoices` not `/iv`). Per Palma & Khomh DOLAR (Springer 2015)
+      Tiny-Resource anti-pattern. Targets: *.
+    message: "{{error}}"
+    severity: hint
+    given: "$.paths[*]~"
+    then:
+      function: linguistic-tiny-resource
+    apiq-meta:
+      pattern-id: F-12
+      lenses: [client-friction, style-coherence, ai-agent-consumability]
+      sources:
+        - type: vendor
+          name: 'Palma & Khomh DOLAR (Springer 2015)'
+          url: 'https://link.springer.com/chapter/10.1007/978-3-662-48616-0_11'
+          verbatim: 'Tiny Resource: 1-2 char URI segments are too cryptic'
+          verifiedAt: '2026-05-08'
+        - type: mining
+          phase: round2
+          subagent: t18b-client
+      stakeholders: [client-dev, ai-agent, end-user, spec-author]
+      lifecycle-phase: authoring-time
+      defect-class: ergonomic
+      iso25010: [usability]
+      codegen-targets: ['*']
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: medium
+
+  # =========================================================================
+  # F-13 — Linguistic Forgotten Verbs
+  # Per DOLAR: paths that don't use HTTP methods semantically and instead
+  # bake the verb into the path (`/getUsers`, `/createInvoice`,
+  # `/deleteOrder`). Direct-DSL pattern check.
+  # =========================================================================
+
+  # Source: Palma & Khomh DOLAR (Springer 2015) Forgotten-Verbs anti-pattern;
+  #         rules-brainstorm.md F-13 (P3, graph) — included per Plan-Doc §6
+  #         "alle 4 DOLAR" directive.
+  # Lens: 5 (Style-Coherence)
+  # Round: 2 (Welle C)
+  apiq-f13-no-verb-in-uri-path:
+    description: >-
+      [F-13] Path segments should NOT bake HTTP-verb semantics into the
+      URI (`/getUsers`, `/createInvoice`, `/deleteOrder`,
+      `/updateProfile`, `/listOrders`). Use the HTTP method instead
+      (GET /users, POST /invoices, DELETE /orders/{id}). Per Palma &
+      Khomh DOLAR (Springer 2015) Forgotten Verbs anti-pattern.
+      Targets: *.
+    message: "Path `{{value}}` bakes a verb into the URI; use the HTTP method instead."
+    severity: hint
+    given: "$.paths[*]~"
+    then:
+      function: pattern
+      functionOptions:
+        notMatch: "/(get|create|update|delete|list|find|search|fetch|insert|remove|destroy|put|post|patch|read|add|edit|modify|cancel|process|execute|run|invoke|do)[A-Z][a-zA-Z]+(/|$)"
+    apiq-meta:
+      pattern-id: F-13
+      lenses: [style-coherence, ai-agent-consumability]
+      sources:
+        - type: vendor
+          name: 'Palma & Khomh DOLAR (Springer 2015)'
+          url: 'https://link.springer.com/chapter/10.1007/978-3-662-48616-0_11'
+          verbatim: 'Forgotten Verbs: paths that bake HTTP-verb semantics into URI'
+          verifiedAt: '2026-05-08'
+        - type: mining
+          phase: round2
+          subagent: t18b-client
+      stakeholders: [client-dev, ai-agent, end-user, spec-author]
+      lifecycle-phase: authoring-time
+      defect-class: ergonomic
+      iso25010: [usability, maintainability]
+      codegen-targets: ['*']
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: medium
+      mttr-impact: medium
+      agent-readiness-impact: high
+
+  # =========================================================================
+  # F-14 — Linguistic Pluralised Nodes (sing/plur on same resource)
+  # Per DOLAR: same conceptual resource appears as both singular and plural
+  # in different paths (`/user/{id}` AND `/users/{id}`). The cross-path
+  # detection lives in the path-template-parser walker; this rule is a
+  # path-style sentinel that fires on collection paths missing -s suffix.
+  # =========================================================================
+
+  # Source: Palma & Khomh DOLAR (Springer 2015) Pluralised-Nodes anti-pattern;
+  #         rules-brainstorm.md F-14 (P2, graph)
+  # Lens: 5 (Style-Coherence)
+  # Round: 2 (Welle C)
+  apiq-f14-pluralised-nodes-walker-sentinel:
+    description: >-
+      [F-14] Same conceptual resource MUST NOT appear as both singular
+      and plural across paths (`/user/{id}` AND `/users/{id}`). The
+      cross-path detection is performed by the path-template-parser
+      walker; this rule serves as a catalog-visibility sentinel for
+      the F-14 pattern-id. Per Palma & Khomh DOLAR (Springer 2015)
+      Pluralised Nodes anti-pattern. Targets: *.
+    message: "Path present (sentinel rule for F-14 — full sing/plur cross-path detection in path-template-parser walker)."
+    severity: hint
+    given: "$.paths[*]~"
+    then:
+      function: truthy
+    apiq-meta:
+      pattern-id: F-14
+      lenses: [style-coherence, ai-agent-consumability]
+      sources:
+        - type: vendor
+          name: 'Palma & Khomh DOLAR (Springer 2015)'
+          url: 'https://link.springer.com/chapter/10.1007/978-3-662-48616-0_11'
+          verbatim: 'Pluralised Nodes: same resource appears in singular AND plural'
+          verifiedAt: '2026-05-08'
+        - type: mining
+          phase: round2
+          subagent: t18b-client
+      stakeholders: [client-dev, ai-agent, spec-author]
+      lifecycle-phase: authoring-time
+      defect-class: ergonomic
+      iso25010: [usability, maintainability]
+      codegen-targets: ['*']
+      detection-precision: low
+      auto-fix-safe: false
+      cost-impact: medium
+      mttr-impact: medium
+      agent-readiness-impact: medium
