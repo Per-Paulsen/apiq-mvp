@@ -340,16 +340,46 @@ Nach F4 (YAML-metadata-promotion): erste Migration-Welle erfolgreich + F5-Enforc
 
 ---
 
-## 7. Welle D — P3 Trail
+## 7. Welle D — P3 Trail (erweitert 2026-05-08 post-Welle-C)
 
-**Inhalt** (per `implementation-priority.md` P3-Tabelle):
+**Inhalt** (per `implementation-priority.md` P3-Tabelle + Welle-C-Open-Questions-Resolutions):
+
+### Original Plan-Doc-Scope
 - **T16c P3-Threat** ~30 rules
 - **T18c P3-Client** ~30 rules
 - **T25 Source-Verify-CI Job** — quarterly gh-api-raw verification of RFC-2119-verbatim wording, populate `source-verified-at` timestamps
 
+### NEU (post-Welle-C user-direktive 2026-05-08 "alles 100% ordentlich")
+
+- **T-Sentinels — 3 sentinel-Walker-Implementations** (resolve Welle-C-sentinel-rules):
+  - `walkers/schema-similarity.ts` (CL-48) — pairwise schema-comparison via embedding-distance ODER JSON-structure-Levenshtein für near-duplicate schemas detection
+  - `walkers/pluralised-nodes.ts` (F-14) — sing/plur-conflict-detection auf URI-segments (e.g. `/users/{id}/order` vs `/users/{id}/orders`)
+  - **Erweiterung** existing `json-schema-draft-detector.ts` für CL-24 multi-type-detection (`Array.isArray(@.type)`-fix)
+
+- **T-F7 — F7-Vollständigkeits-Pass** (codegen-targets-coverage):
+  - Alle ~60 neue P3-rules tragen entweder `['*']` ODER konkrete codegen-targets-Liste (per rule-description / custom-function-source explizit entschieden, kein default-`['*']`)
+  - **Retroactive** für alle existing P1+P2-rules (~170 rules): rules die sprach-spezifisch sind bekommen konkrete Liste; rules die genuine universal sind behalten `['*']`
+  - **Acceptance:** ≥80% der ~230 active rules sind korrekt-getagged (rest = genuine universal)
+
+- **T-Funcs — Custom-Functions Konsistenz-Cleanup** (per `<lens>-p<priority>-functions.ts`-Pattern):
+  - **Rename** `spectral-functions/multi-lang-reserved-keywords.ts` → `spectral-functions/client-p1-functions.ts` (consistency mit P2-pattern). Update `spectral-runner.ts` imports.
+  - **Neue P3-function-files** per Lens-Bucket wo P3-patterns custom-functions brauchen:
+    - `threat-p3-functions.ts` (für TM-A* P3 patterns)
+    - `client-p3-functions.ts` (für CL-* P3 patterns)
+    - `evolution-p3-functions.ts` (für EV-* P3 patterns)
+    - `standards-p3-functions.ts` (für RFC2-* P3 patterns)
+    - empty buckets = kein file (nicht alle Lenses brauchen custom-functions in P3)
+
 **Pre-Condition:** Welle C done. F8 (`source-verbatim`/`verified-at` schema) done.
 
-**Subagent-Welle:** 3 parallele Subagents (T16c + T18c + T25).
+**Subagent-Welle:** 5+ parallele Subagents (T16c + T18c + T25 + T-Sentinels + T-F7 + ggf. T-Funcs als orchestrator-Welle).
+
+**Acceptance-Criteria-Erweiterung gegenüber Plan-Doc-Original:**
+- 3 sentinel-walkers built + tested + wired in `walkers/index.ts`
+- F7-coverage ≥80% auf alle ~230 active rules (P1+P2+P3) — nicht "in Welle E messen"
+- Custom-functions konsistent per `<lens>-p<priority>`-Pattern (rename done)
+
+**Begründung Erweiterung:** Welle C hat 3 sentinel-rules emittiert die auf nicht-existente Walker zeigen — ohne Walker-Impl sind sie unfertig. Maximalismus-Direktive: nichts halb-fertig lassen. F7 + Custom-Functions-Cleanup analog.
 
 ---
 
