@@ -15,7 +15,7 @@
  * shape. False-positives are worse than misses for a domain-knowledge layer.
  */
 
-import type { DetectorFinding, DetectorOptions } from '../types.js';
+import type { DetectorFinding, DetectorOptions } from '../infra/types.js';
 
 const HTTP_METHODS = ['get', 'post', 'put', 'patch', 'delete', 'head', 'options'] as const;
 const WRITE_METHODS = ['post', 'put', 'patch'] as const;

@@ -21,8 +21,8 @@ import {
   PHI_FIELD_NAME_PATTERNS,
   DATA_CLASS_VENDOR_EXTENSIONS,
   walkPrivacyDataClass,
-} from "../../deterministic/walkers/privacy-data-class.js";
-import { mapDetectorFindings } from "../../deterministic/output-mapper.js";
+} from "../../deterministic/aggregators/privacy-data-class.js";
+import { mapDetectorFindings } from "../../deterministic/infra/output-mapper.js";
 import { FindingSchema } from "../../schema.js";
 
 const __filename = fileURLToPath(import.meta.url);

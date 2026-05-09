@@ -76,6 +76,7 @@
  */
 
 import type { IFunction, IFunctionResult } from '@stoplight/spectral-core';
+import { getRequestBodyContent } from './_helpers/request-body.js';
 
 type AnyObj = Record<string, unknown>;
 
@@ -684,15 +685,9 @@ export const mergePatchPropertiesNotRequired: IFunction = function (
   const cpath = context.path;
   const method = String(cpath[cpath.length - 1]).toLowerCase();
   if (method !== 'patch') return [];
-  const rb = isObject(op.requestBody) ? op.requestBody : null;
-  if (!rb) return [];
-  const content = isObject(rb.content) ? rb.content : null;
-  if (!content) return [];
   const out: IFunctionResult[] = [];
-  for (const [mediaType, mtUnknown] of Object.entries(content)) {
+  for (const [mediaType, mt] of Object.entries(getRequestBodyContent(op))) {
     if (!/application\/merge-patch\+json/i.test(mediaType)) continue;
-    const mt = isObject(mtUnknown) ? mtUnknown : null;
-    if (!mt) continue;
     const sch = isObject(mt.schema) ? mt.schema : null;
     if (!sch) continue;
     const required = Array.isArray(sch.required) ? sch.required : null;
@@ -729,15 +724,9 @@ export const jsonPatchSchemaIsArray: IFunction = function (
   const cpath = context.path;
   const method = String(cpath[cpath.length - 1]).toLowerCase();
   if (method !== 'patch') return [];
-  const rb = isObject(op.requestBody) ? op.requestBody : null;
-  if (!rb) return [];
-  const content = isObject(rb.content) ? rb.content : null;
-  if (!content) return [];
   const out: IFunctionResult[] = [];
-  for (const [mediaType, mtUnknown] of Object.entries(content)) {
+  for (const [mediaType, mt] of Object.entries(getRequestBodyContent(op))) {
     if (!/application\/json-patch\+json/i.test(mediaType)) continue;
-    const mt = isObject(mtUnknown) ? mtUnknown : null;
-    if (!mt) continue;
     const sch = isObject(mt.schema) ? mt.schema : null;
     if (!sch) continue;
     if (sch.type !== 'array') {
@@ -1226,15 +1215,9 @@ export const multipartFormBundle: IFunction = function (
   const op = getResolvedTarget<AnyObj>(targetVal);
   if (!op) return [];
   const cpath = context.path;
-  const rb = isObject(op.requestBody) ? op.requestBody : null;
-  if (!rb) return [];
-  const content = isObject(rb.content) ? rb.content : null;
-  if (!content) return [];
   const out: IFunctionResult[] = [];
-  for (const [mediaType, mtUnknown] of Object.entries(content)) {
+  for (const [mediaType, mt] of Object.entries(getRequestBodyContent(op))) {
     if (!MULTIPART_FORM_DATA.test(mediaType)) continue;
-    const mt = isObject(mtUnknown) ? mtUnknown : null;
-    if (!mt) continue;
     const sch = isObject(mt.schema) ? mt.schema : null;
     // RFC2-100 — schema MUST be type:object with properties.
     if (!sch) {
@@ -1280,6 +1263,167 @@ export const multipartFormBundle: IFunction = function (
     }
   }
   return out;
+};
+
+// =============================================================================
+// Welle Arch+ A3 — FUNCTION_METADATA registry for standards-p3 callables.
+// =============================================================================
+
+import type { FunctionMetadata } from './_metadata.js';
+
+export const FUNCTION_METADATA: Record<string, FunctionMetadata> = {
+  'problem-details-extension-reserved': {
+    name: 'problem-details-extension-reserved',
+    patternIds: ['RFC2-4'],
+    lens: 'standards-compliance',
+    perfClass: 'O(n)',
+    description:
+      'application/problem+json schema must not redefine the 5 reserved RFC 9457 §3.1 keys (type/title/status/detail/instance) with conflicting types.',
+  },
+  'one-xx-response-upgrade-header': {
+    name: 'one-xx-response-upgrade-header',
+    patternIds: ['RFC2-13'],
+    lens: 'standards-compliance',
+    perfClass: 'O(n)',
+    description:
+      '1xx responses (101 Switching Protocols) MUST declare Upgrade + Connection headers (RFC 9110 §15.2.2).',
+  },
+  'upgrade-required-426': {
+    name: 'upgrade-required-426',
+    patternIds: ['RFC2-15'],
+    lens: 'standards-compliance',
+    perfClass: 'O(n)',
+    description:
+      '426 Upgrade Required responses MUST declare an Upgrade header (RFC 9110 §15.5.22).',
+  },
+  'one-xx-not-in-responses-keys': {
+    name: 'one-xx-not-in-responses-keys',
+    patternIds: ['RFC2-17'],
+    lens: 'standards-compliance',
+    perfClass: 'O(n)',
+    description:
+      '1xx informational status-codes (100/101/102/103) should not appear as response-keys in OAS — they are not final responses.',
+  },
+  'if-modified-since-implies-304': {
+    name: 'if-modified-since-implies-304',
+    patternIds: ['RFC2-23'],
+    lens: 'standards-compliance',
+    perfClass: 'O(n)',
+    description:
+      'Operation accepts If-Modified-Since header but no 304 Not Modified response declared (RFC 9110 §13.1.3).',
+  },
+  'if-unmodified-since-implies-412': {
+    name: 'if-unmodified-since-implies-412',
+    patternIds: ['RFC2-24'],
+    lens: 'standards-compliance',
+    perfClass: 'O(n)',
+    description:
+      'Operation accepts If-Unmodified-Since header but no 412 Precondition Failed response declared (RFC 9110 §13.1.4).',
+  },
+  'etag-cross-resource-consistency': {
+    name: 'etag-cross-resource-consistency',
+    patternIds: ['RFC2-28'],
+    lens: 'standards-compliance',
+    perfClass: 'O(n*m)',
+    description:
+      'ETag header declared on some 2xx responses but not others on the same resource — inconsistent caching contract.',
+  },
+  'id-write-op-etag-support': {
+    name: 'id-write-op-etag-support',
+    patternIds: ['RFC2-29'],
+    lens: 'standards-compliance',
+    perfClass: 'O(n)',
+    description:
+      'Resource-{id} write op (PUT/PATCH/DELETE) should declare If-Match parameter and 412 response for ETag-based optimistic concurrency.',
+  },
+  'proxy-authenticate-407': {
+    name: 'proxy-authenticate-407',
+    patternIds: ['RFC2-41'],
+    lens: 'standards-compliance',
+    perfClass: 'O(n)',
+    description:
+      '407 Proxy Authentication Required responses MUST declare a Proxy-Authenticate header (RFC 9110 §15.5.8).',
+  },
+  'prefer-implies-preference-applied': {
+    name: 'prefer-implies-preference-applied',
+    patternIds: ['RFC2-46'],
+    lens: 'standards-compliance',
+    perfClass: 'O(n)',
+    description:
+      'Operation accepts Prefer header — responses should declare Preference-Applied response-header (RFC 7240).',
+  },
+  'prefer-respond-async-implies-202': {
+    name: 'prefer-respond-async-implies-202',
+    patternIds: ['RFC2-48'],
+    lens: 'standards-compliance',
+    perfClass: 'O(n)',
+    description:
+      'Operation Prefer:respond-async description-mention requires a 202 Accepted response with Location header (RFC 7240 §4.1).',
+  },
+  'deprecation-pairs-sunset': {
+    name: 'deprecation-pairs-sunset',
+    patternIds: ['RFC2-91'],
+    lens: 'standards-compliance',
+    perfClass: 'O(n*m)',
+    description:
+      'Response declaring Deprecation header should pair it with Sunset header (RFC 9745 + RFC 8594).',
+  },
+  'rate-limit-header-family-consistency': {
+    name: 'rate-limit-header-family-consistency',
+    patternIds: ['RFC2-93'],
+    lens: 'standards-compliance',
+    perfClass: 'O(n*m)',
+    description:
+      'RateLimit-Limit/-Remaining/-Reset triplet must be declared together (no partial subset). draft-ietf-httpapi-ratelimit-headers.',
+  },
+  'merge-patch-properties-not-required': {
+    name: 'merge-patch-properties-not-required',
+    patternIds: ['RFC2-98'],
+    lens: 'standards-compliance',
+    perfClass: 'O(n)',
+    description:
+      'application/merge-patch+json schema must not declare required[] — RFC 7396 merge-patch is property-by-property optional.',
+  },
+  'json-patch-schema-is-array': {
+    name: 'json-patch-schema-is-array',
+    patternIds: ['RFC2-99'],
+    lens: 'standards-compliance',
+    perfClass: 'O(n)',
+    description:
+      'application/json-patch+json schema must be type:array (of operation objects) — RFC 6902.',
+  },
+  'cache-header-bundle': {
+    name: 'cache-header-bundle',
+    patternIds: ['RFC2-30'],
+    lens: 'standards-compliance',
+    perfClass: 'O(n*m)',
+    description:
+      'Cacheable 2xx response should declare Cache-Control and either Expires or max-age (RFC 9111).',
+  },
+  'cache-validators-bundle': {
+    name: 'cache-validators-bundle',
+    patternIds: ['RFC2-35'],
+    lens: 'standards-compliance',
+    perfClass: 'O(n*m)',
+    description:
+      'Cacheable response without ETag/Last-Modified validator headers prevents 304-revalidation flow (RFC 9111 + RFC 7234).',
+  },
+  'link-header-bundle': {
+    name: 'link-header-bundle',
+    patternIds: ['RFC2-52'],
+    lens: 'standards-compliance',
+    perfClass: 'O(n*m)',
+    description:
+      'List endpoint declaring pagination should expose Link header with rel="next"/"prev"/"first"/"last" (RFC 8288).',
+  },
+  'multipart-form-bundle': {
+    name: 'multipart-form-bundle',
+    patternIds: ['RFC2-100'],
+    lens: 'standards-compliance',
+    perfClass: 'O(n*m)',
+    description:
+      'multipart/form-data schema must be type:object+properties (RFC 7578 §4.2); binary-likely fields should declare format:binary.',
+  },
 };
 
 // =============================================================================

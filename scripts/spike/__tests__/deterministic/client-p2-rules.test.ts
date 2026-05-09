@@ -25,7 +25,7 @@ import {
   runSpectralLayers,
   getClientP2RuleCodes,
   _resetSpectralCacheForTests,
-} from '../../deterministic/spectral-runner.js';
+} from '../../deterministic/infra/spectral-runner.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -35,6 +35,7 @@ const EXAMPLES_DIR = path.join(REPO_ROOT, 'openapi-examples');
 const YAML_PATH = path.join(
   SPIKE_DIR,
   'deterministic',
+  'rules',
   'apiq-ruleset-client-p2.yaml'
 );
 

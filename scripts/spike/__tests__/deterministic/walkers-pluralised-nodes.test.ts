@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { walkPluralisedNodes } from '../../deterministic/walkers/pluralised-nodes.js';
+import { walkPluralisedNodes } from '../../deterministic/aggregators/pluralised-nodes.js';
 
 describe('walkPluralisedNodes (Welle D / F-14)', () => {
   it('emits 0 findings when there are no paths', async () => {

@@ -81,6 +81,9 @@
  */
 
 import type { IFunction, IFunctionResult } from '@stoplight/spectral-core';
+import { operationHasRateLimitHeader } from './_helpers/rate-limit-headers.js';
+import { getRequestBodyContent } from './_helpers/request-body.js';
+import { effectiveSecurityFor } from './_helpers/security.js';
 
 type AnyObj = Record<string, unknown>;
 
@@ -555,7 +558,6 @@ export const nonStandardMethodNeedsSecurity: IFunction = function (
   if (!doc) return [];
   const pathsObj = isObject(doc.paths) ? (doc.paths as AnyObj) : null;
   if (!pathsObj) return [];
-  const docSecurity = Array.isArray(doc.security) ? doc.security : null;
   const out: IFunctionResult[] = [];
   for (const [pname, pitem] of Object.entries(pathsObj)) {
     if (!isObject(pitem)) continue;
@@ -564,10 +566,10 @@ export const nonStandardMethodNeedsSecurity: IFunction = function (
       if (!NON_STANDARD_METHOD_KEYS.has(lower) && !lower.startsWith('x-')) continue;
       const op = isObject(opUnknown) ? (opUnknown as AnyObj) : null;
       if (!op) continue;
-      const opSec = Array.isArray(op.security) ? op.security : null;
-      const docHas = docSecurity && docSecurity.length > 0;
-      if (opSec && opSec.length > 0) continue;
-      if (!opSec && docHas) continue;
+      const sec = effectiveSecurityFor(op, doc);
+      // Skip if op declares own security (non-empty), or op declines to declare AND doc-level supplies it.
+      if (sec.hasOperationLevel) continue;
+      if (!sec.hasOperationLevel && !sec.isEmpty && sec.hasSpecLevel) continue;
       out.push({
         message: `Non-standard method ${method.toUpperCase()} ${pname} declares no explicit security — restrict or remove (OWASP API5/API8, RFC 7231 §4.3.8 for TRACE).`,
         path: [...context.path, 'paths', pname, method],
@@ -587,27 +589,6 @@ export const nonStandardMethodNeedsSecurity: IFunction = function (
 
 const SIGNUP_PATH_PATTERN = /\/(signup|sign-?up|register|registration|create-account|account\/create|users?\/?$)/i;
 const CAPTCHA_PROP_PATTERN = /^(captcha|recaptcha|turnstile|hcaptcha|cf_turnstile|g_recaptcha_response)$/i;
-
-const RATE_LIMIT_HEADER_RE = [
-  /^x-ratelimit-/i,
-  /^ratelimit-/i,
-  /^x-rate-limit-/i,
-  /^retry-after$/i,
-];
-
-function opHasRateLimitHeader(op: AnyObj): boolean {
-  const responses = isObject(op.responses) ? (op.responses as AnyObj) : null;
-  if (!responses) return false;
-  for (const r of Object.values(responses)) {
-    if (!isObject(r)) continue;
-    const headers = isObject(r.headers) ? (r.headers as AnyObj) : null;
-    if (!headers) continue;
-    for (const k of Object.keys(headers)) {
-      if (RATE_LIMIT_HEADER_RE.some((re) => re.test(k))) return true;
-    }
-  }
-  return false;
-}
 
 function opHasCaptchaHint(op: AnyObj): boolean {
   if (op['x-captcha-required'] === true) return true;
@@ -648,7 +629,7 @@ export const signupNeedsRateLimitOrCaptcha: IFunction = function (
   if (method !== 'post' && method !== 'put') return [];
   const routePath = String(cpath[cpath.length - 2]);
   if (!SIGNUP_PATH_PATTERN.test(routePath)) return [];
-  if (opHasRateLimitHeader(op)) return [];
+  if (operationHasRateLimitHeader(op)) return [];
   if (opHasCaptchaHint(op)) return [];
   return [
     {
@@ -686,7 +667,7 @@ export const postingCommentNeedsRateLimit: IFunction = function (
   if (method !== 'post' && method !== 'put') return [];
   const routePath = String(cpath[cpath.length - 2]);
   if (!COMMENT_PATH_PATTERN.test(routePath)) return [];
-  if (opHasRateLimitHeader(op)) return [];
+  if (operationHasRateLimitHeader(op)) return [];
   return [
     {
       message: `Comment/post-style endpoint ${method.toUpperCase()} ${routePath} declares no rate-limit headers — spam-flood risk (OWASP API6).`,
@@ -946,12 +927,8 @@ export const webhookRejectsWildcardContentType: IFunction = function (
   if (method !== 'post' && method !== 'put') return [];
   const routePath = String(cpath[cpath.length - 2]);
   if (!WEBHOOK_PATH_PATTERN.test(routePath)) return [];
-  const rb = isObject(op.requestBody) ? (op.requestBody as AnyObj) : null;
-  if (!rb) return [];
-  const content = isObject(rb.content) ? (rb.content as AnyObj) : null;
-  if (!content) return [];
   const out: IFunctionResult[] = [];
-  for (const mt of Object.keys(content)) {
+  for (const mt of Object.keys(getRequestBodyContent(op))) {
     const lower = mt.toLowerCase();
     if (lower === '*/*' || lower === 'application/*' || lower === 'text/*') {
       out.push({
@@ -961,4 +938,141 @@ export const webhookRejectsWildcardContentType: IFunction = function (
     }
   }
   return out;
+};
+
+// =============================================================================
+// Welle Arch+ A3 — FUNCTION_METADATA registry for threat-p3 callables.
+// =============================================================================
+
+import type { FunctionMetadata } from './_metadata.js';
+
+export const FUNCTION_METADATA: Record<string, FunctionMetadata> = {
+  'sensitive-header-name-rejected': {
+    name: 'sensitive-header-name-rejected',
+    patternIds: ['Y-18'],
+    lens: 'threat-modeling',
+    perfClass: 'O(1)',
+    description:
+      'Header parameter name (password/token/api-key/secret) exposes credential — use a defined securityScheme (OWASP API8).',
+  },
+  'post-creates-need-idempotency-key': {
+    name: 'post-creates-need-idempotency-key',
+    patternIds: ['Y-25', 'RFC2-90'],
+    lens: 'threat-modeling',
+    perfClass: 'O(n)',
+    description:
+      'POST creating a resource (201/202) SHOULD accept Idempotency-Key header to prevent retry-induced double-creates.',
+  },
+  'three-or-more-id-params-bola': {
+    name: 'three-or-more-id-params-bola',
+    patternIds: ['TM-A3'],
+    lens: 'threat-modeling',
+    perfClass: 'O(n)',
+    description:
+      'Path with ≥3 ID-template segments raises BOLA risk — every additional ID is another authorization boundary (OWASP API1).',
+  },
+  'body-contains-user-id-on-non-admin': {
+    name: 'body-contains-user-id-on-non-admin',
+    patternIds: ['TM-A4'],
+    lens: 'threat-modeling',
+    perfClass: 'O(n)',
+    description:
+      'Non-admin endpoint accepts user_id/account_id-like field in body — server identity should be session-derived (OWASP API1).',
+  },
+  'multiple-and-security-same-type': {
+    name: 'multiple-and-security-same-type',
+    patternIds: ['TM-A8'],
+    lens: 'threat-modeling',
+    perfClass: 'O(n)',
+    description:
+      'security AND-requirement composed of identical scheme types is not multi-factor (OWASP API2).',
+  },
+  'long-running-op-async-pattern': {
+    name: 'long-running-op-async-pattern',
+    patternIds: ['TM-A25'],
+    lens: 'threat-modeling',
+    perfClass: 'O(n)',
+    description:
+      'Long-running operation should use 202 Accepted + Location async pattern instead of synchronous response (OWASP API4).',
+  },
+  'admin-shares-public-security': {
+    name: 'admin-shares-public-security',
+    patternIds: ['TM-A27'],
+    lens: 'threat-modeling',
+    perfClass: 'O(n*m)',
+    description:
+      'Admin/internal paths share security scheme with public paths — privilege-escalation risk (OWASP API5 BFLA).',
+  },
+  'resource-only-get-no-write': {
+    name: 'resource-only-get-no-write',
+    patternIds: ['TM-A29'],
+    lens: 'threat-modeling',
+    perfClass: 'O(n*m)',
+    description:
+      'Resource path tree with only GET operations and no writes — read-only-API smell, confirm intentional (OWASP API5).',
+  },
+  'non-standard-method-needs-security': {
+    name: 'non-standard-method-needs-security',
+    patternIds: ['TM-A30', 'TM-A43'],
+    lens: 'threat-modeling',
+    perfClass: 'O(n*m)',
+    description:
+      'Non-standard HTTP methods (TRACE/CONNECT/WebDAV/x-*) without explicit security (OWASP API5/API8, RFC 7231 §4.3.8).',
+  },
+  'signup-needs-rate-limit-or-captcha': {
+    name: 'signup-needs-rate-limit-or-captcha',
+    patternIds: ['TM-A31'],
+    lens: 'threat-modeling',
+    perfClass: 'O(n)',
+    description:
+      'Signup/register endpoint declares no rate-limit headers and no CAPTCHA hint — bot-signup risk (OWASP API6).',
+  },
+  'posting-comment-needs-rate-limit': {
+    name: 'posting-comment-needs-rate-limit',
+    patternIds: ['TM-A33'],
+    lens: 'threat-modeling',
+    perfClass: 'O(n)',
+    description:
+      'Comment/post/review write endpoint declares no rate-limit headers — spam-flood risk (OWASP API6).',
+  },
+  'host-param-flagged-for-ssrf': {
+    name: 'host-param-flagged-for-ssrf',
+    patternIds: ['TM-A37'],
+    lens: 'threat-modeling',
+    perfClass: 'O(1)',
+    description:
+      'Parameter named host/hostname/server/origin raises SSRF flag — document allowlist/validation in description (OWASP API7).',
+  },
+  'cors-origin-reflection-without-allowlist': {
+    name: 'cors-origin-reflection-without-allowlist',
+    patternIds: ['TM-A40'],
+    lens: 'threat-modeling',
+    perfClass: 'O(n)',
+    description:
+      'Access-Control-Allow-Origin response header without allowlist documentation — origin-reflection / wildcard CORS risk.',
+  },
+  'browser-api-needs-security-headers': {
+    name: 'browser-api-needs-security-headers',
+    patternIds: ['TM-A41'],
+    lens: 'threat-modeling',
+    perfClass: 'O(n)',
+    description:
+      'Browser-facing API (text/html response) lacks HSTS/CSP/X-Frame-Options security headers (OWASP Secure Headers).',
+  },
+  'upstream-url-op-needs-5xx-explicit': {
+    name: 'upstream-url-op-needs-5xx-explicit',
+    patternIds: ['TM-A49'],
+    lens: 'threat-modeling',
+    perfClass: 'O(n)',
+    description:
+      'Upstream-URL op lacks explicit 502/503/504 declarations — clients cannot distinguish gateway failure modes (OWASP API10).',
+  },
+  'webhook-rejects-wildcard-content-type': {
+    name: 'webhook-rejects-wildcard-content-type',
+    patternIds: ['TM-A51'],
+    lens: 'threat-modeling',
+    perfClass: 'O(n)',
+    description:
+      'Webhook receiver accepts wildcard content-type (*/* etc.) — content-type-confusion bypass risk (OWASP API10).',
+  },
 };

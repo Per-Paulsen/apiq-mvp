@@ -21,7 +21,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { walkHttpProtocolPairings, __test } from '../../deterministic/http-protocol-pairings.js';
+import { walkHttpProtocolPairings, __test } from '../../deterministic/modules/http-protocol-pairings.js';
 import { HTTP_STATUS_CODES } from '../../deterministic/iana/status-codes.js';
 import { isRegisteredMethod } from '../../deterministic/iana/methods.js';
 

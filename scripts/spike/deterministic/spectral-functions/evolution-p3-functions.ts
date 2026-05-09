@@ -803,3 +803,156 @@ export const int64StringEncodingCandidate: IFunction = function (
     },
   ];
 };
+
+// =============================================================================
+// Welle Arch+ A3 — FUNCTION_METADATA registry for evolution-p3 callables.
+// =============================================================================
+
+import type { FunctionMetadata } from './_metadata.js';
+
+export const FUNCTION_METADATA: Record<string, FunctionMetadata> = {
+  'required-field-overdeclared-check': {
+    name: 'required-field-overdeclared-check',
+    patternIds: ['EV-2'],
+    lens: 'evolution-friction',
+    perfClass: 'O(1)',
+    description:
+      'Schema with required[] above threshold (default 15) — future field-pruning is breaking.',
+  },
+  'status-code-set-cardinality': {
+    name: 'status-code-set-cardinality',
+    patternIds: ['EV-15'],
+    lens: 'evolution-friction',
+    perfClass: 'O(1)',
+    description:
+      'Operation declares >threshold (default 10) distinct response status-codes — contract is over-broad.',
+  },
+  'single-media-type-response': {
+    name: 'single-media-type-response',
+    patternIds: ['EV-20'],
+    lens: 'evolution-friction',
+    perfClass: 'O(1)',
+    description:
+      'Response declares only one media-type — content-negotiation evolution is harder later.',
+  },
+  'required-prop-needs-description': {
+    name: 'required-prop-needs-description',
+    patternIds: ['EV-21'],
+    lens: 'evolution-friction',
+    perfClass: 'O(n)',
+    description:
+      'Property in required[] lacks description — intent is under-documented; required without prose accumulates drift.',
+  },
+  'ref-cycle-needs-max-depth': {
+    name: 'ref-cycle-needs-max-depth',
+    patternIds: ['EV-22'],
+    lens: 'evolution-friction',
+    perfClass: 'O(n*m)',
+    description:
+      'Schema participates in a $ref-cycle but declares no x-max-depth — bound recursion-depth explicitly.',
+  },
+  'required-prop-single-value-enum': {
+    name: 'required-prop-single-value-enum',
+    patternIds: ['EV-39'],
+    lens: 'evolution-friction',
+    perfClass: 'O(n)',
+    description:
+      'Required property has single-value enum — model as `const` or drop the field.',
+  },
+  'field-evolution-suffix': {
+    name: 'field-evolution-suffix',
+    patternIds: ['EV-41'],
+    lens: 'evolution-friction',
+    perfClass: 'O(n)',
+    description:
+      'Field-name carries _v1/_legacy/_old/_deprecated/_new suffix — technical-debt accumulating.',
+  },
+  'tags-internal-experimental': {
+    name: 'tags-internal-experimental',
+    patternIds: ['EV-42'],
+    lens: 'evolution-friction',
+    perfClass: 'O(n)',
+    description:
+      'Operation tagged internal/private/beta/experimental/alpha/preview — contract not committed.',
+  },
+  'no-components-schemas': {
+    name: 'no-components-schemas',
+    patternIds: ['EV-44'],
+    lens: 'evolution-friction',
+    perfClass: 'O(1)',
+    description:
+      'Spec has no components.schemas — schema-reuse impossible; codegen produces anonymous types.',
+  },
+  'default-specific-status-overlap': {
+    name: 'default-specific-status-overlap',
+    patternIds: ['EV-45'],
+    lens: 'evolution-friction',
+    perfClass: 'O(n)',
+    description:
+      'Responses declare both `default` and range-codes (4XX/5XX) or exhaustive 4xx+5xx — semantics ambiguous / default redundant.',
+  },
+  'multipart-json-same-schema': {
+    name: 'multipart-json-same-schema',
+    patternIds: ['EV-47'],
+    lens: 'evolution-friction',
+    perfClass: 'O(1)',
+    description:
+      'Request declares both multipart/form-data and application/json with same schema — encodings need divergent shapes.',
+  },
+  'magic-string-enum-candidate': {
+    name: 'magic-string-enum-candidate',
+    patternIds: ['EV-51'],
+    lens: 'evolution-friction',
+    perfClass: 'O(n)',
+    description:
+      'Property has enum-affinity name (status/type/category/role/...) but no enum constraint — drift-prone.',
+  },
+  'int-needs-string-encoding': {
+    name: 'int-needs-string-encoding',
+    patternIds: ['EV-52'],
+    lens: 'evolution-friction',
+    perfClass: 'O(1)',
+    description:
+      'Integer maximum exceeds 2^53 — JS clients lose precision; use type:string + format:int64.',
+  },
+  'version-param-no-enum': {
+    name: 'version-param-no-enum',
+    patternIds: ['EV-54'],
+    lens: 'evolution-friction',
+    perfClass: 'O(1)',
+    description:
+      'Version parameter (api-version/version/v) has no enum constraint — tightening later is breaking.',
+  },
+  'redirect-without-location': {
+    name: 'redirect-without-location',
+    patternIds: ['EV-59'],
+    lens: 'evolution-friction',
+    perfClass: 'O(n)',
+    description:
+      'Redirect response (301/302/303/307/308) declares no Location header (RFC 9110 §15.4).',
+  },
+  'webhook-needs-prose': {
+    name: 'webhook-needs-prose',
+    patternIds: ['EV-60'],
+    lens: 'evolution-friction',
+    perfClass: 'O(1)',
+    description:
+      'Webhook operation lacks both summary and description — subscriber-facing prose is mandatory.',
+  },
+  'oneof-closed-prose-says-open': {
+    name: 'oneof-closed-prose-says-open',
+    patternIds: ['EV-61'],
+    lens: 'evolution-friction',
+    perfClass: 'O(1)',
+    description:
+      'Schema declares closed oneOf but description claims set will grow ("more variants", "future extensions") — semantic mismatch.',
+  },
+  'int64-string-encoding-candidate': {
+    name: 'int64-string-encoding-candidate',
+    patternIds: ['EV-62'],
+    lens: 'evolution-friction',
+    perfClass: 'O(1)',
+    description:
+      'type:integer + format:int64 risks JS-precision-loss; consider type:string + format:int64 (Stripe ID-as-string).',
+  },
+};

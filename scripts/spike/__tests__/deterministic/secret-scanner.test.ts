@@ -29,8 +29,8 @@ import {
   isHighEntropy,
   luhnValid,
   runSecretScanner,
-} from "../../deterministic/secret-scanner.js";
-import { mapDetectorFindings } from "../../deterministic/output-mapper.js";
+} from "../../deterministic/modules/secret-scanner.js";
+import { mapDetectorFindings } from "../../deterministic/infra/output-mapper.js";
 import { FindingSchema } from "../../schema.js";
 
 const __filename = fileURLToPath(import.meta.url);

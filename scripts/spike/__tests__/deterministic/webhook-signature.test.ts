@@ -19,9 +19,9 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { runWebhookSignature, WEBHOOK_SIGNATURE_RULES } from '../../deterministic/webhook-signature.js';
-import { mapDetectorFindings } from '../../deterministic/output-mapper.js';
-import type { DetectorFinding } from '../../deterministic/types.js';
+import { runWebhookSignature, WEBHOOK_SIGNATURE_RULES } from '../../deterministic/modules/webhook-signature.js';
+import { mapDetectorFindings } from '../../deterministic/infra/output-mapper.js';
+import type { DetectorFinding } from '../../deterministic/infra/types.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

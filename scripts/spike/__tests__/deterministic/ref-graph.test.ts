@@ -12,8 +12,8 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { runRefGraphAnalysis, buildRefGraph } from '../../deterministic/ref-graph.js';
-import { mapDetectorFindings } from '../../deterministic/output-mapper.js';
+import { runRefGraphAnalysis, buildRefGraph } from '../../deterministic/modules/ref-graph.js';
+import { mapDetectorFindings } from '../../deterministic/infra/output-mapper.js';
 
 // =============================================================================
 // Helpers

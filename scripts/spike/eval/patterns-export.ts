@@ -19,7 +19,7 @@ import type {
   Lens,
   Severity,
   SeverityDirection,
-} from '../deterministic/severity-schema.js';
+} from '../deterministic/infra/severity-schema.js';
 
 // =============================================================================
 // 1. Schema (D15)

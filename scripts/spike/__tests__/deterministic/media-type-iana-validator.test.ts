@@ -21,8 +21,8 @@ import * as fs from 'node:fs';
 import * as pathMod from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { runMediaTypeValidator } from '../../deterministic/media-type-iana-validator.js';
-import { mapDetectorFindings } from '../../deterministic/output-mapper.js';
+import { runMediaTypeValidator } from '../../deterministic/modules/media-type-iana-validator.js';
+import { mapDetectorFindings } from '../../deterministic/infra/output-mapper.js';
 import { FindingSchema } from '../../schema.js';
 // Sanity-check that T13 still depends on T22's IANA snapshot module —
 // re-importing here ensures the dependency is real and not stubbed-around.

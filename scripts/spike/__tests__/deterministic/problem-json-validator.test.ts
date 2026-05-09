@@ -25,8 +25,8 @@ import { describe, it, expect } from "vitest";
 import {
   validateProblemJson,
   __test__,
-} from "../../deterministic/problem-json-validator.js";
-import { mapDetectorFinding } from "../../deterministic/output-mapper.js";
+} from "../../deterministic/modules/problem-json-validator.js";
+import { mapDetectorFinding } from "../../deterministic/infra/output-mapper.js";
 
 const { isUriLike } = __test__;
 

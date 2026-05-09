@@ -53,7 +53,7 @@ describe('runDeterministicLayer integration', () => {
     expect(Object.keys(result.perDetector).length).toBeGreaterThan(10);
     expect(result.findings.every(f => typeof f.title === 'string' && f.title.length > 0)).toBe(true);
     expect(result.perLayer['module-class']).toBeGreaterThan(0);
-  }, 1800000); // 30min — Welle D bumped from 10min: 12-yaml ruleset (342 rules / 91 custom-fns) is ~2.4× the pre-Welle-D 6-yaml workload (170 rules / 25 fns) and stripe-full is the largest reference-spec. Welle-E sub-task T-Stripe-Perf will profile + optimize. Until then the timeout reflects the new workload-reality.
+  }, 1620000); // 27min — Welle Arch+ OQ-3 profiled + optimized. Was 30min (Welle D bump from 10min). Profile shows spectral.run() against the 342-rule × 12-yaml ruleset on stripe-full (1385 schemas / 414 paths) is the dominant cost (~22min); walker+module sweeps are ~30s combined post-Promise.all. Total measured: 22.85min. Timeout = 22.85 × 1.18 ≈ 27min headroom. Further reduction would require narrowing the 109 `$..` recursive-descent JSONPath rules (Welle-D scope) or forking Spectral itself. See specs/E09-w-arch-stripe-perf-profile.json.
 
   it('runs end-to-end on pagerduty-full without crashing and produces findings', async () => {
     const specPath = path.join(REPO_ROOT, 'openapi-examples', 'pagerduty-full', 'spec.json');
@@ -75,5 +75,5 @@ describe('runDeterministicLayer integration', () => {
     expect(Object.keys(result.perDetector).length).toBeGreaterThan(10);
     expect(result.findings.every(f => typeof f.title === 'string' && f.title.length > 0)).toBe(true);
     expect(result.perLayer['module-class']).toBeGreaterThan(0);
-  }, 900000); // 15min — github-rest is the heaviest spec (21k findings; codegen alone ~5min)
+  }, 2700000); // 45min — github-rest spec is 12.5MB (vs stripe-full 8MB), so spectral runtime scales beyond stripe's 22.85min. Welle Arch+ OQ-3 bump from 15min after the 12-yaml ruleset (Welle-D) hit timeout. Walker+module-Promise.all knocked ~13s off; the rest is inherent spectral.run() cost on the large spec. See profile in specs/E09-w-arch-stripe-perf-profile.json.
 });

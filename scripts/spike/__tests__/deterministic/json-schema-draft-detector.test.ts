@@ -31,10 +31,10 @@ import {
   isTwentyTwentyOnly,
   requiresDraft07OrNewer,
   KEYWORD_CATALOG,
-} from "../../deterministic/json-schema-draft-detector.js";
-import { mapDetectorFindings } from "../../deterministic/output-mapper.js";
+} from "../../deterministic/classifiers/json-schema-draft-detector.js";
+import { mapDetectorFindings } from "../../deterministic/infra/output-mapper.js";
 import { FindingSchema } from "../../schema.js";
-import type { DetectorFinding } from "../../deterministic/types.js";
+import type { DetectorFinding } from "../../deterministic/infra/types.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

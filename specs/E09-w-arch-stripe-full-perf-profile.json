@@ -1,0 +1,219 @@
+{
+  "spec": "stripe-full",
+  "schemaCount": 1385,
+  "pathCount": 414,
+  "loadMs": 240.65200001001358,
+  "spectralColdMs": -1,
+  "spectralColdFindings": -1,
+  "spectralWarmMs": -1,
+  "walkerTotalMs": 3242.5120000839233,
+  "walkers": [
+    {
+      "name": "walkHtmlPrevalence",
+      "ms": 6.918999969959259,
+      "findings": 1
+    },
+    {
+      "name": "walkEmptySchemaDescriptions",
+      "ms": 6.735000014305115,
+      "findings": 1
+    },
+    {
+      "name": "walkMaxLengthDefaultEverywhere",
+      "ms": 593.847000002861,
+      "findings": 1
+    },
+    {
+      "name": "walkIntegerNoRangeConstraints",
+      "ms": 359.460000038147,
+      "findings": 1
+    },
+    {
+      "name": "walkRequestBodyNoExamples",
+      "ms": 3.722000002861023,
+      "findings": 1
+    },
+    {
+      "name": "walkSingleDefaultResponse",
+      "ms": 3.3479999899864197,
+      "findings": 1
+    },
+    {
+      "name": "walkProseDeprecationWithoutFlag",
+      "ms": 5.618000030517578,
+      "findings": 1
+    },
+    {
+      "name": "walkOperationIdVerbose",
+      "ms": 1.8399999737739563,
+      "findings": 0
+    },
+    {
+      "name": "walkPaginationStyleInconsistency",
+      "ms": 3.565999984741211,
+      "findings": 1
+    },
+    {
+      "name": "walkVendorExtensionOveruse",
+      "ms": 91.94900000095367,
+      "findings": 1
+    },
+    {
+      "name": "walkUnusedComponentHeaders",
+      "ms": 0.44600003957748413,
+      "findings": 0
+    },
+    {
+      "name": "walkResponseWithoutValidatorsOn304",
+      "ms": 1.8759999871253967,
+      "findings": 0
+    },
+    {
+      "name": "walkAiAgentConsumability",
+      "ms": 45.3759999871254,
+      "findings": 4
+    },
+    {
+      "name": "walkEvolutionStatistical",
+      "ms": 1399.04699999094,
+      "findings": 2
+    },
+    {
+      "name": "walkOperationalMetadata",
+      "ms": 19.134999990463257,
+      "findings": 2
+    },
+    {
+      "name": "walkPrivacyDataClass",
+      "ms": 243.99500000476837,
+      "findings": 2
+    },
+    {
+      "name": "walkSchemaSimilarity",
+      "ms": 437.4800000190735,
+      "findings": 1
+    },
+    {
+      "name": "walkPluralisedNodes",
+      "ms": 9.062000036239624,
+      "findings": 1
+    },
+    {
+      "name": "walkSla4oaiPresence",
+      "ms": 0.3700000047683716,
+      "findings": 0
+    },
+    {
+      "name": "walkCapabilityDiscoveryEndpoint",
+      "ms": 2.4570000171661377,
+      "findings": 0
+    },
+    {
+      "name": "walkRfc9727ApiCatalog",
+      "ms": 1.168000042438507,
+      "findings": 0
+    },
+    {
+      "name": "walkRfc9728OauthProtectedResource",
+      "ms": 1.1589999794960022,
+      "findings": 0
+    },
+    {
+      "name": "walkBrownoutSchedule",
+      "ms": 0.49799996614456177,
+      "findings": 0
+    },
+    {
+      "name": "walkRateLimitTier",
+      "ms": 3.0329999923706055,
+      "findings": 0
+    },
+    {
+      "name": "walkArazzoWorkflowDocument",
+      "ms": 0.406000018119812,
+      "findings": 0
+    }
+  ],
+  "moduleTotalMs": 30579.352999925613,
+  "modules": [
+    {
+      "name": "ajv-validator",
+      "ms": 15373.132999956608,
+      "findings": 0
+    },
+    {
+      "name": "codegen-validation",
+      "ms": 11857.926999986172,
+      "findings": 0
+    },
+    {
+      "name": "cross-reference-consistency",
+      "ms": 713.529000043869,
+      "findings": 20
+    },
+    {
+      "name": "duplicate-schemas",
+      "ms": 264.1050000190735,
+      "findings": 129
+    },
+    {
+      "name": "naming-classifier",
+      "ms": 84.0359999537468,
+      "findings": 0
+    },
+    {
+      "name": "path-template-parser",
+      "ms": 41.74500000476837,
+      "findings": 2
+    },
+    {
+      "name": "ref-graph",
+      "ms": 468.4399999976158,
+      "findings": 4
+    },
+    {
+      "name": "secret-scanner",
+      "ms": 831.597000002861,
+      "findings": 0
+    },
+    {
+      "name": "webhook-signature",
+      "ms": 13.80400002002716,
+      "findings": 0
+    },
+    {
+      "name": "http-protocol-pairings",
+      "ms": 20.80299997329712,
+      "findings": 2
+    },
+    {
+      "name": "problem-json-validator",
+      "ms": 29.185999989509583,
+      "findings": 0
+    },
+    {
+      "name": "oauth2-flow-validator",
+      "ms": 1.078000009059906,
+      "findings": 0
+    },
+    {
+      "name": "media-type-iana-validator",
+      "ms": 40.074000000953674,
+      "findings": 1
+    },
+    {
+      "name": "json-schema-draft-detector",
+      "ms": 546.4569999575615,
+      "findings": 0
+    },
+    {
+      "name": "per-style-coherence",
+      "ms": 293.4390000104904,
+      "findings": 1
+    }
+  ],
+  "runModulesCombinedMs": 28480.335999965668,
+  "grandTotalColdMs": 33821.86500000954,
+  "grandTotalColdMin": 0.563697750000159,
+  "timestamp": "2026-05-09T15:36:49.086Z"
+}

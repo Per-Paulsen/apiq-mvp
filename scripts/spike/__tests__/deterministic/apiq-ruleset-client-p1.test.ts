@@ -33,7 +33,7 @@ import {
   runSpectralLayers,
   getClientP1RuleCodes,
   _resetSpectralCacheForTests,
-} from '../../deterministic/spectral-runner.js';
+} from '../../deterministic/infra/spectral-runner.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -269,6 +269,7 @@ describe('apiq-ruleset-client-p1.yaml — load + completeness', () => {
     const yamlPath = path.join(
       SPIKE_DIR,
       'deterministic',
+      'rules',
       'apiq-ruleset-client-p1.yaml'
     );
     expect(fs.existsSync(yamlPath)).toBe(true);

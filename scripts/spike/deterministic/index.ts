@@ -20,8 +20,8 @@ import type {
   DetectorLayer,
   DetectorOptions,
   DeterministicLayerResult,
-} from './types.js';
-import { mapDetectorFindings } from './output-mapper.js';
+} from './infra/types.js';
+import { mapDetectorFindings } from './infra/output-mapper.js';
 
 // Layer-runner functions — each will be implemented by an agent in Tasks
 // A1.1 (spectral-oas3-default + spectral-apiq-custom), A1.3 (walkers), A2
@@ -121,13 +121,13 @@ export async function runDeterministicLayer(
  */
 export async function registerDefaultRunners(): Promise<void> {
   try {
-    const mod = await import('./spectral-runner.js');
+    const mod = await import('./infra/spectral-runner.js');
     if (mod.runSpectralLayers) registerSpectralRunner(mod.runSpectralLayers);
   } catch {
     // module not yet present — agents are still building it
   }
   try {
-    const mod = await import('./walkers/index.js');
+    const mod = await import('./aggregators/index.js');
     if (mod.runWalkers) registerWalkerRunner(mod.runWalkers);
   } catch {
     // module not yet present
@@ -152,4 +152,13 @@ export async function registerDefaultRunners(): Promise<void> {
   //   registerDomainKnowledgeRunner(dk.runDomainKnowledgeLayers);
 }
 
-export type { DetectorFinding, DetectorOptions, DeterministicLayerResult, DetectorLayer } from './types.js';
+export type { DetectorFinding, DetectorOptions, DeterministicLayerResult, DetectorLayer } from './infra/types.js';
+
+// Welle Arch+ — re-exports from the layered subtree so external consumers can
+// treat `deterministic/` as a single import-surface. Subtree files (modules/,
+// aggregators/, classifiers/, rules/, spectral-functions/, iana/, infra/) are
+// still importable directly when granularity is needed.
+export { runSpectralLayers, mapDiagnosticToDetectorFinding } from './infra/spectral-runner.js';
+export { runWalkers } from './aggregators/index.js';
+export { runModules } from './modules/index.js';
+export { mapDetectorFindings, mapDetectorFinding } from './infra/output-mapper.js';

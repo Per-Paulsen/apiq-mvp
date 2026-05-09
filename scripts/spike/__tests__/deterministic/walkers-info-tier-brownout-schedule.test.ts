@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { walkBrownoutSchedule } from '../../deterministic/walkers/info-tier-brownout-schedule.js';
+import { walkBrownoutSchedule } from '../../deterministic/aggregators/info-tier-brownout-schedule.js';
 
 describe('walkBrownoutSchedule (Welle F)', () => {
   it('emits 0 findings when no x-brownout-schedule extension', async () => {

@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { walkSchemaSimilarity } from '../../deterministic/walkers/schema-similarity.js';
+import { walkSchemaSimilarity } from '../../deterministic/aggregators/schema-similarity.js';
 
 describe('walkSchemaSimilarity (Welle D / CL-48)', () => {
   it('emits 0 findings when only one schema is present', async () => {

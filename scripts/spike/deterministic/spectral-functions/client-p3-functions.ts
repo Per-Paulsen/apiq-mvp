@@ -894,3 +894,116 @@ export const readOnlyRequiredConflict: IFunction = function (
   }
   return findings;
 };
+
+// =============================================================================
+// Welle Arch+ A3 — FUNCTION_METADATA registry for client-p3 callables.
+// =============================================================================
+
+import type { FunctionMetadata } from './_metadata.js';
+
+export const FUNCTION_METADATA: Record<string, FunctionMetadata> = {
+  'camelize-collide-schema-property': {
+    name: 'camelize-collide-schema-property',
+    patternIds: ['CL-3'],
+    lens: 'client-friction',
+    perfClass: 'O(n)',
+    description:
+      'Property names that camelize to the same identifier collide in SDK codegen — pick one canonical naming convention.',
+  },
+  'required-asymmetry-request-response': {
+    name: 'required-asymmetry-request-response',
+    patternIds: ['CL-8'],
+    lens: 'client-friction',
+    perfClass: 'O(n*m)',
+    description:
+      'Property required-state differs between request and response schema for the same operation — SDK consumers see 3-state semantics.',
+  },
+  'int64-needs-string-alternative': {
+    name: 'int64-needs-string-alternative',
+    patternIds: ['CL-16'],
+    lens: 'client-friction',
+    perfClass: 'O(1)',
+    description:
+      'format:int64 declared without a string-alternative branch; JavaScript Number loses precision past 2^53 (Stripe-style).',
+  },
+  'empty-body-2xx-4xx-discriminator': {
+    name: 'empty-body-2xx-4xx-discriminator',
+    patternIds: ['CL-19'],
+    lens: 'client-friction',
+    perfClass: 'O(n*m)',
+    description:
+      'Operation has both empty-body 2xx and 4xx without distinguishing data — SDK consumer cannot discriminate from body alone.',
+  },
+  'response-ref-inconsistency': {
+    name: 'response-ref-inconsistency',
+    patternIds: ['CL-27'],
+    lens: 'client-friction',
+    perfClass: 'O(n*m)',
+    description:
+      'Same status-code response appears mixed via $ref AND inline across operations — consolidate to a component-response.',
+  },
+  'nested-composition-depth': {
+    name: 'nested-composition-depth',
+    patternIds: ['CL-30'],
+    lens: 'client-friction',
+    perfClass: 'O(n)',
+    description:
+      'Schema has allOf/oneOf/anyOf composition-depth above limit — swagger-ui and codegen render deeply-nested chains poorly.',
+  },
+  'field-name-length-balance': {
+    name: 'field-name-length-balance',
+    patternIds: ['CL-44'],
+    lens: 'client-friction',
+    perfClass: 'O(1)',
+    description:
+      'Field name >30 chars (verbose) OR ≤2 chars (cryptic, with allowlist for id/ts/etc). Both produce poor SDK DX.',
+  },
+  'crud-shape-consistency': {
+    name: 'crud-shape-consistency',
+    patternIds: ['CL-47'],
+    lens: 'client-friction',
+    perfClass: 'O(n*m)',
+    description:
+      'POST/PUT/PATCH 2xx return-shape ≠ GET 2xx shape on same path — Stripe-style CRUD returns the resource on every mutation.',
+  },
+  'params-order-required-first': {
+    name: 'params-order-required-first',
+    patternIds: ['CL-51'],
+    lens: 'client-friction',
+    perfClass: 'O(n)',
+    description:
+      'Required parameter follows an optional parameter in `parameters` array — reorder for cleaner SDK method signatures.',
+  },
+  'total-required-inputs-exceeds': {
+    name: 'total-required-inputs-exceeds',
+    patternIds: ['CL-53'],
+    lens: 'client-friction',
+    perfClass: 'O(n)',
+    description:
+      'Total required inputs (params + requestBody.required) exceed threshold — hard for SDK consumers and AI agents to construct.',
+  },
+  'vendor-extension-prefix-consistency': {
+    name: 'vendor-extension-prefix-consistency',
+    patternIds: ['CL-61'],
+    lens: 'client-friction',
+    perfClass: 'O(n)',
+    description:
+      'Same vendor uses ≥2 distinct casings/separators for x-* extensions across spec — pick one canonical prefix.',
+  },
+  'tag-casing-cross-spec-consistency': {
+    name: 'tag-casing-cross-spec-consistency',
+    patternIds: ['CL-75'],
+    lens: 'client-friction',
+    perfClass: 'O(n)',
+    description:
+      'Spec uses ≥2 distinct tag-casing conventions (pascal/camel/kebab/snake) — codegen and docs render inconsistently.',
+  },
+  'read-only-required-conflict': {
+    name: 'read-only-required-conflict',
+    patternIds: ['CL-80'],
+    lens: 'client-friction',
+    perfClass: 'O(n)',
+    description:
+      'Property is both readOnly:true AND in parent.required — clients cannot satisfy required-constraint on POST/PUT input.',
+  },
+};

@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { walkCapabilityDiscoveryEndpoint } from '../../deterministic/walkers/info-tier-capability-discovery.js';
+import { walkCapabilityDiscoveryEndpoint } from '../../deterministic/aggregators/info-tier-capability-discovery.js';
 
 describe('walkCapabilityDiscoveryEndpoint (Welle F)', () => {
   it('emits 0 findings when no /capabilities or /.well-known/capabilities path', async () => {

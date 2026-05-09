@@ -23,7 +23,7 @@ import * as crypto from 'node:crypto';
 import dotenv from 'dotenv';
 import OpenAI from 'openai';
 
-import type { Lens, Severity, SeverityDirection } from '../deterministic/severity-schema.js';
+import type { Lens, Severity, SeverityDirection } from '../deterministic/infra/severity-schema.js';
 
 // =============================================================================
 // Path setup + env-loading (Q2-fix pattern: REPO_ROOT first, SPIKE_ROOT override)

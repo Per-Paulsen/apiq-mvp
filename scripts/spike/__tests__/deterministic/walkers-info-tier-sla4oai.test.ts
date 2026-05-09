@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { walkSla4oaiPresence } from '../../deterministic/walkers/info-tier-sla4oai.js';
+import { walkSla4oaiPresence } from '../../deterministic/aggregators/info-tier-sla4oai.js';
 
 describe('walkSla4oaiPresence (Welle F)', () => {
   it('emits 0 findings when info.x-sla / info.x-sla4oai absent', async () => {

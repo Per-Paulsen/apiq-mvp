@@ -56,7 +56,7 @@
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
-import type { DetectorFinding, DetectorOptions } from '../types.js';
+import type { DetectorFinding, DetectorOptions } from '../infra/types.js';
 import { runStripePatterns } from './stripe.js';
 
 interface LooseSpec {

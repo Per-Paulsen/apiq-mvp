@@ -18,10 +18,10 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { walkPathTemplates } from '../../deterministic/path-template-parser.js';
-import { mapDetectorFindings } from '../../deterministic/output-mapper.js';
+import { walkPathTemplates } from '../../deterministic/modules/path-template-parser.js';
+import { mapDetectorFindings } from '../../deterministic/infra/output-mapper.js';
 import { FindingSchema } from '../../schema.js';
-import type { DetectorFinding } from '../../deterministic/types.js';
+import type { DetectorFinding } from '../../deterministic/infra/types.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

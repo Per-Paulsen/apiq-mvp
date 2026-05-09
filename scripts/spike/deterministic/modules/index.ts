@@ -19,22 +19,22 @@
  * source files remain unchanged.
  */
 
-import type { DetectorFinding, DetectorLayer, DetectorOptions } from '../types.js';
-import { runAjvValidator } from '../ajv-validator.js';
-import { runCodegenValidation } from '../codegen-validation.js';
-import { walkCrossReferenceConsistency } from '../cross-reference-consistency.js';
-import { runDuplicateSchemaDetectors } from '../duplicate-schemas.js';
-import { runNamingClassifier } from '../naming-classifier.js';
-import { walkPathTemplates } from '../path-template-parser.js';
-import { runRefGraphAnalysis } from '../ref-graph.js';
-import { runSecretScanner } from '../secret-scanner.js';
-import { runWebhookSignature } from '../webhook-signature.js';
-import { walkHttpProtocolPairings } from '../http-protocol-pairings.js';
-import { validateProblemJson } from '../problem-json-validator.js';
-import { runOAuth2FlowValidator } from '../oauth2-flow-validator.js';
-import { runMediaTypeValidator } from '../media-type-iana-validator.js';
-import { runJsonSchemaDraftDetector } from '../json-schema-draft-detector.js';
-import { runStyleCoherenceChecks } from '../per-style-coherence.js';
+import type { DetectorFinding, DetectorLayer, DetectorOptions } from '../infra/types.js';
+import { runAjvValidator } from './ajv-validator.js';
+import { runCodegenValidation } from './codegen-validation.js';
+import { walkCrossReferenceConsistency } from './cross-reference-consistency.js';
+import { runDuplicateSchemaDetectors } from './duplicate-schemas.js';
+import { runNamingClassifier } from './naming-classifier.js';
+import { walkPathTemplates } from './path-template-parser.js';
+import { runRefGraphAnalysis } from './ref-graph.js';
+import { runSecretScanner } from './secret-scanner.js';
+import { runWebhookSignature } from './webhook-signature.js';
+import { walkHttpProtocolPairings } from './http-protocol-pairings.js';
+import { validateProblemJson } from './problem-json-validator.js';
+import { runOAuth2FlowValidator } from './oauth2-flow-validator.js';
+import { runMediaTypeValidator } from './media-type-iana-validator.js';
+import { runJsonSchemaDraftDetector } from '../classifiers/json-schema-draft-detector.js';
+import { runStyleCoherenceChecks } from './per-style-coherence.js';
 
 type ModuleFn = (spec: object, opts?: DetectorOptions) => Promise<DetectorFinding[]>;
 
@@ -75,20 +75,31 @@ export async function runModules(
   spec: object,
   opts?: DetectorOptions
 ): Promise<DetectorFinding[]> {
-  const all: DetectorFinding[] = [];
-  for (const mod of ALL_MODULES) {
-    try {
-      const findings = await mod.fn(spec, opts);
-      const targetLayer: DetectorLayer = mod.layer ?? 'module-class';
-      for (const f of findings) {
-        f.layer = targetLayer;
+  // Welle Arch+ (OQ-3) — run modules in parallel. The two slowest modules on
+  // stripe-full are ajv-validator (~15s) and codegen-validation (~12s); both
+  // are bound by their own internal work (AJV schema compilation, openapi-
+  // typescript+Redocly), not by JS event-loop. Running serially we paid
+  // ~28s wallclock; in parallel we pay ~max(15s, 12s) ≈ 15s. Each module
+  // already swallows its own errors via try/catch, so Promise.all on a wrapper
+  // can't reject — every module either returns DetectorFinding[] or [].
+  const results = await Promise.all(
+    ALL_MODULES.map(async (mod): Promise<DetectorFinding[]> => {
+      try {
+        const findings = await mod.fn(spec, opts);
+        const targetLayer: DetectorLayer = mod.layer ?? 'module-class';
+        for (const f of findings) {
+          f.layer = targetLayer;
+        }
+        return findings;
+      } catch (err) {
+        console.warn(
+          `[module] ${mod.name} failed: ${err instanceof Error ? err.message : String(err)}`
+        );
+        return [];
       }
-      all.push(...findings);
-    } catch (err) {
-      console.warn(
-        `[module] ${mod.name} failed: ${err instanceof Error ? err.message : String(err)}`
-      );
-    }
-  }
+    })
+  );
+  const all: DetectorFinding[] = [];
+  for (const r of results) all.push(...r);
   return all;
 }

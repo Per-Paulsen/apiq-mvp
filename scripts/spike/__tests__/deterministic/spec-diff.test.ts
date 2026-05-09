@@ -15,8 +15,8 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { runSpecDiff } from '../../deterministic/spec-diff.js';
-import { mapDetectorFinding } from '../../deterministic/output-mapper.js';
+import { runSpecDiff } from '../../deterministic/modules/spec-diff.js';
+import { mapDetectorFinding } from '../../deterministic/infra/output-mapper.js';
 
 // =============================================================================
 // Spec builders

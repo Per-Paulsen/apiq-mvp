@@ -18,8 +18,8 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { runCodegenValidation } from '../../deterministic/codegen-validation.js';
-import { mapDetectorFindings } from '../../deterministic/output-mapper.js';
+import { runCodegenValidation } from '../../deterministic/modules/codegen-validation.js';
+import { mapDetectorFindings } from '../../deterministic/infra/output-mapper.js';
 import { FindingSchema } from '../../schema.js';
 
 const __filename = fileURLToPath(import.meta.url);

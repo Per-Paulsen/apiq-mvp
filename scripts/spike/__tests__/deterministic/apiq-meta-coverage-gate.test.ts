@@ -26,6 +26,7 @@ import YAML from 'yaml';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DETERMINISTIC_DIR = path.resolve(__dirname, '..', '..', 'deterministic');
+const RULES_DIR = path.resolve(DETERMINISTIC_DIR, 'rules');
 
 // Welle C (2026-05-08) — added P2 rulesets `apiq-ruleset-threat-p2.yaml` +
 // `apiq-ruleset-client-p2.yaml`.
@@ -48,7 +49,7 @@ const ALL_YAML_FILES = [
   'apiq-ruleset-other-p3.yaml',
 ] as const;
 const YAML_FILES = ALL_YAML_FILES.filter((f) =>
-  fs.existsSync(path.join(DETERMINISTIC_DIR, f))
+  fs.existsSync(path.join(RULES_DIR, f))
 );
 
 interface YamlRule {
@@ -75,7 +76,7 @@ const REQUIRED_FIELDS = [
 ] as const;
 
 function loadRuleset(yamlFile: string): YamlRuleset {
-  const yamlPath = path.join(DETERMINISTIC_DIR, yamlFile);
+  const yamlPath = path.join(RULES_DIR, yamlFile);
   const yamlText = fs.readFileSync(yamlPath, 'utf8');
   return YAML.parse(yamlText) as YamlRuleset;
 }

@@ -409,3 +409,52 @@ export const linguisticTinyResource: IFunction = function (
     },
   ];
 };
+
+// =============================================================================
+// Welle Arch+ A3 — FUNCTION_METADATA registry for client-p2 callables.
+// =============================================================================
+
+import type { FunctionMetadata } from './_metadata.js';
+
+export const FUNCTION_METADATA: Record<string, FunctionMetadata> = {
+  'schema-nesting-depth': {
+    name: 'schema-nesting-depth',
+    patternIds: ['CL-29'],
+    lens: 'client-friction',
+    perfClass: 'O(n)',
+    description:
+      'Inline-object nesting depth exceeds limit; deeply-nested schemas render poorly in docs portals and produce NestedNestedNested codegen types.',
+  },
+  'regex-multi-engine-unsupported': {
+    name: 'regex-multi-engine-unsupported',
+    patternIds: ['CL-25'],
+    lens: 'client-friction',
+    perfClass: 'O(n)',
+    description:
+      'Pattern uses regex features rejected by Java/Python/ECMA-262 engines (lookbehind, possessive, atomic groups, etc.) — codegen breaks.',
+  },
+  'allof-heavy-non-ref-objects': {
+    name: 'allof-heavy-non-ref-objects',
+    patternIds: ['CL-77'],
+    lens: 'client-friction',
+    perfClass: 'O(n)',
+    description:
+      'allOf with multiple non-$ref inline objects produces synthetic intermediate types in codegen output. Extract to named components.',
+  },
+  'linguistic-amorphous-uri': {
+    name: 'linguistic-amorphous-uri',
+    patternIds: ['F-11'],
+    lens: 'client-friction',
+    perfClass: 'O(n)',
+    description:
+      'Path contains amorphous URI segments (data/thing/resource/info/...). Replace with concrete resource-type. (Palma/Khomh DOLAR)',
+  },
+  'linguistic-tiny-resource': {
+    name: 'linguistic-tiny-resource',
+    patternIds: ['F-12'],
+    lens: 'client-friction',
+    perfClass: 'O(n)',
+    description:
+      'Path contains 1-2-char segments (excluding `id` / `v1`-`v9` / locale codes). Too cryptic for human + agent consumers. (Palma/Khomh DOLAR)',
+  },
+};

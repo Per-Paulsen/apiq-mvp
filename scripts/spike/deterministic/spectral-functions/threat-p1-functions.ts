@@ -36,6 +36,7 @@
  */
 
 import type { IFunction, IFunctionResult } from '@stoplight/spectral-core';
+import { operationHasRateLimitHeader } from './_helpers/rate-limit-headers.js';
 
 type AnyObj = Record<string, unknown>;
 
@@ -77,13 +78,6 @@ const PAGINATION_HEADER_NAMES = [
   'x-pagination-page',
   'x-pagination-limit',
   'x-pagination-total',
-];
-
-const RATE_LIMIT_HEADER_PATTERNS = [
-  /^x-ratelimit-/i,
-  /^ratelimit-/i,
-  /^x-rate-limit-/i,
-  /^retry-after$/i,
 ];
 
 const SENSITIVE_FLOW_PATH_PATTERNS = [
@@ -258,26 +252,7 @@ export const sensitiveFlowNeedsRateLimitHeaders: IFunction = function (
 
   if (!isSensitive) return [];
 
-  const responses = isObject(op.responses) ? op.responses : null;
-  if (!responses) return [];
-
-  // Check ALL response definitions for rate-limit headers.
-  let hasRateLimitHeader = false;
-  for (const respUnknown of Object.values(responses)) {
-    const resp = isObject(respUnknown) ? respUnknown : null;
-    if (!resp) continue;
-    const headers = isObject(resp.headers) ? resp.headers : null;
-    if (!headers) continue;
-    for (const headerName of Object.keys(headers)) {
-      if (RATE_LIMIT_HEADER_PATTERNS.some((re) => re.test(headerName))) {
-        hasRateLimitHeader = true;
-        break;
-      }
-    }
-    if (hasRateLimitHeader) break;
-  }
-
-  if (hasRateLimitHeader) return [];
+  if (operationHasRateLimitHeader(op)) return [];
 
   return [
     {
@@ -423,4 +398,45 @@ export const responseHasWwwAuthenticateHeader: IFunction = function (
     ];
   }
   return [];
+};
+
+// =============================================================================
+// Welle Arch+ A3 — FUNCTION_METADATA registry for threat-p1 callables.
+// =============================================================================
+
+import type { FunctionMetadata } from './_metadata.js';
+
+export const FUNCTION_METADATA: Record<string, FunctionMetadata> = {
+  'list-endpoint-has-pagination': {
+    name: 'list-endpoint-has-pagination',
+    patternIds: ['TM-A22'],
+    lens: 'threat-modeling',
+    perfClass: 'O(n)',
+    description:
+      'GET ops returning array bodies must declare a pagination query param or pagination response-header (DoS prevention).',
+  },
+  'sensitive-flow-needs-rate-limit-headers': {
+    name: 'sensitive-flow-needs-rate-limit-headers',
+    patternIds: ['TM-A32'],
+    lens: 'threat-modeling',
+    perfClass: 'O(n)',
+    description:
+      'Sensitive business-flow ops (purchase/checkout/order/payment) must declare rate-limit headers on responses (OWASP API6).',
+  },
+  'cors-credentials-wildcard-conflict': {
+    name: 'cors-credentials-wildcard-conflict',
+    patternIds: ['TM-A39'],
+    lens: 'threat-modeling',
+    perfClass: 'O(n)',
+    description:
+      'Access-Control-Allow-Credentials:true combined with Access-Control-Allow-Origin:* is browser-rejected (CORS spec).',
+  },
+  'response-has-www-authenticate-header': {
+    name: 'response-has-www-authenticate-header',
+    patternIds: ['TM-A53'],
+    lens: 'threat-modeling',
+    perfClass: 'O(n)',
+    description:
+      '401 responses MUST declare a WWW-Authenticate header (RFC 9110 §11.6.1).',
+  },
 };

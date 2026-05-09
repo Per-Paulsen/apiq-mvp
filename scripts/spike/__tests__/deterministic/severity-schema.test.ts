@@ -40,6 +40,7 @@ import {
   safeValidateFindingMetadata,
   tagFinding,
   migrateLegacyRule,
+  validateApiqMetaYamlBlock,
   // Welle F new exports:
   ImpactLevelSchema,
   AgentReadinessImpactSchema,
@@ -51,7 +52,7 @@ import {
   type FindingMetadata,
   type RuleMetadataInput,
   type Lens,
-} from '../../deterministic/severity-schema.js';
+} from '../../deterministic/infra/severity-schema.js';
 
 // ---------------------------------------------------------------------------
 // Test 1 — All atomic enums round-trip
@@ -941,5 +942,168 @@ describe('Welle F — full RuleMetadata round-trip with all new fields', () => {
     expect(
       parsed.sources[0].type === 'rfc' && parsed.sources[0].verbatim
     ).toBeTruthy();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Test 11 — validateApiqMetaYamlBlock (Welle Arch+ A2b)
+// kebab-case YAML block -> camelCase RuleMetadata
+// ---------------------------------------------------------------------------
+
+describe('validateApiqMetaYamlBlock — kebab→camel + schema validation', () => {
+  it('parses a real apiq-meta block (kebab-case YAML shape) into RuleMetadata', () => {
+    const yamlBlock = {
+      'pattern-id': 'Y-2',
+      lenses: ['threat-modeling'],
+      sources: [
+        {
+          type: 'vendor',
+          name: 'OWASP API2:2023 (Broken Authentication)',
+        },
+        {
+          type: 'rfc',
+          number: 6750,
+          section: '2.3',
+          summary: 'clients MUST NOT use the URI',
+        },
+      ],
+      stakeholders: ['security', 'end-user'],
+      'lifecycle-phase': 'deploy-time',
+      'defect-class': 'semantic',
+      iso25010: ['security'],
+      'codegen-targets': ['*'],
+      'detection-precision': 'high',
+      'auto-fix-safe': false,
+      'regulatory-mapping': {
+        nist: ['PR.AA-01', 'PR.DS-02'],
+        asvs: ['V2.1.1', 'V9.1.1'],
+        cis: ['CIS-3.10', 'CIS-6.1'],
+      },
+      'cost-impact': 'medium',
+      'mttr-impact': 'high',
+      'agent-readiness-impact': 'high',
+      severity: 'error',
+    };
+    const result = validateApiqMetaYamlBlock(yamlBlock);
+    expect('errors' in result).toBe(false);
+    if (!('errors' in result)) {
+      expect(result.patternId).toBe('Y-2');
+      expect(result.lenses).toEqual(['threat-modeling']);
+      expect(result.lifecyclePhase).toBe('deploy-time');
+      expect(result.defectClass).toBe('semantic');
+      expect(result.codegenTargets).toEqual(['*']);
+      expect(result.detectionPrecision).toBe('high');
+      expect(result.autoFixSafe).toBe(false);
+      expect(result.regulatoryMapping?.nist).toEqual(['PR.AA-01', 'PR.DS-02']);
+      expect(result.costImpact).toBe('medium');
+      expect(result.mttrImpact).toBe('high');
+      expect(result.agentReadinessImpact).toBe('high');
+    }
+  });
+
+  it('returns errors when lens is invalid', () => {
+    const result = validateApiqMetaYamlBlock({
+      'pattern-id': 'BAD-LENS',
+      lenses: ['fictional-lens'],
+      sources: [{ type: 'rfc', number: 9110 }],
+      stakeholders: ['spec-author'],
+      'lifecycle-phase': 'build-time',
+      'defect-class': 'norm',
+      iso25010: ['maintainability'],
+      severity: 'warn',
+    });
+    expect('errors' in result).toBe(true);
+    if ('errors' in result) {
+      expect(result.errors.some(e => e.includes('lenses'))).toBe(true);
+    }
+  });
+
+  it('returns errors when severity is missing', () => {
+    const result = validateApiqMetaYamlBlock({
+      'pattern-id': 'NO-SEVERITY',
+      lenses: ['threat-modeling'],
+      sources: [{ type: 'rfc', number: 9110 }],
+      stakeholders: ['spec-author'],
+      'lifecycle-phase': 'build-time',
+      'defect-class': 'norm',
+      iso25010: ['security'],
+    });
+    expect('errors' in result).toBe(true);
+    if ('errors' in result) {
+      expect(result.errors.some(e => e.includes('severity'))).toBe(true);
+    }
+  });
+
+  it('returns errors when required field stakeholders is empty array', () => {
+    const result = validateApiqMetaYamlBlock({
+      'pattern-id': 'NO-STAKEHOLDERS',
+      lenses: ['threat-modeling'],
+      sources: [{ type: 'rfc', number: 9110 }],
+      stakeholders: [],
+      'lifecycle-phase': 'build-time',
+      'defect-class': 'norm',
+      iso25010: ['security'],
+      severity: 'warn',
+    });
+    expect('errors' in result).toBe(true);
+  });
+
+  it('returns errors when block is null/non-object', () => {
+    expect('errors' in validateApiqMetaYamlBlock(null)).toBe(true);
+    expect('errors' in validateApiqMetaYamlBlock('string')).toBe(true);
+    expect('errors' in validateApiqMetaYamlBlock([])).toBe(true);
+  });
+
+  it('preserves a sources entry that uses verbatim alongside summary', () => {
+    const result = validateApiqMetaYamlBlock({
+      'pattern-id': 'EV-1',
+      lenses: ['evolution-friction'],
+      sources: [
+        {
+          type: 'rfc',
+          number: 9745,
+          section: '2',
+          summary: 'Servers SHOULD include the Sunset header.',
+          verbatim: 'Sunset: Sat, 31 Dec 2025 23:59:59 GMT',
+          verifiedAt: '2026-04-15',
+        },
+      ],
+      stakeholders: ['client-dev'],
+      'lifecycle-phase': 'evolution-time',
+      'defect-class': 'semantic',
+      iso25010: ['compatibility'],
+      severity: 'warn',
+      direction: 'tighten',
+    });
+    expect('errors' in result).toBe(false);
+    if (!('errors' in result)) {
+      expect(result.direction).toBe('tighten');
+      expect(result.sources[0].type).toBe('rfc');
+    }
+  });
+
+  it('applies RuleMetadata defaults when optional fields are absent', () => {
+    const result = validateApiqMetaYamlBlock({
+      'pattern-id': 'MIN-1',
+      lenses: ['threat-modeling'],
+      sources: [{ type: 'rfc', number: 9110 }],
+      stakeholders: ['security'],
+      'lifecycle-phase': 'build-time',
+      'defect-class': 'norm',
+      iso25010: ['security'],
+      severity: 'error',
+    });
+    expect('errors' in result).toBe(false);
+    if (!('errors' in result)) {
+      // RuleMetadataSchema applies defaults: codegenTargets=['*'],
+      // detectionPrecision='medium', autoFixSafe=false, costImpact='medium',
+      // mttrImpact='medium', agentReadinessImpact='none'.
+      expect(result.codegenTargets).toEqual(['*']);
+      expect(result.detectionPrecision).toBe('medium');
+      expect(result.autoFixSafe).toBe(false);
+      expect(result.costImpact).toBe('medium');
+      expect(result.mttrImpact).toBe('medium');
+      expect(result.agentReadinessImpact).toBe('none');
+    }
   });
 });

@@ -19,8 +19,8 @@ import {
   collectIdentifiers,
   distributionFor,
   runNamingClassifier,
-} from '../../deterministic/naming-classifier.js';
-import { mapDetectorFindings } from '../../deterministic/output-mapper.js';
+} from '../../deterministic/modules/naming-classifier.js';
+import { mapDetectorFindings } from '../../deterministic/infra/output-mapper.js';
 
 // ---------------------------------------------------------------------------
 // classifyIdentifier — 8 buckets

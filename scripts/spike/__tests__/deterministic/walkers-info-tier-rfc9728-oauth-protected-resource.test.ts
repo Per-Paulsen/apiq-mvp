@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { walkRfc9728OauthProtectedResource } from '../../deterministic/walkers/info-tier-rfc9728-oauth-protected-resource.js';
+import { walkRfc9728OauthProtectedResource } from '../../deterministic/aggregators/info-tier-rfc9728-oauth-protected-resource.js';
 
 describe('walkRfc9728OauthProtectedResource (Welle F)', () => {
   it('emits 0 findings when no /.well-known/oauth-protected-resource path', async () => {

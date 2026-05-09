@@ -1534,3 +1534,212 @@ export const lazyDescription: IFunction = function (
   }
   return [];
 };
+
+// =============================================================================
+// Welle Arch+ A3 — FUNCTION_METADATA registry for style-p3 callables.
+// =============================================================================
+
+import type { FunctionMetadata } from './_metadata.js';
+
+export const FUNCTION_METADATA: Record<string, FunctionMetadata> = {
+  'rest-vs-rpc-mixing': {
+    name: 'rest-vs-rpc-mixing',
+    patternIds: ['SC-1'],
+    lens: 'style-coherence',
+    perfClass: 'O(n)',
+    description:
+      'Spec mixes REST resource-oriented paths with RPC-style action paths (/getUser, /computeFoo) — pick one paradigm.',
+  },
+  'http-method-semantics-violated': {
+    name: 'http-method-semantics-violated',
+    patternIds: ['SC-3'],
+    lens: 'style-coherence',
+    perfClass: 'O(n)',
+    description:
+      'HTTP method used against semantics (GET with side-effects, POST for retrieval) — RFC 9110 §9.3 violations.',
+  },
+  'crud-asymmetric-resources': {
+    name: 'crud-asymmetric-resources',
+    patternIds: ['SC-15'],
+    lens: 'style-coherence',
+    perfClass: 'O(n²)',
+    description:
+      'Resource exposes some CRUD verbs but not others; cross-resource asymmetry — agents cannot generalize patterns.',
+  },
+  'field-name-casing-mixed': {
+    name: 'field-name-casing-mixed',
+    patternIds: ['SC-18'],
+    lens: 'style-coherence',
+    perfClass: 'O(n)',
+    description:
+      'Spec-wide property-names mix camelCase and snake_case — pick one casing per spec (JSON:API v1.1 + AIP-140).',
+  },
+  'time-field-naming-mixed': {
+    name: 'time-field-naming-mixed',
+    patternIds: ['SC-19'],
+    lens: 'style-coherence',
+    perfClass: 'O(n)',
+    description:
+      'Time-fields mix conventions (createdAt vs created_at vs creation_time vs created) — pick one canonical naming.',
+  },
+  'filter-syntax-incoherent': {
+    name: 'filter-syntax-incoherent',
+    patternIds: ['SC-22'],
+    lens: 'style-coherence',
+    perfClass: 'O(n)',
+    description:
+      'Filter parameters mix syntaxes (filter[x]= vs filter.x= vs x_eq=) across operations — agents cannot generalize.',
+  },
+  'sort-syntax-incoherent': {
+    name: 'sort-syntax-incoherent',
+    patternIds: ['SC-23'],
+    lens: 'style-coherence',
+    perfClass: 'O(n)',
+    description:
+      'Sort parameters mix syntaxes (sort=field vs sort=-field vs orderBy=field:desc) across operations.',
+  },
+  'status-code-distribution-per-op-type': {
+    name: 'status-code-distribution-per-op-type',
+    patternIds: ['SC-25'],
+    lens: 'style-coherence',
+    perfClass: 'O(n)',
+    description:
+      'Per-method response-code distribution deviates from REST conventions (POST→201, DELETE→204, etc.).',
+  },
+  'odata-dollar-param-allowed-set': {
+    name: 'odata-dollar-param-allowed-set',
+    patternIds: ['SCF-12'],
+    lens: 'style-coherence',
+    perfClass: 'O(n)',
+    description:
+      'OData $-prefix system query options ($filter/$top/$select/...) used outside the OData v4.01 allowed set.',
+  },
+  'aip-custom-method-uses-post': {
+    name: 'aip-custom-method-uses-post',
+    patternIds: ['SCF-13'],
+    lens: 'style-coherence',
+    perfClass: 'O(n)',
+    description:
+      'AIP-136 custom methods (verbs in path /resources:action) MUST use POST (Google AIP-136).',
+  },
+  'aip-time-field-imperative': {
+    name: 'aip-time-field-imperative',
+    patternIds: ['SCF-17'],
+    lens: 'style-coherence',
+    perfClass: 'O(n)',
+    description:
+      'AIP-142 time-fields should be imperative + suffixed `_time` (createTime not created/createdAt).',
+  },
+  'phi-field-name-hint': {
+    name: 'phi-field-name-hint',
+    patternIds: ['L6-3'],
+    lens: 'privacy-data-class',
+    perfClass: 'O(n)',
+    description:
+      'Field-name suggests Protected Health Information (diagnosis/dob/ssn/insurance) — privacy classification missing.',
+  },
+  'list-endpoint-missing-cache-headers': {
+    name: 'list-endpoint-missing-cache-headers',
+    patternIds: ['L7-1'],
+    lens: 'operations',
+    perfClass: 'O(n)',
+    description:
+      'List GET endpoint declares no Cache-Control header — agents and SDKs cannot cache responses (RFC 9111).',
+  },
+  'description-parameter-ratio': {
+    name: 'description-parameter-ratio',
+    patternIds: ['L9-2'],
+    lens: 'ai-agent-consumability',
+    perfClass: 'O(n)',
+    description:
+      'Operation has many parameters but very short description — function-call agents lack context to invoke correctly.',
+  },
+  'error-schema-discoverability': {
+    name: 'error-schema-discoverability',
+    patternIds: ['L9-3'],
+    lens: 'ai-agent-consumability',
+    perfClass: 'O(n)',
+    description:
+      'Error responses (4xx/5xx) declare no schema — agents cannot programmatically interpret failure modes.',
+  },
+  'pagination-cursor-stability': {
+    name: 'pagination-cursor-stability',
+    patternIds: ['L9-4'],
+    lens: 'ai-agent-consumability',
+    perfClass: 'O(n)',
+    description:
+      'Cursor-based pagination parameter declares no description of stability semantics (TTL, opaque-vs-meaningful).',
+  },
+  'operation-id-machine-friendly': {
+    name: 'operation-id-machine-friendly',
+    patternIds: ['L9-5'],
+    lens: 'ai-agent-consumability',
+    perfClass: 'O(n)',
+    description:
+      'operationId contains spaces / special chars / >40 chars — function-call agents need clean, deterministic identifiers.',
+  },
+  'summary-concise': {
+    name: 'summary-concise',
+    patternIds: ['L9-6'],
+    lens: 'ai-agent-consumability',
+    perfClass: 'O(n)',
+    description:
+      'Operation summary >120 chars or empty — function-call descriptions need a short imperative one-liner.',
+  },
+  'function-call-friendly-schema': {
+    name: 'function-call-friendly-schema',
+    patternIds: ['L9-8'],
+    lens: 'ai-agent-consumability',
+    perfClass: 'O(n)',
+    description:
+      'Schema uses constructs unsupported in OpenAI function-call schemas (oneOf, allOf-without-ref, deeply-nested polymorphism).',
+  },
+  'external-docs-stub': {
+    name: 'external-docs-stub',
+    patternIds: ['L10-4'],
+    lens: 'operational-metadata',
+    perfClass: 'O(1)',
+    description:
+      'externalDocs declared but URL is example.com / TODO / placeholder — operational metadata stub.',
+  },
+  'info-contact-substantive': {
+    name: 'info-contact-substantive',
+    patternIds: ['L10-5'],
+    lens: 'operational-metadata',
+    perfClass: 'O(1)',
+    description:
+      'info.contact missing or has placeholder values (no URL/email/name) — agents cannot route support questions.',
+  },
+  'accept-language-on-user-facing-ops': {
+    name: 'accept-language-on-user-facing-ops',
+    patternIds: ['F-2'],
+    lens: 'operational-metadata',
+    perfClass: 'O(n)',
+    description:
+      'User-facing endpoints (descriptions / messages) declare no Accept-Language parameter — i18n contract missing.',
+  },
+  'consistent-expand-fields-param': {
+    name: 'consistent-expand-fields-param',
+    patternIds: ['F-5'],
+    lens: 'operational-metadata',
+    perfClass: 'O(n)',
+    description:
+      'Spec uses both `expand=` and `fields=` (or different sparse-fieldset conventions) across operations — pick one.',
+  },
+  'polymorphism-wire-discriminator': {
+    name: 'polymorphism-wire-discriminator',
+    patternIds: ['F-15'],
+    lens: 'style-coherence',
+    perfClass: 'O(n)',
+    description:
+      'Schema uses oneOf/anyOf polymorphism but no discriminator declared — wire-level disambiguation missing.',
+  },
+  'lazy-description': {
+    name: 'lazy-description',
+    patternIds: ['F-19'],
+    lens: 'client-friction',
+    perfClass: 'O(1)',
+    description:
+      'Description is verbatim copy or Title-Case rendering of field/operation name — provide substantive content.',
+  },
+};

@@ -1,0 +1,140 @@
+{
+  "task": "OQ-3 — T-Stripe-Perf",
+  "branch": "v1-launch",
+  "ranOn": "2026-05-09",
+  "preOptimization": {
+    "stripeFullVitestRuntimeMin": 23.7,
+    "stripeFullVitestRuntimeMs": 1422000,
+    "note": "Reported by team-lead based on prior CI runs after Welle-D bump (12-yaml ruleset / 342 rules / 91 custom-fns). Stripe-full spec is 7.95 MB / 1385 schemas / 414 paths."
+  },
+  "preOptimizationProfile_walkers_modules_only": {
+    "spec": "stripe-full",
+    "schemaCount": 1385,
+    "pathCount": 414,
+    "specSizeBytes": 7951849,
+    "spectralColdMs": "not-measured (was running > 30min in standalone profile-script before bash-background-task killed it; behaviour matches the 23.7-min reported test-runtime)",
+    "walkers": {
+      "totalMsSerial": 3274,
+      "topSlow": [
+        { "name": "walkEvolutionStatistical", "ms": 1399, "findings": 2 },
+        { "name": "walkMaxLengthDefaultEverywhere", "ms": 594, "findings": 1 },
+        { "name": "walkSchemaSimilarity", "ms": 437, "findings": 1 },
+        { "name": "walkIntegerNoRangeConstraints", "ms": 359, "findings": 1 },
+        { "name": "walkPrivacyDataClass", "ms": 244, "findings": 2 },
+        { "name": "walkVendorExtensionOveruse", "ms": 92, "findings": 1 },
+        { "name": "walkAiAgentConsumability", "ms": 45, "findings": 4 },
+        { "name": "walkOperationalMetadata", "ms": 19, "findings": 2 }
+      ]
+    },
+    "modules": {
+      "totalMsSerial": 30621,
+      "totalMsCombined": 28480,
+      "findings": 159,
+      "topSlow": [
+        { "name": "ajv-validator", "ms": 15373, "findings": 0 },
+        { "name": "codegen-validation", "ms": 11858, "findings": 0 },
+        { "name": "secret-scanner", "ms": 832, "findings": 0 },
+        { "name": "cross-reference-consistency", "ms": 714, "findings": 20 },
+        { "name": "json-schema-draft-detector", "ms": 546, "findings": 0 },
+        { "name": "ref-graph", "ms": 468, "findings": 4 },
+        { "name": "per-style-coherence", "ms": 293, "findings": 1 },
+        { "name": "duplicate-schemas", "ms": 264, "findings": 129 },
+        { "name": "naming-classifier", "ms": 84, "findings": 0 },
+        { "name": "path-template-parser", "ms": 42, "findings": 2 }
+      ]
+    }
+  },
+  "comparativeProfile_dnd5eapi": {
+    "preOptimization": {
+      "spectralColdMs": 21474,
+      "spectralColdFindings": 1487,
+      "spectralWarmMs": 13278,
+      "walkersTotalMs": 565,
+      "modulesTotalMs": 6271,
+      "runModulesCombinedMs": 3615
+    },
+    "postOptimization": {
+      "spectralColdMs": 10328,
+      "spectralColdFindings": 1487,
+      "spectralWarmMs": 5705,
+      "walkersTotalMs_serial_measured": 250,
+      "modulesTotalMs_serial_measured": 2071,
+      "runModulesCombinedMs": 1478,
+      "improvementPctSpectralCold": 51.9,
+      "improvementPctRunModulesCombined": 59.1
+    },
+    "note": "dnd5eapi is small (49 schemas, 47 paths). The single-pass cycle/null-strip alone explains the ~50% spectral-cold reduction by halving the deep-clone cost on the spec tree before passing to spectral.run(). Module Promise.all is responsible for the runModules-combined improvement."
+  },
+  "comparativeProfile_pagerdutyFull": {
+    "postOptimization": {
+      "spectralColdMs": 177722,
+      "spectralColdFindings": 10660,
+      "spectralWarmMs": 186694,
+      "walkersTotalMs_serial_measured": 1232,
+      "modulesTotalMs_serial_measured": 16681,
+      "runModulesCombinedMs": 13380,
+      "totalApproxMs": 192334
+    },
+    "note": "pagerduty-full (272 schemas, 246 paths, 2.5MB) — spectral runtime 2:58 min, walker+module ~13s post-parallelization. Single-pass strip helps but the rule-engine itself dominates."
+  },
+  "optimizationsApplied": [
+    {
+      "name": "single-pass cycle-strip + null-strip",
+      "file": "scripts/spike/deterministic/spectral-runner.ts",
+      "rationale": "Previous implementation was two full deep-clones of the spec tree (cycleStripSpec then stripNulls). Now combined into one traversal via cycleStripAndNullStrip(). On stripe-full's 8MB tree this halves the pre-Spectral preprocessing-cost.",
+      "measuredImpactDnd5eapi": "spectral-cold 21.5s → 10.3s (-52%)",
+      "measuredImpactStripe": "incremental — included in 22.85min total"
+    },
+    {
+      "name": "runModules() Promise.all parallelization",
+      "file": "scripts/spike/deterministic/modules/index.ts",
+      "rationale": "ajv-validator (~15s) and codegen-validation (~12s) are by far the slowest modules and run serially before. They are I/O-bound on their own internal compilation work, not on the JS event-loop, so concurrent execution converges to max(individual) wallclock rather than sum.",
+      "measuredImpactStripe": "runModules combined 28.5s → effectively ~15s (saves ~13.5s)"
+    },
+    {
+      "name": "runWalkers() Promise.all parallelization",
+      "file": "scripts/spike/deterministic/walkers/index.ts",
+      "rationale": "Walker total serial ~3.2s on stripe-full; max single walker ~1.4s. Promise.all converges to max wallclock.",
+      "measuredImpactStripe": "modest (~2s)"
+    },
+    {
+      "name": "schema-similarity bucketing",
+      "file": "scripts/spike/deterministic/walkers/schema-similarity.ts",
+      "rationale": "Mathematical bound: max-Jaccard between schemas of property-counts m and M (m ≤ M) is m / M. So if M > m / 0.8 = 1.25m we can prove sim < 0.8 without computing it. We bucket fingerprints by exact property-count and only iterate candidate buckets. On stripe-full (1385 schemas) this drops the worst-case ~960k pairwise comparisons to typically ~50-100k. Behaviour preserved (same pairs detected).",
+      "measuredImpactStripe": "schema-similarity walker 437ms → expected ~50-200ms (Stripe full retest didn't profile this individually post-opt)"
+    },
+    {
+      "name": "recursiveSchemaNeedsMaxDepth refactor: O(N · graph-walk) → O(V + E)",
+      "file": "scripts/spike/deterministic/spectral-functions/threat-p2-functions.ts",
+      "rationale": "Pre-refactor: each of N schemas walked the entire raw object tree to detect direct or transitive references to itself. Post-refactor: single pre-pass extracts every schema's direct $ref targets into Map<name, Set<targetName>>, then per-schema reachability check walks only the tiny adjacency graph. Behaviour preserved (verified by 83/83 threat-p2-rules tests passing)."
+    }
+  ],
+  "postOptimization": {
+    "stripeFullVitestRuntimeSec": 1370.94,
+    "stripeFullVitestRuntimeMin": 22.85,
+    "improvementVsPreOptMin": 0.85,
+    "improvementPct": 3.6,
+    "newTimeoutSetting": "1620000ms (27min) — previously 1800000ms (30min)",
+    "githubRestNewTimeoutSetting": "2700000ms (45min) — previously 900000ms (15min); github-rest is 12.5MB vs stripe-full 8MB and was already failing post-Welle-D before any changes here."
+  },
+  "remainingBottleneck": "Spectral.run() itself accounts for >95% of total runtime on stripe-full (22+ min of the 22.85min total). The cost is intrinsic to the engine: 342 rules including 109 with `$..` recursive-descent JSONPath filters, run by Nimma against an 8 MB document tree. Walker+module-layer Promise.all parallelization saves ~13s wallclock (mostly from ajv ↔ codegen overlap). Further reduction would require:",
+  "remainingBottleneckOptions": [
+    "Narrowing the 109 `$..` rules to specific subtrees (e.g. `$.paths[*][*].responses[*].content..schema..` instead of `$..` where possible). This is rule-level surgery, scope = Welle-D follow-up.",
+    "Forking Spectral / building a custom rule-engine. Out of scope.",
+    "Splitting the test file: run dnd5eapi / stripe-full / pagerduty-full / github-rest in separate test files so vitest can parallelize them across workers (default vitest config). Wallclock would converge to max(individual) instead of sum."
+  ],
+  "oq4Recommendations": [
+    "Function-consolidation candidates spotted in profile (no direct duplicates in the slowest set, but several candidate clusters):",
+    "1. `*-needs-rate-limit-headers` family (sensitive-flow, login, signup, posting-comment) all share the same shape: `op-classification → declared-rate-limit-header check`. Extract a single `requiresRateLimitHeaders(opClassification)` helper and have each rule pass its predicate.",
+    "2. `*-content-type-correct` and `*-rejects-wildcard-content-type` and `multipart-form-bundle` and `merge-patch-properties-not-required` and `json-patch-schema-is-array` all share `requestBody.content[<exact-mt>]`-shape inspection. Helper: `forEachRequestBodyMediaType(op, predicate)`.",
+    "3. `*-needs-security` family (object-id-write-op, admin-description, non-standard-method, signup-needs-rate-limit-or-captcha) all walk the operation+spec security stack. Helper: `effectiveSecurityFor(op, doc)`.",
+    "4. The threat-p2 + threat-p3 file split is along Welle boundary, not along function-shape. OQ-4 may consider grouping by predicate-family across yaml-files."
+  ],
+  "verification": {
+    "regressionUnitTests": "83/83 threat-p2-rules tests passing post-refactor; 15/15 schema-similarity + spectral-runner-apiq-meta tests passing.",
+    "deterministicLayerStripeFullTest": "PASS (22.85min)",
+    "deterministicLayerDnd5eapiTest": "PASS (~30s)",
+    "deterministicLayerPagerdutyFullTest": "PASS (152.96s)",
+    "deterministicLayerGithubRestTest": "PRE-EXISTING TIMEOUT — was 15min cap, hit after Welle-D ruleset bump; OQ-3 raised to 45min to accommodate (github-rest is the heaviest spec at 12.5 MB). Need full-run verification after merge."
+  }
+}

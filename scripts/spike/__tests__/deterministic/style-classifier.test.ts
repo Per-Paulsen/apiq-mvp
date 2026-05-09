@@ -23,11 +23,11 @@ import {
   classifyApiStyle,
   collectStats,
   type ApiStyle,
-} from '../../deterministic/style-classifier.js';
+} from '../../deterministic/classifiers/style-classifier.js';
 import {
   runStyleCoherenceChecks,
   _coherenceInternals,
-} from '../../deterministic/per-style-coherence.js';
+} from '../../deterministic/modules/per-style-coherence.js';
 
 // ---------------------------------------------------------------------------
 // Helper fixtures

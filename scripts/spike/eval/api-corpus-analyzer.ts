@@ -19,7 +19,7 @@
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import type { Lens } from '../deterministic/severity-schema.js';
+import type { Lens } from '../deterministic/infra/severity-schema.js';
 
 // =============================================================================
 // Types — Public-API surface

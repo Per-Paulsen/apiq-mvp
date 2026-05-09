@@ -23,8 +23,8 @@ import { fileURLToPath } from 'node:url';
 import {
   walkOperationalMetadata,
   OPERATIONAL_METADATA_RULES,
-} from '../../deterministic/walkers/operational-metadata.js';
-import type { DetectorFinding } from '../../deterministic/types.js';
+} from '../../deterministic/aggregators/operational-metadata.js';
+import type { DetectorFinding } from '../../deterministic/infra/types.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

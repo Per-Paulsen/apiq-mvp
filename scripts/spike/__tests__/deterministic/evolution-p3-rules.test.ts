@@ -81,6 +81,7 @@ const SPIKE_DIR = path.resolve(__dirname, '..', '..');
 const RULESET_PATH = path.join(
   SPIKE_DIR,
   'deterministic',
+  'rules',
   'apiq-ruleset-evolution-p3.yaml'
 );
 

@@ -1,0 +1,311 @@
+{
+  "comment": "OQ-2 verbatim-curation candidates. Each entry maps a rule's pattern-id to the verbatim-quote we want to populate, plus the URL the T25 fetcher will hit. After populating yamls, T25 dry-run verifies each quote.",
+  "candidates": [
+    {
+      "rule": "apiq-rfc2-1-problem-json-needs-type",
+      "pattern": "RFC2-1",
+      "yaml": "apiq-ruleset-threat-p2.yaml",
+      "sourceIndex": 0,
+      "rfc": 9457,
+      "url": "https://www.rfc-editor.org/rfc/rfc9457#section-3.1",
+      "quote": "Problem detail objects can have the following members."
+    },
+    {
+      "rule": "apiq-rfc2-2-problem-details-type-uri",
+      "pattern": "RFC2-2",
+      "yaml": "apiq-ruleset-threat-p2.yaml",
+      "sourceIndex": 0,
+      "rfc": 9457,
+      "url": "https://www.rfc-editor.org/rfc/rfc9457#section-3.1.1",
+      "quote": "The \"type\" member is a JSON string containing a URI reference [URI] that identifies the problem type."
+    },
+    {
+      "rule": "apiq-rfc2-3-problem-details-status-matches-http-status",
+      "pattern": "RFC2-3",
+      "yaml": "apiq-ruleset-threat-p2.yaml",
+      "sourceIndex": 0,
+      "rfc": 9457,
+      "url": "https://www.rfc-editor.org/rfc/rfc9457#section-3.1.2",
+      "quote": "Generators MUST use the same status code in the actual HTTP response"
+    },
+    {
+      "rule": "apiq-rfc2-15-426-upgrade-required",
+      "pattern": "RFC2-15",
+      "yaml": "apiq-ruleset-standards-p3.yaml",
+      "sourceIndex": 0,
+      "rfc": 9110,
+      "url": "https://www.rfc-editor.org/rfc/rfc9110#section-15.5.22",
+      "quote": "A server that sends a 426 (Upgrade Required) response MUST send an Upgrade header field"
+    },
+    {
+      "rule": "apiq-rfc2-32-partial-content-content-range",
+      "pattern": "RFC2-32",
+      "yaml": "apiq-ruleset-threat-p2.yaml",
+      "sourceIndex": 0,
+      "rfc": 9110,
+      "url": "https://www.rfc-editor.org/rfc/rfc9110#section-15.3.7",
+      "quote": "the server generating the 206 response MUST generate a Content-Range header field"
+    },
+    {
+      "rule": "apiq-rfc2-41-407-proxy-authenticate-required",
+      "pattern": "RFC2-41",
+      "yaml": "apiq-ruleset-standards-p3.yaml",
+      "sourceIndex": 0,
+      "rfc": 9110,
+      "url": "https://www.rfc-editor.org/rfc/rfc9110#section-11.7.1",
+      "quote": "A proxy MUST send at least one Proxy-Authenticate header field in each 407 (Proxy Authentication Required) response that it generates."
+    },
+    {
+      "rule": "apiq-rfc2-58-jwt-bearer-rfc-8725-alias",
+      "pattern": "RFC2-58",
+      "yaml": "apiq-ruleset-threat-p2.yaml",
+      "sourceIndex": 0,
+      "rfc": 8725,
+      "url": "https://www.rfc-editor.org/rfc/rfc8725#section-3.1",
+      "quote": "Libraries MUST enable the caller to specify a supported set of algorithms and MUST NOT use any other algorithms when performing cryptographic operations."
+    },
+    {
+      "rule": "apiq-tm-y8-jwt-bearer-rfc-8725-mention",
+      "pattern": "Y-8",
+      "yaml": "apiq-ruleset-threat-p2.yaml",
+      "sourceIndex": 0,
+      "rfc": 8725,
+      "url": "https://www.rfc-editor.org/rfc/rfc8725#section-3.3",
+      "quote": "All cryptographic operations used in the JWT MUST be validated and the entire JWT MUST be rejected if any of them fail to validate."
+    },
+    {
+      "rule": "apiq-rfc2-65-oauth2-scopes-need-descriptions",
+      "pattern": "RFC2-65",
+      "yaml": "apiq-ruleset-threat-p2.yaml",
+      "sourceIndex": 0,
+      "rfc": 6749,
+      "url": "https://www.rfc-editor.org/rfc/rfc6749#section-3.3",
+      "quote": "scope-token = 1*( %x21 / %x23-5B / %x5D-7E )"
+    },
+    {
+      "rule": "apiq-rfc2-69-path-no-fragment",
+      "pattern": "RFC2-69",
+      "yaml": "apiq-ruleset-threat-p2.yaml",
+      "sourceIndex": 0,
+      "rfc": 3986,
+      "url": "https://www.rfc-editor.org/rfc/rfc3986#section-3.5",
+      "quote": "A fragment identifier component is indicated by the presence of a number sign (\"#\") character and terminated by the end of the URI."
+    },
+    {
+      "rule": "apiq-rfc2-70-oas-path-template-level1-only",
+      "pattern": "RFC2-70",
+      "yaml": "apiq-ruleset-threat-p2.yaml",
+      "sourceIndex": 0,
+      "rfc": 6570,
+      "url": "https://www.rfc-editor.org/rfc/rfc6570",
+      "quote": "we refer to these as Level 1 templates."
+    },
+    {
+      "rule": "apiq-rfc2-74-server-url-no-userinfo",
+      "pattern": "RFC2-74",
+      "yaml": "apiq-ruleset-threat-p2.yaml",
+      "sourceIndex": 0,
+      "rfc": 3986,
+      "url": "https://www.rfc-editor.org/rfc/rfc3986#section-3.2.1",
+      "quote": "Use of the format \"user:password\" in the userinfo field is deprecated."
+    },
+    {
+      "rule": "apiq-rfc2-97-patch-content-type-correct",
+      "pattern": "RFC2-97",
+      "yaml": "apiq-ruleset-threat-p2.yaml",
+      "sourceIndex": 0,
+      "rfc": 7396,
+      "url": "https://www.rfc-editor.org/rfc/rfc7396",
+      "quote": "This specification defines the JSON merge patch format and processing rules."
+    },
+    {
+      "rule": "apiq-tm-a6-openid-connect-url-https",
+      "pattern": "TM-A6",
+      "yaml": "apiq-ruleset-threat-p1.yaml",
+      "sourceIndex": 0,
+      "rfc": 6749,
+      "url": "https://www.rfc-editor.org/rfc/rfc6749#section-3.1",
+      "quote": "the authorization server MUST require the use of TLS"
+    },
+    {
+      "rule": "apiq-tm-a10-bearer-token-in-url",
+      "pattern": "TM-A10",
+      "yaml": "apiq-ruleset-threat-p1.yaml",
+      "sourceIndex": 1,
+      "rfc": 6750,
+      "url": "https://www.rfc-editor.org/rfc/rfc6750#section-2.3",
+      "quote": "the high likelihood that the URL containing the access token will be logged, it SHOULD NOT be used"
+    },
+    {
+      "rule": "apiq-tm-a53-401-www-authenticate",
+      "pattern": "TM-A53",
+      "yaml": "apiq-ruleset-threat-p1.yaml",
+      "sourceIndex": 0,
+      "rfc": 9110,
+      "url": "https://www.rfc-editor.org/rfc/rfc9110#section-11.6.1",
+      "quote": "The server generating a 401 response MUST send a WWW-Authenticate header field"
+    },
+    {
+      "rule": "apiq-tm-a7-oauth2-authcode-pkce-recommended",
+      "pattern": "TM-A7",
+      "yaml": "apiq-ruleset-threat-p2.yaml",
+      "sourceIndex": 0,
+      "rfc": 9700,
+      "url": "https://www.rfc-editor.org/rfc/rfc9700#section-2.1.1",
+      "quote": "Public clients MUST use PKCE"
+    },
+    {
+      "rule": "apiq-ev-1-deprecated-needs-sunset",
+      "pattern": "EV-1",
+      "yaml": "apiq-ruleset-evolution.yaml",
+      "sourceIndex": 1,
+      "rfc": 9745,
+      "url": "https://www.rfc-editor.org/rfc/rfc9745",
+      "quote": "The Deprecation HTTP response header field is used to signal to consumers of a resource (identified by a URI) that the resource will be or has been deprecated."
+    },
+    {
+      "rule": "apiq-rfc2-59-bearer-401-www-authenticate-realm",
+      "pattern": "RFC2-59",
+      "yaml": "apiq-ruleset-threat-p2.yaml",
+      "sourceIndex": 0,
+      "rfc": 6750,
+      "url": "https://www.rfc-editor.org/rfc/rfc6750#section-3",
+      "quote": "the resource server MUST include the HTTP \"WWW-Authenticate\" response header field"
+    },
+    {
+      "rule": "apiq-rfc2-conditional-request-correctness",
+      "pattern": "RFC2-20",
+      "yaml": "apiq-ruleset-threat-p2.yaml",
+      "sourceIndex": 0,
+      "rfc": 9110,
+      "url": "https://www.rfc-editor.org/rfc/rfc9110#section-13.1.1",
+      "quote": "If-Match"
+    },
+    {
+      "rule": "apiq-rfc2-11-header-names-title-case",
+      "pattern": "RFC2-11",
+      "yaml": "apiq-ruleset-threat-p2.yaml",
+      "sourceIndex": 0,
+      "rfc": 9110,
+      "url": "https://www.rfc-editor.org/rfc/rfc9110#section-5.1",
+      "quote": "Field names are case-insensitive"
+    },
+    {
+      "rule": "apiq-rfc2-13-1xx-upgrade-connection",
+      "pattern": "RFC2-13",
+      "yaml": "apiq-ruleset-standards-p3.yaml",
+      "sourceIndex": 0,
+      "rfc": 9110,
+      "url": "https://www.rfc-editor.org/rfc/rfc9110#section-15.2.2",
+      "quote": "A server that sends a 101 (Switching Protocols) response MUST send an Upgrade header field"
+    },
+    {
+      "rule": "apiq-rfc2-18-content-length-not-declared",
+      "pattern": "RFC2-18",
+      "yaml": "apiq-ruleset-standards-p3.yaml",
+      "sourceIndex": 0,
+      "rfc": 9110,
+      "url": "https://www.rfc-editor.org/rfc/rfc9110#section-8.6",
+      "quote": "The \"Content-Length\" header field indicates the associated representation's data length"
+    },
+    {
+      "rule": "apiq-rfc2-19-date-header-not-declared",
+      "pattern": "RFC2-19",
+      "yaml": "apiq-ruleset-standards-p3.yaml",
+      "sourceIndex": 0,
+      "rfc": 9110,
+      "url": "https://www.rfc-editor.org/rfc/rfc9110#section-6.6.1",
+      "quote": "The \"Date\" header field represents the date and time at which the message was originated"
+    },
+    {
+      "rule": "apiq-rfc2-23-if-modified-since-implies-304",
+      "pattern": "RFC2-23",
+      "yaml": "apiq-ruleset-standards-p3.yaml",
+      "sourceIndex": 0,
+      "rfc": 9110,
+      "url": "https://www.rfc-editor.org/rfc/rfc9110#section-13.1.3",
+      "quote": "The \"If-Modified-Since\" header field"
+    },
+    {
+      "rule": "apiq-rfc2-24-if-unmodified-since-implies-412",
+      "pattern": "RFC2-24",
+      "yaml": "apiq-ruleset-standards-p3.yaml",
+      "sourceIndex": 0,
+      "rfc": 9110,
+      "url": "https://www.rfc-editor.org/rfc/rfc9110#section-13.1.4",
+      "quote": "The \"If-Unmodified-Since\" header field"
+    },
+    {
+      "rule": "apiq-rfc2-27-etag-opaque-quoted",
+      "pattern": "RFC2-27",
+      "yaml": "apiq-ruleset-standards-p3.yaml",
+      "sourceIndex": 0,
+      "rfc": 9110,
+      "url": "https://www.rfc-editor.org/rfc/rfc9110#section-8.8.3",
+      "quote": "opaque-tag       = DQUOTE *etagc DQUOTE"
+    },
+    {
+      "rule": "apiq-rfc2-44-digest-auth-outdated",
+      "pattern": "RFC2-44",
+      "yaml": "apiq-ruleset-standards-p3.yaml",
+      "sourceIndex": 0,
+      "rfc": 7616,
+      "url": "https://www.rfc-editor.org/rfc/rfc7616",
+      "quote": "HTTP Digest Access Authentication"
+    },
+    {
+      "rule": "apiq-rfc2-46-prefer-implies-preference-applied",
+      "pattern": "RFC2-46",
+      "yaml": "apiq-ruleset-standards-p3.yaml",
+      "sourceIndex": 0,
+      "rfc": 7240,
+      "url": "https://www.rfc-editor.org/rfc/rfc7240#section-3",
+      "quote": "Preference-Applied"
+    },
+    {
+      "rule": "apiq-rfc2-48-prefer-respond-async-implies-202",
+      "pattern": "RFC2-48",
+      "yaml": "apiq-ruleset-standards-p3.yaml",
+      "sourceIndex": 0,
+      "rfc": 7240,
+      "url": "https://www.rfc-editor.org/rfc/rfc7240#section-4.1",
+      "quote": "respond-async"
+    },
+    {
+      "rule": "apiq-rfc2-63-oauth2-authcode-refresh-url",
+      "pattern": "RFC2-63",
+      "yaml": "apiq-ruleset-standards-p3.yaml",
+      "sourceIndex": 0,
+      "rfc": 9700,
+      "url": "https://www.rfc-editor.org/rfc/rfc9700#section-4.14",
+      "quote": "Refresh tokens"
+    },
+    {
+      "rule": "apiq-rfc2-64-oauth2-clientcred-scopes-defined",
+      "pattern": "RFC2-64",
+      "yaml": "apiq-ruleset-standards-p3.yaml",
+      "sourceIndex": 0,
+      "rfc": 9700,
+      "url": "https://www.rfc-editor.org/rfc/rfc9700#section-2.3",
+      "quote": "Access Token Privilege Restriction"
+    },
+    {
+      "rule": "apiq-rfc2-67-path-segment-grammar",
+      "pattern": "RFC2-67",
+      "yaml": "apiq-ruleset-standards-p3.yaml",
+      "sourceIndex": 0,
+      "rfc": 3986,
+      "url": "https://www.rfc-editor.org/rfc/rfc3986#section-3.3",
+      "quote": "segment       = *pchar"
+    },
+    {
+      "rule": "apiq-rfc2-cache-validators-bundle",
+      "pattern": "RFC2-35",
+      "yaml": "apiq-ruleset-standards-p3.yaml",
+      "sourceIndex": 1,
+      "rfc": 9111,
+      "url": "https://www.rfc-editor.org/rfc/rfc9111#section-5.4",
+      "quote": "Pragma"
+    }
+  ]
+}

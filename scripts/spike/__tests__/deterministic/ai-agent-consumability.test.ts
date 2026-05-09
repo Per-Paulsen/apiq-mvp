@@ -23,9 +23,9 @@ import { fileURLToPath } from 'node:url';
 import {
   walkAiAgentConsumability,
   AI_AGENT_CONSUMABILITY_RULES,
-} from '../../deterministic/walkers/ai-agent-consumability.js';
-import type { DetectorFinding } from '../../deterministic/types.js';
-import { RuleMetadataSchema } from '../../deterministic/severity-schema.js';
+} from '../../deterministic/aggregators/ai-agent-consumability.js';
+import type { DetectorFinding } from '../../deterministic/infra/types.js';
+import { RuleMetadataSchema } from '../../deterministic/infra/severity-schema.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

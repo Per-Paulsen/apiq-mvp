@@ -1,0 +1,1539 @@
+{
+  "startedAt": "2026-05-09T15:42:38.722Z",
+  "finishedAt": "2026-05-09T15:42:41.590Z",
+  "mode": "dry-run",
+  "totalSources": 34,
+  "verified": 34,
+  "drift": 0,
+  "fetchFail": 0,
+  "summaryOnlySkipped": 188,
+  "legacyVerbatimWarned": 0,
+  "perFile": {
+    "apiq-ruleset-client-p1.yaml": {
+      "verified": 0,
+      "drift": 0,
+      "fetchFail": 0,
+      "summaryOnlySkipped": 9,
+      "legacyVerbatimWarned": 0,
+      "sources": 0
+    },
+    "apiq-ruleset-client-p2.yaml": {
+      "verified": 0,
+      "drift": 0,
+      "fetchFail": 0,
+      "summaryOnlySkipped": 22,
+      "legacyVerbatimWarned": 0,
+      "sources": 0
+    },
+    "apiq-ruleset-client-p3.yaml": {
+      "verified": 0,
+      "drift": 0,
+      "fetchFail": 0,
+      "summaryOnlySkipped": 32,
+      "legacyVerbatimWarned": 0,
+      "sources": 0
+    },
+    "apiq-ruleset-evolution-p3.yaml": {
+      "verified": 0,
+      "drift": 0,
+      "fetchFail": 0,
+      "summaryOnlySkipped": 1,
+      "legacyVerbatimWarned": 0,
+      "sources": 0
+    },
+    "apiq-ruleset-evolution.yaml": {
+      "verified": 1,
+      "drift": 0,
+      "fetchFail": 0,
+      "summaryOnlySkipped": 3,
+      "legacyVerbatimWarned": 0,
+      "sources": 1
+    },
+    "apiq-ruleset-other-p3.yaml": {
+      "verified": 0,
+      "drift": 0,
+      "fetchFail": 0,
+      "summaryOnlySkipped": 16,
+      "legacyVerbatimWarned": 0,
+      "sources": 0
+    },
+    "apiq-ruleset-standards-p3.yaml": {
+      "verified": 15,
+      "drift": 0,
+      "fetchFail": 0,
+      "summaryOnlySkipped": 49,
+      "legacyVerbatimWarned": 0,
+      "sources": 15
+    },
+    "apiq-ruleset-threat-p1.yaml": {
+      "verified": 3,
+      "drift": 0,
+      "fetchFail": 0,
+      "summaryOnlySkipped": 19,
+      "legacyVerbatimWarned": 0,
+      "sources": 3
+    },
+    "apiq-ruleset-threat-p2.yaml": {
+      "verified": 15,
+      "drift": 0,
+      "fetchFail": 0,
+      "summaryOnlySkipped": 15,
+      "legacyVerbatimWarned": 0,
+      "sources": 15
+    },
+    "apiq-ruleset-threat-p3.yaml": {
+      "verified": 0,
+      "drift": 0,
+      "fetchFail": 0,
+      "summaryOnlySkipped": 14,
+      "legacyVerbatimWarned": 0,
+      "sources": 0
+    },
+    "apiq-ruleset.yaml": {
+      "verified": 0,
+      "drift": 0,
+      "fetchFail": 0,
+      "summaryOnlySkipped": 8,
+      "legacyVerbatimWarned": 0,
+      "sources": 0
+    }
+  },
+  "results": [
+    {
+      "yamlFile": "apiq-ruleset-evolution.yaml",
+      "ruleName": "apiq-ev-1-deprecated-needs-sunset",
+      "sourceIndex": 1,
+      "url": "https://www.rfc-editor.org/rfc/rfc9745",
+      "quote": "The Deprecation HTTP response header field is used to signal to consumers of a resource (identified by a URI) that the resource will be or has been deprecated.",
+      "status": "verified",
+      "newVerifiedAt": "2026-05-09"
+    },
+    {
+      "yamlFile": "apiq-ruleset-standards-p3.yaml",
+      "ruleName": "apiq-rfc2-13-1xx-upgrade-connection",
+      "sourceIndex": 0,
+      "url": "https://www.rfc-editor.org/rfc/rfc9110#section-15.2.2",
+      "quote": "A server that sends a 101 (Switching Protocols) response MUST send an Upgrade header field",
+      "status": "verified",
+      "newVerifiedAt": "2026-05-09"
+    },
+    {
+      "yamlFile": "apiq-ruleset-standards-p3.yaml",
+      "ruleName": "apiq-rfc2-15-426-upgrade-required",
+      "sourceIndex": 0,
+      "url": "https://www.rfc-editor.org/rfc/rfc9110#section-15.5.22",
+      "quote": "A server that sends a 426 (Upgrade Required) response MUST send an Upgrade header field",
+      "status": "verified",
+      "newVerifiedAt": "2026-05-09"
+    },
+    {
+      "yamlFile": "apiq-ruleset-standards-p3.yaml",
+      "ruleName": "apiq-rfc2-18-content-length-not-declared",
+      "sourceIndex": 0,
+      "url": "https://www.rfc-editor.org/rfc/rfc9110#section-8.6",
+      "quote": "The \"Content-Length\" header field indicates the associated representation's data length",
+      "status": "verified",
+      "newVerifiedAt": "2026-05-09"
+    },
+    {
+      "yamlFile": "apiq-ruleset-standards-p3.yaml",
+      "ruleName": "apiq-rfc2-19-date-header-not-declared",
+      "sourceIndex": 0,
+      "url": "https://www.rfc-editor.org/rfc/rfc9110#section-6.6.1",
+      "quote": "The \"Date\" header field represents the date and time at which the message was originated",
+      "status": "verified",
+      "newVerifiedAt": "2026-05-09"
+    },
+    {
+      "yamlFile": "apiq-ruleset-standards-p3.yaml",
+      "ruleName": "apiq-rfc2-23-if-modified-since-implies-304",
+      "sourceIndex": 0,
+      "url": "https://www.rfc-editor.org/rfc/rfc9110#section-13.1.3",
+      "quote": "The \"If-Modified-Since\" header field",
+      "status": "verified",
+      "newVerifiedAt": "2026-05-09"
+    },
+    {
+      "yamlFile": "apiq-ruleset-standards-p3.yaml",
+      "ruleName": "apiq-rfc2-24-if-unmodified-since-implies-412",
+      "sourceIndex": 0,
+      "url": "https://www.rfc-editor.org/rfc/rfc9110#section-13.1.4",
+      "quote": "The \"If-Unmodified-Since\" header field",
+      "status": "verified",
+      "newVerifiedAt": "2026-05-09"
+    },
+    {
+      "yamlFile": "apiq-ruleset-standards-p3.yaml",
+      "ruleName": "apiq-rfc2-27-etag-opaque-quoted",
+      "sourceIndex": 0,
+      "url": "https://www.rfc-editor.org/rfc/rfc9110#section-8.8.3",
+      "quote": "opaque-tag       = DQUOTE *etagc DQUOTE",
+      "status": "verified",
+      "newVerifiedAt": "2026-05-09"
+    },
+    {
+      "yamlFile": "apiq-ruleset-standards-p3.yaml",
+      "ruleName": "apiq-rfc2-cache-validators-bundle",
+      "sourceIndex": 1,
+      "url": "https://www.rfc-editor.org/rfc/rfc9111#section-5.4",
+      "quote": "Pragma",
+      "status": "verified",
+      "newVerifiedAt": "2026-05-09"
+    },
+    {
+      "yamlFile": "apiq-ruleset-standards-p3.yaml",
+      "ruleName": "apiq-rfc2-41-407-proxy-authenticate-required",
+      "sourceIndex": 0,
+      "url": "https://www.rfc-editor.org/rfc/rfc9110#section-11.7.1",
+      "quote": "A proxy MUST send at least one Proxy-Authenticate header field in each 407 (Proxy Authentication Required) response that it generates.",
+      "status": "verified",
+      "newVerifiedAt": "2026-05-09"
+    },
+    {
+      "yamlFile": "apiq-ruleset-standards-p3.yaml",
+      "ruleName": "apiq-rfc2-44-digest-auth-outdated",
+      "sourceIndex": 0,
+      "url": "https://www.rfc-editor.org/rfc/rfc7616",
+      "quote": "HTTP Digest Access Authentication",
+      "status": "verified",
+      "newVerifiedAt": "2026-05-09"
+    },
+    {
+      "yamlFile": "apiq-ruleset-standards-p3.yaml",
+      "ruleName": "apiq-rfc2-46-prefer-implies-preference-applied",
+      "sourceIndex": 0,
+      "url": "https://www.rfc-editor.org/rfc/rfc7240#section-3",
+      "quote": "Preference-Applied",
+      "status": "verified",
+      "newVerifiedAt": "2026-05-09"
+    },
+    {
+      "yamlFile": "apiq-ruleset-standards-p3.yaml",
+      "ruleName": "apiq-rfc2-48-prefer-respond-async-implies-202",
+      "sourceIndex": 0,
+      "url": "https://www.rfc-editor.org/rfc/rfc7240#section-4.1",
+      "quote": "respond-async",
+      "status": "verified",
+      "newVerifiedAt": "2026-05-09"
+    },
+    {
+      "yamlFile": "apiq-ruleset-standards-p3.yaml",
+      "ruleName": "apiq-rfc2-63-oauth2-authcode-refresh-url",
+      "sourceIndex": 0,
+      "url": "https://www.rfc-editor.org/rfc/rfc9700#section-4.14",
+      "quote": "Refresh tokens",
+      "status": "verified",
+      "newVerifiedAt": "2026-05-09"
+    },
+    {
+      "yamlFile": "apiq-ruleset-standards-p3.yaml",
+      "ruleName": "apiq-rfc2-64-oauth2-clientcred-scopes-defined",
+      "sourceIndex": 0,
+      "url": "https://www.rfc-editor.org/rfc/rfc9700#section-2.3",
+      "quote": "Access Token Privilege Restriction",
+      "status": "verified",
+      "newVerifiedAt": "2026-05-09"
+    },
+    {
+      "yamlFile": "apiq-ruleset-standards-p3.yaml",
+      "ruleName": "apiq-rfc2-67-path-segment-grammar",
+      "sourceIndex": 0,
+      "url": "https://www.rfc-editor.org/rfc/rfc3986#section-3.3",
+      "quote": "segment       = *pchar",
+      "status": "verified",
+      "newVerifiedAt": "2026-05-09"
+    },
+    {
+      "yamlFile": "apiq-ruleset-threat-p1.yaml",
+      "ruleName": "apiq-tm-a6-openid-connect-url-https",
+      "sourceIndex": 0,
+      "url": "https://www.rfc-editor.org/rfc/rfc6749#section-3.1",
+      "quote": "the authorization server MUST require the use of TLS",
+      "status": "verified",
+      "newVerifiedAt": "2026-05-09"
+    },
+    {
+      "yamlFile": "apiq-ruleset-threat-p1.yaml",
+      "ruleName": "apiq-tm-a10-bearer-token-in-url",
+      "sourceIndex": 1,
+      "url": "https://www.rfc-editor.org/rfc/rfc6750#section-2.3",
+      "quote": "the high likelihood that the URL containing the access token will be logged, it SHOULD NOT be used",
+      "status": "verified",
+      "newVerifiedAt": "2026-05-09"
+    },
+    {
+      "yamlFile": "apiq-ruleset-threat-p1.yaml",
+      "ruleName": "apiq-tm-a53-401-www-authenticate",
+      "sourceIndex": 0,
+      "url": "https://www.rfc-editor.org/rfc/rfc9110#section-11.6.1",
+      "quote": "The server generating a 401 response MUST send a WWW-Authenticate header field",
+      "status": "verified",
+      "newVerifiedAt": "2026-05-09"
+    },
+    {
+      "yamlFile": "apiq-ruleset-threat-p2.yaml",
+      "ruleName": "apiq-tm-y8-jwt-bearer-rfc-8725-mention",
+      "sourceIndex": 0,
+      "url": "https://www.rfc-editor.org/rfc/rfc8725#section-3.3",
+      "quote": "All cryptographic operations used in the JWT MUST be validated and the entire JWT MUST be rejected if any of them fail to validate.",
+      "status": "verified",
+      "newVerifiedAt": "2026-05-09"
+    },
+    {
+      "yamlFile": "apiq-ruleset-threat-p2.yaml",
+      "ruleName": "apiq-tm-a7-oauth2-authcode-pkce-recommended",
+      "sourceIndex": 0,
+      "url": "https://www.rfc-editor.org/rfc/rfc9700#section-2.1.1",
+      "quote": "Public clients MUST use PKCE",
+      "status": "verified",
+      "newVerifiedAt": "2026-05-09"
+    },
+    {
+      "yamlFile": "apiq-ruleset-threat-p2.yaml",
+      "ruleName": "apiq-rfc2-1-problem-json-needs-type",
+      "sourceIndex": 0,
+      "url": "https://www.rfc-editor.org/rfc/rfc9457#section-3.1",
+      "quote": "Problem detail objects can have the following members.",
+      "status": "verified",
+      "newVerifiedAt": "2026-05-09"
+    },
+    {
+      "yamlFile": "apiq-ruleset-threat-p2.yaml",
+      "ruleName": "apiq-rfc2-2-problem-details-type-uri",
+      "sourceIndex": 0,
+      "url": "https://www.rfc-editor.org/rfc/rfc9457#section-3.1.1",
+      "quote": "The \"type\" member is a JSON string containing a URI reference [URI] that identifies the problem type.",
+      "status": "verified",
+      "newVerifiedAt": "2026-05-09"
+    },
+    {
+      "yamlFile": "apiq-ruleset-threat-p2.yaml",
+      "ruleName": "apiq-rfc2-3-problem-details-status-matches-http-status",
+      "sourceIndex": 0,
+      "url": "https://www.rfc-editor.org/rfc/rfc9457#section-3.1.2",
+      "quote": "Generators MUST use the same status code in the actual HTTP response",
+      "status": "verified",
+      "newVerifiedAt": "2026-05-09"
+    },
+    {
+      "yamlFile": "apiq-ruleset-threat-p2.yaml",
+      "ruleName": "apiq-rfc2-11-header-names-title-case",
+      "sourceIndex": 0,
+      "url": "https://www.rfc-editor.org/rfc/rfc9110#section-5.1",
+      "quote": "Field names are case-insensitive",
+      "status": "verified",
+      "newVerifiedAt": "2026-05-09"
+    },
+    {
+      "yamlFile": "apiq-ruleset-threat-p2.yaml",
+      "ruleName": "apiq-rfc2-conditional-request-correctness",
+      "sourceIndex": 0,
+      "url": "https://www.rfc-editor.org/rfc/rfc9110#section-13.1.1",
+      "quote": "If-Match",
+      "status": "verified",
+      "newVerifiedAt": "2026-05-09"
+    },
+    {
+      "yamlFile": "apiq-ruleset-threat-p2.yaml",
+      "ruleName": "apiq-rfc2-32-partial-content-content-range",
+      "sourceIndex": 0,
+      "url": "https://www.rfc-editor.org/rfc/rfc9110#section-15.3.7",
+      "quote": "the server generating the 206 response MUST generate a Content-Range header field",
+      "status": "verified",
+      "newVerifiedAt": "2026-05-09"
+    },
+    {
+      "yamlFile": "apiq-ruleset-threat-p2.yaml",
+      "ruleName": "apiq-rfc2-58-jwt-bearer-rfc-8725-alias",
+      "sourceIndex": 0,
+      "url": "https://www.rfc-editor.org/rfc/rfc8725#section-3.1",
+      "quote": "Libraries MUST enable the caller to specify a supported set of algorithms and MUST NOT use any other algorithms when performing cryptographic operations.",
+      "status": "verified",
+      "newVerifiedAt": "2026-05-09"
+    },
+    {
+      "yamlFile": "apiq-ruleset-threat-p2.yaml",
+      "ruleName": "apiq-rfc2-59-bearer-401-www-authenticate-realm",
+      "sourceIndex": 0,
+      "url": "https://www.rfc-editor.org/rfc/rfc6750#section-3",
+      "quote": "the resource server MUST include the HTTP \"WWW-Authenticate\" response header field",
+      "status": "verified",
+      "newVerifiedAt": "2026-05-09"
+    },
+    {
+      "yamlFile": "apiq-ruleset-threat-p2.yaml",
+      "ruleName": "apiq-rfc2-65-oauth2-scopes-need-descriptions",
+      "sourceIndex": 0,
+      "url": "https://www.rfc-editor.org/rfc/rfc6749#section-3.3",
+      "quote": "scope-token = 1*( %x21 / %x23-5B / %x5D-7E )",
+      "status": "verified",
+      "newVerifiedAt": "2026-05-09"
+    },
+    {
+      "yamlFile": "apiq-ruleset-threat-p2.yaml",
+      "ruleName": "apiq-rfc2-69-path-no-fragment",
+      "sourceIndex": 0,
+      "url": "https://www.rfc-editor.org/rfc/rfc3986#section-3.5",
+      "quote": "A fragment identifier component is indicated by the presence of a number sign (\"#\") character and terminated by the end of the URI.",
+      "status": "verified",
+      "newVerifiedAt": "2026-05-09"
+    },
+    {
+      "yamlFile": "apiq-ruleset-threat-p2.yaml",
+      "ruleName": "apiq-rfc2-70-oas-path-template-level1-only",
+      "sourceIndex": 0,
+      "url": "https://www.rfc-editor.org/rfc/rfc6570",
+      "quote": "we refer to these as Level 1 templates.",
+      "status": "verified",
+      "newVerifiedAt": "2026-05-09"
+    },
+    {
+      "yamlFile": "apiq-ruleset-threat-p2.yaml",
+      "ruleName": "apiq-rfc2-74-server-url-no-userinfo",
+      "sourceIndex": 0,
+      "url": "https://www.rfc-editor.org/rfc/rfc3986#section-3.2.1",
+      "quote": "Use of the format \"user:password\" in the userinfo field is deprecated.",
+      "status": "verified",
+      "newVerifiedAt": "2026-05-09"
+    },
+    {
+      "yamlFile": "apiq-ruleset-threat-p2.yaml",
+      "ruleName": "apiq-rfc2-97-patch-content-type-correct",
+      "sourceIndex": 0,
+      "url": "https://www.rfc-editor.org/rfc/rfc7396",
+      "quote": "This specification defines the JSON merge patch format and processing rules.",
+      "status": "verified",
+      "newVerifiedAt": "2026-05-09"
+    }
+  ],
+  "skipped": [
+    {
+      "yamlFile": "apiq-ruleset-client-p1.yaml",
+      "ruleName": "apiq-cl1-property-name-reserved-keyword",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-client-p1.yaml",
+      "ruleName": "apiq-cl1-operationid-reserved-keyword",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-client-p1.yaml",
+      "ruleName": "apiq-cl6-operationid-required",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-client-p1.yaml",
+      "ruleName": "apiq-cl12-oneof-needs-discriminator",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-client-p1.yaml",
+      "ruleName": "apiq-cl20-204-must-not-have-content",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-client-p1.yaml",
+      "ruleName": "apiq-cl36-example-value-xor-externalvalue",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-client-p1.yaml",
+      "ruleName": "apiq-cl40-path-must-not-have-query",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-client-p1.yaml",
+      "ruleName": "apiq-cl46-error-response-needs-shape",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-client-p1.yaml",
+      "ruleName": "apiq-cl81-no-ref-siblings",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-client-p2.yaml",
+      "ruleName": "apiq-cl4-inline-object-needs-title",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-client-p2.yaml",
+      "ruleName": "apiq-cl5-operationid-not-verbose",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-client-p2.yaml",
+      "ruleName": "apiq-cl7-required-nullable-3-state",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-client-p2.yaml",
+      "ruleName": "apiq-cl9-no-multi-content-types-same-status",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-client-p2.yaml",
+      "ruleName": "apiq-cl13-discriminator-property-required",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-client-p2.yaml",
+      "ruleName": "apiq-cl15-integer-needs-format",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-client-p2.yaml",
+      "ruleName": "apiq-cl17-recursive-schema-needs-termination",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-client-p2.yaml",
+      "ruleName": "apiq-cl18-recursive-cycle-required-field",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-client-p2.yaml",
+      "ruleName": "apiq-cl21-format-known-only",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-client-p2.yaml",
+      "ruleName": "apiq-cl22-object-needs-properties-or-additional-properties",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-client-p2.yaml",
+      "ruleName": "apiq-cl24-multi-type-needs-oneof",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-client-p2.yaml",
+      "ruleName": "apiq-cl25-pattern-multi-engine-portable",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-client-p2.yaml",
+      "ruleName": "apiq-cl29-no-deep-inline-nesting",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-client-p2.yaml",
+      "ruleName": "apiq-cl35-schema-name-not-sdk-reserved",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-client-p2.yaml",
+      "ruleName": "apiq-cl48-similar-schemas-walker-sentinel",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-client-p2.yaml",
+      "ruleName": "apiq-cl54-security-schemes-not-mixed",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-client-p2.yaml",
+      "ruleName": "apiq-cl56-enum-value-identifier-safe",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-client-p2.yaml",
+      "ruleName": "apiq-cl77-allof-not-heavy-inline",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-client-p2.yaml",
+      "ruleName": "apiq-f11-no-amorphous-uri-segments",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-client-p2.yaml",
+      "ruleName": "apiq-f12-no-tiny-resource-segments",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-client-p2.yaml",
+      "ruleName": "apiq-f13-no-verb-in-uri-path",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-client-p2.yaml",
+      "ruleName": "apiq-f14-pluralised-nodes-walker-sentinel",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-client-p3.yaml",
+      "ruleName": "apiq-cl3-camelize-collide-property-schema",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-client-p3.yaml",
+      "ruleName": "apiq-cl8-required-asymmetry-request-response",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-client-p3.yaml",
+      "ruleName": "apiq-cl10-no-mixed-text-json-same-code",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-client-p3.yaml",
+      "ruleName": "apiq-cl14-discriminator-property-no-underscore-prefix",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-client-p3.yaml",
+      "ruleName": "apiq-cl16-int64-needs-string-alternative",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-client-p3.yaml",
+      "ruleName": "apiq-cl19-empty-body-2xx-4xx-discriminator",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-client-p3.yaml",
+      "ruleName": "apiq-cl23-no-free-form-additional-properties",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-client-p3.yaml",
+      "ruleName": "apiq-cl27-response-ref-consistent",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-client-p3.yaml",
+      "ruleName": "apiq-cl28-no-patterned-status-codes",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-client-p3.yaml",
+      "ruleName": "apiq-cl30-no-deep-composition-chains",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-client-p3.yaml",
+      "ruleName": "apiq-cl32-no-array-of-array",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-client-p3.yaml",
+      "ruleName": "apiq-cl34-property-name-not-client",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-client-p3.yaml",
+      "ruleName": "apiq-cl38-description-no-leading-space-lines",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-client-p3.yaml",
+      "ruleName": "apiq-cl39-description-no-html-or-complex-markdown",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-client-p3.yaml",
+      "ruleName": "apiq-cl41-no-external-relative-ref",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-client-p3.yaml",
+      "ruleName": "apiq-cl42-no-external-https-ref",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-client-p3.yaml",
+      "ruleName": "apiq-cl43-description-no-ref-like-strings",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-client-p3.yaml",
+      "ruleName": "apiq-cl44-field-name-length-balanced",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-client-p3.yaml",
+      "ruleName": "apiq-cl47-crud-shape-consistent",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-client-p3.yaml",
+      "ruleName": "apiq-cl51-params-order-required-first",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-client-p3.yaml",
+      "ruleName": "apiq-cl52-dict-value-type-consistent-walker-sentinel",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-client-p3.yaml",
+      "ruleName": "apiq-cl53-total-required-inputs-bounded",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-client-p3.yaml",
+      "ruleName": "apiq-cl61-vendor-extension-prefix-consistent",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-client-p3.yaml",
+      "ruleName": "apiq-cl62-tags-coherent-on-resource-walker-sentinel",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-client-p3.yaml",
+      "ruleName": "apiq-cl65-required-boolean-needs-default",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-client-p3.yaml",
+      "ruleName": "apiq-cl67-oneof-needs-multiple-elements",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-client-p3.yaml",
+      "ruleName": "apiq-cl72-no-multipart-mixed",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-client-p3.yaml",
+      "ruleName": "apiq-cl74-webhook-signature-walker-sentinel",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-client-p3.yaml",
+      "ruleName": "apiq-cl75-tag-casing-consistent",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-client-p3.yaml",
+      "ruleName": "apiq-cl78-no-allof-oneof-anyof-siblings",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-client-p3.yaml",
+      "ruleName": "apiq-cl79-no-form-and-json-same-request",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-client-p3.yaml",
+      "ruleName": "apiq-cl80-no-readonly-required-conflict",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-evolution-p3.yaml",
+      "ruleName": "apiq-ev-59-3xx-without-location",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-evolution.yaml",
+      "ruleName": "apiq-ev-1-deprecated-needs-sunset",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-evolution.yaml",
+      "ruleName": "apiq-ev-48-patch-content-type",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-evolution.yaml",
+      "ruleName": "apiq-ev-48-patch-content-type",
+      "sourceIndex": 1,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-other-p3.yaml",
+      "ruleName": "apiq-sc-3-http-method-semantics",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-other-p3.yaml",
+      "ruleName": "apiq-sc-12-siren-class-array",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-other-p3.yaml",
+      "ruleName": "apiq-sc-25-status-code-distribution",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-other-p3.yaml",
+      "ruleName": "apiq-scf-2-jsonapi-resource-type-id",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-other-p3.yaml",
+      "ruleName": "apiq-scf-6-jsonapi-no-extra-top-level",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-other-p3.yaml",
+      "ruleName": "apiq-scf-7-hal-response-has-links",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-other-p3.yaml",
+      "ruleName": "apiq-scf-9-siren-class-array",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-other-p3.yaml",
+      "ruleName": "apiq-scf-10-siren-actions-name-href",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-other-p3.yaml",
+      "ruleName": "apiq-scf-11-odata-list-value-array",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-other-p3.yaml",
+      "ruleName": "apiq-scf-13-aip-custom-method-uses-post",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-other-p3.yaml",
+      "ruleName": "apiq-scf-14-aip-list-standard-params",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-other-p3.yaml",
+      "ruleName": "apiq-l7-1-list-endpoint-cache-headers",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-other-p3.yaml",
+      "ruleName": "apiq-f-2-accept-language-on-user-facing",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-other-p3.yaml",
+      "ruleName": "apiq-f-3-time-zone-explicit-datetime",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-other-p3.yaml",
+      "ruleName": "apiq-f-19-lazy-description",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-other-p3.yaml",
+      "ruleName": "apiq-f-20-bearer-format-jwt-declared",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-standards-p3.yaml",
+      "ruleName": "apiq-rfc2-4-problem-details-reserved-names",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-standards-p3.yaml",
+      "ruleName": "apiq-rfc2-4-problem-details-reserved-names",
+      "sourceIndex": 1,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-standards-p3.yaml",
+      "ruleName": "apiq-rfc2-4-problem-details-reserved-names",
+      "sourceIndex": 2,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-standards-p3.yaml",
+      "ruleName": "apiq-rfc2-13-1xx-upgrade-connection",
+      "sourceIndex": 1,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-standards-p3.yaml",
+      "ruleName": "apiq-rfc2-15-426-upgrade-required",
+      "sourceIndex": 1,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-standards-p3.yaml",
+      "ruleName": "apiq-rfc2-17-1xx-codes-as-response-keys",
+      "sourceIndex": 1,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-standards-p3.yaml",
+      "ruleName": "apiq-rfc2-18-content-length-not-declared",
+      "sourceIndex": 1,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-standards-p3.yaml",
+      "ruleName": "apiq-rfc2-19-date-header-not-declared",
+      "sourceIndex": 1,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-standards-p3.yaml",
+      "ruleName": "apiq-rfc2-23-if-modified-since-implies-304",
+      "sourceIndex": 1,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-standards-p3.yaml",
+      "ruleName": "apiq-rfc2-24-if-unmodified-since-implies-412",
+      "sourceIndex": 1,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-standards-p3.yaml",
+      "ruleName": "apiq-rfc2-27-etag-opaque-quoted",
+      "sourceIndex": 1,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-standards-p3.yaml",
+      "ruleName": "apiq-rfc2-28-etag-cross-resource-consistency",
+      "sourceIndex": 1,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-standards-p3.yaml",
+      "ruleName": "apiq-rfc2-29-id-write-op-etag-support",
+      "sourceIndex": 2,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-standards-p3.yaml",
+      "ruleName": "apiq-rfc2-cache-header-bundle",
+      "sourceIndex": 2,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-standards-p3.yaml",
+      "ruleName": "apiq-rfc2-cache-header-bundle",
+      "sourceIndex": 4,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-standards-p3.yaml",
+      "ruleName": "apiq-rfc2-cache-validators-bundle",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-standards-p3.yaml",
+      "ruleName": "apiq-rfc2-cache-validators-bundle",
+      "sourceIndex": 2,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-standards-p3.yaml",
+      "ruleName": "apiq-rfc2-cache-validators-bundle",
+      "sourceIndex": 5,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-standards-p3.yaml",
+      "ruleName": "apiq-rfc2-41-407-proxy-authenticate-required",
+      "sourceIndex": 1,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-standards-p3.yaml",
+      "ruleName": "apiq-rfc2-42-www-authenticate-iana-scheme",
+      "sourceIndex": 2,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-standards-p3.yaml",
+      "ruleName": "apiq-rfc2-44-digest-auth-outdated",
+      "sourceIndex": 1,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-standards-p3.yaml",
+      "ruleName": "apiq-rfc2-46-prefer-implies-preference-applied",
+      "sourceIndex": 1,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-standards-p3.yaml",
+      "ruleName": "apiq-rfc2-47-prefer-iana-tokens",
+      "sourceIndex": 2,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-standards-p3.yaml",
+      "ruleName": "apiq-rfc2-48-prefer-respond-async-implies-202",
+      "sourceIndex": 1,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-standards-p3.yaml",
+      "ruleName": "apiq-rfc2-50-sfv-header-example-required",
+      "sourceIndex": 1,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-standards-p3.yaml",
+      "ruleName": "apiq-rfc2-link-header-bundle",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-standards-p3.yaml",
+      "ruleName": "apiq-rfc2-link-header-bundle",
+      "sourceIndex": 5,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-standards-p3.yaml",
+      "ruleName": "apiq-rfc2-57-bearer-format-declared",
+      "sourceIndex": 2,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-standards-p3.yaml",
+      "ruleName": "apiq-rfc2-63-oauth2-authcode-refresh-url",
+      "sourceIndex": 1,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-standards-p3.yaml",
+      "ruleName": "apiq-rfc2-64-oauth2-clientcred-scopes-defined",
+      "sourceIndex": 1,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-standards-p3.yaml",
+      "ruleName": "apiq-rfc2-67-path-segment-grammar",
+      "sourceIndex": 1,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-standards-p3.yaml",
+      "ruleName": "apiq-rfc2-81-int64-string-encoded",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-standards-p3.yaml",
+      "ruleName": "apiq-rfc2-81-int64-string-encoded",
+      "sourceIndex": 2,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-standards-p3.yaml",
+      "ruleName": "apiq-rfc2-85-oas31-jsonschema-dialect",
+      "sourceIndex": 1,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-standards-p3.yaml",
+      "ruleName": "apiq-rfc2-86-definitions-deprecated",
+      "sourceIndex": 1,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-standards-p3.yaml",
+      "ruleName": "apiq-rfc2-87-id-keyword-deprecated",
+      "sourceIndex": 1,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-standards-p3.yaml",
+      "ruleName": "apiq-rfc2-88-exclusive-bound-numeric",
+      "sourceIndex": 1,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-standards-p3.yaml",
+      "ruleName": "apiq-rfc2-91-deprecation-pairs-sunset",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-standards-p3.yaml",
+      "ruleName": "apiq-rfc2-91-deprecation-pairs-sunset",
+      "sourceIndex": 1,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-standards-p3.yaml",
+      "ruleName": "apiq-rfc2-91-deprecation-pairs-sunset",
+      "sourceIndex": 2,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-standards-p3.yaml",
+      "ruleName": "apiq-rfc2-92-sunset-http-date",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-standards-p3.yaml",
+      "ruleName": "apiq-rfc2-92-sunset-http-date",
+      "sourceIndex": 1,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-standards-p3.yaml",
+      "ruleName": "apiq-rfc2-93-ratelimit-triplet-consistency",
+      "sourceIndex": 1,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-standards-p3.yaml",
+      "ruleName": "apiq-rfc2-98-merge-patch-no-required",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-standards-p3.yaml",
+      "ruleName": "apiq-rfc2-98-merge-patch-no-required",
+      "sourceIndex": 1,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-standards-p3.yaml",
+      "ruleName": "apiq-rfc2-99-json-patch-array-type",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-standards-p3.yaml",
+      "ruleName": "apiq-rfc2-99-json-patch-array-type",
+      "sourceIndex": 1,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-standards-p3.yaml",
+      "ruleName": "apiq-rfc2-multipart-form-bundle",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-standards-p3.yaml",
+      "ruleName": "apiq-rfc2-multipart-form-bundle",
+      "sourceIndex": 2,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-threat-p1.yaml",
+      "ruleName": "apiq-tm-y2-api-key-in-url",
+      "sourceIndex": 1,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-threat-p1.yaml",
+      "ruleName": "apiq-tm-y2-api-key-in-url-components",
+      "sourceIndex": 1,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-threat-p1.yaml",
+      "ruleName": "apiq-tm-y3-credentials-in-path-template",
+      "sourceIndex": 1,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-threat-p1.yaml",
+      "ruleName": "apiq-tm-y4-http-basic-on-insecure-server",
+      "sourceIndex": 1,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-threat-p1.yaml",
+      "ruleName": "apiq-tm-y5-oauth2-authorization-url-https",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-threat-p1.yaml",
+      "ruleName": "apiq-tm-y5-oauth2-token-url-https",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-threat-p1.yaml",
+      "ruleName": "apiq-tm-y5-oauth2-refresh-url-https",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-threat-p1.yaml",
+      "ruleName": "apiq-tm-y5-oauth2-refresh-url-https",
+      "sourceIndex": 1,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-threat-p1.yaml",
+      "ruleName": "apiq-tm-y7-oauth2-implicit-flow-forbidden",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-threat-p1.yaml",
+      "ruleName": "apiq-tm-y7-oauth2-implicit-flow-forbidden",
+      "sourceIndex": 1,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-threat-p1.yaml",
+      "ruleName": "apiq-tm-y7-oauth2-password-flow-forbidden",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-threat-p1.yaml",
+      "ruleName": "apiq-tm-y23-write-op-needs-security",
+      "sourceIndex": 2,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-threat-p1.yaml",
+      "ruleName": "apiq-tm-a11-mass-assignment-fields",
+      "sourceIndex": 1,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-threat-p1.yaml",
+      "ruleName": "apiq-tm-a15-pii-named-fields-response",
+      "sourceIndex": 2,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-threat-p1.yaml",
+      "ruleName": "apiq-tm-a17-additional-properties-true-request",
+      "sourceIndex": 1,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-threat-p1.yaml",
+      "ruleName": "apiq-tm-a23-pagination-param-needs-maximum",
+      "sourceIndex": 1,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-threat-p1.yaml",
+      "ruleName": "apiq-tm-a34-url-property-format-and-pattern",
+      "sourceIndex": 2,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-threat-p1.yaml",
+      "ruleName": "apiq-tm-a42-error-schema-no-stack-trace",
+      "sourceIndex": 1,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-threat-p1.yaml",
+      "ruleName": "apiq-tm-a44-no-debug-paths",
+      "sourceIndex": 2,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-threat-p2.yaml",
+      "ruleName": "apiq-tm-y1-numeric-id-path-params",
+      "sourceIndex": 3,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-threat-p2.yaml",
+      "ruleName": "apiq-tm-y8-jwt-bearer-rfc-8725-mention",
+      "sourceIndex": 2,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-threat-p2.yaml",
+      "ruleName": "apiq-tm-y10-component-schema-additional-properties-false",
+      "sourceIndex": 2,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-threat-p2.yaml",
+      "ruleName": "apiq-tm-y15-url-property-needs-format-uri",
+      "sourceIndex": 2,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-threat-p2.yaml",
+      "ruleName": "apiq-tm-y21-property-name-no-programming-keywords",
+      "sourceIndex": 2,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-threat-p2.yaml",
+      "ruleName": "apiq-tm-a2-object-id-write-op-needs-security",
+      "sourceIndex": 1,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-threat-p2.yaml",
+      "ruleName": "apiq-tm-a5-bearer-jwt-text-rfc-8725-mention",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-threat-p2.yaml",
+      "ruleName": "apiq-tm-a9-login-endpoint-rate-limit",
+      "sourceIndex": 1,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-threat-p2.yaml",
+      "ruleName": "apiq-tm-a46-deprecated-needs-sunset-replacement",
+      "sourceIndex": 1,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-threat-p2.yaml",
+      "ruleName": "apiq-tm-a46-deprecated-needs-sunset-replacement",
+      "sourceIndex": 2,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-threat-p2.yaml",
+      "ruleName": "apiq-rfc2-conditional-request-correctness",
+      "sourceIndex": 1,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-threat-p2.yaml",
+      "ruleName": "apiq-rfc2-conditional-request-correctness",
+      "sourceIndex": 2,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-threat-p2.yaml",
+      "ruleName": "apiq-rfc2-conditional-request-correctness",
+      "sourceIndex": 3,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-threat-p2.yaml",
+      "ruleName": "apiq-rfc2-97-patch-content-type-correct",
+      "sourceIndex": 1,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-threat-p2.yaml",
+      "ruleName": "apiq-rfc2-97-patch-content-type-correct",
+      "sourceIndex": 2,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-threat-p3.yaml",
+      "ruleName": "apiq-tm-y6-oauth2-refresh-url-recommended",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-threat-p3.yaml",
+      "ruleName": "apiq-tm-y20-server-url-no-port",
+      "sourceIndex": 1,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-threat-p3.yaml",
+      "ruleName": "apiq-tm-y25-post-creates-need-idempotency-key",
+      "sourceIndex": 1,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-threat-p3.yaml",
+      "ruleName": "apiq-tm-a3-three-or-more-id-params-bola",
+      "sourceIndex": 1,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-threat-p3.yaml",
+      "ruleName": "apiq-tm-a4-body-contains-user-id-on-non-admin",
+      "sourceIndex": 1,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-threat-p3.yaml",
+      "ruleName": "apiq-tm-a8-multiple-and-security-same-type",
+      "sourceIndex": 1,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-threat-p3.yaml",
+      "ruleName": "apiq-tm-a25-long-running-op-async-pattern",
+      "sourceIndex": 1,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-threat-p3.yaml",
+      "ruleName": "apiq-tm-a27-admin-shares-public-security",
+      "sourceIndex": 1,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-threat-p3.yaml",
+      "ruleName": "apiq-tm-a29-resource-only-get-no-write",
+      "sourceIndex": 1,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-threat-p3.yaml",
+      "ruleName": "apiq-tm-a30-non-standard-method-needs-security",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-threat-p3.yaml",
+      "ruleName": "apiq-tm-a31-signup-needs-rate-limit-or-captcha",
+      "sourceIndex": 1,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-threat-p3.yaml",
+      "ruleName": "apiq-tm-a33-posting-comment-needs-rate-limit",
+      "sourceIndex": 1,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-threat-p3.yaml",
+      "ruleName": "apiq-tm-a43-non-standard-method-without-security",
+      "sourceIndex": 1,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset-threat-p3.yaml",
+      "ruleName": "apiq-tm-a49-upstream-url-op-needs-5xx-explicit",
+      "sourceIndex": 1,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset.yaml",
+      "ruleName": "apiq-deepobject-only-on-objects",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset.yaml",
+      "ruleName": "apiq-no-ref-siblings",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset.yaml",
+      "ruleName": "apiq-no-content-type-header-parameter",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset.yaml",
+      "ruleName": "apiq-default-type-matches-integer",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset.yaml",
+      "ruleName": "apiq-default-type-matches-number",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset.yaml",
+      "ruleName": "apiq-default-type-matches-boolean",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset.yaml",
+      "ruleName": "apiq-default-type-matches-string",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    },
+    {
+      "yamlFile": "apiq-ruleset.yaml",
+      "ruleName": "apiq-prefer-iana-markdown-mediatype",
+      "sourceIndex": 0,
+      "reason": "summary-only"
+    }
+  ]
+}

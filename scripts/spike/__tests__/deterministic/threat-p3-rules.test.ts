@@ -80,6 +80,7 @@ const SPIKE_DIR = path.resolve(__dirname, '..', '..');
 const RULESET_PATH = path.join(
   SPIKE_DIR,
   'deterministic',
+  'rules',
   'apiq-ruleset-threat-p3.yaml'
 );
 

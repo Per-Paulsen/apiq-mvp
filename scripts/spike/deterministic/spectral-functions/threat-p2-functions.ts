@@ -89,6 +89,9 @@
  */
 
 import type { IFunction, IFunctionResult } from '@stoplight/spectral-core';
+import { operationHasRateLimitHeader } from './_helpers/rate-limit-headers.js';
+import { getRequestBodyContent } from './_helpers/request-body.js';
+import { effectiveSecurityFor } from './_helpers/security.js';
 
 type AnyObj = Record<string, unknown>;
 
@@ -135,13 +138,10 @@ export const objectIdWriteOpNeedsSecurity: IFunction = function (
   if (!['post', 'put', 'patch', 'delete'].includes(method)) return [];
   const routePath = String(cpath[cpath.length - 2]);
   if (!ID_TEMPLATE_PATTERN.test(routePath)) return [];
-  // Operation-level security wins.
-  if (Array.isArray(op.security)) return [];
-  // Spec-level security inherited.
-  const document = context.document?.data as AnyObj | undefined;
-  if (document && Array.isArray(document.security) && document.security.length > 0) {
-    return [];
-  }
+  const sec = effectiveSecurityFor(op, context.document?.data);
+  // Original semantic: any op-level security array (including `[]` opt-out) wins.
+  if (sec.hasOperationLevel || sec.isEmpty) return [];
+  if (sec.hasSpecLevel) return [];
   return [
     {
       message: `Write op ${method.toUpperCase()} ${routePath} acts on resource-{id} but declares no \`security\` (BOLA-risk per OWASP API1).`,
@@ -206,12 +206,6 @@ export const oauth2AuthCodePkceRecommended: IFunction = function (
 
 const LOGIN_PATH_PATTERN = /\/(login|signin|sign-?in|authenticate|auth\/(?:login|token|signin))(\/|$)/i;
 const PASSWORD_FIELD_PATTERN = /^(password|pwd|passwd|secret|passphrase)$/i;
-const RATE_LIMIT_HEADER_PATTERNS = [
-  /^x-ratelimit-/i,
-  /^ratelimit-/i,
-  /^x-rate-limit-/i,
-  /^retry-after$/i,
-];
 
 function operationHasPasswordField(op: AnyObj): boolean {
   const rb = isObject(op.requestBody) ? op.requestBody : null;
@@ -227,21 +221,6 @@ function operationHasPasswordField(op: AnyObj): boolean {
     if (!props) continue;
     for (const propName of Object.keys(props)) {
       if (PASSWORD_FIELD_PATTERN.test(propName)) return true;
-    }
-  }
-  return false;
-}
-
-function operationHasRateLimitHeader(op: AnyObj): boolean {
-  const responses = isObject(op.responses) ? op.responses : null;
-  if (!responses) return false;
-  for (const rUnknown of Object.values(responses)) {
-    const r = isObject(rUnknown) ? rUnknown : null;
-    if (!r) continue;
-    const headers = isObject(r.headers) ? r.headers : null;
-    if (!headers) continue;
-    for (const headerName of Object.keys(headers)) {
-      if (RATE_LIMIT_HEADER_PATTERNS.some((re) => re.test(headerName))) return true;
     }
   }
   return false;
@@ -399,31 +378,65 @@ export const recursiveSchemaNeedsMaxDepth: IFunction = function (
   const schemas = components && isObject(components.schemas) ? (components.schemas as AnyObj) : null;
   if (!schemas) return [];
 
-  function refersTo(name: string, sch: unknown, visited = new Set<unknown>()): boolean {
-    if (!sch || typeof sch !== 'object' || visited.has(sch)) return false;
-    visited.add(sch);
-    if (Array.isArray(sch)) {
-      return sch.some((item) => refersTo(name, item, visited));
+  // Welle Arch+ (OQ-3) — refactored from O(N · graph-walk) per-schema to
+  // O(V + E) via:
+  //   1. Single pre-pass that extracts every schema's direct outgoing
+  //      $ref-targets into a Map<name, Set<refTarget>>.
+  //   2. Per-schema transitive-reachability check that walks the precomputed
+  //      adjacency map (not the raw object tree). Each visited schema-name is
+  //      O(adjacency-list-size) — bounded — and the per-call visited-set
+  //      prevents re-walking the same node.
+  //
+  // Behaviour preserved: a schema is "recursive" iff it can reach itself via
+  // any chain of $refs (direct or transitive). The previous implementation
+  // walked the entire raw object tree of each schema on every iteration,
+  // which on stripe-full (1385 schemas, deep object graphs) compounded into
+  // hundreds of thousands of object visits.
+  const directRefs = new Map<string, Set<string>>();
+  function collectRefs(node: unknown, into: Set<string>, seen: Set<unknown>): void {
+    if (!node || typeof node !== 'object' || seen.has(node)) return;
+    seen.add(node);
+    if (Array.isArray(node)) {
+      for (const v of node) collectRefs(v, into, seen);
+      return;
     }
-    const obj = sch as AnyObj;
+    const obj = node as AnyObj;
     if (typeof obj.$ref === 'string') {
       const m = /^#\/components\/schemas\/(.+)$/.exec(obj.$ref);
-      if (m && m[1] === name) return true;
-      // Transitive: follow ref into the schemas map.
-      if (m && m[1] && schemas) {
-        const target = schemas[m[1]];
-        // Cycle-protection via visited set already applied to objects.
-        if (target && refersTo(name, target, visited)) return true;
-      }
-      return false;
+      if (m && m[1]) into.add(m[1]);
+      return; // $ref nodes don't have other interesting siblings to walk
     }
-    return Object.values(obj).some((v) => refersTo(name, v, visited));
+    for (const v of Object.values(obj)) collectRefs(v, into, seen);
+  }
+  for (const [name, sch] of Object.entries(schemas)) {
+    if (!isObject(sch)) continue;
+    const refs = new Set<string>();
+    collectRefs(sch, refs, new Set());
+    directRefs.set(name, refs);
+  }
+
+  function reachesSelf(start: string): boolean {
+    const stack: string[] = [];
+    const visited = new Set<string>();
+    const initial = directRefs.get(start);
+    if (!initial) return false;
+    for (const r of initial) stack.push(r);
+    while (stack.length > 0) {
+      const cur = stack.pop()!;
+      if (cur === start) return true;
+      if (visited.has(cur)) continue;
+      visited.add(cur);
+      const next = directRefs.get(cur);
+      if (!next) continue;
+      for (const r of next) stack.push(r);
+    }
+    return false;
   }
 
   const out: IFunctionResult[] = [];
   for (const [name, sch] of Object.entries(schemas)) {
     if (!isObject(sch)) continue;
-    if (!refersTo(name, sch)) continue;
+    if (!reachesSelf(name)) continue;
     const hasDepthHint =
       typeof (sch as AnyObj)['x-max-depth'] === 'number' ||
       typeof (sch as AnyObj)['maxItems'] === 'number';
@@ -461,9 +474,9 @@ export const adminDescriptionWithoutSecurity: IFunction = function (
   const description = typeof op.description === 'string' ? op.description : '';
   const blob = `${summary} ${description}`;
   if (!ADMIN_DESC_PATTERN.test(blob)) return [];
-  if (Array.isArray(op.security) && op.security.length > 0) return [];
-  // op.security may be `[]` (intentional opt-out — we still flag).
-  if (Array.isArray(op.security) && op.security.length === 0) {
+  const sec = effectiveSecurityFor(op, context.document?.data);
+  if (sec.hasOperationLevel) return [];
+  if (sec.isEmpty) {
     return [
       {
         message: `Operation describes admin/internal scope but has \`security: []\` (intentional auth-disable on a privileged endpoint).`,
@@ -471,10 +484,7 @@ export const adminDescriptionWithoutSecurity: IFunction = function (
       },
     ];
   }
-  // Spec-level security check.
-  const document = context.document?.data as AnyObj | undefined;
-  const docSec = document && Array.isArray(document.security) ? document.security : null;
-  if (docSec && docSec.length > 0) return [];
+  if (sec.hasSpecLevel) return [];
   return [
     {
       message: `Operation summary/description mentions admin/internal scope but declares no \`security\` (OWASP API5 — Broken Function-Level Authorization).`,
@@ -1057,8 +1067,7 @@ export const patchContentTypeCorrect: IFunction = function (
   if (!cpath || cpath.length < 3) return [];
   const method = String(cpath[cpath.length - 1]).toLowerCase();
   if (method !== 'patch') return [];
-  const rb = isObject(op.requestBody) ? (op.requestBody as AnyObj) : null;
-  if (!rb) {
+  if (!isObject(op.requestBody)) {
     return [
       {
         message: 'PATCH operation has no requestBody — should declare merge-patch+json or json-patch+json content-type (RFC 7396 / RFC 6902).',
@@ -1066,15 +1075,143 @@ export const patchContentTypeCorrect: IFunction = function (
       },
     ];
   }
-  const content = isObject(rb.content) ? (rb.content as AnyObj) : null;
-  if (!content) return [];
-  for (const mt of Object.keys(content)) {
-    if (PATCH_CONFORMANT_MEDIA_TYPES.has(mt.toLowerCase())) return [];
-  }
+  const content = getRequestBodyContent(op);
+  const mediaTypes = Object.keys(content);
+  if (mediaTypes.length === 0) return [];
+  if (mediaTypes.some((mt) => PATCH_CONFORMANT_MEDIA_TYPES.has(mt.toLowerCase()))) return [];
   return [
     {
-      message: `PATCH requestBody declares only [${Object.keys(content).join(', ')}] — should include application/json-patch+json (RFC 6902) OR application/merge-patch+json (RFC 7396).`,
+      message: `PATCH requestBody declares only [${mediaTypes.join(', ')}] — should include application/json-patch+json (RFC 6902) OR application/merge-patch+json (RFC 7396).`,
       path: [...cpath, 'requestBody', 'content'],
     },
   ];
+};
+
+// =============================================================================
+// Welle Arch+ A3 — FUNCTION_METADATA registry for threat-p2 callables.
+// =============================================================================
+
+import type { FunctionMetadata } from './_metadata.js';
+
+export const FUNCTION_METADATA: Record<string, FunctionMetadata> = {
+  'object-id-write-op-needs-security': {
+    name: 'object-id-write-op-needs-security',
+    patternIds: ['TM-A2'],
+    lens: 'threat-modeling',
+    perfClass: 'O(1)',
+    description:
+      'Write op (POST/PUT/PATCH/DELETE) on resource-{id} path declares no `security` (BOLA-risk per OWASP API1).',
+  },
+  'oauth2-authcode-pkce-recommended': {
+    name: 'oauth2-authcode-pkce-recommended',
+    patternIds: ['TM-A7'],
+    lens: 'threat-modeling',
+    perfClass: 'O(1)',
+    description:
+      'OAuth2 authorizationCode flow SHOULD declare PKCE (RFC 9700 BCP-240 §2.1.1) via x-pkce-required or description.',
+  },
+  'login-endpoint-rate-limit': {
+    name: 'login-endpoint-rate-limit',
+    patternIds: ['TM-A9'],
+    lens: 'threat-modeling',
+    perfClass: 'O(n)',
+    description:
+      'Login endpoints (path or password-field-detected) MUST declare rate-limit headers (OWASP API2 + RFC 9745).',
+  },
+  'schema-reuse-without-readonly-writeonly': {
+    name: 'schema-reuse-without-readonly-writeonly',
+    patternIds: ['TM-A14'],
+    lens: 'threat-modeling',
+    perfClass: 'O(n*m)',
+    description:
+      'Component-schemas reused across request+response without readOnly/writeOnly markers (OWASP API3 mass-assignment risk).',
+  },
+  'recursive-schema-needs-max-depth': {
+    name: 'recursive-schema-needs-max-depth',
+    patternIds: ['TM-A18'],
+    lens: 'threat-modeling',
+    perfClass: 'O(n*m)',
+    description:
+      'Recursive schema (transitive self-$ref) lacks `x-max-depth` extension or `maxItems` — DoS via deep nesting (OWASP API4).',
+  },
+  'admin-description-without-security': {
+    name: 'admin-description-without-security',
+    patternIds: ['TM-A28'],
+    lens: 'threat-modeling',
+    perfClass: 'O(1)',
+    description:
+      'Operation summary/description mentions admin/internal/privileged scope but declares no `security` (OWASP API5 BFLA).',
+  },
+  'upstream-url-needs-error-responses': {
+    name: 'upstream-url-needs-error-responses',
+    patternIds: ['TM-A36'],
+    lens: 'threat-modeling',
+    perfClass: 'O(n)',
+    description:
+      'Operation consumes an upstream URL (param/body) but lacks 4xx + 5xx response declaration (OWASP API7/API10).',
+  },
+  'multi-version-servers-need-deprecation': {
+    name: 'multi-version-servers-need-deprecation',
+    patternIds: ['TM-A45'],
+    lens: 'threat-modeling',
+    perfClass: 'O(n)',
+    description:
+      'Spec declares ≥2 server URLs with different /vN/ prefixes but none is marked deprecated (OWASP API9 inventory-mgmt).',
+  },
+  'deprecated-needs-sunset-replacement': {
+    name: 'deprecated-needs-sunset-replacement',
+    patternIds: ['TM-A46'],
+    lens: 'threat-modeling',
+    perfClass: 'O(n)',
+    description:
+      'Operation marked `deprecated:true` lacks Sunset header (RFC 8594 / RFC 9745) and/or replacement guidance.',
+  },
+  'info-version-server-url-drift': {
+    name: 'info-version-server-url-drift',
+    patternIds: ['TM-A47'],
+    lens: 'threat-modeling',
+    perfClass: 'O(n)',
+    description:
+      'info.version major differs from /vN/ prefix in any server URL — version-drift confuses clients (OWASP API9).',
+  },
+  'problem-details-status-matches-http-status': {
+    name: 'problem-details-status-matches-http-status',
+    patternIds: ['RFC2-3'],
+    lens: 'standards-compliance',
+    perfClass: 'O(n)',
+    description:
+      'application/problem+json `status` example/default/const must match enclosing HTTP status (RFC 9457 §3.1.2).',
+  },
+  'conditional-request-correctness': {
+    name: 'conditional-request-correctness',
+    patternIds: ['RFC2-20'],
+    lens: 'standards-compliance',
+    perfClass: 'O(n)',
+    description:
+      'Conditional-request bundle: If-Match/If-None-Match/If-(Un)Modified-Since paired with 412/304 responses (RFC 9110 §13).',
+  },
+  'partial-content-needs-content-range': {
+    name: 'partial-content-needs-content-range',
+    patternIds: ['RFC2-32'],
+    lens: 'standards-compliance',
+    perfClass: 'O(n)',
+    description:
+      '206 (Partial Content) response MUST declare a Content-Range header (RFC 9110 §15.3.7 verbatim "MUST").',
+  },
+  'bearer-401-www-authenticate-realm': {
+    name: 'bearer-401-www-authenticate-realm',
+    patternIds: ['RFC2-59'],
+    lens: 'standards-compliance',
+    perfClass: 'O(n*m)',
+    description:
+      'When Bearer http scheme declared, every 401 response MUST carry WWW-Authenticate with `Bearer realm=` (RFC 6750 §3).',
+  },
+  'patch-content-type-correct': {
+    name: 'patch-content-type-correct',
+    patternIds: ['RFC2-97'],
+    lens: 'standards-compliance',
+    perfClass: 'O(n)',
+    description:
+      'PATCH requestBody must declare json-patch+json (RFC 6902) OR merge-patch+json (RFC 7396); plain application/json non-conformant.',
+  },
 };

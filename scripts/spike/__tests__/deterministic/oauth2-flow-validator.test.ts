@@ -29,8 +29,8 @@ import {
   runOAuth2FlowValidator,
   validateOAuth2Schemes,
   OAUTH2_PATTERN_IDS,
-} from "../../deterministic/oauth2-flow-validator.js";
-import { mapDetectorFindings } from "../../deterministic/output-mapper.js";
+} from "../../deterministic/modules/oauth2-flow-validator.js";
+import { mapDetectorFindings } from "../../deterministic/infra/output-mapper.js";
 import { FindingSchema } from "../../schema.js";
 
 const __filename = fileURLToPath(import.meta.url);

@@ -22,8 +22,8 @@ import {
   canonicalizeSchema,
   hashSchema,
   runDuplicateSchemaDetectors,
-} from '../../deterministic/duplicate-schemas.js';
-import { mapDetectorFindings } from '../../deterministic/output-mapper.js';
+} from '../../deterministic/modules/duplicate-schemas.js';
+import { mapDetectorFindings } from '../../deterministic/infra/output-mapper.js';
 import { FindingSchema } from '../../schema.js';
 
 const __filename = fileURLToPath(import.meta.url);

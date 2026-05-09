@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { walkArazzoWorkflowDocument } from '../../deterministic/walkers/info-tier-arazzo-workflow.js';
+import { walkArazzoWorkflowDocument } from '../../deterministic/aggregators/info-tier-arazzo-workflow.js';
 
 describe('walkArazzoWorkflowDocument (Welle F)', () => {
   it('emits 0 findings when no Arazzo evidence', async () => {

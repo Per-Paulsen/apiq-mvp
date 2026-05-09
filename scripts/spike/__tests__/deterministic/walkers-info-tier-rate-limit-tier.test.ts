@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { walkRateLimitTier } from '../../deterministic/walkers/info-tier-rate-limit-tier.js';
+import { walkRateLimitTier } from '../../deterministic/aggregators/info-tier-rate-limit-tier.js';
 
 describe('walkRateLimitTier (Welle F)', () => {
   it('emits 0 findings when no operations carry x-rate-limit-tier', async () => {

@@ -14,8 +14,8 @@ import { describe, it, expect } from 'vitest';
 import * as path from 'node:path';
 import * as fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { runAjvValidator, __test } from '../../deterministic/ajv-validator.js';
-import { mapDetectorFindings } from '../../deterministic/output-mapper.js';
+import { runAjvValidator, __test } from '../../deterministic/modules/ajv-validator.js';
+import { mapDetectorFindings } from '../../deterministic/infra/output-mapper.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

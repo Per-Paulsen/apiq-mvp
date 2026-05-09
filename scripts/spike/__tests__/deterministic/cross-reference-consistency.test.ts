@@ -12,8 +12,8 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { walkCrossReferenceConsistency } from '../../deterministic/cross-reference-consistency.js';
-import { mapDetectorFinding } from '../../deterministic/output-mapper.js';
+import { walkCrossReferenceConsistency } from '../../deterministic/modules/cross-reference-consistency.js';
+import { mapDetectorFinding } from '../../deterministic/infra/output-mapper.js';
 
 // =============================================================================
 // Spec builders

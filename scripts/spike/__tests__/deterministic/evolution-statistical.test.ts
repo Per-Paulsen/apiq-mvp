@@ -30,7 +30,7 @@ import {
   walkSchemaNameCollisions,
   walkUrlInfoVersionDrift,
   walkRequiredNotInProperties,
-} from '../../deterministic/walkers/evolution-statistical.js';
+} from '../../deterministic/aggregators/evolution-statistical.js';
 
 // ===========================================================================
 // Helpers
@@ -851,6 +851,7 @@ describe('apiq-ruleset-evolution.yaml — Spectral integration smoke', () => {
     '..',
     '..',
     'deterministic',
+    'rules',
     'apiq-ruleset-evolution.yaml'
   );
 

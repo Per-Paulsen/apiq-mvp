@@ -83,6 +83,7 @@ const REPO_ROOT = path.resolve(SPIKE_DIR, '..', '..');
 const RULESET_PATH = path.join(
   SPIKE_DIR,
   'deterministic',
+  'rules',
   'apiq-ruleset-threat-p2.yaml'
 );
 

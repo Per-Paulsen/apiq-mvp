@@ -10,8 +10,8 @@
 
 import { describe, it, expect } from 'vitest';
 
-import { mapDetectorFindings, aggregateCodegenFindings } from '../../deterministic/output-mapper.js';
-import type { DetectorFinding } from '../../deterministic/types.js';
+import { mapDetectorFindings, aggregateCodegenFindings } from '../../deterministic/infra/output-mapper.js';
+import type { DetectorFinding } from '../../deterministic/infra/types.js';
 
 function makeCodegenFinding(
   kind: 'validation-problem' | 'resolver-warning',

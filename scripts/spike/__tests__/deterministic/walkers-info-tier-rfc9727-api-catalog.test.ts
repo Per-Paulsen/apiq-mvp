@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { walkRfc9727ApiCatalog } from '../../deterministic/walkers/info-tier-rfc9727-api-catalog.js';
+import { walkRfc9727ApiCatalog } from '../../deterministic/aggregators/info-tier-rfc9727-api-catalog.js';
 
 describe('walkRfc9727ApiCatalog (Welle F)', () => {
   it('emits 0 findings when no /.well-known/api-catalog path', async () => {

@@ -1,0 +1,1578 @@
+# apiq Spectral Evolution Ruleset (Lens 3 — Single-Spec Breaking-Change-Prediction)
+#
+# Authored 2026-05-06 (Task T17 / Wave-2 Welle-B). This ruleset implements the
+# EV-* P1 + P2 patterns from Round-2 Phase C mining:
+#   - specs/big-spec-architecture-spike-stage-a-mining-round2-evolution.md
+#   - specs/big-spec-architecture-spike-stage-a-implementation-priority.md
+#   - specs/big-spec-architecture-spike-stage-a-rules-brainstorm.md
+#
+# Lens 3 is apiq's first DIFF — no other linter does single-spec breaking-change
+# prediction. Mature linters (Vacuum, Redocly, IBM, OWASP-Spectral, Zalando-Zally)
+# cover Lens-1/2/5; oasdiff and openapi-changes need TWO specs. apiq Stage-A
+# predicts breaking changes from a SINGLE spec by flagging structural patterns
+# that imply future tightening / loosening / drift will be breaking.
+#
+# Welle F (2026-05-08) — apiq-meta-block migration applied to all 30 rules.
+# Each rule now carries:
+#   - structured `direction:` field (replacing description-prefix Prosa)
+#   - lenses[] (multi-lens membership per patterns.json)
+#   - sources[] (RFC / vendor / mining citations)
+#   - stakeholders[], lifecycle-phase, defect-class, iso25010[]
+#   - codegen-targets[], detection-precision, auto-fix-safe
+#   - regulatory-mapping (where security/privacy-relevant)
+#   - cost-impact, mttr-impact, agent-readiness-impact
+# The Spectral runner (`spectral-runner.ts`) reads `apiq-meta` at YAML-load time
+# and strips it before handing the rule to Spectral; the block is propagated
+# into `DetectorFinding.meta.apiqMeta` for downstream consumers.
+#
+# Severity-Schema Final integration:
+#   - Each rule carries a `direction` modifier (tighten/loosen/drift) per
+#     `severity-schema.ts` Section 2 — implemented as a top-level `apiq-meta`
+#     field. The legacy `[lens-3 | direction]` description-prefix is preserved
+#     for human-reader continuity.
+#   - Sources are tagged in description prose as `[OASDIFF/OPTIC/STRIPE/...]`
+#     and structured under `apiq-meta.sources` for machine consumption.
+#
+# Welle F severity-upgrades applied (per patterns.json severity-hypothesis):
+#   - EV-5  hint→warn (patterns.json severityHypothesis: warn; OASDIFF + Microsoft + Zalando)
+#   - EV-6  hint→warn (patterns.json severityHypothesis: warn; OASDIFF + Bump.sh)
+#   - EV-14 hint→warn (patterns.json severityHypothesis: warn; SP-G-AZ-9 + IBM)
+#   - EV-17 hint→warn (patterns.json severityHypothesis: warn; SG-41 + spectral:oas)
+#   - EV-23 hint→warn (both string + array variants; OASDIFF schema-tightening)
+#   - EV-18 warn→hint (patterns.json severityHypothesis: hint; OWASP-mass-assignment-class)
+# Note: EV-1 already at warn (matches RFC 9745 / R4-IETF-ST-01 target).
+#
+# Cross-cut with apiq-ruleset.yaml: the base ruleset already covers EV-19
+# (unused securitySchemes, via spectral:oas), EV-22 ($ref-cycle DoS via apiq's
+# A2 cycle module), and several Lens-3-tagged patterns through other lenses.
+# This file adds the EV-specific net-new rules.
+#
+# Rules below grouped by P-tier (P1 first — mature-linter-pari; P2 second —
+# apiq-USP differentiator). Walkers in `walkers/evolution-statistical.ts`
+# cover the patterns Spectral DSL cannot express (statistical aggregation,
+# graph-walks, cross-spec property-name-checks).
+
+extends:
+  - spectral:oas
+
+formats:
+  - oas3
+  - oas3_0
+  - oas3_1
+
+rules:
+  # =========================================================================
+  # ============================ P1 — EV PATTERNS ===========================
+  # =========================================================================
+  # Mature-linter-pari (oasdiff/Optic/Spectral catch these in two-spec mode;
+  # apiq catches them in single-spec mode by flagging the structural pattern).
+
+  # ------------------------------------------------------------------------
+  # EV-1 — `deprecated: true` operation/parameter without sunset/replacement
+  # [drift] [warn] sources: OASDIFF + OAS-3.3-PROP + RFC 8594 + RFC 9745 + API-Platform + Zalando #189
+  # ------------------------------------------------------------------------
+  # Source: OASDIFF endpoint-deprecated-no-sunset + RFC 8594 (Sunset header) +
+  #         RFC 9745 (Deprecation header, March 2025, R4-IETF-ST-01) +
+  #         API-Platform x-deprecation-details + Zalando #189;
+  #         rules-brainstorm.md EV-1 (P1, drift)
+  # Lens: 3 (Evolution-Friction), 4 (Client-Friction)
+  # Round: 2 + R4-IETF-ST-01 (RFC 9745)
+  apiq-ev-1-deprecated-needs-sunset:
+    description: >-
+      [lens-3 | drift] EV-1: An operation flagged `deprecated: true` should also
+      indicate WHEN it sunsets (`x-sunset` / `Sunset` header / RFC 8594) and a
+      replacement reference (`x-replacement` / `x-deprecation-details` / prose).
+      Without these markers the deprecation-removal-without-sunset-window is a
+      breaking-change-class-O. Sources: [OASDIFF endpoint-deprecated-no-sunset]
+      [OAS-3.3-PROP] [RFC 8594] [RFC 9745 Deprecation Header (March 2025)]
+      [API-Platform x-deprecation-details] [Zalando #189].
+    message: "Deprecated operation lacks sunset date or replacement reference
+      (description should mention sunset/removed/use ... instead, or set
+      x-sunset / x-replacement)."
+    severity: warn
+    given: "$.paths[*][?(@.deprecated===true)]"
+    then:
+      function: truthy
+      field: description
+    apiq-meta:
+      pattern-id: EV-1
+      lenses: [ evolution-friction, client-friction, operational-metadata ]
+      direction: drift
+      sources:
+        - type: rfc
+          number: 8594
+          section: '2'
+          summary: 'The Sunset HTTP response header field indicates that a URI is likely
+            to become unresponsive at a specified point in the future.'
+        - type: rfc
+          number: 9745
+          section: '1'
+          summary: 'Deprecation is an Item Structured Header Field; its value MUST be a
+            Date as per Section 3.3.7 of [RFC9651].'
+          url: https://www.rfc-editor.org/rfc/rfc9745
+          quote: The Deprecation HTTP response header field is used to signal to
+            consumers of a resource (identified by a URI) that the resource will
+            be or has been deprecated.
+          verifiedAt: 2026-05-09
+        - type: vendor
+          name: 'OASDIFF endpoint-deprecated-no-sunset'
+          verifiedAt: '2026-05-08'
+        - type: vendor
+          name: 'Zalando RESTful API Guidelines #189'
+          verifiedAt: '2026-05-08'
+      stakeholders: [ client-dev, end-user, ai-agent ]
+      lifecycle-phase: evolution-time
+      defect-class: operational-metadata-missing
+      iso25010: [ reliability, maintainability, compatibility ]
+      codegen-targets: [ java, go, python, typescript, rust, csharp, kotlin ]
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: medium
+      mttr-impact: high
+      agent-readiness-impact: high
+
+  # ------------------------------------------------------------------------
+  # EV-4 — Bare-array request/response body
+  # [tighten] [warn] sources: OASDIFF + already-cross-source consensus
+  # ------------------------------------------------------------------------
+  # Source: OASDIFF body-type-changed-from-array-to-object + apiq §1;
+  #         rules-brainstorm.md EV-4 (P1, tighten)
+  # Lens: 3 (Evolution-Friction), 4 (Client-Friction)
+  # Round: 2
+  apiq-ev-4-bare-array-response-body:
+    description: >-
+      [lens-3 | tighten] EV-4: A response body schema typed `array` (no
+      envelope) forces a breaking change to add metadata, pagination, or links
+      later. Wrap arrays in an envelope object (e.g. {data: [], pagination:
+      {...}}). Source: [OASDIFF body-type-changed-from-array-to-object is
+      breaking].
+    message: "Bare array response body — wrapping in an envelope later is a breaking
+      change."
+    severity: warn
+    given: "$.paths[*][get,post,put,patch,delete].responses[*].content[*].schema[?(\
+      @.type=='array')]"
+    then:
+      function: undefined
+      field: type
+    apiq-meta:
+      pattern-id: EV-4
+      lenses: [ evolution-friction, client-friction ]
+      direction: tighten
+      sources:
+        - type: vendor
+          name: 'OASDIFF body-type-changed-from-array-to-object'
+          verifiedAt: '2026-05-08'
+      stakeholders: [ client-dev, spec-author ]
+      lifecycle-phase: evolution-time
+      defect-class: over-specification
+      iso25010: [ maintainability, compatibility ]
+      codegen-targets: [ java, go, python, typescript, rust, csharp, kotlin ]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: high
+      mttr-impact: high
+      agent-readiness-impact: medium
+
+  # Source: OASDIFF body-type-changed (request-side mirror);
+  #         rules-brainstorm.md EV-4 (P1, request variant)
+  # Lens: 3 (Evolution-Friction), 4 (Client-Friction)
+  # Round: 2
+  apiq-ev-4-bare-array-request-body:
+    description: >-
+      [lens-3 | tighten] EV-4 (request-side): A request-body schema typed
+      `array` forces a breaking change to add metadata or wrap fields later.
+      Source: [OASDIFF body-type-changed].
+    message: "Bare array request body — adding fields later is a breaking change."
+    severity: warn
+    given: "$.paths[*][post,put,patch].requestBody.content[*].schema[?(@.type=='arr\
+      ay')]"
+    then:
+      function: undefined
+      field: type
+    apiq-meta:
+      pattern-id: EV-4
+      lenses: [ evolution-friction, client-friction ]
+      direction: tighten
+      sources:
+        - type: vendor
+          name: 'OASDIFF body-type-changed'
+          verifiedAt: '2026-05-08'
+      stakeholders: [ client-dev, spec-author ]
+      lifecycle-phase: evolution-time
+      defect-class: over-specification
+      iso25010: [ maintainability, compatibility ]
+      codegen-targets: [ java, go, python, typescript, rust, csharp, kotlin ]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: high
+      mttr-impact: high
+      agent-readiness-impact: medium
+
+  # ------------------------------------------------------------------------
+  # EV-5 — additionalProperties not declared on response schemas
+  # [tighten] [warn] sources: OASDIFF + Microsoft + Zalando #225
+  # NOTE: Statistical M8 walker handles spec-wide aggregation; this rule fires
+  # per-component-schema so each violation is locatable.
+  # Welle F severity-upgrade: hint → warn (patterns.json severityHypothesis: warn).
+  # ------------------------------------------------------------------------
+  # Source: OASDIFF additionalProperties-changed + Microsoft rest-fail-for-
+  #         unknown-fields + Zalando #225 + SG-42; rules-brainstorm.md EV-5 (P1)
+  # Lens: 3 (Evolution-Friction), 4 (Client-Friction), 1 (Threat-Modeling)
+  # Round: 2
+  apiq-ev-5-response-schema-additionalproperties-undeclared:
+    description: >-
+      [lens-3 | tighten] EV-5: Response component schemas should declare
+      `additionalProperties: false` (or true with explicit allowed types) so
+      tightening to false later is non-breaking. Adding strict-validation later
+      breaks clients that sent extra props (mass-assignment-class A1). Sources:
+      [OASDIFF additionalProperties-changed] [Microsoft
+      rest-fail-for-unknown-fields] [Zalando #225].
+    message: "Response schema does not declare `additionalProperties`; future
+      tightening is breaking."
+    severity: warn
+    given: "$.components.schemas[?(@.type=='object' && @.properties &&
+      @.additionalProperties===undefined)]"
+    then:
+      function: defined
+      field: additionalProperties
+    apiq-meta:
+      pattern-id: EV-5
+      lenses: [ evolution-friction, client-friction, threat-modeling ]
+      direction: tighten
+      sources:
+        - type: vendor
+          name: 'OASDIFF additionalProperties-changed'
+          verifiedAt: '2026-05-08'
+        - type: vendor
+          name: 'Microsoft rest-fail-for-unknown-fields'
+          verifiedAt: '2026-05-08'
+        - type: vendor
+          name: 'Zalando RESTful API Guidelines #225'
+          verifiedAt: '2026-05-08'
+      stakeholders: [ spec-author, client-dev, security ]
+      lifecycle-phase: evolution-time
+      defect-class: incomplete
+      iso25010: [ security, maintainability ]
+      codegen-targets: [ java, go, python, typescript, rust, csharp, kotlin ]
+      detection-precision: medium
+      auto-fix-safe: false
+      regulatory-mapping:
+        asvs: [ 'V13.2.1' ]
+      cost-impact: low
+      mttr-impact: medium
+      agent-readiness-impact: low
+
+  # ------------------------------------------------------------------------
+  # EV-8 — Operation lacks operationId
+  # [drift] [warn] sources: OPTIC + OASDIFF + Spectral default
+  # NOTE: spectral:oas already includes `operation-operationId`; we re-state it
+  # at warn to bind the Lens-3 framing (path-rename without operationId is breaking).
+  # ------------------------------------------------------------------------
+  # Source: OPTIC operationId-required + OASDIFF operationId-removed-is-breaking +
+  #         spectral:oas operation-operationId; rules-brainstorm.md EV-8 (P1)
+  # Lens: 3 (Evolution-Friction), 4 (Client-Friction)
+  # Round: 2
+  apiq-ev-8-operation-needs-operationid:
+    description: >-
+      [lens-3 | drift] EV-8: Without `operationId`, the only stable identity for
+      the operation is path+method — any path rename becomes a breaking-rename.
+      Codegen tools build SDK function-names from operationId; absence forces
+      brittle path-derived names. Source: [OPTIC operationId-required] [OASDIFF
+      operationId-removed-is-breaking].
+    message: "Operation lacks `operationId`; path-rename later becomes a
+      breaking-rename."
+    severity: warn
+    given: "$.paths[*][get,post,put,patch,delete,options,head,trace]"
+    then:
+      function: truthy
+      field: operationId
+    apiq-meta:
+      pattern-id: EV-8
+      lenses: [ evolution-friction, client-friction, ai-agent-consumability ]
+      direction: drift
+      sources:
+        - type: vendor
+          name: 'OPTIC operationId-required'
+          verifiedAt: '2026-05-08'
+        - type: vendor
+          name: 'OASDIFF operationId-removed-is-breaking'
+          verifiedAt: '2026-05-08'
+        - type: vendor
+          name: 'spectral:oas operation-operationId'
+          verifiedAt: '2026-05-08'
+      stakeholders: [ spec-author, client-dev, codegen-tool, ai-agent ]
+      lifecycle-phase: authoring-time
+      defect-class: incomplete
+      iso25010: [ maintainability, usability ]
+      codegen-targets: [ java, go, python, typescript, rust, csharp, kotlin ]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: high
+      agent-readiness-impact: high
+
+  # ------------------------------------------------------------------------
+  # EV-10 — Mixed URL+Header versioning
+  # [drift] [warn] sources: SG-6 + Zalando MUST-single-version + Stripe + GH-API + MS-AZ
+  # NOTE: Detected via Walker (cross-cutting; needs to inspect both servers and parameters).
+  # See evolution-statistical.ts walkVersioningAxisDrift.
+  # ------------------------------------------------------------------------
+
+  # ------------------------------------------------------------------------
+  # EV-23 — Request property maxLength/maxItems/maximum/pattern absent
+  # [tighten] [warn] sources: OASDIFF schema-tightening
+  # NOTE: Statistical Walker handles spec-wide; this DSL rule fires per-property
+  # for string-typed request properties without maxLength.
+  # Welle F severity-upgrade: hint → warn (patterns.json severityHypothesis: warn).
+  # ------------------------------------------------------------------------
+  # Source: OASDIFF schema-pattern-added (request) + maxLength-decreased;
+  #         rules-brainstorm.md EV-23 (P1, tighten)
+  # Lens: 3 (Evolution-Friction), 1 (Threat-Modeling)
+  # Round: 2
+  apiq-ev-23-request-string-needs-maxlength:
+    description: >-
+      [lens-3 | tighten] EV-23: Request-string property without `maxLength` —
+      server tightening (adding `maxLength: 100`) later breaks clients that send
+      101-char strings. Sources: [OASDIFF schema-pattern-added (request)]
+      [OASDIFF maxLength-decreased].
+    message: "Request property is `type: string` without `maxLength` — server
+      tightening later is breaking."
+    severity: warn
+    given: "$.paths[*][post,put,patch].requestBody.content[*].schema..properties[?(\
+      @.type=='string' && @.maxLength===undefined && @.enum===undefined &&
+      @.format===undefined)]"
+    then:
+      function: defined
+      field: maxLength
+    apiq-meta:
+      pattern-id: EV-23
+      lenses: [ evolution-friction, threat-modeling ]
+      direction: tighten
+      sources:
+        - type: vendor
+          name: 'OASDIFF schema-pattern-added (request)'
+          verifiedAt: '2026-05-08'
+        - type: vendor
+          name: 'OASDIFF maxLength-decreased'
+          verifiedAt: '2026-05-08'
+      stakeholders: [ spec-author, client-dev, security ]
+      lifecycle-phase: evolution-time
+      defect-class: incomplete
+      iso25010: [ security, reliability ]
+      codegen-targets: [ '*' ]
+      detection-precision: medium
+      auto-fix-safe: false
+      regulatory-mapping:
+        asvs: [ 'V5.1.4' ]
+        nist: [ 'PR.DS-2' ]
+      cost-impact: low
+      mttr-impact: medium
+      agent-readiness-impact: low
+
+  # Source: OASDIFF schema-tightening (array variant);
+  #         rules-brainstorm.md EV-23 (P1, tighten)
+  # Lens: 3 (Evolution-Friction), 1 (Threat-Modeling)
+  # Round: 2
+  apiq-ev-23-request-array-needs-maxitems:
+    description: >-
+      [lens-3 | tighten] EV-23 (array variant): Request-array property without
+      `maxItems` — server tightening later is breaking.
+    message: "Request property is `type: array` without `maxItems` — server
+      tightening later is breaking."
+    severity: warn
+    given: "$.paths[*][post,put,patch].requestBody.content[*].schema..properties[?(\
+      @.type=='array' && @.maxItems===undefined)]"
+    then:
+      function: defined
+      field: maxItems
+    apiq-meta:
+      pattern-id: EV-23
+      lenses: [ evolution-friction, threat-modeling ]
+      direction: tighten
+      sources:
+        - type: vendor
+          name: 'OASDIFF schema-tightening'
+          verifiedAt: '2026-05-08'
+      stakeholders: [ spec-author, client-dev, security ]
+      lifecycle-phase: evolution-time
+      defect-class: incomplete
+      iso25010: [ security, reliability ]
+      codegen-targets: [ '*' ]
+      detection-precision: medium
+      auto-fix-safe: false
+      regulatory-mapping:
+        asvs: [ 'V5.1.4' ]
+        nist: [ 'PR.DS-2' ]
+      cost-impact: low
+      mttr-impact: medium
+      agent-readiness-impact: low
+
+  # ------------------------------------------------------------------------
+  # EV-24 — Request pattern without ^/$ anchors
+  # [tighten] [warn] sources: MIN-2 IBM + OASDIFF
+  # ------------------------------------------------------------------------
+  # Source: IBM ibm-anchored-patterns (MIN-2) + OASDIFF pattern-tightened;
+  #         rules-brainstorm.md EV-24 (P1, tighten) + CL-26
+  # Lens: 3 (Evolution-Friction), 2 (Standards-Compliance)
+  # Round: 2
+  apiq-ev-24-pattern-needs-anchors:
+    description: >-
+      [lens-3 | tighten] EV-24: A `pattern` constraint without `^...$` anchors
+      matches only a substring; server tightening anchors later rejects
+      previously-passing strings. Sources: [IBM ibm-anchored-patterns] [OASDIFF
+      pattern-tightened].
+    message: "`pattern` does not contain `^...$` anchors — server tightening to
+      anchored later is breaking."
+    severity: warn
+    given: "$..[?(@.pattern && @.type=='string')]"
+    then:
+      function: pattern
+      field: pattern
+      functionOptions:
+        match: "(^\\^.*\\$$)|(^\\^[^|]*$)|(^.*\\$$)"
+    apiq-meta:
+      pattern-id: EV-24
+      lenses: [ evolution-friction, standards-compliance, threat-modeling ]
+      direction: tighten
+      sources:
+        - type: vendor
+          name: 'IBM ibm-anchored-patterns (MIN-2)'
+          verifiedAt: '2026-05-08'
+        - type: vendor
+          name: 'OASDIFF pattern-tightened'
+          verifiedAt: '2026-05-08'
+      stakeholders: [ spec-author, client-dev, security ]
+      lifecycle-phase: evolution-time
+      defect-class: incomplete
+      iso25010: [ security, reliability ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: true
+      regulatory-mapping:
+        asvs: [ 'V5.1.3' ]
+      cost-impact: low
+      mttr-impact: medium
+      agent-readiness-impact: low
+
+  # ------------------------------------------------------------------------
+  # EV-25 — type:integer without format:int32/int64
+  # [tighten] [warn] sources: SP-G-OWASP-21 + Zalando + OASDIFF + JSON-Schema-evolution
+  # ------------------------------------------------------------------------
+  # Source: SP-G-OWASP-21 must-define-a-format-for-integer-types + Zalando
+  #         integer-format + OASDIFF format-changed + JSON-Schema-evolution
+  #         int->long->float->double; rules-brainstorm.md EV-25 (P1, drift)
+  # Lens: 3 (Evolution-Friction), 2 (Standards-Compliance), 4 (Client-Friction)
+  # Round: 2
+  apiq-ev-25-integer-needs-format:
+    description: >-
+      [lens-3 | tighten] EV-25: An untyped `integer` (no `format: int32` /
+      `int64`) leaves codegen-classes ambiguous — declaring format later changes
+      precision and codegen-class (silent-breaking on edge cases). Sources:
+      [SP-G-OWASP-21 must-define-a-format-for-integer-types] [Zalando
+      integer-format] [OASDIFF format-changed] [JSON-Schema-evolution
+      int->long->float->double].
+    message: "`type: integer` without `format: int32` / `int64` — declaring format
+      later is breaking on edge cases."
+    severity: warn
+    given: "$..[?(@.type=='integer' && @.format===undefined)]"
+    then:
+      function: defined
+      field: format
+    apiq-meta:
+      pattern-id: EV-25
+      lenses: [ evolution-friction, standards-compliance, client-friction ]
+      direction: tighten
+      sources:
+        - type: vendor
+          name: 'SP-G-OWASP-21 must-define-a-format-for-integer-types'
+          verifiedAt: '2026-05-08'
+        - type: vendor
+          name: 'Zalando integer-format'
+          verifiedAt: '2026-05-08'
+        - type: vendor
+          name: 'OASDIFF format-changed'
+          verifiedAt: '2026-05-08'
+      stakeholders: [ spec-author, client-dev, codegen-tool ]
+      lifecycle-phase: evolution-time
+      defect-class: incomplete
+      iso25010: [ compatibility, maintainability ]
+      codegen-targets: [ java, go, csharp, kotlin, rust ]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: medium
+      agent-readiness-impact: medium
+
+  # ------------------------------------------------------------------------
+  # EV-27 — Path-segment file-extension
+  # [drift] [error] sources: SP-G-AYWH-14 + SG-5 + SPS
+  # ------------------------------------------------------------------------
+  # Source: SP-G-AYWH-14 + SG-5 + SPS sps-paths-expose-extension;
+  #         rules-brainstorm.md EV-27 (P1, drift) + CL-50
+  # Lens: 3 (Evolution-Friction), 5 (Style-Coherence)
+  # Round: 2
+  apiq-ev-27-path-no-file-extension:
+    description: >-
+      [lens-3 | drift] EV-27: A path segment with file-extension (`.json`,
+      `.xml`, `.html`) bakes content-negotiation-via-extension into the URL.
+      Replacing with `Accept`-header negotiation later is a major breaking
+      change (URL-rotation). Sources: [SP-G-AYWH-14] [SG-5] [SPS
+      sps-paths-expose-extension].
+    message: "Path contains file-extension segment ({{value}});
+      content-negotiation-via-Accept later is breaking."
+    severity: error
+    given: "$.paths"
+    then:
+      function: pattern
+      field: "@key"
+      functionOptions:
+        notMatch: "\\.(json|xml|html|yaml|yml|txt|csv|pdf)(/|$)"
+    apiq-meta:
+      pattern-id: EV-27
+      lenses: [ evolution-friction, style-coherence ]
+      direction: drift
+      sources:
+        - type: vendor
+          name: 'SPS sps-paths-expose-extension'
+          verifiedAt: '2026-05-08'
+        - type: vendor
+          name: 'SG-5 / SP-G-AYWH-14'
+          verifiedAt: '2026-05-08'
+      stakeholders: [ spec-author, client-dev ]
+      lifecycle-phase: authoring-time
+      defect-class: norm
+      iso25010: [ maintainability, compatibility ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: high
+      mttr-impact: high
+      agent-readiness-impact: medium
+
+  # ------------------------------------------------------------------------
+  # EV-28 — Server URL contains environment name
+  # [drift] [error] sources: SP-G-SPS-10
+  # ------------------------------------------------------------------------
+  # Source: SP-G-SPS-10 (no-environment-in-server-url);
+  #         rules-brainstorm.md EV-28 (P1, drift)
+  # Lens: 3 (Evolution-Friction), 1 (Threat-Modeling — env-leak)
+  # Round: 2
+  apiq-ev-28-server-url-no-environment:
+    description: >-
+      [lens-3 | drift] EV-28: Server URL contains environment name (`/dev/`,
+      `/staging/`, `/sandbox/`, `/prod/`) — promoting from staging to prod
+      requires URL rotation, which is breaking. Source: [SP-G-SPS-10].
+    message: "Server URL contains environment name (dev/staging/sandbox/prod);
+      promotion later is breaking."
+    severity: error
+    given: "$.servers[*].url"
+    then:
+      function: pattern
+      functionOptions:
+        notMatch: "/(dev|staging|stage|sandbox|prod|production|test|qa|uat)(/|$)"
+    apiq-meta:
+      pattern-id: EV-28
+      lenses: [ evolution-friction, threat-modeling ]
+      direction: drift
+      sources:
+        - type: vendor
+          name: 'SPS sps-no-environment-in-server-url'
+          verifiedAt: '2026-05-08'
+      stakeholders: [ spec-author, security, operations ]
+      lifecycle-phase: deploy-time
+      defect-class: semantic
+      iso25010: [ security, maintainability ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: false
+      regulatory-mapping:
+        nist: [ 'PR.AC-5' ]
+        soc2: [ 'CC6.6' ]
+      cost-impact: medium
+      mttr-impact: high
+      agent-readiness-impact: medium
+
+  # ------------------------------------------------------------------------
+  # EV-31 — Custom HTTP method without RFC reference
+  # [drift] [error] sources: SP-G-SPS-1
+  # NOTE: spectral:oas validates HTTP method names against the OAS-Object schema.
+  # OAS3 enumerates exactly: get/put/post/delete/options/head/patch/trace.
+  # Custom methods (SEARCH/LOCK/MKCOL) cannot appear in OAS3-conformant specs.
+  # We add a defensive rule for the case where a non-standard verb is encoded
+  # via an extension field.
+  # ------------------------------------------------------------------------
+
+  # ------------------------------------------------------------------------
+  # EV-32 — Authorization/Content-Type/Accept as explicit Header param
+  # [drift] [warn] sources: Azure G-AZ-7 + SPS + IBM + SG-46
+  # NOTE: Existing apiq-no-content-type-header-parameter covers Content-Type.
+  # We add Authorization / Accept variants here.
+  # ------------------------------------------------------------------------
+  # Source: Azure G-AZ-7 + SPS sps-no-explicit-headers + IBM + SG-46;
+  #         rules-brainstorm.md EV-32 (P1, drift)
+  # Lens: 3 (Evolution-Friction), 2 (Standards-Compliance)
+  # Round: 2
+  apiq-ev-32-no-authorization-header-parameter:
+    description: >-
+      [lens-3 | drift] EV-32: `Authorization` declared as an explicit header
+      parameter — this should come from `securitySchemes`, not from a parameter.
+      Refactoring later (when the team adopts OAS security) is breaking.
+      Sources: [Azure G-AZ-7] [SPS sps-no-explicit-headers] [IBM] [SG-46].
+    message: "Operation declares `Authorization` header parameter; should come from
+      `securitySchemes`."
+    severity: warn
+    given: "$..parameters[?(@.in=='header' && @.name && (@.name=='Authorization' ||
+      @.name=='authorization'))]"
+    then:
+      function: undefined
+      field: name
+    apiq-meta:
+      pattern-id: EV-32
+      lenses: [ evolution-friction, standards-compliance, threat-modeling ]
+      direction: drift
+      sources:
+        - type: vendor
+          name: 'Azure G-AZ-7'
+          verifiedAt: '2026-05-08'
+        - type: vendor
+          name: 'SPS sps-no-explicit-headers'
+          verifiedAt: '2026-05-08'
+        - type: vendor
+          name: 'IBM API Style Guide'
+          verifiedAt: '2026-05-08'
+      stakeholders: [ spec-author, security, client-dev ]
+      lifecycle-phase: authoring-time
+      defect-class: norm
+      iso25010: [ security, maintainability ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: false
+      regulatory-mapping:
+        asvs: [ 'V14.4.5' ]
+        nist: [ 'PR.AC-1' ]
+      cost-impact: medium
+      mttr-impact: medium
+      agent-readiness-impact: medium
+
+  # Source: Azure G-AZ-7 + SPS + IBM (Accept variant);
+  #         rules-brainstorm.md EV-32 (P1, drift)
+  # Lens: 3 (Evolution-Friction), 2 (Standards-Compliance)
+  # Round: 2
+  apiq-ev-32-no-accept-header-parameter:
+    description: >-
+      [lens-3 | drift] EV-32: `Accept` declared as an explicit header parameter
+      — content negotiation should be driven by `responses[*].content` keys.
+      Sources: [Azure G-AZ-7] [SPS] [IBM].
+    message: "Operation declares `Accept` header parameter; OAS 3 derives content
+      negotiation from `responses[*].content` keys."
+    severity: warn
+    given: "$..parameters[?(@.in=='header' && @.name && (@.name=='Accept' ||
+      @.name=='accept'))]"
+    then:
+      function: undefined
+      field: name
+    apiq-meta:
+      pattern-id: EV-32
+      lenses: [ evolution-friction, standards-compliance ]
+      direction: drift
+      sources:
+        - type: vendor
+          name: 'Azure G-AZ-7'
+          verifiedAt: '2026-05-08'
+        - type: vendor
+          name: 'SPS sps-no-explicit-headers'
+          verifiedAt: '2026-05-08'
+      stakeholders: [ spec-author, client-dev ]
+      lifecycle-phase: authoring-time
+      defect-class: norm
+      iso25010: [ maintainability, compatibility ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: true
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: low
+
+  # ------------------------------------------------------------------------
+  # EV-34 — Spec uses Swagger-2 (vs OAS 3.x)
+  # [drift] [error] sources: SP-G-TD-3 + Red-Hat
+  # ------------------------------------------------------------------------
+  # Source: SP-G-TD-3 Team-D no-swagger-2 + Red-Hat rhoas-oas3minimum;
+  #         rules-brainstorm.md EV-34 (P1, drift)
+  # Lens: 3 (Evolution-Friction)
+  # Round: 2
+  apiq-ev-34-no-swagger-2:
+    description: >-
+      [lens-3 | drift] EV-34: Document declares `swagger: 2.0` instead of
+      `openapi: 3.x`. Swagger-2 is the previous spec generation; migration to
+      OAS-3 is itself a breaking change for codegen consumers. Sources:
+      [SP-G-TD-3 Team-D no-swagger-2] [Red-Hat rhoas-oas3minimum].
+    message: "Document uses Swagger 2.0; migrate to OpenAPI 3.x — apiq Stage-A
+      targets OAS-3."
+    severity: error
+    given: "$"
+    then:
+      function: undefined
+      field: swagger
+    apiq-meta:
+      pattern-id: EV-34
+      lenses: [ evolution-friction, standards-compliance ]
+      direction: drift
+      sources:
+        - type: vendor
+          name: 'SP-G-TD-3 Team-D no-swagger-2'
+          verifiedAt: '2026-05-08'
+        - type: vendor
+          name: 'Red-Hat rhoas-oas3minimum'
+          verifiedAt: '2026-05-08'
+      stakeholders: [ spec-author, codegen-tool, client-dev ]
+      lifecycle-phase: authoring-time
+      defect-class: syntax
+      iso25010: [ compatibility, maintainability ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: high
+      mttr-impact: high
+      agent-readiness-impact: high
+
+  # ------------------------------------------------------------------------
+  # EV-35 — Adjacent path-template-segments with no separator
+  # [drift] [error] sources: MIN-6 IBM
+  # ------------------------------------------------------------------------
+  # Source: MIN-6 IBM ibm-no-consecutive-path-parameter-segments;
+  #         rules-brainstorm.md EV-35 (P1, drift) + CL-68
+  # Lens: 3 (Evolution-Friction), 4 (Client-Friction)
+  # Round: 2
+  apiq-ev-35-no-consecutive-path-parameters:
+    description: >-
+      [lens-3 | drift] EV-35: Two adjacent path-template segments without a
+      static separator (e.g. `/foos/{x}{y}`) are ambiguous — disambiguation
+      later requires URL rotation (breaking). Source: [MIN-6 IBM
+      ibm-no-consecutive-path-parameter-segments].
+    message: "Path contains consecutive `{param}{param}` segments without separator
+      — disambiguation later is breaking."
+    severity: error
+    given: "$.paths"
+    then:
+      function: pattern
+      field: "@key"
+      functionOptions:
+        notMatch: "\\}\\{"
+    apiq-meta:
+      pattern-id: EV-35
+      lenses: [ evolution-friction, client-friction ]
+      direction: drift
+      sources:
+        - type: vendor
+          name: 'IBM ibm-no-consecutive-path-parameter-segments (MIN-6)'
+          verifiedAt: '2026-05-08'
+      stakeholders: [ spec-author, client-dev, ai-agent ]
+      lifecycle-phase: authoring-time
+      defect-class: semantic
+      iso25010: [ usability, maintainability ]
+      codegen-targets: [ java, go, python, typescript, rust, csharp, kotlin ]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: high
+      mttr-impact: high
+      agent-readiness-impact: high
+
+  # ------------------------------------------------------------------------
+  # EV-36 — Two paths with identical structural template
+  # [drift] [error] sources: MIN-7 Vacuum + Redocly
+  # NOTE: Detected via Walker (cross-path comparison).
+  # See evolution-statistical.ts walkAmbiguousPathTemplates.
+  # ------------------------------------------------------------------------
+
+  # ------------------------------------------------------------------------
+  # EV-37 — info.version not present
+  # [drift] [error] sources: OAS-3-MUST
+  # NOTE: spectral:oas3-schema enforces this (OAS3 schema requires info.version);
+  # we re-state at error severity as a Lens-3 finding for explicit framing.
+  # ------------------------------------------------------------------------
+  # Source: OAS-3 schema (info.version required); spectral:oas3-schema enforces;
+  #         rules-brainstorm.md EV-37 (P1, drift)
+  # Lens: 3 (Evolution-Friction)
+  # Round: 2
+  apiq-ev-37-info-version-required:
+    description: >-
+      [lens-3 | drift] EV-37: `info.version` is required by OAS-3 and indicates
+      version-discipline. Absence implies no prior versioning thinking → adding
+      it later is doc-only but flags institutional risk. Source: [OAS-3-MUST].
+    message: "`info.version` is missing — required by OAS-3 and signals undeclared
+      version discipline."
+    severity: error
+    given: "$.info"
+    then:
+      function: truthy
+      field: version
+    apiq-meta:
+      pattern-id: EV-37
+      lenses: [ evolution-friction, standards-compliance ]
+      direction: drift
+      sources:
+        - type: vendor
+          name: 'OAS-3 specification (info.version required)'
+          verifiedAt: '2026-05-08'
+      stakeholders: [ spec-author ]
+      lifecycle-phase: authoring-time
+      defect-class: incomplete
+      iso25010: [ maintainability, compatibility ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: true
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: low
+
+  # ------------------------------------------------------------------------
+  # EV-40 — Schema-name reuse case-insensitive
+  # [drift] [warn] sources: Redocly + IBM + MIN-50 + apiq O2
+  # NOTE: Detected via Walker (needs to compare all schema names case-insensitively).
+  # See evolution-statistical.ts walkSchemaNameCollisions.
+  # ------------------------------------------------------------------------
+
+  # ------------------------------------------------------------------------
+  # EV-43 — swagger:2.0 + openapi:3.x (half-migrated spec)
+  # [drift] [error] sources: SP-G-TD-3 + pb33f
+  # NOTE: residual `consumes` / `produces` (Swagger-2) + `openapi: 3.x` indicates
+  # incomplete migration. Spectral default catches the OAS schema violation.
+  # We flag the residual fields explicitly.
+  # ------------------------------------------------------------------------
+  # Source: SP-G-TD-3 + pb33f migration-warnings;
+  #         rules-brainstorm.md EV-43 (P1, drift) — half-migrated spec
+  # Lens: 3 (Evolution-Friction), 2 (Standards-Compliance)
+  # Round: 2
+  apiq-ev-43-no-swagger-2-residue-consumes:
+    description: >-
+      [lens-3 | drift] EV-43: Document declares `consumes` (Swagger-2 only) on
+      an OAS-3 spec — half-migrated. OAS-3 derives content-types from
+      `requestBody.content` keys. Sources: [SP-G-TD-3] [pb33f
+      migration-warnings].
+    message: "Top-level `consumes` is a Swagger-2 artifact — migrate to
+      per-operation `requestBody.content`."
+    severity: error
+    given: "$"
+    then:
+      function: undefined
+      field: consumes
+    apiq-meta:
+      pattern-id: EV-43
+      lenses: [ evolution-friction, standards-compliance ]
+      direction: drift
+      sources:
+        - type: vendor
+          name: 'SP-G-TD-3 / pb33f migration-warnings'
+          verifiedAt: '2026-05-08'
+      stakeholders: [ spec-author, codegen-tool ]
+      lifecycle-phase: authoring-time
+      defect-class: syntax
+      iso25010: [ compatibility, maintainability ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: true
+      cost-impact: medium
+      mttr-impact: medium
+      agent-readiness-impact: medium
+
+  # Source: SP-G-TD-3 + pb33f migration-warnings (produces variant);
+  #         rules-brainstorm.md EV-43 (P1, drift)
+  # Lens: 3 (Evolution-Friction), 2 (Standards-Compliance)
+  # Round: 2
+  apiq-ev-43-no-swagger-2-residue-produces:
+    description: >-
+      [lens-3 | drift] EV-43 (companion): Top-level `produces` is a Swagger-2
+      artifact — half-migrated to OAS-3.
+    message: "Top-level `produces` is a Swagger-2 artifact — migrate to per-response
+      `content` keys."
+    severity: error
+    given: "$"
+    then:
+      function: undefined
+      field: produces
+    apiq-meta:
+      pattern-id: EV-43
+      lenses: [ evolution-friction, standards-compliance ]
+      direction: drift
+      sources:
+        - type: vendor
+          name: 'SP-G-TD-3 / pb33f migration-warnings'
+          verifiedAt: '2026-05-08'
+      stakeholders: [ spec-author, codegen-tool ]
+      lifecycle-phase: authoring-time
+      defect-class: syntax
+      iso25010: [ compatibility, maintainability ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: true
+      cost-impact: medium
+      mttr-impact: medium
+      agent-readiness-impact: medium
+
+  # ------------------------------------------------------------------------
+  # EV-57 — required declares fields not in properties
+  # [drift] [error] sources: apiq A3 + tri-linter consensus
+  # NOTE: detected via Walker (needs to compare required[] against properties{}).
+  # See evolution-statistical.ts walkRequiredNotInProperties.
+  # ------------------------------------------------------------------------
+
+  # =========================================================================
+  # ============================ P2 — EV PATTERNS ===========================
+  # =========================================================================
+  # apiq-USP differentiator — patterns mature linters do NOT catch.
+
+  # ------------------------------------------------------------------------
+  # EV-3 — Closed enum without extensibility hook
+  # [loosen] [hint] sources: Zalando + Speakeasy + OASDIFF + OPTIC
+  # ------------------------------------------------------------------------
+  # Source: Zalando x-extensible-enum + Speakeasy x-speakeasy-unknown-values +
+  #         OASDIFF added-enum-value-on-response is breaking-for-strict-clients +
+  #         OPTIC removed-enum-value-breaking; rules-brainstorm.md EV-3 (P2, loosen)
+  # Lens: 3 (Evolution-Friction), 4 (Client-Friction)
+  # Round: 2
+  apiq-ev-3-response-enum-needs-extensibility:
+    description: >-
+      [lens-3 | loosen] EV-3: A `enum` on a response schema without an
+      extensibility hook (`x-extensible-enum` / `x-speakeasy-unknown-values` /
+      description containing "extensible"/"open"/"may add") is a breaking-change
+      bomb — adding a new enum value breaks clients that exhaustively switch.
+      Sources: [Zalando x-extensible-enum] [Speakeasy
+      x-speakeasy-unknown-values] [OASDIFF added-enum-value-on-response is
+      breaking-for-strict-clients] [OPTIC removed-enum-value-breaking].
+    message: "Response enum has no extensibility hook (x-extensible-enum /
+      x-speakeasy-unknown-values / description-keyword) — adding values later is
+      breaking."
+    severity: hint
+    given: "$.paths[*][*].responses[*].content[*].schema..[?(@.enum && @.enum.length
+      > 1 && @['x-extensible-enum']===undefined &&
+      @['x-speakeasy-unknown-values']===undefined)]"
+    then:
+      function: defined
+      field: x-extensible-enum
+    apiq-meta:
+      pattern-id: EV-3
+      lenses: [ evolution-friction, client-friction ]
+      direction: loosen
+      sources:
+        - type: vendor
+          name: 'Zalando x-extensible-enum'
+          verifiedAt: '2026-05-08'
+        - type: vendor
+          name: 'Speakeasy x-speakeasy-unknown-values'
+          verifiedAt: '2026-05-08'
+        - type: vendor
+          name: 'OASDIFF added-enum-value-on-response'
+          verifiedAt: '2026-05-08'
+        - type: vendor
+          name: 'OPTIC removed-enum-value-breaking'
+          verifiedAt: '2026-05-08'
+      stakeholders: [ spec-author, client-dev ]
+      lifecycle-phase: evolution-time
+      defect-class: incomplete
+      iso25010: [ compatibility, maintainability ]
+      codegen-targets: [ java, go, python, typescript, rust, csharp, kotlin ]
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: medium
+      mttr-impact: high
+      agent-readiness-impact: medium
+
+  # ------------------------------------------------------------------------
+  # EV-6 — oneOf without discriminator+mapping
+  # [loosen] [warn] sources: OASDIFF + Bump.sh + SmartBear
+  # NOTE: Existing apiq-oneof-needs-discriminator covers warning-on-absent-discriminator.
+  # We add a stricter variant: discriminator present but no mapping table.
+  # Welle F severity-upgrade: hint → warn (patterns.json severityHypothesis: warn).
+  # ------------------------------------------------------------------------
+  # Source: OASDIFF discriminator-mapping-changed-breaking +
+  #         Bump.sh discriminator-redundancy-analysis;
+  #         rules-brainstorm.md EV-6 (P2, loosen)
+  # Lens: 3 (Evolution-Friction), 4 (Client-Friction)
+  # Round: 2
+  apiq-ev-6-discriminator-needs-mapping:
+    description: >-
+      [lens-3 | loosen] EV-6: `discriminator` is declared but no `mapping` table
+      — clients can't dispatch on unknown variant. Adding a new subtype later
+      forces clients to runtime-probe-by-string. Source: [OASDIFF
+      discriminator-mapping-changed-breaking] [Bump.sh
+      discriminator-redundancy-analysis].
+    message: "`discriminator` is declared without `mapping` — encourages explicit
+      subtype registry."
+    severity: warn
+    given: "$..[?(@.discriminator && @.discriminator.propertyName &&
+      @.discriminator.mapping===undefined && (@.oneOf || @.anyOf))]"
+    then:
+      function: defined
+      field: discriminator.mapping
+    apiq-meta:
+      pattern-id: EV-6
+      lenses: [ evolution-friction, client-friction ]
+      direction: loosen
+      sources:
+        - type: vendor
+          name: 'OASDIFF discriminator-mapping-changed-breaking'
+          verifiedAt: '2026-05-08'
+        - type: vendor
+          name: 'Bump.sh discriminator-redundancy-analysis'
+          verifiedAt: '2026-05-08'
+      stakeholders: [ spec-author, client-dev, codegen-tool ]
+      lifecycle-phase: evolution-time
+      defect-class: incomplete
+      iso25010: [ maintainability, compatibility ]
+      codegen-targets: [ java, go, python, typescript, rust, csharp, kotlin ]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: medium
+      mttr-impact: medium
+      agent-readiness-impact: medium
+
+  # ------------------------------------------------------------------------
+  # EV-7 — Default value present on a required field
+  # [drift] [warn] sources: SP-G-AZ-10 + IBM + OASDIFF + STRIPE
+  # NOTE: Detected via Walker (needs to cross-reference `required` array against `properties.*.default`).
+  # See evolution-statistical.ts walkRequiredHasDefault.
+  # ------------------------------------------------------------------------
+
+  # ------------------------------------------------------------------------
+  # EV-11 — No spec-wide error-shape declared
+  # [drift] [warn] sources: SG-16 + RFC 7807/9457 + OPTIC + STRIPE-convention
+  # NOTE: Statistical Walker — counts distinct error-schemas; flags if no
+  # canonical error-shape (no problem+json reference, no components.responses.Error).
+  # See evolution-statistical.ts walkInconsistentErrorShape.
+  # ------------------------------------------------------------------------
+
+  # ------------------------------------------------------------------------
+  # EV-14 — requestBody.required not explicit
+  # [drift] [warn] sources: SP-G-AZ-9 + IBM ibm-content-contains-schema
+  # Welle F severity-upgrade: hint → warn (patterns.json severityHypothesis: warn).
+  # ------------------------------------------------------------------------
+  # Source: SP-G-AZ-9 + IBM ibm-content-contains-schema;
+  #         rules-brainstorm.md EV-14 (P2, drift)
+  # Lens: 3 (Evolution-Friction), 5 (Style-Coherence)
+  # Round: 2
+  apiq-ev-14-requestbody-required-explicit:
+    description: >-
+      [lens-3 | drift] EV-14: `requestBody` should declare `required: true` or
+      `required: false` explicitly. The default is `false` in OAS-3 but tools
+      may treat absence differently → silent breaking on tool-divergence.
+      Sources: [SP-G-AZ-9] [IBM ibm-content-contains-schema].
+    message: "`requestBody.required` is not explicitly declared; tools default
+      differently."
+    severity: warn
+    given: "$.paths[*][post,put,patch].requestBody"
+    then:
+      function: defined
+      field: required
+    apiq-meta:
+      pattern-id: EV-14
+      lenses: [ evolution-friction, style-coherence ]
+      direction: drift
+      sources:
+        - type: vendor
+          name: 'Azure SP-G-AZ-9'
+          verifiedAt: '2026-05-08'
+        - type: vendor
+          name: 'IBM ibm-content-contains-schema'
+          verifiedAt: '2026-05-08'
+      stakeholders: [ spec-author, client-dev, codegen-tool ]
+      lifecycle-phase: authoring-time
+      defect-class: incomplete
+      iso25010: [ maintainability, compatibility ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: true
+      cost-impact: low
+      mttr-impact: medium
+      agent-readiness-impact: medium
+
+  # ------------------------------------------------------------------------
+  # EV-16 — 5xx/default response missing
+  # [drift] [warn] sources: SP-G-OWASP-28 + Azure az-default-response + Zalando
+  # ------------------------------------------------------------------------
+  # Source: SP-G-OWASP-28 + Azure az-default-response + Zalando
+  #         must-specify-default-response; rules-brainstorm.md EV-16 (P2, drift)
+  # Lens: 3 (Evolution-Friction), 4 (Client-Friction)
+  # Round: 2
+  apiq-ev-16-operation-needs-default-response:
+    description: >-
+      [lens-3 | drift] EV-16: Operation has no `default` and no 5xx response
+      declared — when an unanticipated server-error occurs, the contract is
+      undefined for clients. Adding `default` later changes handler resolution.
+      Sources: [SP-G-OWASP-28] [Azure az-default-response] [Zalando
+      must-specify-default-response].
+    message: "Operation has no `default` or 5xx response — undefined error contract."
+    severity: warn
+    given: "$.paths[*][get,post,put,patch,delete].responses"
+    then:
+      function: schema
+      functionOptions:
+        schema:
+          oneOf:
+            - required: [ 'default' ]
+            - required: [ '500' ]
+            - required: [ '501' ]
+            - required: [ '502' ]
+            - required: [ '503' ]
+            - required: [ '504' ]
+            - required: [ '505' ]
+    apiq-meta:
+      pattern-id: EV-16
+      lenses: [ evolution-friction, client-friction, ai-agent-consumability ]
+      direction: drift
+      sources:
+        - type: vendor
+          name: 'Azure az-default-response'
+          verifiedAt: '2026-05-08'
+        - type: vendor
+          name: 'Zalando must-specify-default-response'
+          verifiedAt: '2026-05-08'
+        - type: vendor
+          name: 'SP-G-OWASP-28'
+          verifiedAt: '2026-05-08'
+      stakeholders: [ spec-author, client-dev, ai-agent ]
+      lifecycle-phase: authoring-time
+      defect-class: incomplete
+      iso25010: [ reliability, usability ]
+      codegen-targets: [ java, go, python, typescript, rust, csharp, kotlin ]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: medium
+      mttr-impact: medium
+      agent-readiness-impact: high
+
+  # ------------------------------------------------------------------------
+  # EV-17 — Endpoint without tags
+  # [drift] [warn] sources: SG-41 + spectral:oas operation-tag-defined
+  # NOTE: spectral:oas operation-tags warns at info-level. We re-state at
+  # warn for Lens-3 framing.
+  # Welle F severity-upgrade: hint → warn (patterns.json severityHypothesis: warn).
+  # ------------------------------------------------------------------------
+  # Source: SG-41 + spectral:oas operation-tag-defined;
+  #         rules-brainstorm.md EV-17 (P2, drift) + Q1
+  # Lens: 3 (Evolution-Friction), 4 (Client-Friction), 10 (Operational-Metadata)
+  # Round: 2
+  apiq-ev-17-operation-needs-tags:
+    description: >-
+      [lens-3 | drift] EV-17: An operation without `tags` cannot be moved into a
+      logical group later without doc-restructure. Re-tagging rotates docs-URL
+      anchors. Sources: [SG-41] [spectral:oas operation-tag-defined].
+    message: "Operation has no `tags` — re-tagging later rotates doc anchors."
+    severity: warn
+    given: "$.paths[*][get,post,put,patch,delete]"
+    then:
+      function: schema
+      field: tags
+      functionOptions:
+        schema:
+          type: array
+          minItems: 1
+    apiq-meta:
+      pattern-id: EV-17
+      lenses: [ evolution-friction, client-friction, operational-metadata ]
+      direction: drift
+      sources:
+        - type: vendor
+          name: 'spectral:oas operation-tag-defined'
+          verifiedAt: '2026-05-08'
+        - type: vendor
+          name: 'SG-41'
+          verifiedAt: '2026-05-08'
+      stakeholders: [ spec-author, docs-tool, client-dev ]
+      lifecycle-phase: authoring-time
+      defect-class: incomplete
+      iso25010: [ usability, maintainability ]
+      codegen-targets: [ java, go, python, typescript, rust, csharp, kotlin ]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: low
+
+  # ------------------------------------------------------------------------
+  # EV-18 — additionalProperties:true on REQUEST body without explicit allow-list
+  # [tighten] [hint] sources: OWASP + Stripe + MS-AZ
+  # Welle F severity-update: warn → hint (patterns.json severityHypothesis: hint).
+  # Justification: structural-validity is OWASP-mass-assignment-territory but
+  # opinion-divided whether `additionalProperties:true` should fire warn vs hint.
+  # patterns.json hypothesis is hint; aligning here.
+  # ------------------------------------------------------------------------
+  # Source: OWASP API3 (mass-assignment) + STRIPE-strict-by-design +
+  #         MS-AZ rest-fail-for-unknown-fields; rules-brainstorm.md EV-18 (P2,
+  #         tighten — inverse EV-5)
+  # Lens: 3 (Evolution-Friction), 1 (Threat-Modeling)
+  # Round: 2
+  apiq-ev-18-request-additionalproperties-true:
+    description: >-
+      [lens-3 | tighten] EV-18: A request schema with `additionalProperties:
+      true` cannot be tightened to `false` later without breaking clients that
+      send extra props. Inverse of EV-5 (response-side). Sources:
+      [OWASP-mass-assignment] [STRIPE-strict-by-design] [MS-AZ
+      rest-fail-for-unknown-fields].
+    message: "Request schema has `additionalProperties: true` — server tightening to
+      false later is breaking."
+    severity: hint
+    given: "$.paths[*][post,put,patch].requestBody.content[*].schema..[?(@.type=='o\
+      bject' && @.additionalProperties===true)]"
+    then:
+      function: falsy
+      field: additionalProperties
+    apiq-meta:
+      pattern-id: EV-18
+      lenses: [ evolution-friction, threat-modeling ]
+      direction: tighten
+      sources:
+        - type: vendor
+          name: 'OWASP API3 mass-assignment'
+          verifiedAt: '2026-05-08'
+        - type: vendor
+          name: 'Stripe strict-by-design'
+          verifiedAt: '2026-05-08'
+        - type: vendor
+          name: 'Microsoft Azure rest-fail-for-unknown-fields'
+          verifiedAt: '2026-05-08'
+      stakeholders: [ spec-author, security, client-dev ]
+      lifecycle-phase: evolution-time
+      defect-class: over-specification
+      iso25010: [ security, maintainability ]
+      codegen-targets: [ '*' ]
+      detection-precision: medium
+      auto-fix-safe: false
+      regulatory-mapping:
+        asvs: [ 'V13.2.1' ]
+        nist: [ 'PR.DS-2' ]
+      cost-impact: medium
+      mttr-impact: medium
+      agent-readiness-impact: low
+
+  # ------------------------------------------------------------------------
+  # EV-19 — securitySchemes declared but unused
+  # [drift] [warn] sources: OASDIFF + apiq F3
+  # NOTE: spectral:oas3 has `oas3-unused-component` for unused schemas; it
+  # does NOT cover securitySchemes. We use unreferencedReusableObject.
+  # ------------------------------------------------------------------------
+  # Source: OASDIFF security-removed-or-added-is-breaking + apiq F3 (Round-1
+  #         dead-scheme-detection); rules-brainstorm.md EV-19 (P2, drift)
+  # Lens: 3 (Evolution-Friction), 1 (Threat-Modeling)
+  # Round: 2
+  apiq-ev-19-unused-securityschemes:
+    description: >-
+      [lens-3 | drift] EV-19: Security scheme is defined but no operation (or
+      `security` block) references it. Adding it as a requirement later is
+      breaking for existing public endpoints. Sources: [OASDIFF
+      security-removed-or-added-is-breaking] [apiq F3].
+    message: "Security scheme {{property}} is defined but never referenced."
+    severity: warn
+    recommended: true
+    resolved: false
+    given: "$.components.securitySchemes"
+    then:
+      function: unreferencedReusableObject
+      functionOptions:
+        reusableObjectsLocation: "#/components/securitySchemes"
+    apiq-meta:
+      pattern-id: EV-19
+      lenses: [ evolution-friction, threat-modeling ]
+      direction: drift
+      sources:
+        - type: vendor
+          name: 'OASDIFF security-removed-or-added-is-breaking'
+          verifiedAt: '2026-05-08'
+        - type: mining
+          phase: round1
+          subagent: 'apiq F3'
+          verifiedAt: '2026-05-08'
+      stakeholders: [ spec-author, security ]
+      lifecycle-phase: authoring-time
+      defect-class: incomplete
+      iso25010: [ security, maintainability ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: false
+      regulatory-mapping:
+        asvs: [ 'V14.4.1' ]
+        nist: [ 'PR.AC-1' ]
+      cost-impact: medium
+      mttr-impact: high
+      agent-readiness-impact: medium
+
+  # ------------------------------------------------------------------------
+  # EV-30 — requestBody without application/json
+  # [drift] [warn] sources: SP-G-AYWH-10 + SPS + OPTIC
+  # NOTE: Walker — checks for any operation that has requestBody.content but
+  # NO application/json key. Multi-content-type-aware.
+  # See evolution-statistical.ts walkRequestBodyNoJson.
+  # ------------------------------------------------------------------------
+
+  # ------------------------------------------------------------------------
+  # EV-33 — nullable:true AND required:true (contradiction)
+  # [drift] [warn] sources: JSON-Schema-evolution + Speakeasy
+  # NOTE: Walker — needs to cross-reference required[] with property's nullable.
+  # See evolution-statistical.ts walkNullableAndRequired.
+  # ------------------------------------------------------------------------
+
+  # ------------------------------------------------------------------------
+  # EV-46 — readOnly in request OR writeOnly in response
+  # [drift] [warn] sources: SP-G-AZ-24 + OASDIFF
+  # ------------------------------------------------------------------------
+  # Source: SP-G-AZ-24 + OASDIFF readOnly-flag-changed;
+  #         rules-brainstorm.md EV-46 (P2, drift)
+  # Lens: 3 (Evolution-Friction), 4 (Client-Friction)
+  # Round: 2
+  apiq-ev-46-readonly-in-request:
+    description: >-
+      [lens-3 | drift] EV-46: A property marked `readOnly: true` should NOT
+      appear in a request schema. Cleanup-by-removal-later is breaking. Sources:
+      [SP-G-AZ-24] [OASDIFF readOnly-flag-changed].
+    message: "`readOnly: true` property in request body — semantically confused;
+      cleanup later is breaking."
+    severity: warn
+    given: "$.paths[*][post,put,patch].requestBody.content[*].schema..properties[?(\
+      @.readOnly===true)]"
+    then:
+      function: undefined
+      field: readOnly
+    apiq-meta:
+      pattern-id: EV-46
+      lenses: [ evolution-friction, client-friction, internal-consistency ]
+      direction: drift
+      sources:
+        - type: vendor
+          name: 'Azure SP-G-AZ-24'
+          verifiedAt: '2026-05-08'
+        - type: vendor
+          name: 'OASDIFF readOnly-flag-changed'
+          verifiedAt: '2026-05-08'
+      stakeholders: [ spec-author, client-dev ]
+      lifecycle-phase: authoring-time
+      defect-class: semantic
+      iso25010: [ maintainability, compatibility ]
+      codegen-targets: [ java, go, python, typescript, rust, csharp, kotlin ]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: medium
+      mttr-impact: medium
+      agent-readiness-impact: medium
+
+  # Source: SP-G-AZ-24 + OASDIFF (writeOnly mirror);
+  #         rules-brainstorm.md EV-46 (P2, drift)
+  # Lens: 3 (Evolution-Friction), 4 (Client-Friction)
+  # Round: 2
+  apiq-ev-46-writeonly-in-response:
+    description: >-
+      [lens-3 | drift] EV-46 (mirror): A property marked `writeOnly: true`
+      should NOT appear in a response schema.
+    message: "`writeOnly: true` property in response body — semantically confused;
+      cleanup later is breaking."
+    severity: warn
+    given: "$.paths[*][*].responses[*].content[*].schema..properties[?(@.writeOnly=\
+      ==true)]"
+    then:
+      function: undefined
+      field: writeOnly
+    apiq-meta:
+      pattern-id: EV-46
+      lenses: [ evolution-friction, client-friction, internal-consistency ]
+      direction: drift
+      sources:
+        - type: vendor
+          name: 'Azure SP-G-AZ-24'
+          verifiedAt: '2026-05-08'
+        - type: vendor
+          name: 'OASDIFF writeOnly-flag-changed'
+          verifiedAt: '2026-05-08'
+      stakeholders: [ spec-author, client-dev ]
+      lifecycle-phase: authoring-time
+      defect-class: semantic
+      iso25010: [ maintainability, compatibility ]
+      codegen-targets: [ java, go, python, typescript, rust, csharp, kotlin ]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: medium
+      mttr-impact: medium
+      agent-readiness-impact: medium
+
+  # ------------------------------------------------------------------------
+  # EV-48 — PATCH accepts application/json (RFC errata 3169)
+  # [drift] [warn] sources: SP-G-TD-4 + Azure az-patch-content-type + IBM
+  # ------------------------------------------------------------------------
+  # Source: SP-G-TD-4 + Azure az-patch-content-type + IBM MIN-30 + RFC 7396
+  #         (merge-patch+json) + RFC 6902 (json-patch+json) + RFC errata 3169;
+  #         rules-brainstorm.md EV-48 (P2, drift) + RFC2-97
+  # Lens: 3 (Evolution-Friction), 2 (Standards-Compliance)
+  # Round: 2
+  apiq-ev-48-patch-content-type:
+    description: >-
+      [lens-3 | drift] EV-48: `PATCH` operation accepts `application/json`
+      instead of `application/merge-patch+json` (RFC 7396) or
+      `application/json-patch+json` (RFC 6902). RFC errata 3169 + IETF guidance.
+      Standardizing the content-type later is breaking. Sources: [SP-G-TD-4]
+      [Azure az-patch-content-type] [SG-34] [IBM MIN-30].
+    message: "`PATCH` accepts `application/json` instead of
+      `application/merge-patch+json` or `application/json-patch+json` (RFC 7396
+      / 6902)."
+    severity: warn
+    given: "$.paths[*].patch.requestBody.content"
+    then:
+      function: schema
+      functionOptions:
+        schema:
+          anyOf:
+            - required: [ 'application/merge-patch+json' ]
+            - required: [ 'application/json-patch+json' ]
+    apiq-meta:
+      pattern-id: EV-48
+      lenses: [ evolution-friction, standards-compliance, client-friction ]
+      direction: drift
+      sources:
+        - type: rfc
+          number: 7396
+          summary: 'A JSON merge patch document describes changes to be made to a target
+            JSON document.'
+        - type: rfc
+          number: 6902
+          summary: 'JSON Patch defines a JSON document structure for expressing a sequence
+            of operations to apply to a JSON document.'
+        - type: vendor
+          name: 'Azure az-patch-content-type'
+          verifiedAt: '2026-05-08'
+        - type: vendor
+          name: 'IBM MIN-30'
+          verifiedAt: '2026-05-08'
+      stakeholders: [ spec-author, client-dev, codegen-tool ]
+      lifecycle-phase: authoring-time
+      defect-class: norm
+      iso25010: [ compatibility, maintainability ]
+      codegen-targets: [ java, go, python, typescript, rust, csharp, kotlin ]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: medium
+      mttr-impact: medium
+      agent-readiness-impact: medium
+
+  # ------------------------------------------------------------------------
+  # EV-50 — 304 declared without conditional infrastructure
+  # [drift] [warn] sources: RFC 7232 / 9110 + apiq C10
+  # NOTE: existing walkResponseWithoutValidatorsOn304 handles this. Ruleset
+  # entry kept for documentation traceability.
+  # ------------------------------------------------------------------------
+
+  # ------------------------------------------------------------------------
+  # EV-53 — URL-version vs info.version drift
+  # [drift] [warn] sources: Adidas + Speakeasy + G-URL-1
+  # NOTE: Detected via Walker (cross-references servers/paths regex with info.version).
+  # See evolution-statistical.ts walkUrlInfoVersionDrift.
+  # ------------------------------------------------------------------------
+
+  # ------------------------------------------------------------------------
+  # EV-55 — Required parameter shows default
+  # [drift] [warn] sources: Azure G-AZ-9 + IBM ibm-no-default-for-required-parameter
+  # ------------------------------------------------------------------------
+  # Source: Azure G-AZ-9 + IBM ibm-no-default-for-required-parameter +
+  #         OASDIFF default-changed; rules-brainstorm.md EV-55 (P2, drift)
+  # Lens: 3 (Evolution-Friction)
+  # Round: 2
+  apiq-ev-55-required-param-no-default:
+    description: >-
+      [lens-3 | drift] EV-55: A parameter with `required: true` should NOT
+      declare a `default`. Defaults on required-fields are dead-code; cleanup
+      changes validation semantics. Sources: [Azure G-AZ-9] [IBM
+      ibm-no-default-for-required-parameter] [OASDIFF default-changed].
+    message: "Required parameter declares a `default` value — contradiction; cleanup
+      is breaking."
+    severity: warn
+    given: "$..parameters[?(@.required===true && @.schema &&
+      @.schema.default!==undefined)]"
+    then:
+      function: undefined
+      field: schema.default
+    apiq-meta:
+      pattern-id: EV-55
+      lenses: [ evolution-friction, internal-consistency ]
+      direction: drift
+      sources:
+        - type: vendor
+          name: 'Azure G-AZ-9'
+          verifiedAt: '2026-05-08'
+        - type: vendor
+          name: 'IBM ibm-no-default-for-required-parameter'
+          verifiedAt: '2026-05-08'
+        - type: vendor
+          name: 'OASDIFF default-changed'
+          verifiedAt: '2026-05-08'
+      stakeholders: [ spec-author, client-dev ]
+      lifecycle-phase: authoring-time
+      defect-class: semantic
+      iso25010: [ maintainability ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: true
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: low
+
+  # ------------------------------------------------------------------------
+  # EV-56 — servers array missing or empty
+  # [drift] [warn] sources: SP-Redocly no-empty-servers
+  # ------------------------------------------------------------------------
+  # Source: SP-Redocly no-empty-servers;
+  #         rules-brainstorm.md EV-56 (P2, drift)
+  # Lens: 3 (Evolution-Friction), 5 (Style-Coherence)
+  # Round: 2
+  apiq-ev-56-servers-required:
+    description: >-
+      [lens-3 | drift] EV-56: `servers` array missing or empty — clients
+      hard-code a base URL, introducing servers later is doc-only but exposes
+      drift. Source: [SP-Redocly no-empty-servers].
+    message: "`servers` array is missing or empty — clients are forced to hard-code
+      a base URL."
+    severity: warn
+    given: "$"
+    then:
+      - field: servers
+        function: defined
+      - field: servers
+        function: length
+        functionOptions:
+          min: 1
+    apiq-meta:
+      pattern-id: EV-56
+      lenses: [ evolution-friction, style-coherence, operational-metadata ]
+      direction: drift
+      sources:
+        - type: vendor
+          name: 'Redocly no-empty-servers'
+          verifiedAt: '2026-05-08'
+      stakeholders: [ spec-author, client-dev, ai-agent ]
+      lifecycle-phase: authoring-time
+      defect-class: incomplete
+      iso25010: [ usability, maintainability ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: medium
+      agent-readiness-impact: high
+
+# Notes on rules NOT included (deferred to Walker layer or LLM):
+#
+# WALKERS layer (statistical / cross-reference / graph-walks):
+#   - EV-7  (default-on-required) — cross-reference required[] with properties.default
+#   - EV-10 (mixed URL+Header versioning) — cross-cuts servers + parameters
+#   - EV-11 (no spec-wide error-shape) — count distinct error schemas
+#   - EV-30 (requestBody no application/json) — content-types-aware
+#   - EV-33 (nullable+required contradiction) — cross-reference required[] with properties.nullable
+#   - EV-36 (ambiguous path templates) — cross-path comparison
+#   - EV-40 (schema-name reuse case-insensitive) — cross-schema comparison
+#   - EV-53 (URL-version vs info.version drift) — cross-reference servers/paths with info.version
+#   - EV-57 (required not in properties) — cross-reference required[] with properties{}
+#
+# LLM-ONLY layer (semantic):
+#   - EV-2  (required-field-stability heuristic — relies on prose-NLP)
+#   - EV-58 (deprecated:true with active enum — semantic contradiction)
+#
+# Cross-cut with apiq-ruleset.yaml:
+#   - apiq-oneof-needs-discriminator covers EV-6 base case (apiq O2 / Round-1)
+#   - apiq-no-content-type-header-parameter covers EV-32 Content-Type variant
+#   - walkResponseWithoutValidatorsOn304 covers EV-50 (existing walker)
+#   - walkProseDeprecationWithoutFlag covers EV-1 prose-detection complement

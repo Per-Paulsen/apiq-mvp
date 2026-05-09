@@ -394,3 +394,22 @@ export const multiLangReservedKeywords = (
     },
   ];
 };
+
+// =============================================================================
+// Welle Arch+ A3 — FUNCTION_METADATA registry for client-p1 callables.
+// =============================================================================
+
+import type { FunctionMetadata } from './_metadata.js';
+
+export const FUNCTION_METADATA: Record<string, FunctionMetadata> = {
+  'multi-lang-reserved-keywords': {
+    name: 'multi-lang-reserved-keywords',
+    patternIds: ['CL-1'],
+    lens: 'client-friction',
+    // Per-target Set.has lookup over a fixed 7-element target list is O(1)
+    // amortized; called per identifier so net is O(n) over all identifiers.
+    perfClass: 'O(1)',
+    description:
+      'Identifiers (property-names / operationIds) that collide with reserved keywords / built-ins in any of 7 major SDK target languages.',
+  },
+};

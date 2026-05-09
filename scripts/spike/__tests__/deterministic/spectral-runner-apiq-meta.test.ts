@@ -23,7 +23,7 @@ import {
   runSpectralLayers,
   mapDiagnosticToDetectorFinding,
   type ApiqMetaYamlBlock,
-} from '../../deterministic/spectral-runner.js';
+} from '../../deterministic/infra/spectral-runner.js';
 
 // Minimal valid OAS3 spec — passes Spectral's oas3-schema check, makes
 // runSpectralLayers cheap to run repeatedly in tests.

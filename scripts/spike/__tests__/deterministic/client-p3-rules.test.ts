@@ -25,6 +25,7 @@ const SPIKE_DIR = path.resolve(__dirname, '..', '..');
 const YAML_PATH = path.join(
   SPIKE_DIR,
   'deterministic',
+  'rules',
   'apiq-ruleset-client-p3.yaml'
 );
 
