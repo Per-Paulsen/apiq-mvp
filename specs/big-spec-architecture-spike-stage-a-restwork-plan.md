@@ -898,7 +898,7 @@ Wird bei jedem `/dev`-Run aktualisiert.
 | E | TBD | — | — | — | wartet auf D2 |
 | T | TBD | — | — | — | wartet auf C; parallel zu D/D2/E |
 | Doc | TBD | — | — | — | wartet auf M+F+Arch |
-| Arch | TBD | — | — | — | wartet auf F |
+| **Arch+** | `specs/E09-w-arch-architecture-cleanup.md` (+ `*-results.md`) | ✓ 2026-05-09 | 1830+ / 4 skip / 0 fail | `e3521d3` (feat) | done; Welle-Arch+ erweitert vom Plan-Doc-§13-original-scope auf full architectural cleanup — 7 sub-tasks (5 parallel + 2 sequential): OQ-1 cron monthly + A1 drift-lint + A2 zod-schemas + A3 FunctionMetadata + OQ-3 stripe-perf-investigation (vorgezogen) + OQ-2 verbatim-population (vorgezogen) + OQ-4 function-consolidation + File-Tree-Refactor; **342 rules + 116 custom-functions + 3 _helpers/-modules** (rate-limit/request-body/security); **layered tree** classifiers/aggregators/modules/rules/infra/spectral-functions/iana/index.ts (60 files moved git-mv); **34 RFC-quotes verifiziert** (T25 baseline now meaningful); drift-lint surfaced 15 class-2 errors (concrete follow-up); 5 patternIds drift in functionMetadata (KNOWN_DRIFT in test); github-rest 45min timeout unverified |
 | R | TBD | — | — | — | startbar ab Welle C |
 | V | TBD | — | — | — | wartet auf alle |
 | **M2** (NEU) | TBD — agent + MCP-mining gerichtet | — | — | — | wartet auf V; pre-Phase-B; siehe §16a |
