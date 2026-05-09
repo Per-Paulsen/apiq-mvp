@@ -657,7 +657,10 @@ rules:
       lifecycle-phase: build-time
       defect-class: ergonomic
       iso25010: [usability, maintainability]
-      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
+      # F7 narrow: SDK iterator-helpers (`AsyncIterator`/`Stream`/`paginate()`)
+      # ship in strict-typed and TS SDKs; Rust uses Stream traits; Python
+      # generators hide this. Keeping the 5 most-impacted SDK-codegen targets.
+      codegen-targets: [java, csharp, kotlin, typescript, go]
       detection-precision: low
       auto-fix-safe: false
       cost-impact: medium
@@ -720,7 +723,10 @@ rules:
       lifecycle-phase: build-time
       defect-class: ergonomic
       iso25010: [usability, maintainability]
-      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
+      # F7 narrow: shared error-class codegen produces idiomatic exception
+      # types in OO langs (ProblemException) and typed Result in Rust;
+      # Python clients tend to bubble dict-shaped errors with less typed gain.
+      codegen-targets: [java, csharp, kotlin, typescript, go, rust]
       detection-precision: medium
       auto-fix-safe: false
       cost-impact: medium
@@ -1155,7 +1161,9 @@ rules:
       lifecycle-phase: build-time
       defect-class: semantic
       iso25010: [usability, reliability]
-      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
+      # F7 narrow: example-fixture validation breaks builds in strict-typed
+      # SDK testsuites; Python/TS dynamic-test setups tolerate the divergence.
+      codegen-targets: [java, csharp, kotlin, go, rust]
       detection-precision: high
       auto-fix-safe: false
       cost-impact: low

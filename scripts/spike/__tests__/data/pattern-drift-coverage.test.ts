@@ -5,9 +5,9 @@
  * `apiq-ruleset-*.yaml` files and asserts that drift stays at-or-below the
  * captured baseline.
  *
- * Baseline (captured 2026-05-09 on commit pre-Welle-Arch+ first-run):
+ * Baseline (captured 2026-05-09, ratcheted after class-2 drift-fix-pass):
  *   class-1 (warn)  — 653  patterns.json entries without yaml-rule (orphan)
- *   class-2 (error) — 15   yaml-rule pattern-id NOT in patterns.json
+ *   class-2 (error) — 0    yaml-rule pattern-id NOT in patterns.json (was 15, fixed 2026-05-09)
  *   class-3 (warn)  — 18   severity hypothesis ≠ yaml severity
  *   class-4 (warn)  — 14   lens disjoint between patterns.json + apiq-meta
  *   class-5 (error) — 0    bundle sub-pattern-id NOT in patterns.json
@@ -43,8 +43,10 @@ describe('Welle Arch+ A1 — pattern-drift CI gate', () => {
     const patterns = loadPatternsFromDisk();
     const yamlFiles = loadYamlRulesetsFromDisk();
     const report = lintPatternDrift({ patterns, yamlFiles });
-    // Baseline 15 captured 2026-05-09; ratchet down as drift is fixed.
-    expect(report.byClass['class-2'].length).toBeLessThanOrEqual(15);
+    // Baseline ratcheted 15 → 0 on 2026-05-09 after Drift-Fix-Pass added the 13
+    // missing patterns to patterns.json. Keep at 0 — any class-2 regression
+    // means a yaml-rule references a pattern-id not yet mined.
+    expect(report.byClass['class-2'].length).toBe(0);
   });
 
   it('class-5 errors (bundle sub-pattern-id NOT in patterns.json) stay at 0', () => {

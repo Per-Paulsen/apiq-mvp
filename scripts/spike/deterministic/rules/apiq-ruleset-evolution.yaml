@@ -166,7 +166,9 @@ rules:
       lifecycle-phase: evolution-time
       defect-class: over-specification
       iso25010: [ maintainability, compatibility ]
-      codegen-targets: [ java, go, python, typescript, rust, csharp, kotlin ]
+      # F7 narrow: bare-array → envelope migration breaks typed SDK return-
+      # signatures hardest in strict-typed codegens; Python/TS adapt at runtime.
+      codegen-targets: [ java, csharp, kotlin, go, rust ]
       detection-precision: high
       auto-fix-safe: false
       cost-impact: high
@@ -201,7 +203,9 @@ rules:
       lifecycle-phase: evolution-time
       defect-class: over-specification
       iso25010: [ maintainability, compatibility ]
-      codegen-targets: [ java, go, python, typescript, rust, csharp, kotlin ]
+      # F7 narrow: same as response-side — typed SDK request-builders break
+      # hardest in strict-typed codegens on bare-array → envelope migrations.
+      codegen-targets: [ java, csharp, kotlin, go, rust ]
       detection-precision: high
       auto-fix-safe: false
       cost-impact: high
@@ -253,7 +257,9 @@ rules:
       lifecycle-phase: evolution-time
       defect-class: incomplete
       iso25010: [ security, maintainability ]
-      codegen-targets: [ java, go, python, typescript, rust, csharp, kotlin ]
+      # F7 narrow: strict-typed codegens hard-validate unknown fields and
+      # break loudest on tightening; Python/TS clients silently absorb.
+      codegen-targets: [ java, csharp, kotlin, go, rust ]
       detection-precision: medium
       auto-fix-safe: false
       regulatory-mapping:
@@ -971,7 +977,10 @@ rules:
       lifecycle-phase: evolution-time
       defect-class: incomplete
       iso25010: [ compatibility, maintainability ]
-      codegen-targets: [ java, go, python, typescript, rust, csharp, kotlin ]
+      # F7 narrow: closed sealed-enum codegen breaks SDK consumers when a new
+      # variant ships in strict-typed langs + TS literal-unions; Python/Rust
+      # treat unknown enum values more graciously (Rust uses #[non_exhaustive]).
+      codegen-targets: [ java, csharp, kotlin, typescript, go ]
       detection-precision: medium
       auto-fix-safe: false
       cost-impact: medium
@@ -1020,7 +1029,9 @@ rules:
       lifecycle-phase: evolution-time
       defect-class: incomplete
       iso25010: [ maintainability, compatibility ]
-      codegen-targets: [ java, go, python, typescript, rust, csharp, kotlin ]
+      # F7 narrow: explicit discriminator.mapping table dispatches typed-union
+      # codegen in strict-typed + TS + Rust; Python/Go often runtime-probe.
+      codegen-targets: [ java, csharp, kotlin, typescript, rust ]
       detection-precision: high
       auto-fix-safe: false
       cost-impact: medium
@@ -1182,7 +1193,9 @@ rules:
       lifecycle-phase: authoring-time
       defect-class: incomplete
       iso25010: [ usability, maintainability ]
-      codegen-targets: [ java, go, python, typescript, rust, csharp, kotlin ]
+      # F7 narrow: tags drive SDK class-grouping (UsersApi, OrdersApi) in OO
+      # codegens + TS-namespace; Rust/Python flatter conventions use tags less.
+      codegen-targets: [ java, csharp, kotlin, typescript, go ]
       detection-precision: high
       auto-fix-safe: false
       cost-impact: low
@@ -1347,7 +1360,9 @@ rules:
       lifecycle-phase: authoring-time
       defect-class: semantic
       iso25010: [ maintainability, compatibility ]
-      codegen-targets: [ java, go, python, typescript, rust, csharp, kotlin ]
+      # F7 narrow: readOnly/writeOnly drives separate Request/Response type
+      # generation in strict-typed codegens; Python/TS often share one shape.
+      codegen-targets: [ java, csharp, kotlin, go, rust ]
       detection-precision: high
       auto-fix-safe: false
       cost-impact: medium
@@ -1385,7 +1400,9 @@ rules:
       lifecycle-phase: authoring-time
       defect-class: semantic
       iso25010: [ maintainability, compatibility ]
-      codegen-targets: [ java, go, python, typescript, rust, csharp, kotlin ]
+      # F7 narrow: writeOnly violates Request/Response type-split in strict-
+      # typed codegens; dynamic langs (Python/TS) tolerate the field leakage.
+      codegen-targets: [ java, csharp, kotlin, go, rust ]
       detection-precision: high
       auto-fix-safe: false
       cost-impact: medium

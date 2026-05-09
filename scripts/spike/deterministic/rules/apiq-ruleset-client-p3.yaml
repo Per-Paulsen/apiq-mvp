@@ -376,14 +376,9 @@ rules:
       lifecycle-phase: build-time
       defect-class: ergonomic
       iso25010: [ usability, maintainability ]
-      codegen-targets:
-        - java
-        - go
-        - python
-        - typescript
-        - rust
-        - csharp
-        - kotlin
+      # F7 narrow: shared SDK error-class hierarchy emerges in OO codegens +
+      # TS .d.ts; Rust/Python error-handling diverges and benefits less.
+      codegen-targets: [ java, csharp, kotlin, typescript, go ]
       detection-precision: medium
       auto-fix-safe: false
       cost-impact: low
@@ -599,14 +594,9 @@ rules:
       lifecycle-phase: build-time
       defect-class: ergonomic
       iso25010: [ usability ]
-      codegen-targets:
-        - java
-        - go
-        - python
-        - typescript
-        - rust
-        - csharp
-        - kotlin
+      # F7 narrow: leading-space leakage manifests in Javadoc/JSDoc/docstring/
+      # XML-doc; Go/Rust strip/normalise more aggressively in their doc tools.
+      codegen-targets: [ java, csharp, kotlin, typescript, python ]
       detection-precision: medium
       auto-fix-safe: true
       cost-impact: low
@@ -646,14 +636,10 @@ rules:
       lifecycle-phase: build-time
       defect-class: ergonomic
       iso25010: [ usability, portability ]
-      codegen-targets:
-        - java
-        - go
-        - python
-        - typescript
-        - rust
-        - csharp
-        - kotlin
+      # F7 narrow: HTML-in-description renders unevenly across Javadoc/JSDoc/
+      # docstring/XML-doc; Go/Rust strip cleanly into godoc/rustdoc with less
+      # downstream pain.
+      codegen-targets: [ java, csharp, kotlin, typescript, python ]
       detection-precision: medium
       auto-fix-safe: false
       cost-impact: low
@@ -789,14 +775,10 @@ rules:
       lifecycle-phase: build-time
       defect-class: ergonomic
       iso25010: [ usability ]
-      codegen-targets:
-        - java
-        - go
-        - python
-        - typescript
-        - rust
-        - csharp
-        - kotlin
+      # F7 narrow: literal $ref: strings in description leak into per-language
+      # docstring renderers; Go/Rust documentation is more terse and is
+      # affected less by leaked authoring artefacts.
+      codegen-targets: [ java, csharp, kotlin, typescript, python ]
       detection-precision: high
       auto-fix-safe: false
       cost-impact: low
@@ -1094,14 +1076,10 @@ rules:
       lifecycle-phase: build-time
       defect-class: ergonomic
       iso25010: [ usability ]
-      codegen-targets:
-        - java
-        - go
-        - python
-        - typescript
-        - rust
-        - csharp
-        - kotlin
+      # F7 narrow: shared-resource tag coherence drives SDK class-grouping
+      # (UsersApi, OrdersApi) in OO codegens + TS-namespace; Rust crates and
+      # Python flat-modules use tags less load-bearingly.
+      codegen-targets: [ java, csharp, kotlin, typescript, go ]
       detection-precision: low
       auto-fix-safe: false
       cost-impact: low
@@ -1309,14 +1287,10 @@ rules:
       lifecycle-phase: build-time
       defect-class: ergonomic
       iso25010: [ usability, maintainability ]
-      codegen-targets:
-        - java
-        - go
-        - python
-        - typescript
-        - rust
-        - csharp
-        - kotlin
+      # F7 narrow: tag-casing drives SDK class-name casing (UsersApi vs
+      # users_api) in OO codegens + TS-namespace; Rust/Python conventions
+      # auto-snake-case the surface and dampen the inconsistency.
+      codegen-targets: [ java, csharp, kotlin, typescript, go ]
       detection-precision: high
       auto-fix-safe: false
       cost-impact: low

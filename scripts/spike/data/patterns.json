@@ -19421,5 +19421,328 @@
     "isPureSpectralDetectable": true,
     "isStageATerritory": true,
     "round": 4
+  },
+  {
+    "patternId": "EV-3",
+    "lens": [
+      "evolution-friction",
+      "client-friction"
+    ],
+    "source": {
+      "type": "style-guide",
+      "citation": "Zalando x-extensible-enum + Speakeasy x-speakeasy-unknown-values + OASDIFF + OPTIC",
+      "url": "https://opensource.zalando.com/restful-api-guidelines/"
+    },
+    "severityHypothesis": "hint",
+    "direction": "loosen",
+    "codegenTargets": [
+      "java",
+      "go",
+      "python",
+      "typescript",
+      "rust",
+      "csharp",
+      "kotlin"
+    ],
+    "description": "Response enum without extensibility hook (x-extensible-enum / x-speakeasy-unknown-values / description-keyword) — adding values later is breaking for clients that exhaustively switch.",
+    "detectionPrecision": "medium",
+    "isPureSpectralDetectable": true,
+    "isStageATerritory": true,
+    "round": 4
+  },
+  {
+    "patternId": "EV-4",
+    "lens": [
+      "evolution-friction",
+      "client-friction"
+    ],
+    "source": {
+      "type": "style-guide",
+      "citation": "OASDIFF body-type-changed-from-array-to-object + apiq §1",
+      "url": "https://github.com/oasdiff/oasdiff"
+    },
+    "severityHypothesis": "warn",
+    "direction": "tighten",
+    "codegenTargets": [
+      "java",
+      "go",
+      "python",
+      "typescript",
+      "rust",
+      "csharp",
+      "kotlin"
+    ],
+    "description": "Bare-array request/response body — wrapping in an envelope object later is a breaking change. Use `{data: [], pagination: {...}}` envelopes upfront.",
+    "detectionPrecision": "high",
+    "isPureSpectralDetectable": true,
+    "isStageATerritory": true,
+    "round": 4
+  },
+  {
+    "patternId": "EV-12",
+    "lens": [
+      "evolution-friction"
+    ],
+    "source": {
+      "type": "vendor",
+      "citation": "G-URL-2 Google API URL Conventions + Speakeasy SDK versioning + Stripe major-version URL",
+      "url": "https://google.aip.dev/4/"
+    },
+    "severityHypothesis": "warn",
+    "direction": "loosen",
+    "codegenTargets": [
+      "*"
+    ],
+    "description": "Path-segment encodes minor-version (e.g. `/v1.2/`, `/v2.1.0/`); URL-versioning should encode MAJOR-version only. Embedded minor-version forces gratuitous URL-rev on every minor release.",
+    "detectionPrecision": "high",
+    "isPureSpectralDetectable": true,
+    "isStageATerritory": true,
+    "round": 4
+  },
+  {
+    "patternId": "EV-15",
+    "lens": [
+      "evolution-friction",
+      "client-friction"
+    ],
+    "source": {
+      "type": "style-guide",
+      "citation": "OASDIFF inverted excessive-response-set",
+      "url": "https://github.com/oasdiff/oasdiff"
+    },
+    "severityHypothesis": "hint",
+    "direction": "loosen",
+    "codegenTargets": [
+      "java",
+      "go",
+      "python",
+      "typescript",
+      "rust",
+      "csharp",
+      "kotlin"
+    ],
+    "description": "Operation declares >10 distinct response status-codes — over-broad contract that's hard to evolve. Tighten the response-set or extract `default` for catch-all.",
+    "detectionPrecision": "high",
+    "isPureSpectralDetectable": true,
+    "isStageATerritory": true,
+    "round": 4
+  },
+  {
+    "patternId": "EV-16",
+    "lens": [
+      "evolution-friction",
+      "client-friction",
+      "ai-agent-consumability"
+    ],
+    "source": {
+      "type": "style-guide",
+      "citation": "SP-G-OWASP-28 + Azure az-default-response + Zalando must-specify-default-response",
+      "url": "https://opensource.zalando.com/restful-api-guidelines/"
+    },
+    "severityHypothesis": "warn",
+    "direction": "drift",
+    "codegenTargets": [
+      "java",
+      "go",
+      "python",
+      "typescript",
+      "rust",
+      "csharp",
+      "kotlin"
+    ],
+    "description": "Operation has no `default` and no 5xx response declared — when an unanticipated server-error occurs, the contract is undefined for clients. Adding `default` later changes handler resolution.",
+    "detectionPrecision": "high",
+    "isPureSpectralDetectable": true,
+    "isStageATerritory": true,
+    "round": 4
+  },
+  {
+    "patternId": "EV-20",
+    "lens": [
+      "evolution-friction",
+      "standards-compliance"
+    ],
+    "source": {
+      "type": "style-guide",
+      "citation": "OASDIFF single-media-type fragility",
+      "url": "https://github.com/oasdiff/oasdiff"
+    },
+    "severityHypothesis": "hint",
+    "direction": "loosen",
+    "codegenTargets": [
+      "*"
+    ],
+    "description": "Response declares only one media-type — adding a second (application/problem+json for errors, application/cbor) later forces client content-negotiation handling. Declare intended neighbours upfront.",
+    "detectionPrecision": "high",
+    "isPureSpectralDetectable": true,
+    "isStageATerritory": true,
+    "round": 4
+  },
+  {
+    "patternId": "EV-30",
+    "lens": [
+      "evolution-friction",
+      "style-coherence"
+    ],
+    "source": {
+      "type": "apiq-original",
+      "citation": "apiq-original Round-1 stripe:F8 + SP-G-AYWH-10 + SPS + OPTIC style-guides"
+    },
+    "severityHypothesis": "hint",
+    "direction": "tighten",
+    "codegenTargets": [
+      "*"
+    ],
+    "description": "POST endpoints with a request body should accept application/json alongside any legacy form-encoded content-type. Clients on JSON-only stacks are blocked when only x-www-form-urlencoded is offered.",
+    "detectionPrecision": "medium",
+    "isPureSpectralDetectable": true,
+    "isStageATerritory": true,
+    "round": 1
+  },
+  {
+    "patternId": "EV-51",
+    "lens": [
+      "evolution-friction",
+      "standards-compliance",
+      "ai-agent-consumability"
+    ],
+    "source": {
+      "type": "style-guide",
+      "citation": "LL-13 LLM-friendly-API + apiq M13 string-domain-restriction",
+      "url": "https://opensource.zalando.com/restful-api-guidelines/"
+    },
+    "severityHypothesis": "hint",
+    "direction": "loosen",
+    "codegenTargets": [
+      "*"
+    ],
+    "description": "Property name suggests enum-affinity (status/type/kind/category/level/priority/state) but is unconstrained string — adding `enum` later breaks clients sending arbitrary values. Constrain at design-time.",
+    "detectionPrecision": "low",
+    "isPureSpectralDetectable": true,
+    "isStageATerritory": true,
+    "round": 4
+  },
+  {
+    "patternId": "EV-54",
+    "lens": [
+      "evolution-friction"
+    ],
+    "source": {
+      "type": "apiq-original",
+      "citation": "apiq existing version-axis-detector"
+    },
+    "severityHypothesis": "warn",
+    "direction": "loosen",
+    "codegenTargets": [
+      "*"
+    ],
+    "description": "A parameter named `version` / `api-version` / `apiVersion` without `enum` constraint accepts any string — adding `enum: ['v1', 'v2']` later breaks clients sending other values.",
+    "detectionPrecision": "high",
+    "isPureSpectralDetectable": true,
+    "isStageATerritory": true,
+    "round": 4
+  },
+  {
+    "patternId": "EV-61",
+    "lens": [
+      "evolution-friction",
+      "client-friction"
+    ],
+    "source": {
+      "type": "apiq-original",
+      "citation": "apiq prose-walker contradiction-detection"
+    },
+    "severityHypothesis": "hint",
+    "direction": "loosen",
+    "codegenTargets": [
+      "java",
+      "go",
+      "python",
+      "typescript",
+      "rust",
+      "csharp",
+      "kotlin"
+    ],
+    "description": "Schema declares `oneOf` (closed variant-set) but description-prose mentions `more variants will be added` / `future extensions` — semantic mismatch. Re-model with extension-hook (anyOf + open-marker) or remove the prose claim.",
+    "detectionPrecision": "medium",
+    "isPureSpectralDetectable": true,
+    "isStageATerritory": true,
+    "round": 4
+  },
+  {
+    "patternId": "apiq-deepobject-only-on-objects",
+    "lens": [
+      "standards-compliance"
+    ],
+    "source": {
+      "type": "apiq-original",
+      "citation": "apiq-original Round-1 stripe:F10 + OAS 3.0 §4.7.10.1",
+      "url": "https://spec.openapis.org/oas/v3.0.3"
+    },
+    "severityHypothesis": "error",
+    "direction": "tighten",
+    "codegenTargets": [
+      "*"
+    ],
+    "description": "Parameter `style: deepObject` is only valid for object-typed schemas per OAS 3.0 §4.7.10.1. For arrays, use `form` (with explode: true) or `pipeDelimited` / `spaceDelimited`.",
+    "detectionPrecision": "high",
+    "isPureSpectralDetectable": true,
+    "isStageATerritory": true,
+    "round": 1
+  },
+  {
+    "patternId": "apiq-count-fields-should-be-integer",
+    "lens": [
+      "client-friction",
+      "internal-consistency"
+    ],
+    "source": {
+      "type": "apiq-original",
+      "citation": "apiq-original Round-1 dnd:F10 reference-finding"
+    },
+    "severityHypothesis": "hint",
+    "direction": "tighten",
+    "codegenTargets": [
+      "java",
+      "go",
+      "python",
+      "typescript",
+      "rust",
+      "csharp",
+      "kotlin"
+    ],
+    "description": "Properties whose name signals a count/level/index (count, level, size, total, num_*, *_count) and that are typed `number` should almost always be `integer` instead.",
+    "detectionPrecision": "medium",
+    "isPureSpectralDetectable": true,
+    "isStageATerritory": true,
+    "round": 1
+  },
+  {
+    "patternId": "apiq-comma-separated-should-be-array",
+    "lens": [
+      "client-friction",
+      "style-coherence"
+    ],
+    "source": {
+      "type": "apiq-original",
+      "citation": "apiq-original Round-1 github:F28 + OAS 3.0 §4.7.10",
+      "url": "https://spec.openapis.org/oas/v3.0.3"
+    },
+    "severityHypothesis": "hint",
+    "direction": "tighten",
+    "codegenTargets": [
+      "java",
+      "go",
+      "python",
+      "typescript",
+      "rust",
+      "csharp",
+      "kotlin"
+    ],
+    "description": "Parameters described as `comma-separated` should be typed as arrays with `style: form, explode: false` rather than as flat strings.",
+    "detectionPrecision": "low",
+    "isPureSpectralDetectable": true,
+    "isStageATerritory": true,
+    "round": 1
   }
 ]

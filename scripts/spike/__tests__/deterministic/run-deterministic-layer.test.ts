@@ -75,5 +75,5 @@ describe('runDeterministicLayer integration', () => {
     expect(Object.keys(result.perDetector).length).toBeGreaterThan(10);
     expect(result.findings.every(f => typeof f.title === 'string' && f.title.length > 0)).toBe(true);
     expect(result.perLayer['module-class']).toBeGreaterThan(0);
-  }, 2700000); // 45min — github-rest spec is 12.5MB (vs stripe-full 8MB), so spectral runtime scales beyond stripe's 22.85min. Welle Arch+ OQ-3 bump from 15min after the 12-yaml ruleset (Welle-D) hit timeout. Walker+module-Promise.all knocked ~13s off; the rest is inherent spectral.run() cost on the large spec. See profile in specs/E09-w-arch-stripe-perf-profile.json.
+  }, 1800000); // 30min — empirically verified 2026-05-09 at 15.27min wallclock (Welle-D Task #21 verify). Headroom ~2x for CI-variance + future ruleset-additions. github-rest spec is 12.5MB (vs stripe-full 8MB) but spectral runtime scaled less than expected. Original 45min cap was conservative pre-measurement.
 });

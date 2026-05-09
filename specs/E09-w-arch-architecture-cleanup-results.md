@@ -240,3 +240,86 @@ export { mapDetectorFindings, mapDetectorFinding } from './infra/output-mapper.j
 ---
 
 **Welle Arch+ done — Resume-Trigger nächste Session: "welle d2 starten" oder "weiter mit restwork-plan v2 — welle d2".**
+
+---
+
+## Aftercleanup-Patch (2026-05-09 abends)
+
+> User-Frage post-Welle-Arch+: "können wir das was unfertig blieb noch nachholen?". Antwort: ja, 4 von 5 sind sofort machbar. 4 parallele Subagents als Mini-Welle. Stripe-perf <10min ist genuinely Spectral-bound (out-of-scope ohne Spectral-fork) → bleibt auf Welle V Cross-Linter-Decision.
+
+### Patch-1 — Drift-Fix (drift-fixer, Task #18)
+
+**15 class-2 errors → 0** via 13 neue Einträge in `scripts/spike/data/patterns.json` (959 → 972 entries). Strategie (b): patterns adden statt yaml-rule-pattern-IDs ändern (rule-logic blieb unangetastet).
+
+**Per-pattern adds:**
+- EV-3, EV-4 (request+response mirror), EV-12 (server+path mirror), EV-15, EV-16, EV-20, EV-30, EV-51, EV-54, EV-61
+- 3× apiq-original Round-1 patterns für rule-name-IDs: `apiq-deepobject-only-on-objects`, `apiq-count-fields-should-be-integer`, `apiq-comma-separated-should-be-array`
+
+**CI-gate ratcheted:** `apiq-meta-coverage-gate.test.ts` baseline 15 → 0 (`toBe(0)` statt `toBeLessThanOrEqual(15)`). Jede class-2-Regression failt CI.
+
+### Patch-2 — Flake-Fix (flake-fixer, Task #19)
+
+**1 flake fixed** (von 2 angekündigten reproduzierte nur 1 unter heutigen Bedingungen):
+
+`scripts/spike/__tests__/deterministic/spectral-runner-apiq-meta.test.ts` — `'returns undefined for rules that do not declare apiq-meta'` Test timeout'te bei 5s-default unter parallel load. Root cause: `beforeEach(_resetSpectralCacheForTests)` triggert vollen 11-yaml/340-rule/116-fn rebuild bei jedem Test, was 5s übersteigt unter heavy parallel.
+
+**Fix:** Surgical 1-line — `describe(..., { timeout: 30_000 }, ...)` statt extended reset-helper. `_resetSpectralCacheForTests` clear'd schon alle 3 module-mutables korrekt — kein architecture-Refactor nötig.
+
+**Verify:** 3/3 mega-batch runs grün — 61 test-files / 2230 tests pass / 4 skip / 0 fail / **0 flake**.
+
+### Patch-3 — F7-Narrowing (f7-narrower, Task #20)
+
+**35/91 bulk-pass'd Lens-4 rules narrowed (38.5%, im 30-50% target)**.
+
+Per-yaml:
+- apiq-ruleset.yaml: 10/22 narrowed
+- evolution.yaml: **8/13** (höchste rate 61.5%)
+- client-p3.yaml: 6/13
+- evolution-p3.yaml: 3/7
+- threat-p2.yaml: 3/10
+- client-p1.yaml: 3/14
+- client-p2.yaml: 2/11
+- threat-p3 / standards-p3 / other-p3: 0 narrowed (rules truly universal)
+
+**Pattern-families angewandt:**
+- `[java, csharp, kotlin, go, rust]` — typed-lang specifics (FK, readOnly/writeOnly, mass-assignment)
+- `[java, csharp, kotlin, typescript, go]` — OO+TS class-grouping
+- `[java, csharp, kotlin, typescript, python]` — docstring-driven (description-rendering)
+- `[java, csharp, kotlin, typescript, go, rust]` — typed Problem-class
+- `[java, csharp, kotlin, typescript, rust]` — typed-union/discriminator
+
+Self-correction-note: erst fälschlich auf `['*']` reverted, F5-coverage-gate hat das gefangen, dann hard-revert + correct narrowing. Process worked.
+
+**Verify:** F5 gate 24/24 + per-yaml rule tests 232/232 pass.
+
+### Patch-4 — github-rest verify (github-rest-verifier, Task #21)
+
+**PASS at 15.27 min wallclock** (Test-duration 916.32s, total 936.53s). 45-min-cap war zu konservativ pre-measurement.
+
+**Timeout tightened:** 45 min → **30 min** (file `run-deterministic-layer.test.ts:78`, ~2x headroom).
+
+Result-Assertions clean: findings >10k, perDetector >10 keys, module-class layer fired.
+
+### Patch — kombinierter Status
+
+| Item | Pre-Patch | Post-Patch |
+|---|---|---|
+| class-2 drift errors | 15 | **0** ✓ |
+| patterns.json entries | 959 | 972 (+13) |
+| Parallel-flake tests | 1-2 observed | 0 (3/3 stable) |
+| F7 Lens-4 7-language-list rules | 91 (bulk-default) | 56 (35 narrowed) |
+| github-rest test-timeout | 45 min unverified | 30 min verified-pass |
+| Stripe-full perf | 22.85 min | unchanged (Spectral-bound, deferred to Welle V) |
+
+**Tests post-Patch:** 2230 pass / 4 skip / 0 fail (mega-batch verified 3× stable).
+
+**Commits:**
+- `e3521d3` — feat Welle Arch+ original
+- `c812f44` — docs Welle Arch+ original
+- (this patch wird in nächsten commit angehängt)
+
+---
+
+**Stripe-perf <10min:** als bewusste Welle-V-Decision verschoben. Wenn Cross-Linter-Vergleich zeigt dass andere Linter auf Stripe-skala ähnlich slow sind, ist es industry-fact (akzeptiert). Falls signifikant schneller, dann Welle-V-followup mit Spectral-fork-Investigation.
+
+**Resume-Trigger:** "welle d2 starten" oder "weiter mit restwork-plan v2 — welle d2".

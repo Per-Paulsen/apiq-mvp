@@ -33,7 +33,13 @@ const MINIMAL_SPEC = {
   paths: {},
 };
 
-describe('spectral-runner apiq-meta propagation (Welle F Phase 1B)', () => {
+// `beforeEach(_resetSpectralCacheForTests)` forces buildSpectral() to rebuild
+// the full ruleset (11 yamls + ~340 rules + ~116 custom functions) on every
+// test in this file. Under heavy parallel load that exceeds the vitest 5s
+// default — observed flakes on `returns undefined for ...` were the rebuild
+// taking >5s during contended I/O. 30s gives generous headroom while still
+// catching real hangs.
+describe('spectral-runner apiq-meta propagation (Welle F Phase 1B)', { timeout: 30_000 }, () => {
   let logSpy: ReturnType<typeof vi.spyOn>;
   let warnSpy: ReturnType<typeof vi.spyOn>;
 

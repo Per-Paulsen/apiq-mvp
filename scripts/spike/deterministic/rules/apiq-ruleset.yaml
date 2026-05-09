@@ -82,7 +82,9 @@ rules:
       lifecycle-phase: build-time
       defect-class: incomplete
       iso25010: [maintainability, compatibility]
-      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
+      # F7 narrow: strict-typed languages benefit most from typed FK primitives
+      # (newtype wrappers, value-classes); Python/TS treat them as plain strings.
+      codegen-targets: [java, csharp, kotlin, go, rust]
       detection-precision: medium
       auto-fix-safe: false
       cost-impact: low
@@ -118,7 +120,9 @@ rules:
       lifecycle-phase: build-time
       defect-class: ergonomic
       iso25010: [usability, compatibility]
-      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
+      # F7 narrow: typed Date/Instant/Timestamp mapping is most impactful in
+      # strict-typed languages; TS/Python use number directly without typed Date.
+      codegen-targets: [java, csharp, kotlin, go, rust]
       detection-precision: medium
       auto-fix-safe: false
       cost-impact: low
@@ -320,7 +324,9 @@ rules:
       lifecycle-phase: authoring-time
       defect-class: norm
       iso25010: [usability, compatibility]
-      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
+      # F7 narrow: HTML in description manifests differently per docstring
+      # convention (Javadoc, JSDoc, docstring, XML-doc); Go/Rust strip cleanly.
+      codegen-targets: [java, csharp, kotlin, typescript, python]
       detection-precision: medium
       auto-fix-safe: false
       cost-impact: low
@@ -356,7 +362,10 @@ rules:
       lifecycle-phase: authoring-time
       defect-class: incomplete
       iso25010: [usability, maintainability]
-      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
+      # F7 narrow: schema description renders into per-language docstrings
+      # (Javadoc/JSDoc/docstring/XML-doc); stub descriptions hurt agent IDE
+      # tooltips most in TS/Python/Java/C#/Kotlin developer flows.
+      codegen-targets: [java, csharp, kotlin, typescript, python]
       detection-precision: medium
       auto-fix-safe: false
       cost-impact: low
@@ -435,7 +444,10 @@ rules:
       lifecycle-phase: authoring-time
       defect-class: operational-metadata-missing
       iso25010: [usability, maintainability]
-      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
+      # F7 narrow: tags drive SDK class/module grouping (UsersApi, OrdersApi)
+      # in OO codegens; Rust crate-grouping + Python module flat-namespacing
+      # use different conventions where tag-grouping is less load-bearing.
+      codegen-targets: [java, csharp, kotlin, typescript, go]
       detection-precision: high
       auto-fix-safe: false
       cost-impact: low
@@ -472,7 +484,10 @@ rules:
       lifecycle-phase: authoring-time
       defect-class: incomplete
       iso25010: [usability, maintainability]
-      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
+      # F7 narrow: tag descriptions render as SDK class-doc / namespace-doc
+      # headers in OO codegens; Rust crate-doc and Python module-doc treat
+      # the field differently with less downstream impact.
+      codegen-targets: [java, csharp, kotlin, typescript, go]
       detection-precision: high
       auto-fix-safe: false
       cost-impact: low
@@ -510,7 +525,9 @@ rules:
       lifecycle-phase: build-time
       defect-class: incomplete
       iso25010: [compatibility, maintainability]
-      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
+      # F7 narrow: typed-union discriminator drives clean SDK shapes in
+      # strict-typed langs; Go uses interface{}+type-switch (no native union).
+      codegen-targets: [java, csharp, kotlin, typescript, rust]
       detection-precision: high
       auto-fix-safe: false
       cost-impact: medium
@@ -550,7 +567,9 @@ rules:
       lifecycle-phase: build-time
       defect-class: semantic
       iso25010: [compatibility, maintainability]
-      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
+      # F7 narrow: integer-vs-number split materially affects strict-typed
+      # langs (int32 vs float64); JS/Python collapse both to one numeric type.
+      codegen-targets: [java, csharp, kotlin, go, rust]
       detection-precision: medium
       auto-fix-safe: true
       cost-impact: low
@@ -742,7 +761,9 @@ rules:
       lifecycle-phase: build-time
       defect-class: incomplete
       iso25010: [compatibility, usability]
-      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
+      # F7 narrow: typed-enum codegen produces idiomatic enum classes in
+      # strict-typed langs; Python uses StrEnum (less native), so excluded.
+      codegen-targets: [java, csharp, kotlin, typescript, go, rust]
       detection-precision: medium
       auto-fix-safe: false
       cost-impact: low
@@ -1017,7 +1038,9 @@ rules:
       lifecycle-phase: build-time
       defect-class: semantic
       iso25010: [compatibility, maintainability]
-      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
+      # F7 narrow: typed-array codegen replaces brittle string-split logic in
+      # strict-typed langs; TS/Python pass through string with little gain.
+      codegen-targets: [java, csharp, kotlin, go, rust]
       detection-precision: low
       auto-fix-safe: false
       cost-impact: low

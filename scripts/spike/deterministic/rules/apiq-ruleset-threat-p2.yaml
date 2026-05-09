@@ -753,7 +753,9 @@ rules:
       lifecycle-phase: validation-time
       defect-class: incomplete
       iso25010: [ security, usability ]
-      codegen-targets: [ java, go, python, typescript, rust, csharp, kotlin ]
+      # F7 narrow: server-managed-field readOnly metadata drives Request/
+      # Response type-split in strict-typed codegens; dynamic clients ignore.
+      codegen-targets: [ java, csharp, kotlin, go, rust ]
       detection-precision: high
       auto-fix-safe: true
       regulatory-mapping:
@@ -794,7 +796,10 @@ rules:
       lifecycle-phase: validation-time
       defect-class: semantic
       iso25010: [ security, maintainability ]
-      codegen-targets: [ java, go, python, typescript, rust, csharp, kotlin ]
+      # F7 narrow: schema-reuse without readOnly/writeOnly leaks server-
+      # managed fields into request type in strict-typed codegens; dynamic
+      # langs share one shape and don't expose the divergence at compile time.
+      codegen-targets: [ java, csharp, kotlin, go, rust ]
       detection-precision: medium
       auto-fix-safe: false
       regulatory-mapping:
@@ -1137,7 +1142,9 @@ rules:
       lifecycle-phase: validation-time
       defect-class: norm
       iso25010: [ usability, maintainability ]
-      codegen-targets: [ java, go, python, typescript, rust, csharp, kotlin ]
+      # F7 narrow: typed Problem-class codegen produces idiomatic exception
+      # types in strict-typed langs + TS + Rust; Python error-shapes stay dict-y.
+      codegen-targets: [ java, csharp, kotlin, typescript, go, rust ]
       detection-precision: high
       auto-fix-safe: false
       regulatory-mapping:

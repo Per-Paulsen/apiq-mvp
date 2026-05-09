@@ -397,14 +397,10 @@ rules:
       lifecycle-phase: authoring-time
       defect-class: incomplete
       iso25010: [ maintainability, usability ]
-      codegen-targets:
-        - java
-        - go
-        - python
-        - typescript
-        - rust
-        - csharp
-        - kotlin
+      # F7 narrow: missing field description renders as empty docstrings in
+      # Javadoc/JSDoc/docstring/XML-doc IDE tooltips; Go/Rust auto-deriving
+      # documentation from type-names mitigates the gap.
+      codegen-targets: [ java, csharp, kotlin, typescript, python ]
       detection-precision: medium
       auto-fix-safe: false
       cost-impact: low
@@ -753,14 +749,10 @@ rules:
       lifecycle-phase: design-time
       defect-class: incomplete
       iso25010: [ maintainability ]
-      codegen-targets:
-        - java
-        - go
-        - python
-        - typescript
-        - rust
-        - csharp
-        - kotlin
+      # F7 narrow: anonymous-type proliferation when no components.schemas
+      # exists is worst in strict-typed codegens; Python/TS dynamic-typed
+      # callsites rebuild the shape ad-hoc with less compile-time pain.
+      codegen-targets: [ java, csharp, kotlin, go, rust ]
       detection-precision: high
       auto-fix-safe: false
       cost-impact: medium
@@ -1060,14 +1052,10 @@ rules:
       lifecycle-phase: authoring-time
       defect-class: incomplete
       iso25010: [ usability, maintainability ]
-      codegen-targets:
-        - java
-        - go
-        - python
-        - typescript
-        - rust
-        - csharp
-        - kotlin
+      # F7 narrow: webhook prose-absence renders as empty docstrings on the
+      # generated webhook handler in Javadoc/JSDoc/docstring/XML-doc; Go/Rust
+      # webhook patterns are typically thinner and less docstring-driven.
+      codegen-targets: [ java, csharp, kotlin, typescript, python ]
       detection-precision: high
       auto-fix-safe: false
       cost-impact: low

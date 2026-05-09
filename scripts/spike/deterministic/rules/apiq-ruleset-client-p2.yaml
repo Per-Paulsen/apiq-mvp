@@ -231,7 +231,9 @@ rules:
       lifecycle-phase: build-time
       defect-class: ergonomic
       iso25010: [usability, compatibility]
-      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
+      # F7 narrow: strict-typed codegens must pick ONE return-shape per status;
+      # Python/TS dynamic returns tolerate union without compile-error.
+      codegen-targets: [java, csharp, kotlin, go, rust]
       detection-precision: medium
       auto-fix-safe: false
       cost-impact: medium
@@ -743,7 +745,10 @@ rules:
       lifecycle-phase: build-time
       defect-class: ergonomic
       iso25010: [usability, maintainability]
-      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
+      # F7 narrow: synthetic Nested-Nested-Nested type-name explosion is
+      # worst in OO codegens + TypeScript .d.ts; Rust/Python compose with
+      # less synthetic-class proliferation.
+      codegen-targets: [java, csharp, kotlin, go, typescript]
       detection-precision: high
       auto-fix-safe: false
       cost-impact: medium
