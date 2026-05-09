@@ -407,6 +407,13 @@ interface Accumulator {
   x3: Array<{ pointer: string }>;
   x5_present: boolean;
   mixed: Array<{ pointer: string }>;
+  // CL-24 (Welle D / T-Sentinels): unconstrained multi-type schemas. Distinct
+  // from X2 (3.0 type-array-with-null) and X1 (3.1 nullable). Targets the wider
+  // case where `type: [...]` is an array of >1 entries WITHOUT a discriminating
+  // constraint (oneOf/anyOf-fallback OR per-type keywords). 3.0 case: invalid;
+  // 3.1 case: valid but agent/codegen-hostile.
+  cl24_30: Array<{ pointer: string; types: string[] }>;
+  cl24_31: Array<{ pointer: string; types: string[] }>;
 }
 
 function emptyAcc(): Accumulator {
@@ -422,11 +429,40 @@ function emptyAcc(): Accumulator {
     x3: [],
     x5_present: false,
     mixed: [],
+    cl24_30: [],
+    cl24_31: [],
   };
 }
 
 function hasNullInTypeArray(t: unknown): boolean {
   return Array.isArray(t) && t.some((entry) => entry === "null");
+}
+
+/**
+ * CL-24 helper: detect whether a multi-type schema is "unconstrained" — i.e.
+ * lacks discriminating keywords that would let codegen / clients route per-type.
+ *
+ * A multi-type schema is considered constrained when it carries:
+ *   - oneOf/anyOf — explicit per-type branches
+ *   - allOf — composition that may narrow the type
+ *   - per-type keywords like `properties` (object-only) PLUS `items` (array-only)
+ *     PLUS `pattern` (string-only) co-existing — i.e. the multi-type is documented
+ *     by structural keywords matching each declared type
+ *
+ * Returns true when the schema is unconstrained (= flag for CL-24).
+ */
+function isUnconstrainedMultiType(schema: Record<string, unknown>, types: string[]): boolean {
+  if (types.length < 2) return false;
+  // Branching constructs are sufficient discrimination.
+  if (Array.isArray(schema.oneOf) && schema.oneOf.length > 0) return false;
+  if (Array.isArray(schema.anyOf) && schema.anyOf.length > 0) return false;
+  if (Array.isArray(schema.allOf) && schema.allOf.length > 0) return false;
+  // If the multi-type is just X+null (e.g. ["string", "null"]) AND there's
+  // at least one type-specific structural keyword, that's the canonical 3.1
+  // nullable-form and not what CL-24 targets — skip it.
+  const nonNullTypes = types.filter((t) => t !== "null");
+  if (nonNullTypes.length < 2) return false;
+  return true;
 }
 
 // =============================================================================
@@ -554,6 +590,24 @@ export async function runJsonSchemaDraftDetector(
       for (const k of keys) {
         if (KEYWORDS_2020_ONLY.has(k)) {
           acc.rfc2_85_keywords.push({ pointer, keyword: k });
+        }
+      }
+    }
+
+    // CL-24 (Welle D / T-Sentinels): unconstrained multi-type schemas.
+    // Distinct from X1/X2/Mixed which target null-handling specifically — CL-24
+    // catches the wider class of `type: [stringA, stringB]`-style multi-types
+    // that lack discriminating constraints (oneOf/anyOf/allOf). For 3.0 specs
+    // this is invalid (3.0 forbids type-array entirely); for 3.1 it's valid but
+    // confuses codegen/agents.
+    if (Array.isArray(schema.type)) {
+      const types = schema.type
+        .filter((t): t is string => typeof t === "string");
+      if (types.length >= 2 && isUnconstrainedMultiType(schema, types)) {
+        if (is30) {
+          acc.cl24_30.push({ pointer, types });
+        } else if (is31) {
+          acc.cl24_31.push({ pointer, types });
         }
       }
     }
@@ -865,6 +919,78 @@ export async function runJsonSchemaDraftDetector(
         "Move webhook-style operations into paths as callbacks, OR upgrade to OpenAPI 3.1.",
       sourcePath: "/webhooks",
       meta: { version: version.raw },
+    });
+  }
+
+  if (acc.cl24_30.length > 0) {
+    const examples = acc.cl24_30.slice(0, 3);
+    findings.push({
+      detectorId: "module:json-schema-draft-detector:cl-24-30",
+      layer: "walker-statistical",
+      title: "Unconstrained multi-type schema in OpenAPI 3.0 (invalid)",
+      narration:
+        `${acc.cl24_30.length} schema-position(s) declare an unconstrained multi-type ` +
+        `(e.g. type: [${examples[0]?.types.join(", ") ?? "string, integer"}]) in an OpenAPI 3.0 spec. ` +
+        `OAS 3.0 binds JSON-Schema draft-04, which only allows a single type-string — the ` +
+        `multi-type form is invalid 3.0 syntax AND lacks the oneOf/anyOf branches that would ` +
+        `let codegen/clients route per-type. Validators may reject the spec entirely, accept it ` +
+        `silently, or pick one type at random.`,
+      rationale:
+        "OAS 3.0 4.7.24: schema type is a single string in draft-04. Multi-type without " +
+        "discriminating oneOf/anyOf is doubly broken under 3.0. CL-24 (Round-2 mining, " +
+        "client-DX-friction lens).",
+      category: "correctness",
+      severity: "high",
+      scope: "spec",
+      affectedEndpoints: [],
+      patchOps: [],
+      patchSummary:
+        "Replace the multi-type with explicit oneOf/anyOf branches per type, OR pick a single " +
+        "type. If null-acceptance was intended, use `nullable: true` in 3.0.",
+      sourcePath: examples[0]?.pointer,
+      meta: {
+        version: version.raw,
+        patternId: "CL-24",
+        count: acc.cl24_30.length,
+        examples: examples.map((e) => ({ pointer: e.pointer, types: e.types })),
+      },
+    });
+  }
+
+  if (acc.cl24_31.length > 0) {
+    const examples = acc.cl24_31.slice(0, 3);
+    findings.push({
+      detectorId: "module:json-schema-draft-detector:cl-24-31",
+      layer: "walker-statistical",
+      title: "Unconstrained multi-type schema in OpenAPI 3.1 (codegen-hostile)",
+      narration:
+        `${acc.cl24_31.length} schema-position(s) declare a multi-type (e.g. ` +
+        `type: [${examples[0]?.types.join(", ") ?? "string, integer"}]) in an OpenAPI 3.1 spec ` +
+        `WITHOUT discriminating oneOf/anyOf branches. While valid under 2020-12, codegen ` +
+        `tooling collapses the multi-type to a union (TypeScript: \`string | integer\`; Java/Go ` +
+        `often Object), losing per-type validation guidance. AI-agent consumers cannot reason ` +
+        `about which type to use under what conditions.`,
+      rationale:
+        "JSON-Schema 2020-12 supports type-array, but multi-types without per-type schemas " +
+        "(oneOf/anyOf branches OR per-type structural keywords) are agent/codegen-hostile. " +
+        "CL-24 (Round-2 mining).",
+      category: "design",
+      severity: "low",
+      scope: "spec",
+      affectedEndpoints: [],
+      patchOps: [],
+      patchSummary:
+        "Refactor to explicit `oneOf` branches with per-type schemas, OR pick a single type. " +
+        "If the multi-type was just for null-acceptance (e.g. type: [string, null]), that's " +
+        "the canonical 3.1 nullable form and is not what this rule targets.",
+      sourcePath: examples[0]?.pointer,
+      meta: {
+        version: version.raw,
+        patternId: "CL-24",
+        agentReadinessImpact: "medium",
+        count: acc.cl24_31.length,
+        examples: examples.map((e) => ({ pointer: e.pointer, types: e.types })),
+      },
     });
   }
 

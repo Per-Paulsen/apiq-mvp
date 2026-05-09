@@ -65,3 +65,8 @@ scripts/spike/eval/cache/
 # Reproducible via `node scripts/spike/download-corpus.mjs`. The structured
 # `patterns.json` extract is committed, only the raw corpus is ignored.
 scripts/spike/data/healthy-corpus/
+
+# Source-Verify CLI cache (Welle D T25). Local fetch-cache + ETag store; safely
+# regenerable on each CI run. The CLI itself + workflow + baseline-snapshot
+# (specs/E09-w-d-source-verify-baseline.json) ARE committed.
+scripts/source-verify/.cache.json

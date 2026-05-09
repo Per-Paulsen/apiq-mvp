@@ -1,0 +1,1166 @@
+# apiq Spectral Evolution Ruleset — P3 Trail (Lens 3 — Defense-in-Depth + Nice-to-Have)
+#
+# Authored 2026-05-09 (Task T-EV / Welle D, post-Welle-C). This ruleset implements
+# the EV-* P3 patterns from the implementation-priority.md P3-Tabelle (lines
+# 311-334). It complements the existing `apiq-ruleset-evolution.yaml` (P1+P2 EV-
+# rules) — together they form Lens-3 (Evolution-Friction) coverage.
+#
+# Source-of-truth references (per 2026-05-08 plan-doc):
+#   - specs/big-spec-architecture-spike-stage-a-restwork-plan.md §7 (Welle D)
+#   - specs/big-spec-architecture-spike-stage-a-implementation-priority.md
+#       lines 311-334 (P3 EV-* table)
+#   - specs/big-spec-architecture-spike-stage-a-rules-brainstorm.md
+#       lines 1314-1376 (Lens-3 EV pattern catalogue)
+#   - scripts/spike/data/patterns.json (959 patterns, citation-coverage 80.4%)
+#
+# 24 P3-Evolution rules covering:
+#   EV-2, EV-9, EV-12, EV-13, EV-15, EV-20, EV-21, EV-22, EV-26, EV-29, EV-38,
+#   EV-39, EV-41, EV-42, EV-44, EV-45, EV-47, EV-51, EV-52, EV-54, EV-59, EV-60,
+#   EV-61, EV-62
+#
+# Tier-conventions (per Welle-C-pattern):
+#   - Default severity for P3-Evolution: hint (override per pattern severityHypothesis)
+#   - Direction-field MANDATORY (tighten/loosen/drift) per F3 / severity-schema.ts §2
+#   - apiq-meta-block with ALL Welle-F-Schema REQUIRED_FIELDS populated
+#   - regulatory-mapping populated only where pattern has security/compliance angle
+#   - Custom-functions in `spectral-functions/evolution-p3-functions.ts` for
+#     multi-step / cross-resource logic that pure DSL cannot express
+#
+# Spectral-runner integration: `spectral-runner.ts` reads `apiq-meta` at YAML-
+# load time and strips it before handing the rule to Spectral; the block is
+# propagated into `DetectorFinding.meta.apiqMeta` for downstream consumers.
+
+extends:
+  - spectral:oas
+
+formats:
+  - oas3
+  - oas3_0
+  - oas3_1
+
+rules:
+  # =========================================================================
+  # ============================ P3 — EV PATTERNS ===========================
+  # =========================================================================
+  # Defense-in-depth + nice-to-have. Most rules emit `hint`-severity with
+  # opt-in upgrade-paths for organisations that want stricter evolution-
+  # discipline. Direction-field signals the breaking-direction the pattern
+  # foreshadows (tighten = backward-incompat tighten; loosen = forward-compat
+  # loosen; drift = same-surface semantic-change).
+
+  # ------------------------------------------------------------------------
+  # EV-2 — Required-field-stability heuristic
+  # [drift] [hint] sources: OASDIFF inverted + Stripe
+  # ------------------------------------------------------------------------
+  # Source: OASDIFF inverted required-property-removed (post-hoc) + Stripe API
+  #         schema-stability convention; rules-brainstorm.md EV-2 (P3, drift).
+  # Lens: 3 (Evolution-Friction)
+  # Round: 2
+  # Heuristic: response components.schemas with very large `required` arrays
+  # (>15 fields) signal future-pruning friction — every removal is breaking.
+  apiq-ev-2-required-field-overdeclared:
+    description: >-
+      [lens-3 | drift] EV-2: A response schema with an unusually large `required` array (>15 fields) is at high risk of future field-pruning breakage — every required-field removal is a breaking change in response-shape contracts. Prefer narrower required-sets that capture stable contract surface; mark stability-tier-fields explicitly. Sources: [OASDIFF inverted required-property-removed] [Stripe schema-stability].
+    message: "Response schema declares >15 required fields; future field-pruning is breaking. Narrow `required` to truly-stable contract surface."
+    severity: hint
+    given: "$.components.schemas[?(@.type=='object' && @.required && @.required.length > 15)]"
+    then:
+      function: required-field-overdeclared-check
+      functionOptions:
+        threshold: 15
+    apiq-meta:
+      pattern-id: EV-2
+      lenses: [ evolution-friction ]
+      direction: drift
+      sources:
+        - type: vendor
+          name: 'OASDIFF inverted required-property-removed'
+          url: 'https://github.com/oasdiff/oasdiff'
+          verifiedAt: '2026-05-09'
+        - type: vendor
+          name: 'Stripe API schema-stability convention'
+          url: 'https://stripe.com/docs/api'
+          verifiedAt: '2026-05-09'
+      stakeholders: [ spec-author, client-dev ]
+      lifecycle-phase: evolution-time
+      defect-class: over-specification
+      iso25010: [ maintainability, compatibility ]
+      codegen-targets: [ '*' ]
+      detection-precision: low
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: medium
+      agent-readiness-impact: low
+
+  # ------------------------------------------------------------------------
+  # EV-9 — info.version placeholder/non-versioned
+  # [drift] [hint] sources: Stripe + GH-API + MS-AZ
+  # ------------------------------------------------------------------------
+  # Source: Stripe + GH-API + MS-Azure date-versioning conventions;
+  #         rules-brainstorm.md EV-9 (P3, drift).
+  # Lens: 3 (Evolution-Friction)
+  # Round: 2
+  # Detects placeholder values: 0.0.0, 0.0.1, 1.0.0 with no further context.
+  # Strict semver/date detection lives in EV-13; EV-9 is the placeholder layer.
+  apiq-ev-9-info-version-placeholder:
+    description: >-
+      [lens-3 | drift] EV-9: `info.version` is a placeholder value (0.0.0, 0.0.1, 1.0.0) — operators have not committed to a version-discipline yet. Choose semver (1.2.3) or date-versioning (2026-05-09) and stick to it. Sources: [Stripe API versioning] [GitHub REST date-versioning] [Microsoft Azure API guidelines].
+    message: "`info.version` is a placeholder ('{{value}}'); pick a real semver or date-version and commit to a discipline."
+    severity: hint
+    given: "$.info"
+    then:
+      field: version
+      function: pattern
+      functionOptions:
+        notMatch: "^(0\\.0\\.[01]|1\\.0\\.0|0\\.1\\.0)$"
+    apiq-meta:
+      pattern-id: EV-9
+      lenses: [ evolution-friction ]
+      direction: drift
+      sources:
+        - type: vendor
+          name: 'Stripe API versioning convention'
+          url: 'https://stripe.com/docs/api'
+          verifiedAt: '2026-05-09'
+        - type: vendor
+          name: 'GitHub REST API date-versioning'
+          url: 'https://docs.github.com/en/rest/about-the-rest-api/api-versions'
+          verifiedAt: '2026-05-09'
+        - type: vendor
+          name: 'Microsoft Azure API Guidelines'
+          url: 'https://github.com/microsoft/api-guidelines'
+          verifiedAt: '2026-05-09'
+      stakeholders: [ spec-author, client-dev ]
+      lifecycle-phase: authoring-time
+      defect-class: incomplete
+      iso25010: [ maintainability ]
+      codegen-targets: [ '*' ]
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: low
+
+  # ------------------------------------------------------------------------
+  # EV-12 — Path-version vN.M (minor-version in URL)
+  # [loosen] [warn] sources: G-URL-2 + Speakeasy + Stripe
+  # ------------------------------------------------------------------------
+  # Source: G-URL-2 (Google API URL Conventions) + Speakeasy SDK-versioning +
+  #         Stripe major-version-in-URL convention; rules-brainstorm.md EV-12
+  #         (P3, loosen).
+  # Lens: 3 (Evolution-Friction)
+  # Round: 2
+  # URL-versioning should encode MAJOR version only; embedding minor (v1.2)
+  # forces a URL-rev for every minor release, which is gratuitous breakage.
+  apiq-ev-12-path-version-includes-minor:
+    description: >-
+      [lens-3 | loosen] EV-12: Path-segment encodes minor version (e.g. `/v1.2/`, `/v2.1.0/`); URL-versioning should encode MAJOR-version only. Embedded minor-version forces gratuitous URL-rev on every minor release. Sources: [G-URL-2 Google API URL Conventions] [Speakeasy SDK versioning] [Stripe major-version URL].
+    message: "Path encodes minor-version segment ('{{value}}'); URL-versioning should be major-only (`/v1/` not `/v1.2/`)."
+    severity: warn
+    given: "$.servers[*]"
+    then:
+      field: url
+      function: pattern
+      functionOptions:
+        notMatch: "/v\\d+\\.\\d+(\\.\\d+)?(/|$)"
+    apiq-meta:
+      pattern-id: EV-12
+      lenses: [ evolution-friction ]
+      direction: loosen
+      sources:
+        - type: vendor
+          name: 'G-URL-2 Google API URL Conventions'
+          url: 'https://google.aip.dev/4/'
+          verifiedAt: '2026-05-09'
+        - type: vendor
+          name: 'Speakeasy SDK versioning'
+          url: 'https://www.speakeasy.com/docs'
+          verifiedAt: '2026-05-09'
+        - type: vendor
+          name: 'Stripe major-version URL convention'
+          url: 'https://stripe.com/docs/api'
+          verifiedAt: '2026-05-09'
+      stakeholders: [ spec-author, client-dev, codegen-tool ]
+      lifecycle-phase: authoring-time
+      defect-class: over-specification
+      iso25010: [ maintainability, compatibility ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: medium
+      mttr-impact: medium
+      agent-readiness-impact: low
+
+  # Path-level mirror for paths that don't depend on server-URL versioning.
+  apiq-ev-12-path-version-includes-minor-paths:
+    description: >-
+      [lens-3 | loosen] EV-12 (path-mirror): Path-template-segment encodes minor-version (e.g. `/v1.2/users`); URL-versioning should be MAJOR-only.
+    message: "Path-segment encodes minor-version; URL-versioning should be major-only."
+    severity: warn
+    given: "$.paths"
+    then:
+      field: "@key"
+      function: pattern
+      functionOptions:
+        notMatch: "^/v\\d+\\.\\d+(\\.\\d+)?(/|$)"
+    apiq-meta:
+      pattern-id: EV-12
+      lenses: [ evolution-friction ]
+      direction: loosen
+      sources:
+        - type: vendor
+          name: 'G-URL-2 Google API URL Conventions'
+          verifiedAt: '2026-05-09'
+        - type: vendor
+          name: 'Speakeasy SDK versioning'
+          verifiedAt: '2026-05-09'
+      stakeholders: [ spec-author, client-dev, codegen-tool ]
+      lifecycle-phase: authoring-time
+      defect-class: over-specification
+      iso25010: [ maintainability, compatibility ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: medium
+      mttr-impact: medium
+      agent-readiness-impact: low
+
+  # ------------------------------------------------------------------------
+  # EV-13 — info.version non-semver AND non-date
+  # [drift] [warn] sources: SG-25 + Stripe + GH-API
+  # ------------------------------------------------------------------------
+  # Source: SG-25 (style-guide-mining) + Stripe + GH-API date-versioning;
+  #         rules-brainstorm.md EV-13 (P3, drift).
+  # Lens: 3 (Evolution-Friction)
+  # Round: 2
+  # Pattern matches: SemVer (1.2.3 / 1.2.3-rc.1 / 1.2.3+build) OR ISO-8601 date
+  # (2026-05-09). Anything else is undisciplined free-text version.
+  # NOTE: severityHypothesis from patterns.json is `warn` — overrides the
+  # P3-default-`hint` because version-discipline is load-bearing for codegen.
+  apiq-ev-13-info-version-non-semver-non-date:
+    description: >-
+      [lens-3 | drift] EV-13: `info.version` is neither SemVer (1.2.3) nor ISO-8601 date (2026-05-09). Free-text versions break SDK-codegen, prevent change-tracking, and confuse human consumers. Sources: [SG-25] [Stripe API versioning] [GitHub REST date-versioning].
+    message: "`info.version` ('{{value}}') is neither SemVer nor ISO-8601 date — free-text versions break codegen and version-tracking."
+    severity: warn
+    given: "$.info"
+    then:
+      field: version
+      function: pattern
+      functionOptions:
+        match: "^(\\d+\\.\\d+\\.\\d+(-[0-9A-Za-z.-]+)?(\\+[0-9A-Za-z.-]+)?|\\d{4}-\\d{2}-\\d{2})$"
+    apiq-meta:
+      pattern-id: EV-13
+      lenses: [ evolution-friction ]
+      direction: drift
+      sources:
+        - type: vendor
+          name: 'SG-25 style-guide-mining'
+          verifiedAt: '2026-05-09'
+        - type: vendor
+          name: 'Stripe API versioning convention'
+          url: 'https://stripe.com/docs/api'
+          verifiedAt: '2026-05-09'
+        - type: vendor
+          name: 'GitHub REST API date-versioning'
+          url: 'https://docs.github.com/en/rest/about-the-rest-api/api-versions'
+          verifiedAt: '2026-05-09'
+      stakeholders: [ spec-author, codegen-tool ]
+      lifecycle-phase: authoring-time
+      defect-class: incomplete
+      iso25010: [ maintainability ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: medium
+      agent-readiness-impact: low
+
+  # ------------------------------------------------------------------------
+  # EV-15 — Status-code-set wide-open (>10 codes per operation)
+  # [loosen] [hint] sources: OASDIFF inverted
+  # ------------------------------------------------------------------------
+  # Source: OASDIFF inverted (excessive-response-set-fragility);
+  #         rules-brainstorm.md EV-15 (P3, loosen).
+  # Lens: 3 (Evolution-Friction), 4 (Client-Friction)
+  # Round: 2
+  # Operation declaring >10 distinct response status-codes is over-broad and
+  # signals contract-instability — clients have to handle every documented
+  # code; tightening later breaks them.
+  apiq-ev-15-status-code-set-wide-open:
+    description: >-
+      [lens-3 | loosen] EV-15: Operation declares >10 distinct response status-codes — over-broad contract that's hard to evolve. Tighten the response-set or extract `default` for catch-all behaviour. Source: [OASDIFF inverted excessive-response-set].
+    message: "Operation declares too many response status-codes (>10); contract is over-broad."
+    severity: hint
+    given: "$.paths[*][get,post,put,patch,delete,options,head,trace]"
+    then:
+      function: status-code-set-cardinality
+      functionOptions:
+        threshold: 10
+    apiq-meta:
+      pattern-id: EV-15
+      lenses: [ evolution-friction, client-friction ]
+      direction: loosen
+      sources:
+        - type: vendor
+          name: 'OASDIFF inverted excessive-response-set'
+          url: 'https://github.com/oasdiff/oasdiff'
+          verifiedAt: '2026-05-09'
+      stakeholders: [ spec-author, client-dev ]
+      lifecycle-phase: evolution-time
+      defect-class: over-specification
+      iso25010: [ maintainability, compatibility ]
+      codegen-targets:
+        - java
+        - go
+        - python
+        - typescript
+        - rust
+        - csharp
+        - kotlin
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: medium
+      mttr-impact: medium
+      agent-readiness-impact: medium
+
+  # ------------------------------------------------------------------------
+  # EV-20 — Single media-type response (no negotiation-room)
+  # [loosen] [hint] sources: OASDIFF
+  # ------------------------------------------------------------------------
+  # Source: OASDIFF (single-media-type fragility);
+  #         rules-brainstorm.md EV-20 (P3, loosen).
+  # Lens: 3 (Evolution-Friction), 5 (Standards-Compliance)
+  # Round: 2
+  # Response with single media-type (e.g. only `application/json`) leaves no
+  # room for adding application/problem+json or application/cbor later without
+  # client-breakage.
+  apiq-ev-20-single-media-type-response:
+    description: >-
+      [lens-3 | loosen] EV-20: Response declares only one media-type — adding a second (e.g. application/problem+json for errors, application/cbor) later forces client content-negotiation handling. Declaring intended neighbours upfront avoids retrofit-friction. Source: [OASDIFF single-media-type fragility].
+    message: "Response declares only one media-type — content-negotiation evolution is harder later."
+    severity: hint
+    given: "$.paths[*][get,post,put,patch,delete].responses[*]"
+    then:
+      function: single-media-type-response
+    apiq-meta:
+      pattern-id: EV-20
+      lenses: [ evolution-friction, standards-compliance ]
+      direction: loosen
+      sources:
+        - type: vendor
+          name: 'OASDIFF single-media-type fragility'
+          url: 'https://github.com/oasdiff/oasdiff'
+          verifiedAt: '2026-05-09'
+      stakeholders: [ spec-author, client-dev ]
+      lifecycle-phase: evolution-time
+      defect-class: incomplete
+      iso25010: [ maintainability, compatibility ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: low
+
+  # ------------------------------------------------------------------------
+  # EV-21 — Required prop without description in response
+  # [drift] [hint] sources: SG-2 + VTex
+  # ------------------------------------------------------------------------
+  # Source: SG-2 (style-guide) + VTex openapi-schemas;
+  #         rules-brainstorm.md EV-21 (P3, drift).
+  # Lens: 3 (Evolution-Friction), 4 (Client-Friction)
+  # Round: 2
+  # Required-property without description leaves intent under-documented; even
+  # cosmetic field-rename gets confused with semantic-rename without the prose
+  # anchor.
+  apiq-ev-21-required-prop-no-description:
+    description: >-
+      [lens-3 | drift] EV-21: A required property has no `description` — consumers can't distinguish a cosmetic rename from a semantic-rename because there's no prose anchor for the field's intent. Sources: [SG-2 style-guide] [VTex openapi-schemas].
+    message: "Required property lacks `description`; intent is under-documented."
+    severity: hint
+    given: "$.components.schemas[*]..properties[*]"
+    then:
+      function: required-prop-needs-description
+    apiq-meta:
+      pattern-id: EV-21
+      lenses: [ evolution-friction, client-friction ]
+      direction: drift
+      sources:
+        - type: vendor
+          name: 'SG-2 style-guide-mining'
+          verifiedAt: '2026-05-09'
+        - type: vendor
+          name: 'VTex openapi-schemas'
+          url: 'https://github.com/vtex/openapi-schemas'
+          verifiedAt: '2026-05-09'
+      stakeholders: [ spec-author, client-dev, ai-agent ]
+      lifecycle-phase: authoring-time
+      defect-class: incomplete
+      iso25010: [ maintainability, usability ]
+      codegen-targets:
+        - java
+        - go
+        - python
+        - typescript
+        - rust
+        - csharp
+        - kotlin
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: medium
+
+  # ------------------------------------------------------------------------
+  # EV-22 — $ref-cycle without max-depth marker
+  # [drift] [hint] sources: apiq A2 + JSON-Schema
+  # ------------------------------------------------------------------------
+  # Source: apiq A2 (cycle-detection module) + JSON-Schema specification;
+  #         rules-brainstorm.md EV-22 (P3, drift).
+  # Lens: 3 (Evolution-Friction), 1 (Threat-Modeling)
+  # Round: 2
+  # Cross-cut: apiq A2 module already detects $ref-cycles structurally; this
+  # rule is the meta-data layer — flags cycles that lack `x-max-depth` /
+  # `maxDepth` extension to bound recursion-depth at parse-time.
+  apiq-ev-22-ref-cycle-needs-max-depth:
+    description: >-
+      [lens-3 | drift] EV-22: A schema participates in a $ref-cycle but does not declare `x-max-depth` (or equivalent) extension — recursive parsers can blow the stack, and codegen fails for languages without sum-type cycle-support. Bound recursion-depth explicitly. Sources: [apiq A2 cycle-detector] [JSON-Schema specification].
+    message: "Schema in $ref-cycle lacks `x-max-depth`; bound recursion-depth explicitly."
+    severity: hint
+    given: "$.components.schemas[*]"
+    then:
+      function: ref-cycle-needs-max-depth
+    apiq-meta:
+      pattern-id: EV-22
+      lenses: [ evolution-friction, threat-modeling ]
+      direction: drift
+      sources:
+        - type: vendor
+          name: 'apiq A2 cycle-detector module'
+          verifiedAt: '2026-05-09'
+        - type: vendor
+          name: 'JSON-Schema specification'
+          url: 'https://json-schema.org/specification.html'
+          verifiedAt: '2026-05-09'
+      stakeholders: [ spec-author, codegen-tool, security ]
+      lifecycle-phase: design-time
+      defect-class: incomplete
+      iso25010: [ reliability, maintainability ]
+      codegen-targets: [ '*' ]
+      detection-precision: medium
+      auto-fix-safe: false
+      regulatory-mapping:
+        asvs: [ 'V13.4.1' ]
+      cost-impact: low
+      mttr-impact: medium
+      agent-readiness-impact: low
+
+  # ------------------------------------------------------------------------
+  # EV-26 — TODO/FIXME/placeholder in summary/description
+  # [drift] [hint] sources: SG-2 + apiq stub
+  # ------------------------------------------------------------------------
+  # Source: SG-2 + apiq stub-detector; rules-brainstorm.md EV-26 (P3, drift).
+  # Lens: 3 (Evolution-Friction), 5 (Standards-Compliance)
+  # Round: 2
+  # TODO/FIXME/XXX/HACK + "lorem ipsum" placeholders mean the spec is
+  # incomplete and will see prose-revision later (cosmetic, but signals
+  # immaturity).
+  apiq-ev-26-todo-fixme-in-prose:
+    description: >-
+      [lens-3 | drift] EV-26: Summary or description contains TODO/FIXME/XXX/ HACK marker or "lorem ipsum"-style placeholder. Spec is incomplete; prose-revision is pending. Sources: [SG-2 style-guide] [apiq stub-detector].
+    message: "Description contains TODO/FIXME/placeholder — spec is incomplete."
+    severity: hint
+    given: "$..['summary','description']"
+    then:
+      function: pattern
+      functionOptions:
+        notMatch: "\\b([Tt][Oo][Dd][Oo]|[Ff][Ii][Xx][Mm][Ee]|XXX|HACK|TBD|TBA|[Ll]orem [Ii]psum|[Pp]laceholder|[Ff]ill[ -][Ii]n)\\b"
+    apiq-meta:
+      pattern-id: EV-26
+      lenses: [ evolution-friction, standards-compliance ]
+      direction: drift
+      sources:
+        - type: vendor
+          name: 'SG-2 style-guide-mining'
+          verifiedAt: '2026-05-09'
+        - type: vendor
+          name: 'apiq stub-detector'
+          verifiedAt: '2026-05-09'
+      stakeholders: [ spec-author, client-dev, ai-agent ]
+      lifecycle-phase: authoring-time
+      defect-class: incomplete
+      iso25010: [ usability, maintainability ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: medium
+
+  # ------------------------------------------------------------------------
+  # EV-29 — API-Path-prefix /api/
+  # [drift] [hint] sources: Zalando (opinion-divided)
+  # ------------------------------------------------------------------------
+  # Source: Zalando RESTful API Guidelines (note: opinion-divided across
+  #         vendors); rules-brainstorm.md EV-29 (P3, drift).
+  # Lens: 3 (Evolution-Friction), 5 (Standards-Compliance)
+  # Round: 2
+  # /api/ prefix on paths is redundant when servers already point to
+  # `https://api.example.com` — repeats the type-of-thing in the URL. Some
+  # orgs disagree (e.g. some MS Azure services keep /api/ prefix for routing).
+  # Off-by-default-overridable severity.
+  apiq-ev-29-api-path-prefix:
+    description: >-
+      [lens-3 | drift] EV-29: Path-prefix `/api/` is redundant when the server-URL already encodes API-ness (api.example.com). Note: some organisations keep `/api/` for routing; severity is hint — disable if your house-style allows it. Source: [Zalando RESTful API Guidelines (opinion-divided)].
+    message: "Path-prefix `/api/` is often redundant with server-URL `api.*` host."
+    severity: hint
+    given: "$.paths"
+    then:
+      field: "@key"
+      function: pattern
+      functionOptions:
+        notMatch: "^/api(/|$)"
+    apiq-meta:
+      pattern-id: EV-29
+      lenses: [ evolution-friction, standards-compliance ]
+      direction: drift
+      sources:
+        - type: vendor
+          name: 'Zalando RESTful API Guidelines (opinion-divided)'
+          url: 'https://opensource.zalando.com/restful-api-guidelines/'
+          verifiedAt: '2026-05-09'
+      stakeholders: [ spec-author ]
+      lifecycle-phase: authoring-time
+      defect-class: over-specification
+      iso25010: [ usability, maintainability ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: low
+
+  # ------------------------------------------------------------------------
+  # EV-38 — Past-tense verb in path-segment
+  # [drift] [hint] sources: SP-G-SPS-3 + SG-11
+  # ------------------------------------------------------------------------
+  # Source: SP-G-SPS-3 (SPS-Commerce API standards) + SG-11;
+  #         rules-brainstorm.md EV-38 (P3, drift).
+  # Lens: 3 (Evolution-Friction), 5 (Standards-Compliance)
+  # Round: 2
+  # Past-tense verb in URL-segment ("/orders/created", "/users/deleted") tends
+  # to encode state, not resource — drift-prone (state-changes break clients).
+  apiq-ev-38-past-tense-path-segment:
+    description: >-
+      [lens-3 | drift] EV-38: Path-segment uses past-tense verb (e.g. `/orders/created`, `/users/deleted`) — encodes state, not resource; state-changes will drift. Use noun-based URLs and state-filters as query-params instead. Sources: [SP-G-SPS-3 SPS-Commerce API Standards] [SG-11 style-guide].
+    message: "Path-segment uses past-tense verb — drift-prone; prefer noun-based URLs."
+    severity: hint
+    given: "$.paths"
+    then:
+      field: "@key"
+      function: pattern
+      functionOptions:
+        notMatch: "/(created|updated|deleted|sent|received|accepted|rejected|approved|denied|completed|cancelled|canceled|published|archived|fetched|downloaded|uploaded)(/|$)"
+    apiq-meta:
+      pattern-id: EV-38
+      lenses: [ evolution-friction, standards-compliance ]
+      direction: drift
+      sources:
+        - type: vendor
+          name: 'SP-G-SPS-3 SPS-Commerce API Standards'
+          url: 'https://github.com/SPSCommerce/sps-api-standards'
+          verifiedAt: '2026-05-09'
+        - type: vendor
+          name: 'SG-11 style-guide-mining'
+          verifiedAt: '2026-05-09'
+      stakeholders: [ spec-author, client-dev ]
+      lifecycle-phase: authoring-time
+      defect-class: over-specification
+      iso25010: [ usability, maintainability ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: medium
+      agent-readiness-impact: low
+
+  # ------------------------------------------------------------------------
+  # EV-39 — Required prop with single-value enum
+  # [drift] [hint] sources: JSON-Schema + OASDIFF
+  # ------------------------------------------------------------------------
+  # Source: JSON-Schema specification + OASDIFF enum-value-removed;
+  #         rules-brainstorm.md EV-39 (P3, drift).
+  # Lens: 3 (Evolution-Friction), 5 (Standards-Compliance)
+  # Round: 2
+  # Required + single-value-enum is a constant; either drop the field (clients
+  # don't need it) or model as `const` (3.1) / `examples` for clarity. Adding a
+  # second enum-value later may be drift-confusing.
+  apiq-ev-39-required-prop-single-value-enum:
+    description: >-
+      [lens-3 | drift] EV-39: A required property has a single-value enum — this is a constant. Drop the field (clients don't need it) or model with `const` (OAS 3.1) for explicit intent. Future enum-expansion is drift-confusing. Sources: [JSON-Schema specification] [OASDIFF enum-value-removed].
+    message: "Required property has single-value enum — model as `const` or drop the field."
+    severity: hint
+    given: "$..[?(@.enum && @.enum.length === 1)]"
+    then:
+      function: required-prop-single-value-enum
+    apiq-meta:
+      pattern-id: EV-39
+      lenses: [ evolution-friction, standards-compliance ]
+      direction: drift
+      sources:
+        - type: vendor
+          name: 'JSON-Schema specification'
+          url: 'https://json-schema.org/specification.html'
+          verifiedAt: '2026-05-09'
+        - type: vendor
+          name: 'OASDIFF enum-value-removed'
+          url: 'https://github.com/oasdiff/oasdiff'
+          verifiedAt: '2026-05-09'
+      stakeholders: [ spec-author, client-dev ]
+      lifecycle-phase: authoring-time
+      defect-class: over-specification
+      iso25010: [ maintainability ]
+      codegen-targets: [ '*' ]
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: low
+
+  # ------------------------------------------------------------------------
+  # EV-41 — Field-name with _v1/_legacy/_old/_deprecated suffix
+  # [drift] [hint] sources: apiq prose-walker
+  # ------------------------------------------------------------------------
+  # Source: apiq prose-walker (cross-spec field-name observation);
+  #         rules-brainstorm.md EV-41 (P3, drift).
+  # Lens: 3 (Evolution-Friction), 4 (Client-Friction)
+  # Round: 2
+  # Suffixes _v1/_legacy/_old/_deprecated/_new on field-names signal in-flight
+  # field-rename — old version preserved for backward-compat, new one shadows.
+  # These accumulate as long-term tech-debt.
+  apiq-ev-41-field-evolution-suffix:
+    description: >-
+      [lens-3 | drift] EV-41: Field-name carries evolution-suffix (e.g. `_v1`, `_legacy`, `_old`, `_deprecated`, `_new`) — backward-compat-debt accumulating. Plan a sunset window and remove the legacy field. Source: [apiq prose-walker cross-spec field-name observation].
+    message: "Field-name carries evolution-suffix; technical-debt accumulating."
+    severity: hint
+    given: "$..properties"
+    then:
+      function: field-evolution-suffix
+    apiq-meta:
+      pattern-id: EV-41
+      lenses: [ evolution-friction, client-friction ]
+      direction: drift
+      sources:
+        - type: vendor
+          name: 'apiq prose-walker'
+          verifiedAt: '2026-05-09'
+      stakeholders: [ spec-author, client-dev ]
+      lifecycle-phase: evolution-time
+      defect-class: over-specification
+      iso25010: [ maintainability ]
+      codegen-targets:
+        - java
+        - go
+        - python
+        - typescript
+        - rust
+        - csharp
+        - kotlin
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: medium
+      agent-readiness-impact: low
+
+  # ------------------------------------------------------------------------
+  # EV-42 — tags array contains internal/private/beta/experimental
+  # [drift] [hint] sources: Microsoft + Google AIPs
+  # ------------------------------------------------------------------------
+  # Source: Microsoft API Guidelines + Google AIPs (tag-stability convention);
+  #         rules-brainstorm.md EV-42 (P3, drift).
+  # Lens: 3 (Evolution-Friction), 4 (Client-Friction)
+  # Round: 2
+  # Tags marked `internal`/`private`/`beta`/`experimental` signal that
+  # operations are not yet committed-to. Drift-risk is high — flag for
+  # operator-attention.
+  apiq-ev-42-tags-internal-experimental:
+    description: >-
+      [lens-3 | drift] EV-42: Operation carries tag `internal`, `private`, `beta`, or `experimental` — contract is not yet committed-to and will drift. Either commit or move to a separate spec. Sources: [Microsoft API Guidelines] [Google AIPs].
+    message: "Operation tagged `internal/private/beta/experimental` — contract not committed."
+    severity: hint
+    given: "$.paths[*][get,post,put,patch,delete,options,head,trace]"
+    then:
+      function: tags-internal-experimental
+    apiq-meta:
+      pattern-id: EV-42
+      lenses: [ evolution-friction, client-friction ]
+      direction: drift
+      sources:
+        - type: vendor
+          name: 'Microsoft API Guidelines'
+          url: 'https://github.com/microsoft/api-guidelines'
+          verifiedAt: '2026-05-09'
+        - type: vendor
+          name: 'Google AIPs'
+          url: 'https://google.aip.dev/'
+          verifiedAt: '2026-05-09'
+      stakeholders: [ spec-author, client-dev ]
+      lifecycle-phase: authoring-time
+      defect-class: incomplete
+      iso25010: [ maintainability ]
+      codegen-targets:
+        - java
+        - go
+        - python
+        - typescript
+        - rust
+        - csharp
+        - kotlin
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: medium
+
+  # ------------------------------------------------------------------------
+  # EV-44 — No top-level components.schemas (every schema inline)
+  # [drift] [hint] sources: apiq M6 extended
+  # ------------------------------------------------------------------------
+  # Source: apiq M6 (statistical schema-reuse-aggregation);
+  #         rules-brainstorm.md EV-44 (P3, drift).
+  # Lens: 3 (Evolution-Friction), 4 (Client-Friction)
+  # Round: 2
+  # All-inline-schemas spec means no schema-reuse possible — every change has
+  # to be done at every callsite. Codegen produces N anonymous types instead
+  # of 1 named class.
+  apiq-ev-44-no-components-schemas:
+    description: >-
+      [lens-3 | drift] EV-44: Spec defines no top-level `components.schemas` — every schema is inlined. Codegen produces anonymous types per callsite; schema-reuse + DRY-evolution are impossible. Source: [apiq M6 schema-reuse-aggregation].
+    message: "Spec has no `components.schemas`; schema-reuse impossible — codegen produces anonymous types."
+    severity: hint
+    given: "$"
+    then:
+      function: no-components-schemas
+    apiq-meta:
+      pattern-id: EV-44
+      lenses: [ evolution-friction, client-friction ]
+      direction: drift
+      sources:
+        - type: vendor
+          name: 'apiq M6 schema-reuse-aggregation'
+          verifiedAt: '2026-05-09'
+      stakeholders: [ spec-author, codegen-tool ]
+      lifecycle-phase: design-time
+      defect-class: incomplete
+      iso25010: [ maintainability ]
+      codegen-targets:
+        - java
+        - go
+        - python
+        - typescript
+        - rust
+        - csharp
+        - kotlin
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: medium
+      mttr-impact: high
+      agent-readiness-impact: medium
+
+  # ------------------------------------------------------------------------
+  # EV-45 — default + specific status overlap conflict
+  # [drift] [hint] sources: OASDIFF + OPTIC
+  # ------------------------------------------------------------------------
+  # Source: OASDIFF response-default-overlap + OPTIC default-conflict;
+  #         rules-brainstorm.md EV-45 (P3, drift).
+  # Lens: 3 (Evolution-Friction), 5 (Standards-Compliance)
+  # Round: 2
+  # Operation declares both `default` AND specific status (e.g. `4XX`+`default`)
+  # — semantics conflict (which one matches a 404?). Codegen ambiguity.
+  apiq-ev-45-default-specific-status-overlap:
+    description: >-
+      [lens-3 | drift] EV-45: Operation declares both `default` response AND specific status-code-range that overlaps (e.g. `4XX` + `default`) — semantics ambiguous, codegen has to pick one. Sources: [OASDIFF response-default-overlap] [OPTIC default-conflict].
+    message: "Operation has overlapping `default` and specific-status response — semantics ambiguous."
+    severity: hint
+    given: "$.paths[*][get,post,put,patch,delete,options,head,trace].responses"
+    then:
+      function: default-specific-status-overlap
+    apiq-meta:
+      pattern-id: EV-45
+      lenses: [ evolution-friction, standards-compliance ]
+      direction: drift
+      sources:
+        - type: vendor
+          name: 'OASDIFF response-default-overlap'
+          url: 'https://github.com/oasdiff/oasdiff'
+          verifiedAt: '2026-05-09'
+        - type: vendor
+          name: 'OPTIC default-conflict'
+          url: 'https://www.useoptic.com/'
+          verifiedAt: '2026-05-09'
+      stakeholders: [ spec-author, client-dev ]
+      lifecycle-phase: authoring-time
+      defect-class: over-specification
+      iso25010: [ maintainability ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: medium
+      agent-readiness-impact: low
+
+  # ------------------------------------------------------------------------
+  # EV-47 — requestBody multipart+json same schema
+  # [drift] [hint] sources: Azure + OPTIC
+  # ------------------------------------------------------------------------
+  # Source: Azure API Style Guide + OPTIC content-shape-divergence;
+  #         rules-brainstorm.md EV-47 (P3, drift).
+  # Lens: 3 (Evolution-Friction), 5 (Standards-Compliance)
+  # Round: 2
+  # Operation declares both `multipart/form-data` and `application/json`
+  # request-bodies pointing to the same schema — file-uploads need different
+  # encoding. Drift-risk: schema-evolution forks.
+  apiq-ev-47-multipart-json-same-schema:
+    description: >-
+      [lens-3 | drift] EV-47: Request declares both `multipart/form-data` and `application/json` content-types referencing the same schema. Multipart needs binary-property modelling; this drifts as schema evolves. Sources: [Azure API Style Guide] [OPTIC content-shape-divergence].
+    message: "Request declares multipart and json with same schema — encodings need divergent shapes."
+    severity: hint
+    given: "$.paths[*][post,put,patch].requestBody"
+    then:
+      function: multipart-json-same-schema
+    apiq-meta:
+      pattern-id: EV-47
+      lenses: [ evolution-friction, standards-compliance ]
+      direction: drift
+      sources:
+        - type: vendor
+          name: 'Azure API Style Guide'
+          url: 'https://github.com/Azure/azure-api-style-guide'
+          verifiedAt: '2026-05-09'
+        - type: vendor
+          name: 'OPTIC content-shape-divergence'
+          url: 'https://www.useoptic.com/'
+          verifiedAt: '2026-05-09'
+      stakeholders: [ spec-author, codegen-tool ]
+      lifecycle-phase: authoring-time
+      defect-class: incomplete
+      iso25010: [ maintainability ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: medium
+      agent-readiness-impact: low
+
+  # ------------------------------------------------------------------------
+  # EV-51 — Magic-string (free-text where enum viable)
+  # [loosen] [hint] sources: LL-13 + apiq M13
+  # ------------------------------------------------------------------------
+  # Source: LL-13 (LLM-friendly-API) + apiq M13 (string-domain-restriction);
+  #         rules-brainstorm.md EV-51 (P3, loosen).
+  # Lens: 3 (Evolution-Friction), 5 (Standards-Compliance)
+  # Round: 2
+  # Heuristic: string-property with name suggesting enum-affinity (e.g.
+  # `status`, `type`, `kind`, `category`, `level`, `priority`, `state`) but no
+  # `enum`/`pattern`/`format` constraint. Loosen — adding enum later breaks
+  # clients sending arbitrary strings.
+  apiq-ev-51-magic-string-enum-candidate:
+    description: >-
+      [lens-3 | loosen] EV-51: Property name suggests enum-affinity (status/ type/kind/category/level/priority/state) but is unconstrained string — adding `enum` later breaks clients. Constrain at design-time. Sources: [LL-13 LLM-friendly-API] [apiq M13 string-domain-restriction].
+    message: "Property name suggests enum-affinity but lacks `enum` constraint — drift-prone."
+    severity: hint
+    given: "$..properties"
+    then:
+      function: magic-string-enum-candidate
+    apiq-meta:
+      pattern-id: EV-51
+      lenses: [ evolution-friction, standards-compliance, ai-agent-consumability ]
+      direction: loosen
+      sources:
+        - type: vendor
+          name: 'LL-13 LLM-friendly-API'
+          verifiedAt: '2026-05-09'
+        - type: vendor
+          name: 'apiq M13 string-domain-restriction'
+          verifiedAt: '2026-05-09'
+      stakeholders: [ spec-author, client-dev, ai-agent ]
+      lifecycle-phase: authoring-time
+      defect-class: incomplete
+      iso25010: [ maintainability, usability ]
+      codegen-targets: [ '*' ]
+      detection-precision: low
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: medium
+      agent-readiness-impact: high
+
+  # ------------------------------------------------------------------------
+  # EV-52 — Integer maximum > 2^53 without int64 string-encoding
+  # [drift] [hint] sources: SG-24 + AIP + Zalando #168 + Stripe
+  # ------------------------------------------------------------------------
+  # Source: SG-24 (style-guide) + Google AIPs + Zalando #168 + Stripe ID-as-
+  #         string convention; rules-brainstorm.md EV-52 (P3, drift).
+  # Lens: 3 (Evolution-Friction), 2 (Standards-Compliance), 4 (Client-Friction)
+  # Round: 2
+  # JavaScript Number can safely represent integers up to 2^53 (= 9007199254740992)
+  # — beyond that, JSON-parsing in JS clients silently corrupts the value. Stripe,
+  # Zalando, Google AIPs all recommend `type: string` + `format: int64` for IDs
+  # or counts that may exceed 2^53.
+  apiq-ev-52-int-maximum-over-2-pow-53:
+    description: >-
+      [lens-3 | drift] EV-52: Integer property declares `maximum > 9007199254740992` (2^53) but uses `type: integer` — JavaScript clients lose precision. Use `type: string` + `format: int64`. Sources: [SG-24] [Google AIPs] [Zalando #168] [Stripe ID-as-string].
+    message: "Integer max > 2^53 will lose precision in JS clients; use `type: string` + `format: int64`."
+    severity: hint
+    given: "$..[?(@.type=='integer' && @.maximum > 9007199254740992)]"
+    then:
+      function: int-needs-string-encoding
+    apiq-meta:
+      pattern-id: EV-52
+      lenses: [ evolution-friction, standards-compliance, client-friction ]
+      direction: drift
+      sources:
+        - type: vendor
+          name: 'SG-24 style-guide-mining'
+          verifiedAt: '2026-05-09'
+        - type: vendor
+          name: 'Google AIPs'
+          url: 'https://google.aip.dev/'
+          verifiedAt: '2026-05-09'
+        - type: vendor
+          name: 'Zalando RESTful API Guidelines #168'
+          url: 'https://opensource.zalando.com/restful-api-guidelines/'
+          verifiedAt: '2026-05-09'
+        - type: vendor
+          name: 'Stripe ID-as-string convention'
+          url: 'https://stripe.com/docs/api'
+          verifiedAt: '2026-05-09'
+      stakeholders: [ spec-author, client-dev, codegen-tool ]
+      lifecycle-phase: design-time
+      defect-class: over-specification
+      iso25010: [ reliability, compatibility ]
+      codegen-targets: [ 'typescript', 'javascript' ]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: medium
+      mttr-impact: high
+      agent-readiness-impact: medium
+
+  # ------------------------------------------------------------------------
+  # EV-54 — version param without enum constraint
+  # [loosen] [warn] sources: apiq existing
+  # ------------------------------------------------------------------------
+  # Source: apiq existing (version-axis-detector);
+  #         rules-brainstorm.md EV-54 (P3, loosen).
+  # Lens: 3 (Evolution-Friction)
+  # Round: 2
+  # severityHypothesis from rules-brainstorm.md is `warn` (loosen) — overrides
+  # P3-default-`hint`. A version-param without enum lets clients pass any
+  # value; tightening to `enum: [v1, v2]` later breaks clients sending v3.
+  apiq-ev-54-version-param-no-enum:
+    description: >-
+      [lens-3 | loosen] EV-54: A parameter named `version` / `api-version` / `apiVersion` without `enum` constraint accepts any string — adding `enum: ['v1', 'v2']` later breaks clients sending other values. Constrain at design-time. Source: [apiq existing version-axis-detector].
+    message: "Version parameter has no `enum` constraint — tightening later is breaking."
+    severity: warn
+    given: "$..parameters[*]"
+    then:
+      function: version-param-no-enum
+    apiq-meta:
+      pattern-id: EV-54
+      lenses: [ evolution-friction ]
+      direction: loosen
+      sources:
+        - type: vendor
+          name: 'apiq existing version-axis-detector'
+          verifiedAt: '2026-05-09'
+      stakeholders: [ spec-author, client-dev ]
+      lifecycle-phase: authoring-time
+      defect-class: incomplete
+      iso25010: [ maintainability, compatibility ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: medium
+      agent-readiness-impact: medium
+
+  # ------------------------------------------------------------------------
+  # EV-59 — 3xx (301/302/307/308) without Location header
+  # [drift] [warn] sources: SP-G-SPS-15 inverse + RFC 9110
+  # ------------------------------------------------------------------------
+  # Source: SP-G-SPS-15 inverse + RFC 9110 §10.2.2 + §15.4;
+  #         rules-brainstorm.md EV-59 (P3, drift).
+  # Lens: 3 (Evolution-Friction), 2 (Standards-Compliance)
+  # Round: 2
+  # severityHypothesis from patterns.json is `warn` — overrides P3-default-
+  # `hint`. RFC 9110 §15.4 mandates Location header for 301/302/307/308.
+  apiq-ev-59-3xx-without-location:
+    description: >-
+      [lens-3 | drift] EV-59: 3xx redirect response (301/302/307/308) declared without `Location` header — RFC 9110 §15.4 requires Location. Sources: [SP-G-SPS-15 inverse] [RFC 9110 §15.4].
+    message: "3xx redirect response declares no `Location` header (RFC 9110 §15.4)."
+    severity: warn
+    given: "$.paths[*][get,post,put,patch,delete,options,head,trace].responses"
+    then:
+      function: redirect-without-location
+    apiq-meta:
+      pattern-id: EV-59
+      lenses: [ evolution-friction, standards-compliance ]
+      direction: drift
+      sources:
+        - type: rfc
+          number: 9110
+          section: '15.4'
+          summary: 'For 301, 302, 303, 307, and 308 responses, the Location field-value provides the URI reference for the recipient to follow.'
+          url: 'https://www.rfc-editor.org/rfc/rfc9110#section-15.4'
+        - type: vendor
+          name: 'SP-G-SPS-15 inverse'
+          url: 'https://github.com/SPSCommerce/sps-api-standards'
+          verifiedAt: '2026-05-09'
+      stakeholders: [ spec-author, client-dev ]
+      lifecycle-phase: authoring-time
+      defect-class: incomplete
+      iso25010: [ reliability, compatibility ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: medium
+      mttr-impact: medium
+      agent-readiness-impact: medium
+
+  # ------------------------------------------------------------------------
+  # EV-60 — webhooks (3.1) without summary/description
+  # [drift] [hint] sources: SP-G-SPS-21 + apiq U1/U2
+  # ------------------------------------------------------------------------
+  # Source: SP-G-SPS-21 + apiq U1/U2 (operation-prose-completeness);
+  #         rules-brainstorm.md EV-60 (P3, drift).
+  # Lens: 3 (Evolution-Friction), 4 (Client-Friction)
+  # Round: 2
+  # Webhook-operations need extra prose because subscribers don't see the
+  # surrounding REST-context — the webhook is the ENTIRE contract for them.
+  apiq-ev-60-webhook-no-prose:
+    description: >-
+      [lens-3 | drift] EV-60: Webhook operation lacks `summary` and `description` — webhook subscribers don't see surrounding REST-context; the webhook is the entire contract. Document it explicitly. Sources: [SP-G-SPS-21] [apiq U1/U2].
+    message: "Webhook operation lacks summary/description; subscriber-facing prose is mandatory."
+    severity: hint
+    given: "$.webhooks[*][get,post,put,patch,delete,options,head,trace]"
+    then:
+      function: webhook-needs-prose
+    apiq-meta:
+      pattern-id: EV-60
+      lenses: [ evolution-friction, client-friction, ai-agent-consumability ]
+      direction: drift
+      sources:
+        - type: vendor
+          name: 'SP-G-SPS-21'
+          url: 'https://github.com/SPSCommerce/sps-api-standards'
+          verifiedAt: '2026-05-09'
+        - type: vendor
+          name: 'apiq U1/U2 operation-prose-completeness'
+          verifiedAt: '2026-05-09'
+      stakeholders: [ spec-author, client-dev, ai-agent ]
+      lifecycle-phase: authoring-time
+      defect-class: incomplete
+      iso25010: [ usability, maintainability ]
+      codegen-targets:
+        - java
+        - go
+        - python
+        - typescript
+        - rust
+        - csharp
+        - kotlin
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: high
+
+  # ------------------------------------------------------------------------
+  # EV-61 — oneOf closed + description "more variants" language
+  # [loosen] [hint] sources: apiq prose-walker
+  # ------------------------------------------------------------------------
+  # Source: apiq prose-walker (cross-modal contradiction-detection);
+  #         rules-brainstorm.md EV-61 (P3, loosen).
+  # Lens: 3 (Evolution-Friction), 4 (Client-Friction)
+  # Round: 2
+  # Detects schema with `oneOf` (closed-set) + description prose containing
+  # "more variants will be added", "additional types", "future extensions" —
+  # semantic mismatch: prose says open, schema says closed.
+  apiq-ev-61-oneof-closed-prose-says-open:
+    description: >-
+      [lens-3 | loosen] EV-61: Schema declares `oneOf` (closed variant-set) but description-prose mentions "more variants will be added" / "future extensions" — semantic mismatch. Either re-model with extension-hook (anyOf + open-marker) or remove the prose claim. Source: [apiq prose-walker contradiction-detection].
+    message: "`oneOf` is closed but description says variants will grow — semantic mismatch."
+    severity: hint
+    given: "$..[?(@.oneOf)]"
+    then:
+      function: oneof-closed-prose-says-open
+    apiq-meta:
+      pattern-id: EV-61
+      lenses: [ evolution-friction, client-friction ]
+      direction: loosen
+      sources:
+        - type: vendor
+          name: 'apiq prose-walker contradiction-detection'
+          verifiedAt: '2026-05-09'
+      stakeholders: [ spec-author, client-dev ]
+      lifecycle-phase: authoring-time
+      defect-class: incomplete
+      iso25010: [ maintainability, compatibility ]
+      codegen-targets:
+        - java
+        - go
+        - python
+        - typescript
+        - rust
+        - csharp
+        - kotlin
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: medium
+      agent-readiness-impact: medium
+
+  # ------------------------------------------------------------------------
+  # EV-62 — type:integer candidate for type:string (>2^53 evidence)
+  # [drift] [hint] sources: SG-24 + Stripe + AIPs
+  # ------------------------------------------------------------------------
+  # Source: SG-24 + Stripe ID-as-string + Google AIPs;
+  #         rules-brainstorm.md EV-62 (P3, drift).
+  # Lens: 3 (Evolution-Friction), 4 (Client-Friction)
+  # Round: 2
+  # Sibling to EV-52: detects integer fields whose `format: int64` is declared
+  # — even without explicit maximum > 2^53, int64 alone is sufficient evidence
+  # to recommend string-encoding for JS-safe interop.
+  apiq-ev-62-int64-string-encoding-candidate:
+    description: >-
+      [lens-3 | drift] EV-62: Property declares `type: integer` + `format: int64` but does not opt for `type: string` representation — JS-precision-loss risk for any value > 2^53. Stripe, Zalando, AIPs recommend string encoding for int64 IDs. Sources: [SG-24] [Stripe ID-as-string] [Google AIPs].
+    message: "`type: integer` + `format: int64` risks JS-precision-loss; consider `type: string` + `format: int64`."
+    severity: hint
+    given: "$..[?(@.type=='integer' && @.format=='int64')]"
+    then:
+      function: int64-string-encoding-candidate
+    apiq-meta:
+      pattern-id: EV-62
+      lenses: [ evolution-friction, client-friction ]
+      direction: drift
+      sources:
+        - type: vendor
+          name: 'SG-24 style-guide-mining'
+          verifiedAt: '2026-05-09'
+        - type: vendor
+          name: 'Stripe ID-as-string convention'
+          url: 'https://stripe.com/docs/api'
+          verifiedAt: '2026-05-09'
+        - type: vendor
+          name: 'Google AIPs'
+          url: 'https://google.aip.dev/'
+          verifiedAt: '2026-05-09'
+      stakeholders: [ spec-author, client-dev, codegen-tool ]
+      lifecycle-phase: design-time
+      defect-class: over-specification
+      iso25010: [ reliability, compatibility ]
+      codegen-targets: [ 'typescript', 'javascript' ]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: medium
+      mttr-impact: medium
+      agent-readiness-impact: medium

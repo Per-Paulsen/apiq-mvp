@@ -59,7 +59,7 @@ rules:
       lenses: [threat-modeling]
       sources:
         - { type: vendor, name: 'OWASP API2:2023 (Broken Authentication)' }
-        - { type: rfc, number: 6750, section: '2.3', verbatim: 'clients MUST NOT use the URI', verifiedAt: '2026-05-08' }
+        - { type: rfc, number: 6750, section: '2.3', summary: 'clients MUST NOT use the URI' }
       stakeholders: [security, end-user]
       lifecycle-phase: deploy-time
       defect-class: semantic
@@ -94,7 +94,7 @@ rules:
       lenses: [threat-modeling]
       sources:
         - { type: vendor, name: 'OWASP API2:2023 (Broken Authentication)' }
-        - { type: rfc, number: 6750, section: '2.3', verbatim: 'clients MUST NOT use the URI', verifiedAt: '2026-05-08' }
+        - { type: rfc, number: 6750, section: '2.3', summary: 'clients MUST NOT use the URI' }
       stakeholders: [security, end-user, spec-author]
       lifecycle-phase: deploy-time
       defect-class: semantic
@@ -140,7 +140,7 @@ rules:
       lenses: [threat-modeling, standards-compliance]
       sources:
         - { type: vendor, name: 'OWASP API2:2023' }
-        - { type: rfc, number: 6750, section: '2.3', verbatim: 'clients MUST NOT use the URI', verifiedAt: '2026-05-08' }
+        - { type: rfc, number: 6750, section: '2.3', summary: 'clients MUST NOT use the URI' }
       stakeholders: [security, end-user, spec-author]
       lifecycle-phase: deploy-time
       defect-class: norm
@@ -183,7 +183,7 @@ rules:
       lenses: [threat-modeling, standards-compliance]
       sources:
         - { type: vendor, name: 'OWASP API2:2023' }
-        - { type: rfc, number: 7617, verbatim: 'HTTP Basic authentication MUST NOT be used over an insecure (i.e., non-TLS) channel', verifiedAt: '2026-05-08' }
+        - { type: rfc, number: 7617, summary: 'HTTP Basic authentication MUST NOT be used over an insecure (i.e., non-TLS) channel' }
         - { type: rfc, number: 9110, verifiedAt: '2026-05-08' }
       stakeholders: [security, end-user, operations]
       lifecycle-phase: deploy-time
@@ -222,7 +222,7 @@ rules:
       pattern-id: Y-5
       lenses: [threat-modeling, standards-compliance]
       sources:
-        - { type: rfc, number: 6749, section: '3.1', verbatim: 'MUST utilize TLS', verifiedAt: '2026-05-08' }
+        - { type: rfc, number: 6749, section: '3.1', summary: 'MUST utilize TLS' }
       stakeholders: [security, end-user]
       lifecycle-phase: deploy-time
       defect-class: norm
@@ -256,7 +256,7 @@ rules:
       pattern-id: Y-5
       lenses: [threat-modeling, standards-compliance]
       sources:
-        - { type: rfc, number: 6749, section: '3.2', verbatim: 'MUST utilize TLS', verifiedAt: '2026-05-08' }
+        - { type: rfc, number: 6749, section: '3.2', summary: 'MUST utilize TLS' }
       stakeholders: [security, end-user]
       lifecycle-phase: deploy-time
       defect-class: norm
@@ -290,8 +290,8 @@ rules:
       pattern-id: Y-5
       lenses: [threat-modeling, standards-compliance]
       sources:
-        - { type: rfc, number: 6749, verbatim: 'MUST utilize TLS', verifiedAt: '2026-05-08' }
-        - { type: bcp, number: 240, rfc: 9700, verbatim: 'OAuth2 Security BCP', verifiedAt: '2026-05-08' }
+        - { type: rfc, number: 6749, summary: 'MUST utilize TLS' }
+        - { type: bcp, number: 240, rfc: 9700, summary: 'OAuth2 Security BCP' }
       stakeholders: [security, end-user]
       lifecycle-phase: deploy-time
       defect-class: norm
@@ -329,8 +329,8 @@ rules:
       pattern-id: Y-7
       lenses: [threat-modeling, standards-compliance, evolution-friction]
       sources:
-        - { type: bcp, number: 240, rfc: 9700, section: '2.1.2', verbatim: 'MUST NOT be used', verifiedAt: '2026-05-08' }
-        - { type: mining, phase: round1, subagent: 'R3-PM-IC-04', verbatim: 'OAuth2 implicit deprecation per BCP-240', verifiedAt: '2026-05-07' }
+        - { type: bcp, number: 240, rfc: 9700, section: '2.1.2', summary: 'MUST NOT be used' }
+        - { type: mining, phase: round1, subagent: 'R3-PM-IC-04', summary: 'OAuth2 implicit deprecation per BCP-240' }
       stakeholders: [security, end-user, ai-agent]
       lifecycle-phase: deploy-time
       defect-class: norm
@@ -364,7 +364,7 @@ rules:
       pattern-id: Y-7
       lenses: [threat-modeling, standards-compliance, evolution-friction]
       sources:
-        - { type: bcp, number: 240, rfc: 9700, section: '2.4', verbatim: 'MUST NOT be used', verifiedAt: '2026-05-08' }
+        - { type: bcp, number: 240, rfc: 9700, section: '2.4', summary: 'MUST NOT be used' }
       stakeholders: [security, end-user, ai-agent]
       lifecycle-phase: deploy-time
       defect-class: norm
@@ -446,7 +446,7 @@ rules:
       sources:
         - { type: vendor, name: 'OWASP API2:2023 (Broken Authentication)' }
         - { type: vendor, name: 'OWASP API5:2023 (Broken Function Level Authorization)' }
-        - { type: mining, phase: round1, subagent: 'rules-brainstorm-Y-23', verbatim: 'H-freq write-op-no-security finding', verifiedAt: '2026-05-07' }
+        - { type: mining, phase: round1, subagent: 'rules-brainstorm-Y-23', summary: 'H-freq write-op-no-security finding' }
       stakeholders: [security, end-user, spec-author]
       lifecycle-phase: deploy-time
       defect-class: incomplete
@@ -486,7 +486,7 @@ rules:
       pattern-id: TM-A6
       lenses: [threat-modeling, standards-compliance]
       sources:
-        - { type: rfc, number: 6749, section: '3.1', verbatim: 'MUST utilize TLS', verifiedAt: '2026-05-08' }
+        - { type: rfc, number: 6749, section: '3.1', summary: 'MUST utilize TLS' }
         - { type: vendor, name: 'APIMatic OpenID guidance' }
       stakeholders: [security, end-user]
       lifecycle-phase: deploy-time
@@ -530,7 +530,7 @@ rules:
       lenses: [threat-modeling, standards-compliance]
       sources:
         - { type: vendor, name: 'OWASP API2:2023' }
-        - { type: rfc, number: 6750, section: '2.3', verbatim: 'clients MUST NOT use the URI', verifiedAt: '2026-05-08' }
+        - { type: rfc, number: 6750, section: '2.3', summary: 'clients MUST NOT use the URI' }
       stakeholders: [security, end-user, spec-author]
       lifecycle-phase: deploy-time
       defect-class: norm
@@ -574,7 +574,7 @@ rules:
       lenses: [threat-modeling]
       sources:
         - { type: vendor, name: 'OWASP API3:2023 (Broken Object Property Level Authorization)' }
-        - { type: mining, phase: round2, subagent: 'TM-A11', verbatim: 'apiq-config-driven privilege-escalation field-list', verifiedAt: '2026-05-07' }
+        - { type: mining, phase: round2, subagent: 'TM-A11', summary: 'apiq-config-driven privilege-escalation field-list' }
       stakeholders: [security, end-user, spec-author]
       lifecycle-phase: deploy-time
       defect-class: semantic
@@ -619,7 +619,7 @@ rules:
       sources:
         - { type: vendor, name: 'OWASP API3:2023' }
         - { type: vendor, name: 'Cloudflare PII-detection guidance' }
-        - { type: mining, phase: round2, subagent: 'TM-A15', verbatim: 'OAI #2190 Lens-6 cornerstone', verifiedAt: '2026-05-07' }
+        - { type: mining, phase: round2, subagent: 'TM-A15', summary: 'OAI #2190 Lens-6 cornerstone' }
       stakeholders: [security, end-user, spec-author]
       lifecycle-phase: deploy-time
       defect-class: privacy-leakage
@@ -665,7 +665,7 @@ rules:
       lenses: [threat-modeling]
       sources:
         - { type: vendor, name: 'OWASP API3:2023 (Mass Assignment)' }
-        - { type: mining, phase: round2, subagent: 'TM-A17', verbatim: 'sharper than Y-10', verifiedAt: '2026-05-07' }
+        - { type: mining, phase: round2, subagent: 'TM-A17', summary: 'sharper than Y-10' }
       stakeholders: [security, spec-author, codegen-tool]
       lifecycle-phase: validation-time
       defect-class: over-specification
@@ -751,7 +751,7 @@ rules:
       lenses: [threat-modeling]
       sources:
         - { type: vendor, name: 'OWASP API4:2023 (Unrestricted Resource Consumption)' }
-        - { type: mining, phase: round2, subagent: 'TM-A23', verbatim: 'unbounded pagination → DoS', verifiedAt: '2026-05-07' }
+        - { type: mining, phase: round2, subagent: 'TM-A23', summary: 'unbounded pagination → DoS' }
       stakeholders: [security, end-user, operations, spec-author]
       lifecycle-phase: runtime-at-scale
       defect-class: incomplete
@@ -884,7 +884,7 @@ rules:
       sources:
         - { type: vendor, name: 'OWASP API7:2023 (Server Side Request Forgery)' }
         - { type: vendor, name: 'OWASP SSRF Cheat-Sheet' }
-        - { type: mining, phase: round2, subagent: 'TM-A34', verbatim: 'extends Y-15', verifiedAt: '2026-05-07' }
+        - { type: mining, phase: round2, subagent: 'TM-A34', summary: 'extends Y-15' }
       stakeholders: [security, end-user, spec-author]
       lifecycle-phase: deploy-time
       defect-class: incomplete
@@ -1013,7 +1013,7 @@ rules:
       lenses: [threat-modeling]
       sources:
         - { type: vendor, name: 'OWASP API8:2023 (Security Misconfiguration — verbose-error)' }
-        - { type: mining, phase: round2, subagent: 'TM-A42', verbatim: 'high-value catch', verifiedAt: '2026-05-07' }
+        - { type: mining, phase: round2, subagent: 'TM-A42', summary: 'high-value catch' }
       stakeholders: [security, end-user, spec-author]
       lifecycle-phase: deploy-time
       defect-class: privacy-leakage
@@ -1057,7 +1057,7 @@ rules:
       sources:
         - { type: vendor, name: 'OWASP API8:2023' }
         - { type: vendor, name: 'OWASP API9:2023 (Improper Inventory Management)' }
-        - { type: mining, phase: round2, subagent: 'TM-A44', verbatim: 'common breach-vector — stale debug endpoints', verifiedAt: '2026-05-07' }
+        - { type: mining, phase: round2, subagent: 'TM-A44', summary: 'common breach-vector — stale debug endpoints' }
       stakeholders: [security, operations, spec-author]
       lifecycle-phase: deploy-time
       defect-class: incomplete
@@ -1099,7 +1099,7 @@ rules:
       pattern-id: TM-A53
       lenses: [threat-modeling, standards-compliance]
       sources:
-        - { type: rfc, number: 9110, section: '11.6.1', verbatim: 'MUST send a WWW-Authenticate header field', verifiedAt: '2026-05-08' }
+        - { type: rfc, number: 9110, section: '11.6.1', summary: 'MUST send a WWW-Authenticate header field' }
         - { type: vendor, name: 'OWASP API2:2023' }
       stakeholders: [security, end-user, ai-agent, spec-author]
       lifecycle-phase: runtime-edge

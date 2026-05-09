@@ -65,9 +65,8 @@ rules:
       sources:
         - type: vendor
           name: 'Speakeasy SDK guidance (multi-codegen)'
-          verbatim: 'Inline object schemas without title produce anonymous synthesised types'
+          summary: 'Inline object schemas without title produce anonymous synthesised types'
           url: 'https://www.speakeasy.com/openapi'
-          verifiedAt: '2026-05-08'
         - type: vendor
           name: openapi-generator multi-codegen
           verifiedAt: '2026-05-08'
@@ -115,9 +114,8 @@ rules:
       sources:
         - type: vendor
           name: 'Speakeasy SDK-vendor guidance'
-          verbatim: 'operationId should be concise verb + resource-noun for clean SDK methods'
+          summary: 'operationId should be concise verb + resource-noun for clean SDK methods'
           url: 'https://www.speakeasy.com/openapi'
-          verifiedAt: '2026-05-08'
         - type: vendor
           name: 'FastAPI auto-naming (negative example)'
           verifiedAt: '2026-05-08'
@@ -128,7 +126,7 @@ rules:
       lifecycle-phase: build-time
       defect-class: ergonomic
       iso25010: [usability]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
       detection-precision: medium
       auto-fix-safe: false
       cost-impact: low
@@ -167,8 +165,7 @@ rules:
         - type: vendor
           name: openapi-generator #14765
           url: 'https://github.com/OpenAPITools/openapi-generator/issues/14765'
-          verbatim: 'required+nullable produces 3-state semantics that codegen mishandles'
-          verifiedAt: '2026-05-08'
+          summary: 'required+nullable produces 3-state semantics that codegen mishandles'
         - type: vendor
           name: 'Speakeasy 3-state-semantics guidance'
           url: 'https://www.speakeasy.com/openapi'
@@ -222,8 +219,7 @@ rules:
         - type: vendor
           name: openapi-generator #17877
           url: 'https://github.com/OpenAPITools/openapi-generator/issues/17877'
-          verbatim: 'multiple content-types on same status produce ambiguous SDK output'
-          verifiedAt: '2026-05-08'
+          summary: 'multiple content-types on same status produce ambiguous SDK output'
         - type: vendor
           name: oapi-codegen #1897
           url: 'https://github.com/oapi-codegen/oapi-codegen/issues/1897'
@@ -235,7 +231,7 @@ rules:
       lifecycle-phase: build-time
       defect-class: ergonomic
       iso25010: [usability, compatibility]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
       detection-precision: medium
       auto-fix-safe: false
       cost-impact: medium
@@ -280,8 +276,7 @@ rules:
         - type: vendor
           name: openapi-generator #9444
           url: 'https://github.com/OpenAPITools/openapi-generator/issues/9444'
-          verbatim: 'discriminator.propertyName must be required for reliable variant resolution'
-          verifiedAt: '2026-05-08'
+          summary: 'discriminator.propertyName must be required for reliable variant resolution'
         - type: vendor
           name: 'Redocly discriminator guidance'
           url: 'https://redocly.com/docs/cli/rules/'
@@ -329,8 +324,7 @@ rules:
         - type: vendor
           name: 'OpenAPI Initiative (data-types guidance)'
           url: 'https://spec.openapis.org/oas/v3.0.3#data-types'
-          verbatim: 'integer should declare format: int32 or int64'
-          verifiedAt: '2026-05-08'
+          summary: 'integer should declare format: int32 or int64'
         - type: vendor
           name: 'Speakeasy + openapi-generator (int32-default consensus)'
           url: 'https://www.speakeasy.com/openapi'
@@ -399,8 +393,7 @@ rules:
         - type: vendor
           name: openapi-generator (multi-codegen runtime-failure)
           url: 'https://github.com/OpenAPITools/openapi-generator'
-          verbatim: 'recursive schemas without termination produce infinite recursion at deserialise time'
-          verifiedAt: '2026-05-08'
+          summary: 'recursive schemas without termination produce infinite recursion at deserialise time'
         - type: vendor
           name: openapi-python-client + utoipa
           verifiedAt: '2026-05-08'
@@ -453,8 +446,7 @@ rules:
         - type: vendor
           name: pb33f
           url: 'https://pb33f.io/'
-          verbatim: 'recursive cycles on required fields are unrepresentable in any codegen'
-          verifiedAt: '2026-05-08'
+          summary: 'recursive cycles on required fields are unrepresentable in any codegen'
         - type: mining
           phase: round2
           subagent: t18b-client
@@ -462,7 +454,7 @@ rules:
       lifecycle-phase: build-time
       defect-class: semantic
       iso25010: [reliability, compatibility]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
       detection-precision: low
       auto-fix-safe: false
       cost-impact: high
@@ -525,8 +517,7 @@ rules:
         - type: vendor
           name: 'OpenAPI Initiative (data-types §4.7.4)'
           url: 'https://spec.openapis.org/oas/v3.0.3#data-types'
-          verbatim: 'unknown formats are treated as additional information'
-          verifiedAt: '2026-05-08'
+          summary: 'unknown formats are treated as additional information'
         - type: vendor
           name: openapi-generator multi-issue (format-fallback)
           verifiedAt: '2026-05-08'
@@ -585,8 +576,7 @@ rules:
         - type: vendor
           name: openapi-generator (free-form-object consensus)
           url: 'https://github.com/OpenAPITools/openapi-generator'
-          verbatim: 'object without properties or additionalProperties produces Map<String,Object>'
-          verifiedAt: '2026-05-08'
+          summary: 'object without properties or additionalProperties produces Map<String,Object>'
         - type: vendor
           name: Apicurio
           verifiedAt: '2026-05-08'
@@ -639,8 +629,7 @@ rules:
         - type: vendor
           name: openapi-generator #18207
           url: 'https://github.com/OpenAPITools/openapi-generator/issues/18207'
-          verbatim: '3.1 multi-type handling incomplete in most codegens'
-          verifiedAt: '2026-05-08'
+          summary: '3.1 multi-type handling incomplete in most codegens'
         - type: mining
           phase: round2
           subagent: t18b-client
@@ -686,8 +675,7 @@ rules:
       sources:
         - type: vendor
           name: ReDoc + openapi-python-client (regex-engine-mismatch)
-          verbatim: 'patterns using ECMA-262-only features get rejected by Python re or Java java.util.regex'
-          verifiedAt: '2026-05-08'
+          summary: 'patterns using ECMA-262-only features get rejected by Python re or Java java.util.regex'
         - type: vendor
           name: 'ECMA-262 §22.2 RegExp + Java java.util.regex + Python re docs'
           verifiedAt: '2026-05-08'
@@ -743,8 +731,7 @@ rules:
         - type: vendor
           name: swagger-ui multi-issue (deep-inline-render)
           url: 'https://github.com/swagger-api/swagger-ui'
-          verbatim: 'deeply-nested inline objects produce unreadable docs'
-          verifiedAt: '2026-05-08'
+          summary: 'deeply-nested inline objects produce unreadable docs'
         - type: vendor
           name: redoc deep-inline-rendering issues
           url: 'https://github.com/Redocly/redoc'
@@ -756,7 +743,7 @@ rules:
       lifecycle-phase: build-time
       defect-class: ergonomic
       iso25010: [usability, maintainability]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
       detection-precision: high
       auto-fix-safe: false
       cost-impact: medium
@@ -796,8 +783,7 @@ rules:
         - type: vendor
           name: openapi-python-client (SDK-class-collision)
           url: 'https://github.com/openapi-generators/openapi-python-client'
-          verbatim: 'Schema named Client/API collides with generated SDK base-class'
-          verifiedAt: '2026-05-08'
+          summary: 'Schema named Client/API collides with generated SDK base-class'
         - type: mining
           phase: round2
           subagent: t18b-client
@@ -842,8 +828,7 @@ rules:
         - type: vendor
           name: 'Stripe + Lens-4 mining (similar-schema near-dups)'
           url: 'https://stripe.com/docs/api'
-          verbatim: 'similar-not-identical schemas indicate missed allOf composition'
-          verifiedAt: '2026-05-08'
+          summary: 'similar-not-identical schemas indicate missed allOf composition'
         - type: mining
           phase: round2
           subagent: t18b-client
@@ -851,7 +836,7 @@ rules:
       lifecycle-phase: build-time
       defect-class: ergonomic
       iso25010: [maintainability, usability]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
       detection-precision: low
       auto-fix-safe: false
       cost-impact: medium
@@ -895,8 +880,7 @@ rules:
         - type: vendor
           name: 'Speakeasy SDK (multi-auth-fan-out)'
           url: 'https://www.speakeasy.com/openapi'
-          verbatim: 'mixed securityScheme types produce multi-auth fan-out boilerplate'
-          verifiedAt: '2026-05-08'
+          summary: 'mixed securityScheme types produce multi-auth fan-out boilerplate'
         - type: mining
           phase: round2
           subagent: t18b-client
@@ -904,7 +888,7 @@ rules:
       lifecycle-phase: build-time
       defect-class: ergonomic
       iso25010: [usability, maintainability]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
       detection-precision: low
       auto-fix-safe: false
       cost-impact: medium
@@ -944,8 +928,7 @@ rules:
         - type: vendor
           name: openapi-typescript #1874
           url: 'https://github.com/openapi-ts/openapi-typescript/issues/1874'
-          verbatim: 'enum values must be identifier-safe for clean SDK enum generation'
-          verifiedAt: '2026-05-08'
+          summary: 'enum values must be identifier-safe for clean SDK enum generation'
         - type: mining
           phase: round2
           subagent: t18b-client
@@ -1004,7 +987,7 @@ rules:
       lifecycle-phase: build-time
       defect-class: ergonomic
       iso25010: [usability]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
       detection-precision: medium
       auto-fix-safe: false
       cost-impact: low
@@ -1038,7 +1021,7 @@ rules:
       lifecycle-phase: build-time
       defect-class: ergonomic
       iso25010: [usability]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
       detection-precision: medium
       auto-fix-safe: false
       cost-impact: low
@@ -1070,7 +1053,7 @@ rules:
       lifecycle-phase: build-time
       defect-class: ergonomic
       iso25010: [usability]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
       detection-precision: medium
       auto-fix-safe: false
       cost-impact: low
@@ -1112,8 +1095,7 @@ rules:
         - type: vendor
           name: openapi-generator #9756
           url: 'https://github.com/OpenAPITools/openapi-generator/issues/9756'
-          verbatim: 'heavy allOf with non-$ref objects produces inheritance-tree explosion'
-          verifiedAt: '2026-05-08'
+          summary: 'heavy allOf with non-$ref objects produces inheritance-tree explosion'
         - type: mining
           phase: round2
           subagent: t18b-client
@@ -1162,8 +1144,7 @@ rules:
         - type: vendor
           name: 'Palma & Khomh DOLAR (Springer 2015)'
           url: 'https://link.springer.com/chapter/10.1007/978-3-662-48616-0_11'
-          verbatim: 'Amorphous URI: URIs containing too generic words give clients no resource info'
-          verifiedAt: '2026-05-08'
+          summary: 'Amorphous URI: URIs containing too generic words give clients no resource info'
         - type: mining
           phase: round2
           subagent: t18b-client
@@ -1171,7 +1152,7 @@ rules:
       lifecycle-phase: authoring-time
       defect-class: ergonomic
       iso25010: [usability]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
       detection-precision: high
       auto-fix-safe: false
       cost-impact: medium
@@ -1210,8 +1191,7 @@ rules:
         - type: vendor
           name: 'Palma & Khomh DOLAR (Springer 2015)'
           url: 'https://link.springer.com/chapter/10.1007/978-3-662-48616-0_11'
-          verbatim: 'Tiny Resource: 1-2 char URI segments are too cryptic'
-          verifiedAt: '2026-05-08'
+          summary: 'Tiny Resource: 1-2 char URI segments are too cryptic'
         - type: mining
           phase: round2
           subagent: t18b-client
@@ -1219,7 +1199,7 @@ rules:
       lifecycle-phase: authoring-time
       defect-class: ergonomic
       iso25010: [usability]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
       detection-precision: high
       auto-fix-safe: false
       cost-impact: low
@@ -1260,8 +1240,7 @@ rules:
         - type: vendor
           name: 'Palma & Khomh DOLAR (Springer 2015)'
           url: 'https://link.springer.com/chapter/10.1007/978-3-662-48616-0_11'
-          verbatim: 'Forgotten Verbs: paths that bake HTTP-verb semantics into URI'
-          verifiedAt: '2026-05-08'
+          summary: 'Forgotten Verbs: paths that bake HTTP-verb semantics into URI'
         - type: mining
           phase: round2
           subagent: t18b-client
@@ -1308,8 +1287,7 @@ rules:
         - type: vendor
           name: 'Palma & Khomh DOLAR (Springer 2015)'
           url: 'https://link.springer.com/chapter/10.1007/978-3-662-48616-0_11'
-          verbatim: 'Pluralised Nodes: same resource appears in singular AND plural'
-          verifiedAt: '2026-05-08'
+          summary: 'Pluralised Nodes: same resource appears in singular AND plural'
         - type: mining
           phase: round2
           subagent: t18b-client

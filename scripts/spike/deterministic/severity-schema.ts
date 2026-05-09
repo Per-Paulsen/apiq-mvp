@@ -112,54 +112,83 @@ const IsoDateSchema = z
   .regex(/^\d{4}-\d{2}-\d{2}$/, 'verifiedAt must be ISO-8601 YYYY-MM-DD');
 
 /**
- * Verbatim quote (≤200 chars) from the cited source. Welle F adds this so
- * `findings` can surface the exact RFC / BCP / ISO / IANA / vendor / mining
- * text that backs a rule, not just a citation pointer.
+ * Verbatim copy-paste from authoritative source (≤200 chars). `quote` is
+ * STRICT — it must match the substring in the source URL after whitespace
+ * normalisation. T25 source-verify-CI uses this as its audit-target.
+ *
+ * Only suitable for RFC / BCP / ISO / IANA / W3C-style formal-tone text
+ * (typically containing BCP-2119 keywords MUST/SHOULD/REQUIRED/RECOMMENDED).
  */
-const VerbatimSchema = z
+const QuoteSchema = z
   .string()
-  .max(200, 'verbatim must be ≤200 chars (exact quote, not paraphrase)');
+  .max(200, 'quote must be ≤200 chars (exact substring of source)');
+
+/**
+ * Mining-paraphrase / subagent-summary that captures the rationale for the
+ * rule when no formal verbatim quote exists (e.g. mining-output, vendor blog
+ * post phrased loosely, paraphrase across sections). NOT verified by T25.
+ */
+const SummarySchema = z.string();
+
+/**
+ * @deprecated Welle-D-migration — use `quote` for T25-verifiable RFC-quotes
+ * or `summary` for mining-paraphrases. Retained as optional passthrough
+ * during migration; new rules MUST use `quote`/`summary`.
+ */
+const LegacyVerbatimSchema = z.string();
 
 export const RuleSourceSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('rfc'),
     number: z.number().int().positive(),
     section: z.string().optional(),
-    verbatim: VerbatimSchema.optional(),
+    quote: QuoteSchema.optional(),
+    summary: SummarySchema.optional(),
     verifiedAt: IsoDateSchema.optional(),
+    verbatim: LegacyVerbatimSchema.optional(),
   }),
   z.object({
     type: z.literal('bcp'),
     number: z.number().int().positive(),
     rfc: z.number().int().positive().optional(),
-    verbatim: VerbatimSchema.optional(),
+    quote: QuoteSchema.optional(),
+    summary: SummarySchema.optional(),
     verifiedAt: IsoDateSchema.optional(),
+    verbatim: LegacyVerbatimSchema.optional(),
   }),
   z.object({
     type: z.literal('iso'),
     standard: z.literal('25010'),
     characteristic: z.string().min(1),
-    verbatim: VerbatimSchema.optional(),
+    quote: QuoteSchema.optional(),
+    summary: SummarySchema.optional(),
     verifiedAt: IsoDateSchema.optional(),
+    verbatim: LegacyVerbatimSchema.optional(),
   }),
   z.object({
     type: z.literal('iana-registry'),
     registry: z.string().min(1),
-    verbatim: VerbatimSchema.optional(),
+    quote: QuoteSchema.optional(),
+    summary: SummarySchema.optional(),
     verifiedAt: IsoDateSchema.optional(),
+    verbatim: LegacyVerbatimSchema.optional(),
   }),
   z.object({
     type: z.literal('vendor'),
     name: z.string().min(1),
-    verbatim: VerbatimSchema.optional(),
+    quote: QuoteSchema.optional(),
+    summary: SummarySchema.optional(),
     verifiedAt: IsoDateSchema.optional(),
+    verbatim: LegacyVerbatimSchema.optional(),
   }),
   z.object({
     type: z.literal('mining'),
     phase: z.enum(['round1', 'round2']),
     subagent: z.string().min(1),
-    verbatim: VerbatimSchema.optional(),
+    quote: QuoteSchema.optional(),
+    summary: SummarySchema.optional(),
     verifiedAt: IsoDateSchema.optional(),
+    verbatim: LegacyVerbatimSchema.optional(),
   }),
 ]);
 export type RuleSource = z.infer<typeof RuleSourceSchema>;

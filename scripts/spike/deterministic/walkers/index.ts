@@ -31,6 +31,9 @@ import { walkAiAgentConsumability } from './ai-agent-consumability.js';
 import { walkEvolutionStatistical } from './evolution-statistical.js';
 import { walkOperationalMetadata } from './operational-metadata.js';
 import { walkPrivacyDataClass } from './privacy-data-class.js';
+// Welle D (T-Sentinels) — sentinel-walker resolutions for Welle-C YAML pointer-rules
+import { walkSchemaSimilarity } from './schema-similarity.js';
+import { walkPluralisedNodes } from './pluralised-nodes.js';
 // Welle F (F6) — info-tier positive-marker walkers
 import { walkSla4oaiPresence } from './info-tier-sla4oai.js';
 import { walkCapabilityDiscoveryEndpoint } from './info-tier-capability-discovery.js';
@@ -59,6 +62,9 @@ const ALL_WALKERS: WalkerFn[] = [
   walkEvolutionStatistical,
   walkOperationalMetadata,
   walkPrivacyDataClass,
+  // Welle D (T-Sentinels) — sentinel-walker resolutions (CL-48, F-14)
+  walkSchemaSimilarity,
+  walkPluralisedNodes,
   // Welle F (F6) — info-tier positive-marker walkers (7 walkers)
   walkSla4oaiPresence,
   walkCapabilityDiscoveryEndpoint,

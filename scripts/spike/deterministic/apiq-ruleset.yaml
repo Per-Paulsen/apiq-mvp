@@ -82,7 +82,7 @@ rules:
       lifecycle-phase: build-time
       defect-class: incomplete
       iso25010: [maintainability, compatibility]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
       detection-precision: medium
       auto-fix-safe: false
       cost-impact: low
@@ -118,7 +118,7 @@ rules:
       lifecycle-phase: build-time
       defect-class: ergonomic
       iso25010: [usability, compatibility]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
       detection-precision: medium
       auto-fix-safe: false
       cost-impact: low
@@ -158,7 +158,7 @@ rules:
       lifecycle-phase: build-time
       defect-class: incomplete
       iso25010: [security, performance-efficiency, reliability]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
       detection-precision: high
       auto-fix-safe: false
       regulatory-mapping:
@@ -194,7 +194,7 @@ rules:
       lifecycle-phase: build-time
       defect-class: incomplete
       iso25010: [security, performance-efficiency]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
       detection-precision: medium
       auto-fix-safe: false
       regulatory-mapping:
@@ -229,7 +229,7 @@ rules:
       pattern-id: apiq-deepobject-only-on-objects
       lenses: [standards-compliance]
       sources:
-        - { type: vendor, name: 'OAS 3.0 §4.7.10.1', verbatim: 'deepObject ... applies to objects', verifiedAt: '2026-05-08' }
+        - { type: vendor, name: 'OAS 3.0 §4.7.10.1', summary: 'deepObject ... applies to objects' }
         - { type: mining, phase: round1, subagent: apiq-original, verifiedAt: '2026-05-08' }
       stakeholders: [spec-author, client-dev, codegen-tool]
       lifecycle-phase: validation-time
@@ -268,13 +268,13 @@ rules:
       pattern-id: CL-81
       lenses: [standards-compliance, client-friction]
       sources:
-        - { type: vendor, name: 'OAS 3.0 §3.0 (Reference Object)', verbatim: '$ref ... MUST be the only key', verifiedAt: '2026-05-08' }
+        - { type: vendor, name: 'OAS 3.0 §3.0 (Reference Object)', summary: '$ref ... MUST be the only key' }
         - { type: vendor, name: 'OAS A1 + apiq style-guide', verifiedAt: '2026-05-08' }
       stakeholders: [spec-author, client-dev, codegen-tool, docs-tool]
       lifecycle-phase: validation-time
       defect-class: norm
       iso25010: [compatibility, functional-suitability]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
       detection-precision: high
       auto-fix-safe: false
       cost-impact: low
@@ -320,7 +320,7 @@ rules:
       lifecycle-phase: authoring-time
       defect-class: norm
       iso25010: [usability, compatibility]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
       detection-precision: medium
       auto-fix-safe: false
       cost-impact: low
@@ -356,7 +356,7 @@ rules:
       lifecycle-phase: authoring-time
       defect-class: incomplete
       iso25010: [usability, maintainability]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
       detection-precision: medium
       auto-fix-safe: false
       cost-impact: low
@@ -435,7 +435,7 @@ rules:
       lifecycle-phase: authoring-time
       defect-class: operational-metadata-missing
       iso25010: [usability, maintainability]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
       detection-precision: high
       auto-fix-safe: false
       cost-impact: low
@@ -472,7 +472,7 @@ rules:
       lifecycle-phase: authoring-time
       defect-class: incomplete
       iso25010: [usability, maintainability]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
       detection-precision: high
       auto-fix-safe: false
       cost-impact: low
@@ -510,7 +510,7 @@ rules:
       lifecycle-phase: build-time
       defect-class: incomplete
       iso25010: [compatibility, maintainability]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
       detection-precision: high
       auto-fix-safe: false
       cost-impact: medium
@@ -550,7 +550,7 @@ rules:
       lifecycle-phase: build-time
       defect-class: semantic
       iso25010: [compatibility, maintainability]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
       detection-precision: medium
       auto-fix-safe: true
       cost-impact: low
@@ -588,7 +588,7 @@ rules:
       lifecycle-phase: validation-time
       defect-class: privacy-leakage
       iso25010: [security, maintainability]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
       detection-precision: high
       auto-fix-safe: false
       regulatory-mapping:
@@ -629,7 +629,7 @@ rules:
       lifecycle-phase: build-time
       defect-class: incomplete
       iso25010: [functional-suitability, compatibility]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
       detection-precision: medium
       auto-fix-safe: false
       cost-impact: medium
@@ -659,7 +659,7 @@ rules:
       lenses: [standards-compliance, evolution-friction]
       direction: drift
       sources:
-        - { type: vendor, name: 'OAS 3.0 §4.7.13', verbatim: 'Content-Type is derived from requestBody.content keys', verifiedAt: '2026-05-08' }
+        - { type: vendor, name: 'OAS 3.0 §4.7.13', summary: 'Content-Type is derived from requestBody.content keys' }
         - { type: mining, phase: round1, subagent: apiq-original, verifiedAt: '2026-05-08' }
         - { type: vendor, name: 'EV-32 Azure + SPS + IBM style-guide', verifiedAt: '2026-05-08' }
       stakeholders: [spec-author, client-dev, codegen-tool]
@@ -742,7 +742,7 @@ rules:
       lifecycle-phase: build-time
       defect-class: incomplete
       iso25010: [compatibility, usability]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
       detection-precision: medium
       auto-fix-safe: false
       cost-impact: low
@@ -779,14 +779,14 @@ rules:
       pattern-id: N2
       lenses: [standards-compliance, client-friction]
       sources:
-        - { type: vendor, name: 'JSON Schema §6.2 / OAS 3.0 §3.7', verbatim: 'defaults MUST validate against their own schema', verifiedAt: '2026-05-08' }
+        - { type: vendor, name: 'JSON Schema §6.2 / OAS 3.0 §3.7', summary: 'defaults MUST validate against their own schema' }
         - { type: mining, phase: round1, subagent: apiq-original, verifiedAt: '2026-05-08' }
         - { type: vendor, name: 'CL-70 multi-vendor style-guide', verifiedAt: '2026-05-08' }
       stakeholders: [spec-author, client-dev, codegen-tool]
       lifecycle-phase: validation-time
       defect-class: norm
       iso25010: [functional-suitability, compatibility]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
       detection-precision: high
       auto-fix-safe: false
       cost-impact: low
@@ -812,14 +812,14 @@ rules:
       pattern-id: N2
       lenses: [standards-compliance, client-friction]
       sources:
-        - { type: vendor, name: 'JSON Schema §6.2 / OAS 3.0 §3.7', verbatim: 'defaults MUST validate against their own schema', verifiedAt: '2026-05-08' }
+        - { type: vendor, name: 'JSON Schema §6.2 / OAS 3.0 §3.7', summary: 'defaults MUST validate against their own schema' }
         - { type: mining, phase: round1, subagent: apiq-original, verifiedAt: '2026-05-08' }
         - { type: vendor, name: 'CL-70 multi-vendor style-guide', verifiedAt: '2026-05-08' }
       stakeholders: [spec-author, client-dev, codegen-tool]
       lifecycle-phase: validation-time
       defect-class: norm
       iso25010: [functional-suitability, compatibility]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
       detection-precision: high
       auto-fix-safe: false
       cost-impact: low
@@ -845,14 +845,14 @@ rules:
       pattern-id: N2
       lenses: [standards-compliance, client-friction]
       sources:
-        - { type: vendor, name: 'JSON Schema §6.2 / OAS 3.0 §3.7', verbatim: 'defaults MUST validate against their own schema', verifiedAt: '2026-05-08' }
+        - { type: vendor, name: 'JSON Schema §6.2 / OAS 3.0 §3.7', summary: 'defaults MUST validate against their own schema' }
         - { type: mining, phase: round1, subagent: apiq-original, verifiedAt: '2026-05-08' }
         - { type: vendor, name: 'CL-70 multi-vendor style-guide', verifiedAt: '2026-05-08' }
       stakeholders: [spec-author, client-dev, codegen-tool]
       lifecycle-phase: validation-time
       defect-class: norm
       iso25010: [functional-suitability, compatibility]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
       detection-precision: high
       auto-fix-safe: false
       cost-impact: low
@@ -878,14 +878,14 @@ rules:
       pattern-id: N2
       lenses: [standards-compliance, client-friction]
       sources:
-        - { type: vendor, name: 'JSON Schema §6.2 / OAS 3.0 §3.7', verbatim: 'defaults MUST validate against their own schema', verifiedAt: '2026-05-08' }
+        - { type: vendor, name: 'JSON Schema §6.2 / OAS 3.0 §3.7', summary: 'defaults MUST validate against their own schema' }
         - { type: mining, phase: round1, subagent: apiq-original, verifiedAt: '2026-05-08' }
         - { type: vendor, name: 'CL-70 multi-vendor style-guide', verifiedAt: '2026-05-08' }
       stakeholders: [spec-author, client-dev, codegen-tool]
       lifecycle-phase: validation-time
       defect-class: norm
       iso25010: [functional-suitability, compatibility]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
       detection-precision: high
       auto-fix-safe: false
       cost-impact: low
@@ -918,7 +918,7 @@ rules:
       pattern-id: RFC2-79
       lenses: [standards-compliance]
       sources:
-        - { type: rfc, number: 7763, verbatim: 'text/markdown registration (replaces text/x-markdown)', verifiedAt: '2026-05-08' }
+        - { type: rfc, number: 7763, summary: 'text/markdown registration (replaces text/x-markdown)' }
         - { type: rfc, number: 6838, verifiedAt: '2026-05-08' }
         - { type: 'iana-registry', registry: 'media-types', verifiedAt: '2026-05-08' }
       stakeholders: [spec-author, client-dev, docs-tool]
@@ -966,7 +966,7 @@ rules:
       lifecycle-phase: authoring-time
       defect-class: incomplete
       iso25010: [usability, functional-suitability]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
       detection-precision: high
       auto-fix-safe: false
       cost-impact: low
@@ -1017,7 +1017,7 @@ rules:
       lifecycle-phase: build-time
       defect-class: semantic
       iso25010: [compatibility, maintainability]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
       detection-precision: low
       auto-fix-safe: false
       cost-impact: low
@@ -1059,7 +1059,7 @@ rules:
       lifecycle-phase: build-time
       defect-class: ergonomic
       iso25010: [maintainability]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
       detection-precision: high
       auto-fix-safe: true
       cost-impact: low
@@ -1093,7 +1093,7 @@ rules:
       lifecycle-phase: build-time
       defect-class: ergonomic
       iso25010: [maintainability]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
       detection-precision: high
       auto-fix-safe: true
       cost-impact: low

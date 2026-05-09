@@ -1,0 +1,1350 @@
+# apiq Spectral Ruleset — P3 Standards-Compliance Rules (T-RFC2, Welle D)
+#
+# 47 P3 (Defense-in-Depth + Nice-to-Have) RFC-/Standards-rooted rules per
+# implementation-priority.md P3 RFC2-* table — patterns drawn from RFC 9110,
+# RFC 9111, RFC 9457, RFC 8288, RFC 8594, RFC 7240, RFC 7578, RFC 7396,
+# RFC 6902, RFC 9700, OAS 3.0/3.1, JSON-Schema, IETF drafts, and IANA
+# registries.
+#
+# Rule-count: 30 yaml-rules (47 patterns, after 4 bundle-consolidations:
+#   - apiq-rfc2-cache-header-bundle      RFC2-30/31/33/34
+#   - apiq-rfc2-cache-validators-bundle  RFC2-35/36/37/38/39
+#   - apiq-rfc2-link-header-bundle       RFC2-52/53/54/55
+#   - apiq-rfc2-multipart-form-bundle    RFC2-100/101
+# Bundle-Konsolidation per Welle-D spec analog to Welle-C
+# `apiq-rfc2-conditional-request-correctness` (RFC2-20/21/22/25/26).
+#
+# Authored 2026-05-09 (T-RFC2 / Welle D) from:
+#   - specs/big-spec-architecture-spike-stage-a-implementation-priority.md
+#   - specs/big-spec-architecture-spike-stage-a-restwork-plan.md §7
+#   - scripts/spike/data/patterns.json (single-source pattern substrate)
+#   - rules-brainstorm.md (R1+R2+R3+R4 mining-round consolidations)
+#
+# Severity discipline (per Severity-Schema Final, T23):
+#   - error: RFC-2119 MUST violated; CI-blocking. (RFC2-15, RFC2-41 only —
+#            both verbatim "MUST" per source.)
+#   - warn:  RFC-2119 SHOULD violated, OR strong cross-source consensus.
+#   - hint:  Soft signal; informative; opinion-divided. Default for P3.
+#
+# apiq-meta block (Welle F schema): every rule carries pattern-id, lenses,
+# sources (with verbatim+verifiedAt where source-verbatim available),
+# stakeholders, lifecycle-phase, defect-class, iso25010 (array),
+# codegen-targets, detection-precision, auto-fix-safe, regulatory-mapping
+# (NIST+ASVS where applicable), cost-impact, mttr-impact,
+# agent-readiness-impact.
+#
+# `source-verbatim`-fields populated for the 3 patterns flagged "verbatim" in
+# implementation-priority.md (RFC2-15 §15.5.16, RFC2-41 §11.6.4) plus
+# additional verbatim citations on bundles + single-rule patterns where
+# source-verbatim is on hand. Feeds T25 Source-Verify-CI (Welle D).
+#
+# This file is loaded by spectral-runner.ts — wiring lives in Phase-3
+# integration task (#9) of Welle D, not in this file.
+
+extends:
+  - spectral:oas
+
+formats:
+  - oas3
+  - oas3_0
+  - oas3_1
+
+rules:
+  # =========================================================================
+  # RFC2-4 — problem-details extensions MUST NOT redefine reserved names
+  # RFC 9457 §3.2 + §4.2; severity: warn
+  # Custom function `problem-details-extension-reserved`.
+  # =========================================================================
+  # Source: RFC 9457 §3.2/§4.2 — reserved member-names: type, title, status,
+  #         detail, instance. patterns.json RFC2-4 (P3 standards).
+  # Lens: 2 (Standards-Compliance)
+  # Round: 2 / Welle D
+  apiq-rfc2-4-problem-details-reserved-names:
+    description: >-
+      Problem-Details (RFC 9457) `application/problem+json` extension objects MUST NOT redefine the 5 reserved member-names (type, title, status, detail, instance) with conflicting types. Detected via type-check on schema-properties bearing reserved names.
+    message: "{{error}}"
+    severity: warn
+    given:
+      - "$.paths[*][*].responses[*].content[application/problem+json]"
+      - "$.paths[*][*].responses[*].content[application/problem+xml]"
+    then:
+      function: problem-details-extension-reserved
+    apiq-meta:
+      pattern-id: RFC2-4
+      lenses: [ standards-compliance ]
+      sources:
+        - { type: rfc, number: 9457, section: '3.2', summary: 'reserved member names: type, title, status, detail, instance' }
+        - { type: rfc, number: 9457, section: '4.2', summary: 'extensions MUST NOT use the same names as reserved members' }
+        - { type: mining, phase: round2, subagent: 'RFC2-4', summary: 'patterns.json RFC2-4 P3' }
+      stakeholders: [ spec-author, client-dev ]
+      lifecycle-phase: validation-time
+      defect-class: norm
+      iso25010: [ compatibility, usability ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: false
+      regulatory-mapping:
+        nist: [ 'GV.SC-04' ]
+        asvs: [ 'V13.2.1' ]
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: medium
+
+  # =========================================================================
+  # RFC2-13 — 1xx response → Upgrade/Connection header declared
+  # RFC 9110 §6.2; severity: hint
+  # Custom function `one-xx-response-upgrade-header`.
+  # =========================================================================
+  # Source: RFC 9110 §6.2. patterns.json RFC2-13 (P3 standards).
+  # Lens: 2
+  # Round: 2 / Welle D
+  apiq-rfc2-13-1xx-upgrade-connection:
+    description: >-
+      1xx informational responses (100, 101, etc.) SHOULD declare an `Upgrade` or `Connection` header — per RFC 9110 §6.2 the typical use of 1xx is during protocol-upgrade negotiation.
+    message: "{{error}}"
+    severity: hint
+    given: "$.paths[*][get,head,post,put,patch,delete,options,trace].responses"
+    then:
+      function: one-xx-response-upgrade-header
+    apiq-meta:
+      pattern-id: RFC2-13
+      lenses: [ standards-compliance ]
+      sources:
+        - { type: rfc, number: 9110, section: '6.2', verifiedAt: '2026-05-09' }
+        - { type: mining, phase: round2, subagent: 'RFC2-13', summary: '1xx → Upgrade/Connection' }
+      stakeholders: [ spec-author, client-dev ]
+      lifecycle-phase: documentation-time
+      defect-class: incomplete
+      iso25010: [ compatibility ]
+      codegen-targets: [ '*' ]
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: low
+
+  # =========================================================================
+  # RFC2-15 — 426 → Upgrade header REQUIRED (verbatim "MUST")
+  # RFC 9110 §15.5.16; severity: error
+  # Custom function `upgrade-required-426`.
+  # =========================================================================
+  # Source: RFC 9110 §15.5.16 verbatim "MUST send Upgrade".
+  #         patterns.json RFC2-15 (P3 standards, error).
+  # Lens: 2
+  # Round: 2 / Welle D
+  apiq-rfc2-15-426-upgrade-required:
+    description: >-
+      426 (Upgrade Required) responses MUST declare an `Upgrade` header per RFC 9110 §15.5.16 (verbatim "The server MUST send an Upgrade header field").
+    message: "{{error}}"
+    severity: error
+    given: "$.paths[*][get,head,post,put,patch,delete,options,trace].responses"
+    then:
+      function: upgrade-required-426
+    apiq-meta:
+      pattern-id: RFC2-15
+      lenses: [ standards-compliance ]
+      sources:
+        - { type: rfc, number: 9110, section: '15.5.16', summary: 'The server MUST send an Upgrade header field in a 426 response' }
+        - { type: mining, phase: round2, subagent: 'RFC2-15', summary: 'verbatim MUST per implementation-priority.md' }
+      stakeholders: [ spec-author, client-dev ]
+      lifecycle-phase: validation-time
+      defect-class: norm
+      iso25010: [ compatibility, reliability ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: medium
+
+  # =========================================================================
+  # RFC2-17 — 1xx codes MUST NOT be declared as response-keys (OAS-3)
+  # OAS 3.0 §4.8.16 (Patterned Fields); severity: hint
+  # Custom function `one-xx-not-in-responses-keys`.
+  # =========================================================================
+  # Source: OAS 3.0 §4.8.16 — only HTTP status codes 2xx-5xx + '1XX' wildcard
+  #         are valid response-keys. patterns.json RFC2-17 (P3 standards).
+  # Lens: 2
+  # Round: 2 / Welle D
+  apiq-rfc2-17-1xx-codes-as-response-keys:
+    description: >-
+      Concrete 1xx response-codes (100, 101, 103) SHOULD NOT be declared as OAS3 response-keys — use the `1XX` wildcard form per OAS 3.0 §4.8.16 patterned-fields. 1xx are interim responses not surfaced by most clients.
+    message: "{{error}}"
+    severity: hint
+    given: "$.paths[*][get,head,post,put,patch,delete,options,trace].responses"
+    then:
+      function: one-xx-not-in-responses-keys
+    apiq-meta:
+      pattern-id: RFC2-17
+      lenses: [ standards-compliance ]
+      sources:
+        - { type: vendor, name: 'OAS 3.0 §4.8.16 Patterned Fields', verifiedAt: '2026-05-09' }
+        - { type: mining, phase: round2, subagent: 'RFC2-17', summary: 'OAS-3 1XX-only-wildcard' }
+      stakeholders: [ spec-author ]
+      lifecycle-phase: validation-time
+      defect-class: norm
+      iso25010: [ compatibility ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: true
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: low
+
+  # =========================================================================
+  # RFC2-18 — Content-Length response-header SHOULD NOT be declared
+  # RFC 9110 §8.6; severity: hint (stock-DSL undefined)
+  # =========================================================================
+  # Source: RFC 9110 §8.6 — Content-Length is auto-computed by the HTTP
+  #         framework; declaring it in OAS3 is over-specification.
+  #         patterns.json RFC2-18 (P3 standards).
+  # Lens: 2
+  # Round: 2 / Welle D
+  apiq-rfc2-18-content-length-not-declared:
+    description: >-
+      `Content-Length` SHOULD NOT be declared as an OAS3 response-header — it is auto-computed by the HTTP framework and declaring it in the spec is over-specification (RFC 9110 §8.6).
+    message: "Content-Length response-header SHOULD NOT be declared (over-specification per RFC 9110 §8.6)."
+    severity: hint
+    given: "$.paths[*][*].responses[*].headers[Content-Length,content-length]"
+    then:
+      function: undefined
+    apiq-meta:
+      pattern-id: RFC2-18
+      lenses: [ standards-compliance ]
+      sources:
+        - { type: rfc, number: 9110, section: '8.6', verifiedAt: '2026-05-09' }
+        - { type: mining, phase: round2, subagent: 'RFC2-18', summary: 'Content-Length over-specification' }
+      stakeholders: [ spec-author ]
+      lifecycle-phase: authoring-time
+      defect-class: over-specification
+      iso25010: [ maintainability ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: true
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: low
+
+  # =========================================================================
+  # RFC2-19 — Date response-header SHOULD NOT be declared
+  # RFC 9110 §6.6.1; severity: hint
+  # =========================================================================
+  # Source: RFC 9110 §6.6.1 — Date is auto-emitted by HTTP servers.
+  #         patterns.json RFC2-19 (P3 standards).
+  # Lens: 2
+  # Round: 2 / Welle D
+  apiq-rfc2-19-date-header-not-declared:
+    description: >-
+      `Date` SHOULD NOT be declared as an OAS3 response-header — auto-emitted by HTTP servers per RFC 9110 §6.6.1; declaring is over-specification.
+    message: "Date response-header SHOULD NOT be declared (auto-emitted by HTTP server, RFC 9110 §6.6.1)."
+    severity: hint
+    given: "$.paths[*][*].responses[*].headers[Date,date]"
+    then:
+      function: undefined
+    apiq-meta:
+      pattern-id: RFC2-19
+      lenses: [ standards-compliance ]
+      sources:
+        - { type: rfc, number: 9110, section: '6.6.1', verifiedAt: '2026-05-09' }
+        - { type: mining, phase: round2, subagent: 'RFC2-19', summary: 'Date over-specification' }
+      stakeholders: [ spec-author ]
+      lifecycle-phase: authoring-time
+      defect-class: over-specification
+      iso25010: [ maintainability ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: true
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: low
+
+  # =========================================================================
+  # RFC2-23 — If-Modified-Since param on GET/HEAD → 304 declared
+  # RFC 9110 §13.1.3; severity: hint
+  # Custom function `if-modified-since-implies-304`.
+  # =========================================================================
+  # Source: RFC 9110 §13.1.3. patterns.json RFC2-23 (P3 standards).
+  # Lens: 2
+  # Round: 2 / Welle D
+  apiq-rfc2-23-if-modified-since-implies-304:
+    description: >-
+      Operations accepting `If-Modified-Since` header on GET/HEAD SHOULD declare a 304 (Not Modified) response per RFC 9110 §13.1.3 conditional-request semantics.
+    message: "{{error}}"
+    severity: hint
+    given: "$.paths[*][get,head]"
+    then:
+      function: if-modified-since-implies-304
+    apiq-meta:
+      pattern-id: RFC2-23
+      lenses: [ standards-compliance, operations ]
+      sources:
+        - { type: rfc, number: 9110, section: '13.1.3', verifiedAt: '2026-05-09' }
+        - { type: mining, phase: round2, subagent: 'RFC2-23', summary: 'If-Modified-Since → 304' }
+      stakeholders: [ spec-author, client-dev ]
+      lifecycle-phase: validation-time
+      defect-class: incomplete
+      iso25010: [ compatibility, performance-efficiency ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: low
+
+  # =========================================================================
+  # RFC2-24 — If-Unmodified-Since param → 412 declared
+  # RFC 9110 §13.1.4; severity: warn
+  # Custom function `if-unmodified-since-implies-412`.
+  # =========================================================================
+  # Source: RFC 9110 §13.1.4. patterns.json RFC2-24 (P3 standards, warn).
+  # Lens: 2
+  # Round: 2 / Welle D
+  apiq-rfc2-24-if-unmodified-since-implies-412:
+    description: >-
+      Operations accepting `If-Unmodified-Since` header SHOULD declare a 412 (Precondition Failed) response per RFC 9110 §13.1.4 — without 412 the precondition is silently ignored.
+    message: "{{error}}"
+    severity: warn
+    given: "$.paths[*][get,head,post,put,patch,delete]"
+    then:
+      function: if-unmodified-since-implies-412
+    apiq-meta:
+      pattern-id: RFC2-24
+      lenses: [ standards-compliance, operations ]
+      sources:
+        - { type: rfc, number: 9110, section: '13.1.4', verifiedAt: '2026-05-09' }
+        - { type: mining, phase: round2, subagent: 'RFC2-24', summary: 'If-Unmodified-Since → 412' }
+      stakeholders: [ spec-author, client-dev ]
+      lifecycle-phase: validation-time
+      defect-class: incomplete
+      iso25010: [ reliability, compatibility ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: medium
+      agent-readiness-impact: medium
+
+  # =========================================================================
+  # RFC2-27 — ETag value SHOULD use opaque DQUOTE form
+  # RFC 9110 §8.8.3; severity: hint (stock pattern)
+  # =========================================================================
+  # Source: RFC 9110 §8.8.3 — ETag opaque-tag = DQUOTE *etagc DQUOTE.
+  #         patterns.json RFC2-27 (P3 standards).
+  # Lens: 2
+  # Round: 2 / Welle D
+  apiq-rfc2-27-etag-opaque-quoted:
+    description: >-
+      `ETag` response-header values SHOULD use the opaque-quoted-string form (DQUOTE-wrapped) per RFC 9110 §8.8.3. Examples like `"abc123"` or `W/"abc123"` are valid; bare `abc123` is not.
+    message: "ETag header example/default SHOULD be DQUOTE-wrapped per RFC 9110 §8.8.3."
+    severity: hint
+    given: "$.paths[*][*].responses[*].headers[ETag,etag,Etag].schema"
+    then:
+      - field: pattern
+        function: pattern
+        functionOptions:
+          match: "^(W/)?\".*\""
+    apiq-meta:
+      pattern-id: RFC2-27
+      lenses: [ standards-compliance ]
+      sources:
+        - { type: rfc, number: 9110, section: '8.8.3', summary: 'opaque-tag = DQUOTE *etagc DQUOTE' }
+        - { type: mining, phase: round2, subagent: 'RFC2-27', summary: 'ETag opaque DQUOTE form' }
+      stakeholders: [ spec-author ]
+      lifecycle-phase: documentation-time
+      defect-class: norm
+      iso25010: [ compatibility ]
+      codegen-targets: [ '*' ]
+      detection-precision: medium
+      auto-fix-safe: true
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: low
+
+  # =========================================================================
+  # RFC2-28 — ETag consistency cross-resource ops
+  # RFC 9110 §8.8.3; severity: hint
+  # Custom function `etag-cross-resource-consistency`.
+  # =========================================================================
+  # Source: RFC 9110 §8.8.3 — write-ops on ETag-validated resources should
+  #         return updated ETag for round-trip optimistic-concurrency.
+  #         patterns.json RFC2-28 (P3 standards, Lens-2 + Lens-8).
+  # Lens: 2 (Standards-Compliance), 8 (Internal-Consistency)
+  # Round: 2 / Welle D
+  apiq-rfc2-28-etag-cross-resource-consistency:
+    description: >-
+      If a path declares ETag on its GET 200 response, sibling write-ops (PUT/PATCH) on the same path SHOULD also declare ETag on their success response — enabling round-trip optimistic-concurrency (RFC 9110 §8.8.3).
+    message: "{{error}}"
+    severity: hint
+    given: "$.paths[*]"
+    then:
+      function: etag-cross-resource-consistency
+    apiq-meta:
+      pattern-id: RFC2-28
+      lenses: [ standards-compliance, internal-consistency ]
+      sources:
+        - { type: rfc, number: 9110, section: '8.8.3', verifiedAt: '2026-05-09' }
+        - { type: mining, phase: round2, subagent: 'RFC2-28', summary: 'ETag cross-resource consistency' }
+      stakeholders: [ spec-author, client-dev ]
+      lifecycle-phase: validation-time
+      defect-class: incomplete
+      iso25010: [ compatibility, reliability ]
+      codegen-targets: [ '*' ]
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: low
+
+  # =========================================================================
+  # RFC2-29 — PUT/PATCH/DELETE on /{id} SHOULD support If-Match + ETag
+  # RFC 9110 + Microsoft API Guidelines; severity: hint
+  # Custom function `id-write-op-etag-support`.
+  # =========================================================================
+  # Source: RFC 9110 §8.8.3 + Microsoft REST API Guidelines.
+  #         patterns.json RFC2-29 (P3 standards, Lens-2 + Lens-4).
+  # Lens: 2, 4 (Client-Friction)
+  # Round: 2 / Welle D
+  apiq-rfc2-29-id-write-op-etag-support:
+    description: >-
+      Write operations (PUT/PATCH/DELETE) on resource-{id} paths SHOULD support optimistic-concurrency via `If-Match` parameter + ETag response-header — prevents lost-update from concurrent writers (RFC 9110 §8.8.3 + Microsoft API Guidelines).
+    message: "{{error}}"
+    severity: hint
+    given: "$.paths[*][put,patch,delete]"
+    then:
+      function: id-write-op-etag-support
+    apiq-meta:
+      pattern-id: RFC2-29
+      lenses: [ standards-compliance, client-friction ]
+      sources:
+        - { type: rfc, number: 9110, section: '8.8.3', verifiedAt: '2026-05-09' }
+        - { type: vendor, name: 'Microsoft REST API Guidelines (Concurrency)', verifiedAt: '2026-05-09' }
+        - { type: mining, phase: round2, subagent: 'RFC2-29', summary: '{id} write-op If-Match' }
+      stakeholders: [ spec-author, client-dev ]
+      lifecycle-phase: validation-time
+      defect-class: incomplete
+      iso25010: [ reliability, compatibility ]
+      codegen-targets:
+        - java
+        - go
+        - python
+        - typescript
+        - rust
+        - csharp
+        - kotlin
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: medium
+      mttr-impact: medium
+      agent-readiness-impact: medium
+
+  # =========================================================================
+  # BUNDLE — apiq-rfc2-cache-header-bundle (RFC2-30/31/33/34)
+  # RFC 9110 §14 + Heroku idiom; severity: hint
+  # Custom function `cache-header-bundle`.
+  # =========================================================================
+  # Source: RFC 9110 §14.1 (Range), §15.5.17 (416), §14.3 (Accept-Ranges)
+  #         + Heroku Range pagination idiom. patterns.json
+  #         RFC2-30 + RFC2-31 + RFC2-33 + RFC2-34 (P3 bundle).
+  # Lens: 2
+  # Round: 2 / Welle D
+  apiq-rfc2-cache-header-bundle:
+    description: >-
+      Range/Accept-Ranges correctness bundle (RFC 9110 §14): Range param → 206 declared (RFC2-30); Range param → 416 declared (RFC2-31); Accept-Ranges value IANA-registered ("bytes" or "none") (RFC2-33); Heroku-style Range pagination consistency (RFC2-34, soft).
+    message: "{{error}}"
+    severity: hint
+    given: "$.paths[*][get,head,post,put,patch,delete]"
+    then:
+      function: cache-header-bundle
+    apiq-meta:
+      pattern-id: RFC2-30
+      lenses: [ standards-compliance ]
+      sources:
+        - { type: rfc, number: 9110, section: '14.1', verifiedAt: '2026-05-09' }
+        - { type: rfc, number: 9110, section: '15.5.17', verifiedAt: '2026-05-09' }
+        - { type: rfc, number: 9110, section: '14.3', summary: 'Accept-Ranges: bytes / none (IANA HTTP Range Unit Registry)' }
+        - { type: vendor, name: 'Heroku Range pagination idiom', verifiedAt: '2026-05-09' }
+        - { type: mining, phase: round2, subagent: 'RFC2-30', summary: 'cache-header-bundle: RFC2-30 + RFC2-31 + RFC2-33 + RFC2-34' }
+      stakeholders: [ spec-author, client-dev, operations ]
+      lifecycle-phase: validation-time
+      defect-class: incomplete
+      iso25010: [ compatibility, performance-efficiency ]
+      codegen-targets: [ '*' ]
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: low
+
+  # =========================================================================
+  # BUNDLE — apiq-rfc2-cache-validators-bundle (RFC2-35/36/37/38/39)
+  # RFC 9111 §4.1/§4.3.4/§5.2/§5.3/§5.4; severity: hint
+  # Custom function `cache-validators-bundle`.
+  # =========================================================================
+  # Source: RFC 9111 (HTTP Caching). patterns.json
+  #         RFC2-35 + RFC2-36 + RFC2-37 + RFC2-38 + RFC2-39 (P3 bundle).
+  # Lens: 2 (Standards-Compliance), 7 (Operations), 8 (Internal-Consistency)
+  # Round: 2 / Welle D
+  apiq-rfc2-cache-validators-bundle:
+    description: >-
+      Cache-validator bundle (RFC 9111): Cache-Control directives must be IANA-registered (RFC2-35); Pragma deprecated, SHOULD NOT declare (RFC2-36); Cache-Control + Expires together is smell (RFC2-37); Vary SHOULD declare on content-negotiation (RFC2-38); 200 + 304 ETag- shape consistency (RFC2-39).
+    message: "{{error}}"
+    severity: hint
+    given: "$.paths[*][get,head,post,put,patch,delete]"
+    then:
+      function: cache-validators-bundle
+    apiq-meta:
+      pattern-id: RFC2-35
+      lenses: [ standards-compliance, operations, internal-consistency ]
+      sources:
+        - { type: rfc, number: 9111, section: '5.2', summary: 'Cache-Control directives IANA-registered' }
+        - { type: rfc, number: 9111, section: '5.4', summary: 'Pragma is deprecated' }
+        - { type: rfc, number: 9111, section: '5.3', summary: 'Cache-Control overrides Expires' }
+        - { type: rfc, number: 9111, section: '4.1', verifiedAt: '2026-05-09' }
+        - { type: rfc, number: 9111, section: '4.3.4', verifiedAt: '2026-05-09' }
+        - { type: mining, phase: round2, subagent: 'RFC2-35', summary: 'cache-validators bundle RFC2-35..39' }
+      stakeholders: [ spec-author, client-dev, operations ]
+      lifecycle-phase: validation-time
+      defect-class: norm
+      iso25010: [ compatibility, performance-efficiency, reliability ]
+      codegen-targets: [ '*' ]
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: low
+
+  # =========================================================================
+  # RFC2-41 — 407 → Proxy-Authenticate REQUIRED (verbatim "MUST")
+  # RFC 9110 §11.6.4; severity: error
+  # Custom function `proxy-authenticate-407`.
+  # =========================================================================
+  # Source: RFC 9110 §11.6.4 verbatim "MUST send Proxy-Authenticate".
+  #         patterns.json RFC2-41 (P3 standards, error).
+  # Lens: 2
+  # Round: 2 / Welle D
+  apiq-rfc2-41-407-proxy-authenticate-required:
+    description: >-
+      407 (Proxy Authentication Required) responses MUST declare a `Proxy-Authenticate` header per RFC 9110 §11.6.4 (verbatim "The server MUST send a Proxy-Authenticate header field").
+    message: "{{error}}"
+    severity: error
+    given: "$.paths[*][get,head,post,put,patch,delete,options,trace].responses"
+    then:
+      function: proxy-authenticate-407
+    apiq-meta:
+      pattern-id: RFC2-41
+      lenses: [ standards-compliance ]
+      sources:
+        - { type: rfc, number: 9110, section: '11.6.4', summary: 'The server MUST send a Proxy-Authenticate header field' }
+        - { type: mining, phase: round2, subagent: 'RFC2-41', summary: 'verbatim MUST per implementation-priority.md' }
+      stakeholders: [ spec-author, client-dev, security ]
+      lifecycle-phase: validation-time
+      defect-class: norm
+      iso25010: [ security, compatibility ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: false
+      regulatory-mapping:
+        nist: [ 'PR.AA-01' ]
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: low
+
+  # =========================================================================
+  # RFC2-42 — WWW-Authenticate scheme IANA-registered
+  # RFC 9110 + IANA HTTP Authentication Scheme Registry; severity: hint
+  # Stock-DSL pattern.
+  # =========================================================================
+  # Source: RFC 9110 §11.6 + IANA HTTP Authentication Schemes registry.
+  #         patterns.json RFC2-42 (P3 standards).
+  # Lens: 2
+  # Round: 2 / Welle D
+  apiq-rfc2-42-www-authenticate-iana-scheme:
+    description: >-
+      `WWW-Authenticate` response-header schema example/default SHOULD reference an IANA-registered authentication scheme (Basic, Bearer, Digest, HOBA, Mutual, Negotiate, OAuth, SCRAM-SHA-1, SCRAM-SHA-256, vapid). Custom schemes SHOULD be IANA-registered per RFC 9110 §11.6.
+    message: "WWW-Authenticate scheme example SHOULD be IANA-registered (Basic|Bearer|Digest|HOBA|Mutual|Negotiate|OAuth|SCRAM-SHA-1|SCRAM-SHA-256|vapid)."
+    severity: hint
+    given: "$.paths[*][*].responses[401,407].headers[WWW-Authenticate,www-authenticate].example"
+    then:
+      function: pattern
+      functionOptions:
+        match: "^(Basic|Bearer|Digest|HOBA|Mutual|Negotiate|OAuth|SCRAM-SHA-1|SCRAM-SHA-256|vapid)\\b"
+    apiq-meta:
+      pattern-id: RFC2-42
+      lenses: [ standards-compliance ]
+      sources:
+        - { type: rfc, number: 9110, section: '11.6', verifiedAt: '2026-05-09' }
+        - { type: iana-registry, registry: 'HTTP Authentication Schemes', verifiedAt: '2026-05-09' }
+        - { type: mining, phase: round2, subagent: 'RFC2-42', summary: 'WWW-Authenticate IANA-registered' }
+      stakeholders: [ spec-author, security ]
+      lifecycle-phase: documentation-time
+      defect-class: norm
+      iso25010: [ security, compatibility ]
+      codegen-targets: [ '*' ]
+      detection-precision: medium
+      auto-fix-safe: false
+      regulatory-mapping:
+        nist: [ 'PR.AA-01' ]
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: low
+
+  # =========================================================================
+  # RFC2-44 — http-digest auth outdated
+  # RFC 7616; severity: hint
+  # =========================================================================
+  # Source: RFC 7616 (HTTP Digest Authentication, 2015) — `digest` scheme is
+  #         legacy; modern APIs use Bearer/OAuth2. patterns.json RFC2-44
+  #         (P3 standards).
+  # Lens: 2
+  # Round: 2 / Welle D
+  apiq-rfc2-44-digest-auth-outdated:
+    description: >-
+      `http`-type securityScheme with `scheme: digest` is legacy auth (RFC 7616) — modern APIs use Bearer/OAuth2 + TLS. Hint to migrate.
+    message: "HTTP Digest auth (RFC 7616) is legacy; consider Bearer/OAuth2 over TLS."
+    severity: hint
+    given: "$.components.securitySchemes[?(@ && @.type=='http' && @.scheme=='digest')]"
+    then:
+      function: falsy
+      field: scheme
+    apiq-meta:
+      pattern-id: RFC2-44
+      lenses: [ standards-compliance, threat-modeling ]
+      sources:
+        - { type: rfc, number: 7616, verifiedAt: '2026-05-09' }
+        - { type: mining, phase: round2, subagent: 'RFC2-44', summary: 'digest auth outdated' }
+      stakeholders: [ spec-author, security ]
+      lifecycle-phase: deploy-time
+      defect-class: norm
+      iso25010: [ security ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: false
+      regulatory-mapping:
+        nist: [ 'PR.AA-01' ]
+        asvs: [ 'V2.1.1' ]
+      cost-impact: medium
+      mttr-impact: medium
+      agent-readiness-impact: low
+
+  # =========================================================================
+  # RFC2-46 — Prefer param → Preference-Applied response header
+  # RFC 7240 §3; severity: hint
+  # Custom function `prefer-implies-preference-applied`.
+  # =========================================================================
+  # Source: RFC 7240 §3. patterns.json RFC2-46 (P3 standards).
+  # Lens: 2
+  # Round: 2 / Welle D
+  apiq-rfc2-46-prefer-implies-preference-applied:
+    description: >-
+      Operations accepting `Prefer` header SHOULD declare `Preference- Applied` response-header to signal honoured preferences per RFC 7240 §3.
+    message: "{{error}}"
+    severity: hint
+    given: "$.paths[*][get,head,post,put,patch,delete]"
+    then:
+      function: prefer-implies-preference-applied
+    apiq-meta:
+      pattern-id: RFC2-46
+      lenses: [ standards-compliance ]
+      sources:
+        - { type: rfc, number: 7240, section: '3', verifiedAt: '2026-05-09' }
+        - { type: mining, phase: round2, subagent: 'RFC2-46', summary: 'Prefer → Preference-Applied' }
+      stakeholders: [ spec-author, client-dev ]
+      lifecycle-phase: validation-time
+      defect-class: incomplete
+      iso25010: [ compatibility, usability ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: medium
+
+  # =========================================================================
+  # RFC2-47 — Prefer values registered tokens
+  # RFC 7240 §4 + IANA HTTP Preference Registry; severity: hint
+  # Stock-DSL.
+  # =========================================================================
+  # Source: RFC 7240 §4 + IANA HTTP Preferences registry.
+  #         patterns.json RFC2-47 (P3 standards).
+  # Lens: 2
+  # Round: 2 / Welle D
+  apiq-rfc2-47-prefer-iana-tokens:
+    description: >-
+      `Prefer` parameter schema enum SHOULD list IANA-registered preference tokens (return, respond-async, wait, handling, depth-noroot, max-rerun) per RFC 7240 §4 + IANA Preferences registry. Custom preferences MUST be IANA-registered.
+    message: "Prefer enum SHOULD list IANA-registered tokens (return, respond-async, wait, handling, depth-noroot, max-rerun)."
+    severity: hint
+    given: "$.paths[*][*].parameters[?(@ && @.in=='header' && @.name=='Prefer' && @.schema && @.schema.enum)].schema.enum[*]"
+    then:
+      function: pattern
+      functionOptions:
+        match: "^(return=(representation|minimal)|respond-async|wait=\\d+|handling=(strict|lenient)|depth-noroot|max-rerun=\\d+|odata\\.|wait[ =])"
+    apiq-meta:
+      pattern-id: RFC2-47
+      lenses: [ standards-compliance ]
+      sources:
+        - { type: rfc, number: 7240, section: '4', verifiedAt: '2026-05-09' }
+        - { type: iana-registry, registry: 'HTTP Preferences', verifiedAt: '2026-05-09' }
+        - { type: mining, phase: round2, subagent: 'RFC2-47', summary: 'Prefer IANA tokens' }
+      stakeholders: [ spec-author ]
+      lifecycle-phase: documentation-time
+      defect-class: norm
+      iso25010: [ compatibility ]
+      codegen-targets: [ '*' ]
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: low
+
+  # =========================================================================
+  # RFC2-48 — Prefer:respond-async → 202 declared
+  # RFC 7240 §4.1; severity: warn
+  # Custom function `prefer-respond-async-implies-202`.
+  # =========================================================================
+  # Source: RFC 7240 §4.1. patterns.json RFC2-48 (P3 standards, warn).
+  # Lens: 2
+  # Round: 2 / Welle D
+  apiq-rfc2-48-prefer-respond-async-implies-202:
+    description: >-
+      Operations advertising `Prefer: respond-async` (in description, schema-enum, or example) SHOULD declare a 202 (Accepted) response per RFC 7240 §4.1 — without 202 the async-preference is silently ignored.
+    message: "{{error}}"
+    severity: warn
+    given: "$.paths[*][get,head,post,put,patch,delete]"
+    then:
+      function: prefer-respond-async-implies-202
+    apiq-meta:
+      pattern-id: RFC2-48
+      lenses: [ standards-compliance, operations ]
+      sources:
+        - { type: rfc, number: 7240, section: '4.1', verifiedAt: '2026-05-09' }
+        - { type: mining, phase: round2, subagent: 'RFC2-48', summary: 'respond-async → 202' }
+      stakeholders: [ spec-author, client-dev, operations ]
+      lifecycle-phase: validation-time
+      defect-class: incomplete
+      iso25010: [ compatibility, reliability ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: medium
+      agent-readiness-impact: medium
+
+  # =========================================================================
+  # RFC2-50 — Custom Structured-Field-Value (SFV) header example conforms
+  # RFC 9651 §3 (Structured Field Values for HTTP); severity: hint
+  # =========================================================================
+  # Source: RFC 9651 §3 (SFV grammar). patterns.json RFC2-50 (P3
+  #         standards). Stock-DSL: ensure custom SFV-typed headers carry an
+  #         example, since SFV-correctness needs concrete sample for
+  #         consumers. Leaves lexical SFV-validation to dedicated linter.
+  # Lens: 2
+  # Round: 2 / Welle D
+  apiq-rfc2-50-sfv-header-example-required:
+    description: >-
+      Custom headers using SFV (Structured Field Values, RFC 9651) SHOULD declare an `example` so consumers know the exact serialization (item / list / dictionary) expected. Detection is on response-headers tagged via `x-sfv-type` extension or `format: sfv-*`.
+    message: "Custom SFV header SHOULD declare an example to disambiguate serialization (RFC 9651 §3)."
+    severity: hint
+    given: "$.paths[*][*].responses[*].headers[?(@ && @['x-sfv-type'])]"
+    then:
+      function: defined
+      field: example
+    apiq-meta:
+      pattern-id: RFC2-50
+      lenses: [ standards-compliance ]
+      sources:
+        - { type: rfc, number: 9651, section: '3', verifiedAt: '2026-05-09' }
+        - { type: mining, phase: round2, subagent: 'RFC2-50', summary: 'SFV example required' }
+      stakeholders: [ spec-author, client-dev ]
+      lifecycle-phase: documentation-time
+      defect-class: incomplete
+      iso25010: [ compatibility, usability ]
+      codegen-targets: [ '*' ]
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: medium
+
+  # =========================================================================
+  # BUNDLE — apiq-rfc2-link-header-bundle (RFC2-52/53/54/55)
+  # RFC 8288 §2.1/§3.2/§3.3 + RFC 5988; severity: hint
+  # Custom function `link-header-bundle`.
+  # =========================================================================
+  # Source: RFC 8288 (Web Linking). patterns.json
+  #         RFC2-52 + RFC2-53 + RFC2-54 + RFC2-55 (P3 bundle).
+  # Lens: 2
+  # Round: 2 / Welle D
+  apiq-rfc2-link-header-bundle:
+    description: >-
+      Link header correctness bundle (RFC 8288): rel-tokens IANA-registered OR absolute URI (RFC2-52); paginated ops declare rel="next" (RFC2-53); anchor parameter is absolute IRI (RFC2-54); rel-tokens case-coherent across responses (RFC2-55).
+    message: "{{error}}"
+    severity: hint
+    given: "$.paths[*][get,head,post,put,patch,delete]"
+    then:
+      function: link-header-bundle
+    apiq-meta:
+      pattern-id: RFC2-52
+      lenses: [ standards-compliance ]
+      sources:
+        - { type: rfc, number: 8288, section: '2.1', summary: 'rel-token IANA-registered OR absolute URI' }
+        - { type: rfc, number: 8288, section: '3.2', verifiedAt: '2026-05-09' }
+        - { type: rfc, number: 8288, section: '3.3', verifiedAt: '2026-05-09' }
+        - { type: rfc, number: 5988, verifiedAt: '2026-05-09' }
+        - { type: iana-registry, registry: 'Link Relations', verifiedAt: '2026-05-09' }
+        - { type: mining, phase: round2, subagent: 'RFC2-52', summary: 'link-header bundle RFC2-52..55' }
+      stakeholders: [ spec-author, client-dev ]
+      lifecycle-phase: documentation-time
+      defect-class: norm
+      iso25010: [ compatibility, usability ]
+      codegen-targets: [ '*' ]
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: medium
+
+  # =========================================================================
+  # RFC2-57 — Bearer scheme SHOULD declare bearerFormat
+  # RFC 6750 + OAS 3; severity: hint
+  # Stock-DSL.
+  # =========================================================================
+  # Source: RFC 6750 (Bearer Token Usage) + OAS 3 securityScheme.
+  #         patterns.json RFC2-57 (P3 standards).
+  # Lens: 2
+  # Round: 2 / Welle D
+  apiq-rfc2-57-bearer-format-declared:
+    description: >-
+      `http`-type securityScheme with `scheme: bearer` SHOULD declare `bearerFormat` (e.g. JWT, opaque) so consumers know the token shape (RFC 6750 + OAS 3 §4.8.30).
+    message: "Bearer securityScheme SHOULD declare bearerFormat (e.g. JWT, opaque)."
+    severity: hint
+    given: "$.components.securitySchemes[?(@ && @.type=='http' && @.scheme=='bearer')]"
+    then:
+      function: defined
+      field: bearerFormat
+    apiq-meta:
+      pattern-id: RFC2-57
+      lenses: [ standards-compliance, threat-modeling ]
+      sources:
+        - { type: rfc, number: 6750, verifiedAt: '2026-05-09' }
+        - { type: vendor, name: 'OAS 3 §4.8.30 securityScheme', verifiedAt: '2026-05-09' }
+        - { type: mining, phase: round2, subagent: 'RFC2-57', summary: 'bearerFormat declaration' }
+      stakeholders: [ spec-author, security ]
+      lifecycle-phase: documentation-time
+      defect-class: incomplete
+      iso25010: [ security, usability ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: true
+      regulatory-mapping:
+        nist: [ 'PR.AA-01' ]
+        asvs: [ 'V3.5.2' ]
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: medium
+
+  # =========================================================================
+  # RFC2-63 — OAuth2 authCode SHOULD declare refreshUrl
+  # RFC 9700 §4.1.5; severity: hint
+  # Stock-DSL.
+  # =========================================================================
+  # Source: RFC 9700 (BCP-240 OAuth 2.0 Security, 2025) §4.1.5.
+  #         patterns.json RFC2-63 (P3 standards).
+  # Lens: 2 (Standards-Compliance), 1 (Threat-Modeling)
+  # Round: 2 / Welle D
+  apiq-rfc2-63-oauth2-authcode-refresh-url:
+    description: >-
+      OAuth2 `authorizationCode` flow SHOULD declare `refreshUrl` so clients can rotate access-tokens without re-prompting the user (RFC 9700 BCP-240 §4.1.5 — long-lived sessions need refresh).
+    message: "OAuth2 authorizationCode flow SHOULD declare refreshUrl per RFC 9700 §4.1.5."
+    severity: hint
+    given: "$.components.securitySchemes[?(@ && @.type=='oauth2' && @.flows && @.flows.authorizationCode)].flows.authorizationCode"
+    then:
+      function: defined
+      field: refreshUrl
+    apiq-meta:
+      pattern-id: RFC2-63
+      lenses: [ standards-compliance, threat-modeling ]
+      sources:
+        - { type: rfc, number: 9700, section: '4.1.5', verifiedAt: '2026-05-09' }
+        - { type: mining, phase: round2, subagent: 'RFC2-63', summary: 'authCode refreshUrl' }
+      stakeholders: [ spec-author, security, client-dev ]
+      lifecycle-phase: documentation-time
+      defect-class: incomplete
+      iso25010: [ security, usability ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: false
+      regulatory-mapping:
+        nist: [ 'PR.AA-01', 'PR.AA-05' ]
+        asvs: [ 'V3.5.3' ]
+      cost-impact: medium
+      mttr-impact: medium
+      agent-readiness-impact: medium
+
+  # =========================================================================
+  # RFC2-64 — OAuth2 clientCredentials broad/empty scopes
+  # RFC 9700 §2.1; severity: hint
+  # Stock-DSL.
+  # =========================================================================
+  # Source: RFC 9700 §2.1 — least-privilege scopes.
+  #         patterns.json RFC2-64 (P3 standards).
+  # Lens: 2, 1
+  # Round: 2 / Welle D
+  apiq-rfc2-64-oauth2-clientcred-scopes-defined:
+    description: >-
+      OAuth2 `clientCredentials` flow MUST declare non-empty `scopes` object — empty `scopes:{}` violates least-privilege per RFC 9700 §2.1.
+    message: "OAuth2 clientCredentials flow MUST declare non-empty scopes (least-privilege per RFC 9700 §2.1)."
+    severity: warn
+    given: "$.components.securitySchemes[?(@ && @.type=='oauth2' && @.flows && @.flows.clientCredentials)].flows.clientCredentials.scopes"
+    then:
+      function: length
+      functionOptions:
+        min: 1
+    apiq-meta:
+      pattern-id: RFC2-64
+      lenses: [ standards-compliance, threat-modeling ]
+      sources:
+        - { type: rfc, number: 9700, section: '2.1', summary: 'least-privilege scopes' }
+        - { type: mining, phase: round2, subagent: 'RFC2-64', summary: 'clientCred scopes least-privilege' }
+      stakeholders: [ spec-author, security ]
+      lifecycle-phase: deploy-time
+      defect-class: norm
+      iso25010: [ security ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: false
+      regulatory-mapping:
+        nist: [ 'PR.AA-05' ]
+        asvs: [ 'V3.5.3', 'V8.3.1' ]
+      cost-impact: medium
+      mttr-impact: medium
+      agent-readiness-impact: low
+
+  # =========================================================================
+  # RFC2-67 — Path segments unreserved + segment-allowed sub-delims
+  # RFC 3986 §3.3; severity: hint
+  # Stock-DSL.
+  # =========================================================================
+  # Source: RFC 3986 §3.3 (URI Generic Syntax — Path Component).
+  #         patterns.json RFC2-67 (P3 standards).
+  # Lens: 2
+  # Round: 2 / Welle D
+  apiq-rfc2-67-path-segment-grammar:
+    description: >-
+      Path-template segments SHOULD use only RFC 3986 §3.3 segment-allowed characters: unreserved (ALPHA / DIGIT / "-" / "." / "_" / "~") + sub- delims ("!" / "$" / "&" / "'" / "(" / ")" / "*" / "+" / "," / ";" / "=") + ":" / "@". Spaces / encoded-octets in literal segments are smell (URL-encode at runtime, not in the spec).
+    message: "Path '{{property}}' contains characters outside RFC 3986 §3.3 segment-allowed set."
+    severity: hint
+    given: "$.paths"
+    then:
+      field: "@key"
+      function: pattern
+      functionOptions:
+        match: "^/[A-Za-z0-9._~!$&'()*+,;=:@/{}\\-]*$"
+    apiq-meta:
+      pattern-id: RFC2-67
+      lenses: [ standards-compliance ]
+      sources:
+        - { type: rfc, number: 3986, section: '3.3', summary: 'segment = *pchar; pchar = unreserved / pct-encoded / sub-delims / : / @' }
+        - { type: mining, phase: round2, subagent: 'RFC2-67', summary: 'path segment grammar' }
+      stakeholders: [ spec-author ]
+      lifecycle-phase: authoring-time
+      defect-class: norm
+      iso25010: [ compatibility, usability ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: medium
+
+  # =========================================================================
+  # RFC2-81 — int64 SHOULD be string-encoded (JSON safe-integer)
+  # RFC 8259 §6 + JSON-Schema; severity: hint
+  # Stock-DSL.
+  # =========================================================================
+  # Source: RFC 8259 §6 — "JSON numbers ... can lose precision when
+  #         processed by IEEE-754 double". patterns.json RFC2-81 (P3
+  #         standards, dual-tagged with SG-24).
+  # Lens: 2 (Standards-Compliance), 4 (Client-Friction)
+  # Round: 2 / Welle D
+  apiq-rfc2-81-int64-string-encoded:
+    description: >-
+      `format: int64` schemas SHOULD declare `type: string` (with optional `pattern: "^-?[0-9]+$"`) — JSON numbers above 2^53 lose precision in JavaScript clients per RFC 8259 §6. Stripe / GitHub / Google all string-encode int64.
+    message: "int64 fields SHOULD use type:string (JSON safe-integer per RFC 8259 §6); see Stripe/GitHub/Google convention."
+    severity: hint
+    given: "$..[?(@ && @.format=='int64' && @.type=='integer')]"
+    then:
+      function: undefined
+      field: type
+    apiq-meta:
+      pattern-id: RFC2-81
+      lenses: [ standards-compliance, client-friction ]
+      sources:
+        - { type: rfc, number: 8259, section: '6', summary: 'JSON numbers can lose precision when processed by IEEE-754 double' }
+        - { type: vendor, name: 'Stripe API: int64-as-string convention', verifiedAt: '2026-05-09' }
+        - { type: mining, phase: round2, subagent: 'RFC2-81', summary: 'int64 string-encoded' }
+      stakeholders: [ spec-author, client-dev ]
+      lifecycle-phase: validation-time
+      defect-class: norm
+      iso25010: [ compatibility, reliability ]
+      codegen-targets: [ 'typescript', 'python', 'php', 'ruby' ]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: medium
+      mttr-impact: high
+      agent-readiness-impact: high
+
+  # =========================================================================
+  # RFC2-85 — OAS 3.1 jsonSchemaDialect required when 3.1 keywords used
+  # OAS 3.1 §4.7.1; severity: hint
+  # Stock-DSL.
+  # =========================================================================
+  # Source: OAS 3.1 §4.7.1. patterns.json RFC2-85 (P3 standards).
+  # Lens: 2
+  # Round: 2 / Welle D
+  apiq-rfc2-85-oas31-jsonschema-dialect:
+    description: >-
+      OAS 3.1 specs using JSON-Schema 2020-12 keywords (e.g. `unevaluatedProperties`, `dependentSchemas`, `prefixItems`) SHOULD declare top-level `jsonSchemaDialect` field to make dialect explicit (OAS 3.1 §4.7.1).
+    message: "OAS 3.1 root SHOULD declare `jsonSchemaDialect` (OAS 3.1 §4.7.1)."
+    severity: hint
+    given: "$"
+    then:
+      function: defined
+      field: jsonSchemaDialect
+    formats:
+      - oas3_1
+    apiq-meta:
+      pattern-id: RFC2-85
+      lenses: [ standards-compliance ]
+      sources:
+        - { type: vendor, name: 'OAS 3.1 §4.7.1', verifiedAt: '2026-05-09' }
+        - { type: mining, phase: round2, subagent: 'RFC2-85', summary: 'OAS 3.1 jsonSchemaDialect' }
+      stakeholders: [ spec-author ]
+      lifecycle-phase: authoring-time
+      defect-class: incomplete
+      iso25010: [ compatibility ]
+      codegen-targets: [ '*' ]
+      detection-precision: medium
+      auto-fix-safe: true
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: low
+
+  # =========================================================================
+  # RFC2-86 — definitions → $defs porting smell (JSON-Schema 2019-09+)
+  # JSON-Schema 2019-09; severity: hint
+  # Stock-DSL.
+  # =========================================================================
+  # Source: JSON-Schema 2019-09 — `definitions` deprecated, replaced by `$defs`.
+  #         patterns.json RFC2-86 (P3 standards).
+  # Lens: 3 (Evolution-Friction), 2 (Standards-Compliance)
+  # Round: 2 / Welle D
+  apiq-rfc2-86-definitions-deprecated:
+    description: >-
+      JSON-Schema 2019-09 deprecated `definitions` in favour of `$defs` — OAS 3.1 specs SHOULD use `$defs` (root-level) or `components.schemas` (OAS canonical). `definitions` keyword in schemas is a porting smell from older OAS / Swagger 2.0.
+    message: "Schema uses deprecated `definitions` — migrate to `$defs` (JSON-Schema 2019-09+) or components.schemas."
+    severity: hint
+    given: "$..definitions"
+    then:
+      function: undefined
+    apiq-meta:
+      pattern-id: RFC2-86
+      lenses: [ evolution-friction, standards-compliance ]
+      sources:
+        - { type: vendor, name: 'JSON-Schema 2019-09 release notes', verifiedAt: '2026-05-09' }
+        - { type: mining, phase: round2, subagent: 'RFC2-86', summary: 'definitions → $defs porting smell' }
+      stakeholders: [ spec-author ]
+      lifecycle-phase: evolution-time
+      defect-class: norm
+      iso25010: [ maintainability ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: low
+
+  # =========================================================================
+  # RFC2-87 — id → $id porting smell (JSON-Schema draft-06+)
+  # JSON-Schema draft-06; severity: hint
+  # Stock-DSL.
+  # =========================================================================
+  # Source: JSON-Schema draft-06 — `id` renamed to `$id`. patterns.json
+  #         RFC2-87 (P3 standards).
+  # Lens: 3 (Evolution-Friction), 2 (Standards-Compliance)
+  # Round: 2 / Welle D
+  apiq-rfc2-87-id-keyword-deprecated:
+    description: >-
+      JSON-Schema draft-06+ renamed `id` to `$id`. Schemas using bare `id` keyword as identifier (not as data-property name) are porting smell from draft-04 OAS specs.
+    message: "JSON-Schema deprecated bare `id` keyword — use `$id` per draft-06+."
+    severity: hint
+    given: "$..[?(@ && @.id && (@.type || @.properties))]"
+    then:
+      function: undefined
+      field: id
+    apiq-meta:
+      pattern-id: RFC2-87
+      lenses: [ evolution-friction ]
+      sources:
+        - { type: vendor, name: 'JSON-Schema draft-06 release notes', verifiedAt: '2026-05-09' }
+        - { type: mining, phase: round2, subagent: 'RFC2-87', summary: 'id → $id porting smell' }
+      stakeholders: [ spec-author ]
+      lifecycle-phase: evolution-time
+      defect-class: norm
+      iso25010: [ maintainability ]
+      codegen-targets: [ '*' ]
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: low
+
+  # =========================================================================
+  # RFC2-88 — Boolean exclusiveMin/Max in OAS 3.1
+  # JSON-Schema 2019-09+ + OAS 3.1; severity: warn
+  # Stock-DSL.
+  # =========================================================================
+  # Source: JSON-Schema 2019-09 — exclusiveMinimum/Maximum changed from
+  #         boolean (draft-04) to numeric (draft-06+). patterns.json
+  #         RFC2-88 (P3 standards, warn).
+  # Lens: 3 (Evolution-Friction), 2 (Standards-Compliance)
+  # Round: 2 / Welle D
+  apiq-rfc2-88-exclusive-bound-numeric:
+    description: >-
+      OAS 3.1 / JSON-Schema 2019-09+ require `exclusiveMinimum` / `exclusiveMaximum` to be numeric (not boolean). Boolean form is a draft-04 / OAS 3.0 idiom that is INVALID in OAS 3.1.
+    message: "exclusiveMinimum/Maximum MUST be numeric (not boolean) per JSON-Schema 2019-09+."
+    severity: warn
+    given:
+      - "$..exclusiveMinimum"
+      - "$..exclusiveMaximum"
+    then:
+      function: schema
+      functionOptions:
+        schema:
+          type: number
+    formats:
+      - oas3_1
+    apiq-meta:
+      pattern-id: RFC2-88
+      lenses: [ evolution-friction, standards-compliance ]
+      sources:
+        - { type: vendor, name: 'JSON-Schema 2019-09: exclusiveMin/Max numeric', verifiedAt: '2026-05-09' }
+        - { type: mining, phase: round2, subagent: 'RFC2-88', summary: 'boolean exclusiveMin/Max in 3.1' }
+      stakeholders: [ spec-author ]
+      lifecycle-phase: validation-time
+      defect-class: norm
+      iso25010: [ compatibility ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: medium
+      agent-readiness-impact: low
+
+  # =========================================================================
+  # RFC2-91 — Deprecation header SHOULD pair Sunset header
+  # RFC 9745 + RFC 8594 §2; severity: hint
+  # Custom function `deprecation-pairs-sunset`.
+  # =========================================================================
+  # Source: RFC 9745 (Deprecation Header, March 2025) + RFC 8594
+  #         (Sunset Header, 2019) §2. patterns.json RFC2-91 (P3 standards).
+  # Lens: 2 (Standards-Compliance), 3 (Evolution-Friction)
+  # Round: 2/3 / Welle D — Round-3 mining-finding (RFC 9745 March 2025)
+  # is a new authoritative anchor for this rule.
+  apiq-rfc2-91-deprecation-pairs-sunset:
+    description: >-
+      Operations declaring `Deprecation` response-header SHOULD pair with `Sunset` header to give consumers a removal-date — RFC 9745 (Deprecation, 2025) + RFC 8594 §2 (Sunset).
+    message: "{{error}}"
+    severity: hint
+    given: "$.paths[*][get,head,post,put,patch,delete]"
+    then:
+      function: deprecation-pairs-sunset
+    apiq-meta:
+      pattern-id: RFC2-91
+      lenses: [ standards-compliance, evolution-friction ]
+      sources:
+        - { type: rfc, number: 9745, summary: 'Deprecation HTTP Header (March 2025)' }
+        - { type: rfc, number: 8594, section: '2', summary: 'Sunset HTTP Header (2019)' }
+        - { type: mining, phase: round2, subagent: 'RFC2-91', summary: 'Deprecation-Sunset pair' }
+      stakeholders: [ spec-author, client-dev ]
+      lifecycle-phase: evolution-time
+      defect-class: incomplete
+      iso25010: [ maintainability, compatibility, usability ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: medium
+      agent-readiness-impact: high
+
+  # =========================================================================
+  # RFC2-92 — Sunset header value HTTP-date format
+  # RFC 8594 §2; severity: hint
+  # Stock-DSL.
+  # =========================================================================
+  # Source: RFC 8594 §2 — Sunset value is HTTP-date (IMF-fixdate).
+  #         patterns.json RFC2-92 (P3 standards).
+  # Lens: 2, 3
+  # Round: 2 / Welle D
+  apiq-rfc2-92-sunset-http-date:
+    description: >-
+      `Sunset` response-header schema SHOULD declare `format: date-time` or `format: http-date` so consumers parse the IMF-fixdate per RFC 8594 §2.
+    message: "Sunset header SHOULD declare format:date-time or format:http-date (RFC 8594 §2)."
+    severity: hint
+    given: "$.paths[*][*].responses[*].headers[Sunset,sunset].schema"
+    then:
+      function: defined
+      field: format
+    apiq-meta:
+      pattern-id: RFC2-92
+      lenses: [ standards-compliance, evolution-friction ]
+      sources:
+        - { type: rfc, number: 8594, section: '2', summary: 'Sunset value is HTTP-date (IMF-fixdate)' }
+        - { type: mining, phase: round2, subagent: 'RFC2-92', summary: 'Sunset HTTP-date format' }
+      stakeholders: [ spec-author, client-dev ]
+      lifecycle-phase: documentation-time
+      defect-class: incomplete
+      iso25010: [ compatibility, usability ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: true
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: medium
+
+  # =========================================================================
+  # RFC2-93 — RateLimit-* header family consistency
+  # draft-ietf-httpapi-ratelimit-headers; severity: hint
+  # Custom function `rate-limit-header-family-consistency`.
+  # =========================================================================
+  # Source: draft-ietf-httpapi-ratelimit-headers — standard triplet
+  #         (Limit + Remaining + Reset). patterns.json RFC2-93 (P3
+  #         standards, dual-tagged with W6).
+  # Lens: 2 (Standards-Compliance), 7 (Operations)
+  # Round: 2 / Welle D
+  apiq-rfc2-93-ratelimit-triplet-consistency:
+    description: >-
+      Operations declaring partial RateLimit-* headers (only one or two of Limit / Remaining / Reset) violate the draft-ietf-httpapi-ratelimit- headers triplet contract. Either declare all three or none.
+    message: "{{error}}"
+    severity: hint
+    given: "$.paths[*][get,head,post,put,patch,delete]"
+    then:
+      function: rate-limit-header-family-consistency
+    apiq-meta:
+      pattern-id: RFC2-93
+      lenses: [ standards-compliance, operations ]
+      sources:
+        - { type: vendor, name: 'draft-ietf-httpapi-ratelimit-headers', verifiedAt: '2026-05-09' }
+        - { type: mining, phase: round2, subagent: 'RFC2-93', summary: 'RateLimit triplet' }
+      stakeholders: [ spec-author, client-dev, operations ]
+      lifecycle-phase: validation-time
+      defect-class: incomplete
+      iso25010: [ reliability, compatibility, usability ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: medium
+      agent-readiness-impact: high
+
+  # =========================================================================
+  # RFC2-98 — merge-patch+json schema MUST NOT declare required properties
+  # RFC 7396 §2; severity: warn
+  # Custom function `merge-patch-properties-not-required`.
+  # =========================================================================
+  # Source: RFC 7396 §2 — JSON Merge Patch: all properties optional.
+  #         patterns.json RFC2-98 (P3 standards, warn).
+  # Lens: 2
+  # Round: 2 / Welle D
+  apiq-rfc2-98-merge-patch-no-required:
+    description: >-
+      In `application/merge-patch+json` request bodies, ALL properties are semantically optional (PATCH semantics — present means change, absent means leave) per RFC 7396 §2. Declaring `required: [...]` contradicts merge-patch contract.
+    message: "{{error}}"
+    severity: warn
+    given: "$.paths[*][patch]"
+    then:
+      function: merge-patch-properties-not-required
+    apiq-meta:
+      pattern-id: RFC2-98
+      lenses: [ standards-compliance ]
+      sources:
+        - { type: rfc, number: 7396, section: '2', summary: 'A null value indicates the removal of existing values in the target' }
+        - { type: mining, phase: round2, subagent: 'RFC2-98', summary: 'merge-patch+json properties NOT required' }
+      stakeholders: [ spec-author, client-dev ]
+      lifecycle-phase: validation-time
+      defect-class: norm
+      iso25010: [ compatibility, functional-suitability ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: medium
+      agent-readiness-impact: medium
+
+  # =========================================================================
+  # RFC2-99 — json-patch+json schema MUST be array
+  # RFC 6902 §3; severity: warn
+  # Custom function `json-patch-schema-is-array`.
+  # =========================================================================
+  # Source: RFC 6902 §3 — JSON Patch document is JSON ARRAY of operation
+  #         objects. patterns.json RFC2-99 (P3 standards, warn).
+  # Lens: 2
+  # Round: 2 / Welle D
+  apiq-rfc2-99-json-patch-array-type:
+    description: >-
+      `application/json-patch+json` request body schema MUST be `type:array` (sequence of JSON-Patch operation-objects) per RFC 6902 §3. Object schemas are spec-bugs.
+    message: "{{error}}"
+    severity: warn
+    given: "$.paths[*][patch]"
+    then:
+      function: json-patch-schema-is-array
+    apiq-meta:
+      pattern-id: RFC2-99
+      lenses: [ standards-compliance ]
+      sources:
+        - { type: rfc, number: 6902, section: '3', summary: 'A JSON Patch document is a JSON array of objects' }
+        - { type: mining, phase: round2, subagent: 'RFC2-99', summary: 'json-patch schema MUST be array' }
+      stakeholders: [ spec-author, client-dev ]
+      lifecycle-phase: validation-time
+      defect-class: norm
+      iso25010: [ compatibility, functional-suitability ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: medium
+      agent-readiness-impact: medium
+
+  # =========================================================================
+  # BUNDLE — apiq-rfc2-multipart-form-bundle (RFC2-100/101)
+  # RFC 7578 §4.2 + OAS 3 §4.7.10.4; severity: hint
+  # Custom function `multipart-form-bundle`.
+  # =========================================================================
+  # Source: RFC 7578 (multipart/form-data, 2015). patterns.json
+  #         RFC2-100 + RFC2-101 (P3 bundle).
+  # Lens: 2
+  # Round: 2 / Welle D
+  apiq-rfc2-multipart-form-bundle:
+    description: >-
+      multipart/form-data correctness bundle (RFC 7578): schema MUST be type:object with properties (RFC2-100); binary-likely fields (file, upload, attachment, image, ...) SHOULD declare format:binary (RFC2-101).
+    message: "{{error}}"
+    severity: hint
+    given: "$.paths[*][post,put,patch]"
+    then:
+      function: multipart-form-bundle
+    apiq-meta:
+      pattern-id: RFC2-100
+      lenses: [ standards-compliance ]
+      sources:
+        - { type: rfc, number: 7578, section: '4.2', summary: 'multipart/form-data; each part has Content-Disposition: form-data' }
+        - { type: vendor, name: 'OAS 3 §4.7.10.4 multipart encoding', verifiedAt: '2026-05-09' }
+        - { type: mining, phase: round2, subagent: 'RFC2-100', summary: 'multipart-form-data bundle RFC2-100/101' }
+      stakeholders: [ spec-author, client-dev ]
+      lifecycle-phase: validation-time
+      defect-class: norm
+      iso25010: [ compatibility, usability ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: medium
+      agent-readiness-impact: high

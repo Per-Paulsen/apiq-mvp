@@ -1,12 +1,26 @@
 /**
- * Custom Spectral function — multi-language reserved-keyword allowlist.
+ * Custom Spectral functions for the P1 Client-Friction ruleset (T18a, Welle B).
  *
- * Pattern: CL-1 (Lens 4 Client-Friction, P1, Konkurrenz-Pari-Pflicht).
+ * Spectral's built-in functions (alphabetical, casing, defined, enumeration,
+ * falsy, length, pattern, schema, truthy, undefined, unreferencedReusableObject,
+ * xor, or) cover the casing / pattern / enumeration P1 rules; the callable
+ * below provides the multi-language reserved-keyword allowlist that CL-1
+ * needs:
  *
- * Source: openapi-generator multi-issue (https://github.com/OpenAPITools/openapi-generator/issues?q=label%3A%22reserved+word%22)
- *         + swagger-codegen #4805 + per-language reserved-keyword catalogs
- *         (Java, Go, Python, JavaScript/ECMA-262, Rust 2024, C# spec, Kotlin reference).
- *         See rules-brainstorm.md CL-1 (Lens-4) for the load-bearing classification.
+ *   - multiLangReservedKeywords (CL-1):  property-names and operationIds
+ *                                        that collide with reserved
+ *                                        keywords / built-ins in any of
+ *                                        the seven major SDK target
+ *                                        languages (Java, Go, Python,
+ *                                        JavaScript/TypeScript, Rust 2024,
+ *                                        C#, Kotlin).
+ *
+ * Sources (file-level, per-callable header below cites verbatim):
+ *   - openapi-generator multi-issue (https://github.com/OpenAPITools/openapi-generator/issues?q=label%3A%22reserved+word%22)
+ *   - swagger-codegen #4805 + per-language reserved-keyword catalogs
+ *     (Java, Go, Python, JavaScript/ECMA-262, Rust 2024, C# spec, Kotlin reference)
+ *   - rules-brainstorm.md CL-1 (Lens-4) for the load-bearing classification
+ *
  * Lens: 4 (Client-Friction)
  * Round: 2 (Welle B / T18a — activated)
  *
@@ -380,5 +394,3 @@ export const multiLangReservedKeywords = (
     },
   ];
 };
-
-export default multiLangReservedKeywords;

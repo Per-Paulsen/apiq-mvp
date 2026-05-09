@@ -1,0 +1,126 @@
+name: Source-Verify Quarterly
+
+# T25 (Welle D) — runs the source-verify CLI every quarter to confirm that all
+# `sources[*].verbatim` strings declared inside apiq-meta blocks of all
+# `scripts/spike/deterministic/apiq-ruleset-*.yaml` files are still present in
+# the authoritative source documents (RFCs, IETF drafts, GitHub-hosted vendor
+# docs, W3C specs).
+#
+# Schedule: 00:00 UTC on the 1st of January, April, July, October.
+# Manual trigger: workflow_dispatch (for ad-hoc reruns).
+#
+# On success → opens a PR bumping `verifiedAt` timestamps.
+# On drift   → opens an issue tagged `source-verify-drift`.
+
+on:
+  schedule:
+    - cron: '0 0 1 1,4,7,10 *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  verify:
+    name: Run source-verify CLI
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Run source-verify (check-only first to detect drift)
+        id: verify-check
+        run: |
+          set +e
+          npx tsx scripts/source-verify/verify-rfc-verbatim.ts --check-only --json > source-verify-report.json
+          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+          set -e
+
+      - name: Upload report artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: source-verify-report
+          path: source-verify-report.json
+
+      - name: Open issue on drift / fetch-fail
+        if: steps.verify-check.outputs.exit_code != '0'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = JSON.parse(fs.readFileSync('source-verify-report.json', 'utf8'));
+            const today = new Date().toISOString().slice(0, 10);
+            const drift = report.results.filter(r => r.status === 'drift');
+            const fetchFail = report.results.filter(r => r.status === 'fetch-fail');
+            const lines = [
+              `Quarterly source-verify run on ${today} detected drift or fetch-failures.`,
+              '',
+              `**Summary**`,
+              `- Total verbatim sources: ${report.totalSources}`,
+              `- Verified: ${report.verified}`,
+              `- Drift: ${report.drift}`,
+              `- Fetch-fail: ${report.fetchFail}`,
+              '',
+            ];
+            if (drift.length > 0) {
+              lines.push('### Drift', '');
+              for (const r of drift) {
+                lines.push(`- \`${r.yamlFile}\` :: \`${r.ruleName}[${r.sourceIndex}]\` — ${r.url}`);
+              }
+              lines.push('');
+            }
+            if (fetchFail.length > 0) {
+              lines.push('### Fetch-fail', '');
+              for (const r of fetchFail) {
+                lines.push(`- \`${r.yamlFile}\` :: \`${r.ruleName}[${r.sourceIndex}]\` — ${r.url} — ${r.message ?? 'unknown'}`);
+              }
+              lines.push('');
+            }
+            lines.push('Triggered by `.github/workflows/source-verify-quarterly.yml`.');
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Source-verbatim drift detected — quarterly run ${today}`,
+              body: lines.join('\n'),
+              labels: ['source-verify-drift'],
+            });
+
+      - name: Re-run in verify-mode to bump verifiedAt timestamps
+        if: steps.verify-check.outputs.exit_code == '0'
+        run: |
+          npx tsx scripts/source-verify/verify-rfc-verbatim.ts
+
+      - name: Open PR with bumped timestamps
+        if: steps.verify-check.outputs.exit_code == '0'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: chore/source-verify-${{ github.run_id }}
+          delete-branch: true
+          commit-message: |
+            chore(source-verify): bump verifiedAt timestamps
+
+            Quarterly source-verify run; all verbatim citations confirmed against
+            authoritative sources.
+          title: 'chore(source-verify): bump verifiedAt timestamps'
+          body: |
+            Quarterly automated source-verify run completed cleanly. All
+            `sources[*].verbatim` strings still match the authoritative
+            documents; this PR refreshes their `verifiedAt` timestamps.
+
+            See the workflow run for the per-rule report.
+          labels: |
+            chore
+            source-verify

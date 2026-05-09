@@ -2,13 +2,18 @@
  * Spectral runner — Stage-A pre-pass detector.
  *
  * Loads (in this order; later files overwrite earlier rule-codes if duplicated):
- *   1. OAS3-default ruleset (`@stoplight/spectral-rulesets`'s `oas` export)
- *   2. apiq-ruleset.yaml                  (Welle A — base apiq custom rules)
- *   3. apiq-ruleset-client-p1.yaml        (Welle B P1 — Client-Friction CL-x)
- *   4. apiq-ruleset-threat-p1.yaml        (Welle B P1 — Threat-Modeling Y-x/TM-Ax)
- *   5. apiq-ruleset-evolution.yaml        (Welle B — Evolution-Friction EV-x)
- *   6. apiq-ruleset-client-p2.yaml        (Welle C P2 — Client-Friction P2 + F-x)
- *   7. apiq-ruleset-threat-p2.yaml        (Welle C P2 — Threat-Modeling P2 + RFC2-x)
+ *    1. OAS3-default ruleset (`@stoplight/spectral-rulesets`'s `oas` export)
+ *    2. apiq-ruleset.yaml                  (Welle A — base apiq custom rules)
+ *    3. apiq-ruleset-client-p1.yaml        (Welle B P1 — Client-Friction CL-x)
+ *    4. apiq-ruleset-threat-p1.yaml        (Welle B P1 — Threat-Modeling Y-x/TM-Ax)
+ *    5. apiq-ruleset-evolution.yaml        (Welle B — Evolution-Friction EV-x)
+ *    6. apiq-ruleset-client-p2.yaml        (Welle C P2 — Client-Friction P2 + F-x)
+ *    7. apiq-ruleset-threat-p2.yaml        (Welle C P2 — Threat-Modeling P2 + RFC2-x)
+ *    8. apiq-ruleset-client-p3.yaml        (Welle D — Client-Friction P3)
+ *    9. apiq-ruleset-threat-p3.yaml        (Welle D — Threat-Modeling P3)
+ *   10. apiq-ruleset-evolution-p3.yaml     (Welle D — Evolution-Friction P3)
+ *   11. apiq-ruleset-standards-p3.yaml     (Welle D — Standards/RFC2-* P3)
+ *   12. apiq-ruleset-other-p3.yaml         (Welle D — Other Lenses / Style P3)
  *
  *   Each file is loaded best-effort: missing files emit a warn + skip
  *   (the runner falls back to OAS3-default-only when no apiq YAML loads).
@@ -65,7 +70,7 @@ import type { ReferenceTarget } from '../eval/types.js';
 import { JaccardScorer } from '../eval/scorers/jaccard.js';
 import { mapDetectorFindings } from './output-mapper.js';
 import { cycleStripSpec } from '../stringify-spec.js';
-import multiLangReservedKeywordsFn from './spectral-functions/multi-lang-reserved-keywords.js';
+import { multiLangReservedKeywords } from './spectral-functions/client-p1-functions.js';
 import {
   listEndpointHasPagination,
   sensitiveFlowNeedsRateLimitHeaders,
@@ -96,6 +101,112 @@ import {
   bearer401WwwAuthenticateRealm,
   patchContentTypeCorrect,
 } from './spectral-functions/threat-p2-functions.js';
+// Welle D P3 — Threat-Modeling P3 (Lens 1) custom functions:
+import {
+  sensitiveHeaderNameRejected,
+  postCreatesNeedIdempotencyKey,
+  threeOrMoreIdParamsBola,
+  bodyContainsUserIdOnNonAdmin,
+  multipleAndSecuritySameType,
+  longRunningOpAsyncPattern,
+  adminSharesPublicSecurity,
+  resourceOnlyGetNoWrite,
+  nonStandardMethodNeedsSecurity,
+  signupNeedsRateLimitOrCaptcha,
+  postingCommentNeedsRateLimit,
+  hostParamFlaggedForSsrf,
+  corsOriginReflectionWithoutAllowlist,
+  browserApiNeedsSecurityHeaders,
+  upstreamUrlOpNeeds5xxExplicit,
+  webhookRejectsWildcardContentType,
+} from './spectral-functions/threat-p3-functions.js';
+// Welle D P3 — Client-Friction P3 (Lens 4) custom functions:
+import {
+  camelizeCollideSchemaProperty,
+  requiredAsymmetryRequestResponse,
+  int64NeedsStringAlternative,
+  emptyBody2xx4xxDiscriminator,
+  responseRefInconsistency,
+  nestedCompositionDepth,
+  fieldNameLengthBalance,
+  crudShapeConsistency,
+  paramsOrderRequiredFirst,
+  totalRequiredInputsExceeds,
+  vendorExtensionPrefixConsistency,
+  tagCasingCrossSpecConsistency,
+  readOnlyRequiredConflict,
+} from './spectral-functions/client-p3-functions.js';
+// Welle D P3 — Evolution-Friction P3 (Lens 3) custom functions:
+import {
+  requiredFieldOverdeclaredCheck,
+  statusCodeSetCardinality,
+  singleMediaTypeResponse,
+  requiredPropNeedsDescription,
+  refCycleNeedsMaxDepth,
+  requiredPropSingleValueEnum,
+  fieldEvolutionSuffix,
+  tagsInternalExperimental,
+  noComponentsSchemas,
+  defaultSpecificStatusOverlap,
+  multipartJsonSameSchema,
+  magicStringEnumCandidate,
+  intNeedsStringEncoding,
+  versionParamNoEnum,
+  redirectWithoutLocation,
+  webhookNeedsProse,
+  oneofClosedProseSaysOpen,
+  int64StringEncodingCandidate,
+} from './spectral-functions/evolution-p3-functions.js';
+// Welle D P3 — Standards/RFC2-* P3 custom functions:
+import {
+  problemDetailsExtensionReserved,
+  oneXxResponseUpgradeHeader,
+  upgradeRequired426,
+  oneXxNotInResponsesKeys,
+  ifModifiedSinceImplies304,
+  ifUnmodifiedSinceImplies412,
+  etagCrossResourceConsistency,
+  idWriteOpEtagSupport,
+  proxyAuthenticate407,
+  preferImpliesPreferenceApplied,
+  preferRespondAsyncImplies202,
+  deprecationPairsSunset,
+  rateLimitHeaderFamilyConsistency,
+  mergePatchPropertiesNotRequired,
+  jsonPatchSchemaIsArray,
+  cacheHeaderBundle,
+  cacheValidatorsBundle,
+  linkHeaderBundle,
+  multipartFormBundle,
+} from './spectral-functions/standards-p3-functions.js';
+// Welle D P3 — Other-Lens / Style P3 custom functions:
+import {
+  restVsRpcMixing,
+  httpMethodSemanticsViolated,
+  crudAsymmetricResources,
+  fieldNameCasingMixed,
+  timeFieldNamingMixed,
+  filterSyntaxIncoherent,
+  sortSyntaxIncoherent,
+  statusCodeDistributionPerOpType,
+  odataDollarParamAllowedSet,
+  aipCustomMethodUsesPost,
+  aipTimeFieldImperative,
+  phiFieldNameHint,
+  listEndpointMissingCacheHeaders,
+  descriptionParameterRatio,
+  errorSchemaDiscoverability,
+  paginationCursorStability,
+  operationIdMachineFriendly,
+  summaryConcise,
+  functionCallFriendlySchema,
+  externalDocsStub,
+  infoContactSubstantive,
+  acceptLanguageOnUserFacingOps,
+  consistentExpandFieldsParam,
+  polymorphismWireDiscriminator,
+  lazyDescription,
+} from './spectral-functions/style-p3-functions.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -167,6 +278,86 @@ const APIQ_RULESET_THREAT_P2_PATH = path.join(
 );
 
 /**
+ * Welle D P3 Threat-Modeling (Lens 1) ruleset — 31 rules covering sensitive
+ * header name detection, idempotency-key requirements on POST creates,
+ * BOLA-via-multi-id-param, body-user-id-on-non-admin, multi-and-security
+ * collision, long-running-op async patterns, admin-share-public-security,
+ * non-standard method security, signup/posting rate limits, SSRF host-param
+ * detection, CORS origin reflection without allowlist, browser-API security
+ * headers, upstream-URL-op 5xx-explicit, webhook content-type rejection.
+ * Uses 16 custom Spectral functions registered below.
+ */
+const APIQ_RULESET_THREAT_P3_PATH = path.join(
+  __dirname,
+  'apiq-ruleset-threat-p3.yaml'
+);
+
+/**
+ * Welle D P3 Client-Friction (Lens 4) ruleset — 32 rules covering camelize
+ * collision detection, required-asymmetry-request-response, int64 string
+ * alternative, empty-body-2xx-4xx discriminator, response-ref inconsistency,
+ * nested-composition depth, field-name length balance, CRUD-shape
+ * consistency, params-order required-first, total-required-inputs exceeds,
+ * vendor-extension prefix consistency, tag-casing cross-spec, read-only
+ * required-conflict. Uses 13 custom Spectral functions registered below.
+ */
+const APIQ_RULESET_CLIENT_P3_PATH = path.join(
+  __dirname,
+  'apiq-ruleset-client-p3.yaml'
+);
+
+/**
+ * Welle D P3 Evolution-Friction (Lens 3) ruleset — 25 rules covering
+ * required-field overdeclaration, status-code set cardinality,
+ * single-media-type response, required-prop description/single-enum,
+ * ref-cycle max-depth, field-evolution suffix, internal/experimental tags,
+ * components/schemas absence, default-status overlap, multipart-json same
+ * schema, magic-string enum candidate, int-needs-string encoding,
+ * version-param no-enum, redirect-without-location, webhook-needs-prose,
+ * oneOf-closed-prose-says-open, int64-string encoding candidate. Uses 18
+ * custom Spectral functions registered below.
+ */
+const APIQ_RULESET_EVOLUTION_P3_PATH = path.join(
+  __dirname,
+  'apiq-ruleset-evolution-p3.yaml'
+);
+
+/**
+ * Welle D P3 Standards/RFC2-* ruleset — 36 rules covering RFC-7807 problem-
+ * details extension reserved, RFC-7235 1xx Upgrade-header, 426 Upgrade-Required,
+ * RFC-9111 cache-header bundle, RFC-7234 cache-validators bundle, RFC-8288
+ * Link-header bundle, RFC-7578 multipart/form bundle, conditional 304/412 on
+ * If-Modified-Since/If-Unmodified-Since, ETag cross-resource consistency,
+ * Proxy-Authenticate 407, Prefer/Preference-Applied, Prefer respond-async 202,
+ * RFC-9745 Deprecation/Sunset pairs, RateLimit header family consistency,
+ * RFC-7396 Merge-Patch properties, RFC-6902 JSON-Patch shape. Uses 19 custom
+ * Spectral functions registered below.
+ */
+const APIQ_RULESET_STANDARDS_P3_PATH = path.join(
+  __dirname,
+  'apiq-ruleset-standards-p3.yaml'
+);
+
+/**
+ * Welle D P3 Other-Lens / Style ruleset — 47 rules covering REST-vs-RPC
+ * mixing, HTTP-method semantics violations, CRUD-asymmetric resources,
+ * field-name casing mixed, time-field naming mixed, filter/sort syntax
+ * incoherent, status-code distribution per op-type, OData $-param allowed
+ * set, AIP custom-method uses POST, AIP time-field imperative, PHI
+ * field-name hint, list-endpoint missing cache-headers, description-
+ * parameter ratio, error-schema discoverability, pagination cursor
+ * stability, operation-id machine-friendly, summary concise, function-
+ * call-friendly schema, external-docs stub, info-contact substantive,
+ * Accept-Language on user-facing ops, consistent expand-fields param,
+ * polymorphism wire-discriminator, lazy-description. Uses 25 custom
+ * Spectral functions registered below.
+ */
+const APIQ_RULESET_OTHER_P3_PATH = path.join(
+  __dirname,
+  'apiq-ruleset-other-p3.yaml'
+);
+
+/**
  * Custom Spectral functions registered in addition to `@stoplight/spectral-functions`.
  * Function-name (as it appears in YAML `function:` field) → callable.
  *
@@ -174,7 +365,7 @@ const APIQ_RULESET_THREAT_P2_PATH = path.join(
  */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const APIQ_CUSTOM_FUNCTIONS: Record<string, (...args: any[]) => any> = {
-  'multi-lang-reserved-keywords': multiLangReservedKeywordsFn as unknown as (
+  'multi-lang-reserved-keywords': multiLangReservedKeywords as unknown as (
     ...args: any[]
   ) => any,
   // T16a Threat-P1 custom functions (Lens 1):
@@ -239,6 +430,239 @@ const APIQ_CUSTOM_FUNCTIONS: Record<string, (...args: any[]) => any> = {
   'patch-content-type-correct': patchContentTypeCorrect as unknown as (
     ...args: any[]
   ) => any,
+  // Welle D — T16c Threat-P3 custom functions (Lens 1):
+  'sensitive-header-name-rejected': sensitiveHeaderNameRejected as unknown as (
+    ...args: any[]
+  ) => any,
+  'post-creates-need-idempotency-key':
+    postCreatesNeedIdempotencyKey as unknown as (...args: any[]) => any,
+  'three-or-more-id-params-bola': threeOrMoreIdParamsBola as unknown as (
+    ...args: any[]
+  ) => any,
+  'body-contains-user-id-on-non-admin':
+    bodyContainsUserIdOnNonAdmin as unknown as (...args: any[]) => any,
+  'multiple-and-security-same-type': multipleAndSecuritySameType as unknown as (
+    ...args: any[]
+  ) => any,
+  'long-running-op-async-pattern': longRunningOpAsyncPattern as unknown as (
+    ...args: any[]
+  ) => any,
+  'admin-shares-public-security': adminSharesPublicSecurity as unknown as (
+    ...args: any[]
+  ) => any,
+  'resource-only-get-no-write': resourceOnlyGetNoWrite as unknown as (
+    ...args: any[]
+  ) => any,
+  'non-standard-method-needs-security':
+    nonStandardMethodNeedsSecurity as unknown as (...args: any[]) => any,
+  'signup-needs-rate-limit-or-captcha':
+    signupNeedsRateLimitOrCaptcha as unknown as (...args: any[]) => any,
+  'posting-comment-needs-rate-limit':
+    postingCommentNeedsRateLimit as unknown as (...args: any[]) => any,
+  'host-param-flagged-for-ssrf': hostParamFlaggedForSsrf as unknown as (
+    ...args: any[]
+  ) => any,
+  'cors-origin-reflection-without-allowlist':
+    corsOriginReflectionWithoutAllowlist as unknown as (...args: any[]) => any,
+  'browser-api-needs-security-headers':
+    browserApiNeedsSecurityHeaders as unknown as (...args: any[]) => any,
+  'upstream-url-op-needs-5xx-explicit':
+    upstreamUrlOpNeeds5xxExplicit as unknown as (...args: any[]) => any,
+  'webhook-rejects-wildcard-content-type':
+    webhookRejectsWildcardContentType as unknown as (...args: any[]) => any,
+  // Welle D — T18c Client-P3 custom functions (Lens 4):
+  'camelize-collide-schema-property':
+    camelizeCollideSchemaProperty as unknown as (...args: any[]) => any,
+  'required-asymmetry-request-response':
+    requiredAsymmetryRequestResponse as unknown as (...args: any[]) => any,
+  'int64-needs-string-alternative': int64NeedsStringAlternative as unknown as (
+    ...args: any[]
+  ) => any,
+  'empty-body-2xx-4xx-discriminator':
+    emptyBody2xx4xxDiscriminator as unknown as (...args: any[]) => any,
+  'response-ref-inconsistency': responseRefInconsistency as unknown as (
+    ...args: any[]
+  ) => any,
+  'nested-composition-depth': nestedCompositionDepth as unknown as (
+    ...args: any[]
+  ) => any,
+  'field-name-length-balance': fieldNameLengthBalance as unknown as (
+    ...args: any[]
+  ) => any,
+  'crud-shape-consistency': crudShapeConsistency as unknown as (
+    ...args: any[]
+  ) => any,
+  'params-order-required-first': paramsOrderRequiredFirst as unknown as (
+    ...args: any[]
+  ) => any,
+  'total-required-inputs-exceeds': totalRequiredInputsExceeds as unknown as (
+    ...args: any[]
+  ) => any,
+  'vendor-extension-prefix-consistency':
+    vendorExtensionPrefixConsistency as unknown as (...args: any[]) => any,
+  'tag-casing-cross-spec-consistency':
+    tagCasingCrossSpecConsistency as unknown as (...args: any[]) => any,
+  'read-only-required-conflict': readOnlyRequiredConflict as unknown as (
+    ...args: any[]
+  ) => any,
+  // Welle D — T-EV Evolution-P3 custom functions (Lens 3):
+  'required-field-overdeclared-check':
+    requiredFieldOverdeclaredCheck as unknown as (...args: any[]) => any,
+  'status-code-set-cardinality': statusCodeSetCardinality as unknown as (
+    ...args: any[]
+  ) => any,
+  'single-media-type-response': singleMediaTypeResponse as unknown as (
+    ...args: any[]
+  ) => any,
+  'required-prop-needs-description':
+    requiredPropNeedsDescription as unknown as (...args: any[]) => any,
+  'ref-cycle-needs-max-depth': refCycleNeedsMaxDepth as unknown as (
+    ...args: any[]
+  ) => any,
+  'required-prop-single-value-enum':
+    requiredPropSingleValueEnum as unknown as (...args: any[]) => any,
+  'field-evolution-suffix': fieldEvolutionSuffix as unknown as (
+    ...args: any[]
+  ) => any,
+  'tags-internal-experimental': tagsInternalExperimental as unknown as (
+    ...args: any[]
+  ) => any,
+  'no-components-schemas': noComponentsSchemas as unknown as (
+    ...args: any[]
+  ) => any,
+  'default-specific-status-overlap':
+    defaultSpecificStatusOverlap as unknown as (...args: any[]) => any,
+  'multipart-json-same-schema': multipartJsonSameSchema as unknown as (
+    ...args: any[]
+  ) => any,
+  'magic-string-enum-candidate': magicStringEnumCandidate as unknown as (
+    ...args: any[]
+  ) => any,
+  'int-needs-string-encoding': intNeedsStringEncoding as unknown as (
+    ...args: any[]
+  ) => any,
+  'version-param-no-enum': versionParamNoEnum as unknown as (
+    ...args: any[]
+  ) => any,
+  'redirect-without-location': redirectWithoutLocation as unknown as (
+    ...args: any[]
+  ) => any,
+  'webhook-needs-prose': webhookNeedsProse as unknown as (
+    ...args: any[]
+  ) => any,
+  'oneof-closed-prose-says-open': oneofClosedProseSaysOpen as unknown as (
+    ...args: any[]
+  ) => any,
+  'int64-string-encoding-candidate':
+    int64StringEncodingCandidate as unknown as (...args: any[]) => any,
+  // Welle D — T-RFC2 Standards-P3 custom functions:
+  'problem-details-extension-reserved':
+    problemDetailsExtensionReserved as unknown as (...args: any[]) => any,
+  'one-xx-response-upgrade-header':
+    oneXxResponseUpgradeHeader as unknown as (...args: any[]) => any,
+  'upgrade-required-426': upgradeRequired426 as unknown as (
+    ...args: any[]
+  ) => any,
+  'one-xx-not-in-responses-keys': oneXxNotInResponsesKeys as unknown as (
+    ...args: any[]
+  ) => any,
+  'if-modified-since-implies-304':
+    ifModifiedSinceImplies304 as unknown as (...args: any[]) => any,
+  'if-unmodified-since-implies-412':
+    ifUnmodifiedSinceImplies412 as unknown as (...args: any[]) => any,
+  'etag-cross-resource-consistency':
+    etagCrossResourceConsistency as unknown as (...args: any[]) => any,
+  'id-write-op-etag-support': idWriteOpEtagSupport as unknown as (
+    ...args: any[]
+  ) => any,
+  'proxy-authenticate-407': proxyAuthenticate407 as unknown as (
+    ...args: any[]
+  ) => any,
+  'prefer-implies-preference-applied':
+    preferImpliesPreferenceApplied as unknown as (...args: any[]) => any,
+  'prefer-respond-async-implies-202':
+    preferRespondAsyncImplies202 as unknown as (...args: any[]) => any,
+  'deprecation-pairs-sunset': deprecationPairsSunset as unknown as (
+    ...args: any[]
+  ) => any,
+  'rate-limit-header-family-consistency':
+    rateLimitHeaderFamilyConsistency as unknown as (...args: any[]) => any,
+  'merge-patch-properties-not-required':
+    mergePatchPropertiesNotRequired as unknown as (...args: any[]) => any,
+  'json-patch-schema-is-array': jsonPatchSchemaIsArray as unknown as (
+    ...args: any[]
+  ) => any,
+  'cache-header-bundle': cacheHeaderBundle as unknown as (
+    ...args: any[]
+  ) => any,
+  'cache-validators-bundle': cacheValidatorsBundle as unknown as (
+    ...args: any[]
+  ) => any,
+  'link-header-bundle': linkHeaderBundle as unknown as (...args: any[]) => any,
+  'multipart-form-bundle': multipartFormBundle as unknown as (
+    ...args: any[]
+  ) => any,
+  // Welle D — T-Other-Lens Style-P3 custom functions:
+  'rest-vs-rpc-mixing': restVsRpcMixing as unknown as (...args: any[]) => any,
+  'http-method-semantics-violated': httpMethodSemanticsViolated as unknown as (
+    ...args: any[]
+  ) => any,
+  'crud-asymmetric-resources': crudAsymmetricResources as unknown as (
+    ...args: any[]
+  ) => any,
+  'field-name-casing-mixed': fieldNameCasingMixed as unknown as (
+    ...args: any[]
+  ) => any,
+  'time-field-naming-mixed': timeFieldNamingMixed as unknown as (
+    ...args: any[]
+  ) => any,
+  'filter-syntax-incoherent': filterSyntaxIncoherent as unknown as (
+    ...args: any[]
+  ) => any,
+  'sort-syntax-incoherent': sortSyntaxIncoherent as unknown as (
+    ...args: any[]
+  ) => any,
+  'status-code-distribution-per-op-type':
+    statusCodeDistributionPerOpType as unknown as (...args: any[]) => any,
+  'odata-dollar-param-allowed-set':
+    odataDollarParamAllowedSet as unknown as (...args: any[]) => any,
+  'aip-custom-method-uses-post': aipCustomMethodUsesPost as unknown as (
+    ...args: any[]
+  ) => any,
+  'aip-time-field-imperative': aipTimeFieldImperative as unknown as (
+    ...args: any[]
+  ) => any,
+  'phi-field-name-hint': phiFieldNameHint as unknown as (...args: any[]) => any,
+  'list-endpoint-missing-cache-headers':
+    listEndpointMissingCacheHeaders as unknown as (...args: any[]) => any,
+  'description-parameter-ratio': descriptionParameterRatio as unknown as (
+    ...args: any[]
+  ) => any,
+  'error-schema-discoverability': errorSchemaDiscoverability as unknown as (
+    ...args: any[]
+  ) => any,
+  'pagination-cursor-stability': paginationCursorStability as unknown as (
+    ...args: any[]
+  ) => any,
+  'operation-id-machine-friendly': operationIdMachineFriendly as unknown as (
+    ...args: any[]
+  ) => any,
+  'summary-concise': summaryConcise as unknown as (...args: any[]) => any,
+  'function-call-friendly-schema': functionCallFriendlySchema as unknown as (
+    ...args: any[]
+  ) => any,
+  'external-docs-stub': externalDocsStub as unknown as (...args: any[]) => any,
+  'info-contact-substantive': infoContactSubstantive as unknown as (
+    ...args: any[]
+  ) => any,
+  'accept-language-on-user-facing-ops':
+    acceptLanguageOnUserFacingOps as unknown as (...args: any[]) => any,
+  'consistent-expand-fields-param': consistentExpandFieldsParam as unknown as (
+    ...args: any[]
+  ) => any,
+  'polymorphism-wire-discriminator':
+    polymorphismWireDiscriminator as unknown as (...args: any[]) => any,
+  'lazy-description': lazyDescription as unknown as (...args: any[]) => any,
 };
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
@@ -302,6 +726,16 @@ export interface ApiqMetaYamlBlock {
   direction?: 'tighten' | 'loosen' | 'drift';
   sources?: Array<{
     type: 'rfc' | 'bcp' | 'iso' | 'iana-registry' | 'vendor' | 'mining';
+    name?: string;
+    url?: string;
+    /** Verbatim copy-paste from authoritative source (≤200 chars). T25 verifiable. */
+    quote?: string;
+    /** Mining-paraphrase / subagent-summary. NOT T25-verified. */
+    summary?: string;
+    /** ISO date YYYY-MM-DD of last T25 verification (only meaningful when `quote` is set). */
+    verifiedAt?: string;
+    /** @deprecated Use `quote` (T25-verifiable) or `summary` (paraphrase). Welle-D-migration. */
+    verbatim?: string;
     [key: string]: unknown;
   }>;
   stakeholders?: string[];
@@ -376,6 +810,102 @@ const SUPPORTED_FUNCTIONS = new Set([
   'partial-content-needs-content-range',
   'bearer-401-www-authenticate-realm',
   'patch-content-type-correct',
+  // Welle D — T16c Threat-P3 custom functions:
+  'sensitive-header-name-rejected',
+  'post-creates-need-idempotency-key',
+  'three-or-more-id-params-bola',
+  'body-contains-user-id-on-non-admin',
+  'multiple-and-security-same-type',
+  'long-running-op-async-pattern',
+  'admin-shares-public-security',
+  'resource-only-get-no-write',
+  'non-standard-method-needs-security',
+  'signup-needs-rate-limit-or-captcha',
+  'posting-comment-needs-rate-limit',
+  'host-param-flagged-for-ssrf',
+  'cors-origin-reflection-without-allowlist',
+  'browser-api-needs-security-headers',
+  'upstream-url-op-needs-5xx-explicit',
+  'webhook-rejects-wildcard-content-type',
+  // Welle D — T18c Client-P3 custom functions:
+  'camelize-collide-schema-property',
+  'required-asymmetry-request-response',
+  'int64-needs-string-alternative',
+  'empty-body-2xx-4xx-discriminator',
+  'response-ref-inconsistency',
+  'nested-composition-depth',
+  'field-name-length-balance',
+  'crud-shape-consistency',
+  'params-order-required-first',
+  'total-required-inputs-exceeds',
+  'vendor-extension-prefix-consistency',
+  'tag-casing-cross-spec-consistency',
+  'read-only-required-conflict',
+  // Welle D — T-EV Evolution-P3 custom functions:
+  'required-field-overdeclared-check',
+  'status-code-set-cardinality',
+  'single-media-type-response',
+  'required-prop-needs-description',
+  'ref-cycle-needs-max-depth',
+  'required-prop-single-value-enum',
+  'field-evolution-suffix',
+  'tags-internal-experimental',
+  'no-components-schemas',
+  'default-specific-status-overlap',
+  'multipart-json-same-schema',
+  'magic-string-enum-candidate',
+  'int-needs-string-encoding',
+  'version-param-no-enum',
+  'redirect-without-location',
+  'webhook-needs-prose',
+  'oneof-closed-prose-says-open',
+  'int64-string-encoding-candidate',
+  // Welle D — T-RFC2 Standards-P3 custom functions:
+  'problem-details-extension-reserved',
+  'one-xx-response-upgrade-header',
+  'upgrade-required-426',
+  'one-xx-not-in-responses-keys',
+  'if-modified-since-implies-304',
+  'if-unmodified-since-implies-412',
+  'etag-cross-resource-consistency',
+  'id-write-op-etag-support',
+  'proxy-authenticate-407',
+  'prefer-implies-preference-applied',
+  'prefer-respond-async-implies-202',
+  'deprecation-pairs-sunset',
+  'rate-limit-header-family-consistency',
+  'merge-patch-properties-not-required',
+  'json-patch-schema-is-array',
+  'cache-header-bundle',
+  'cache-validators-bundle',
+  'link-header-bundle',
+  'multipart-form-bundle',
+  // Welle D — T-Other-Lens Style-P3 custom functions:
+  'rest-vs-rpc-mixing',
+  'http-method-semantics-violated',
+  'crud-asymmetric-resources',
+  'field-name-casing-mixed',
+  'time-field-naming-mixed',
+  'filter-syntax-incoherent',
+  'sort-syntax-incoherent',
+  'status-code-distribution-per-op-type',
+  'odata-dollar-param-allowed-set',
+  'aip-custom-method-uses-post',
+  'aip-time-field-imperative',
+  'phi-field-name-hint',
+  'list-endpoint-missing-cache-headers',
+  'description-parameter-ratio',
+  'error-schema-discoverability',
+  'pagination-cursor-stability',
+  'operation-id-machine-friendly',
+  'summary-concise',
+  'function-call-friendly-schema',
+  'external-docs-stub',
+  'info-contact-substantive',
+  'accept-language-on-user-facing-ops',
+  'consistent-expand-fields-param',
+  'polymorphism-wire-discriminator',
+  'lazy-description',
 ]);
 
 /**
@@ -649,6 +1179,28 @@ function buildSpectral(): SpectralCore.Spectral {
     APIQ_RULESET_THREAT_P2_PATH,
     'apiq-ruleset-threat-p2.yaml'
   );
+  // Welle D P3 yamls — load order: client-p3 → threat-p3 → evolution-p3 →
+  // standards-p3 → other-p3 (later files overwrite earlier rule-codes).
+  const clientP3Rules = loadYamlRules(
+    APIQ_RULESET_CLIENT_P3_PATH,
+    'apiq-ruleset-client-p3.yaml'
+  );
+  const threatP3Rules = loadYamlRules(
+    APIQ_RULESET_THREAT_P3_PATH,
+    'apiq-ruleset-threat-p3.yaml'
+  );
+  const evolutionP3Rules = loadYamlRules(
+    APIQ_RULESET_EVOLUTION_P3_PATH,
+    'apiq-ruleset-evolution-p3.yaml'
+  );
+  const standardsP3Rules = loadYamlRules(
+    APIQ_RULESET_STANDARDS_P3_PATH,
+    'apiq-ruleset-standards-p3.yaml'
+  );
+  const otherP3Rules = loadYamlRules(
+    APIQ_RULESET_OTHER_P3_PATH,
+    'apiq-ruleset-other-p3.yaml'
+  );
 
   /* eslint-disable @typescript-eslint/no-explicit-any */
   const merged: Record<string, any> = {};
@@ -658,6 +1210,11 @@ function buildSpectral(): SpectralCore.Spectral {
   if (evolutionRules) Object.assign(merged, evolutionRules);
   if (clientP2Rules) Object.assign(merged, clientP2Rules);
   if (threatP2Rules) Object.assign(merged, threatP2Rules);
+  if (clientP3Rules) Object.assign(merged, clientP3Rules);
+  if (threatP3Rules) Object.assign(merged, threatP3Rules);
+  if (evolutionP3Rules) Object.assign(merged, evolutionP3Rules);
+  if (standardsP3Rules) Object.assign(merged, standardsP3Rules);
+  if (otherP3Rules) Object.assign(merged, otherP3Rules);
   /* eslint-enable @typescript-eslint/no-explicit-any */
 
   if (Object.keys(merged).length > 0) {

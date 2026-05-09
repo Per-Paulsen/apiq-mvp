@@ -1,0 +1,1450 @@
+# apiq Spectral Ruleset — Welle D P3 Client-Friction (Lens 4)
+#
+# 32 P3 client-friction defense-in-depth/nice-to-have rules from
+# implementation-priority.md P3 CL-Tier (lines 335-365) per Plan-Doc §7
+# (Welle D / T18c). These complete apiq's CL-* coverage on top of
+# apiq-ruleset-client-p1.yaml (P1 — Konkurrenz-Pari) +
+# apiq-ruleset-client-p2.yaml (P2 — Differentiator USP).
+#
+# Authored 2026-05-09 (T18c / Welle D, owner: client-p3-builder).
+#
+# Severity discipline (per severity-schema.ts) — P3 default `hint` unless
+# patterns.json hypothesis states higher (warn) — only apply default `hint`
+# downgrade when pattern-source explicitly recommends it; otherwise honour
+# the patterns.json severityHypothesis (most CL-P3 entries are hint or warn,
+# never error):
+#   - error: codegen actually fails or spec-syntax violated (RFC-2119 MUST)
+#   - warn:  codegen produces bad-but-compilable output OR strong consensus
+#   - hint:  SDK-quality degraded; ergonomics suboptimal
+#
+# Custom-functions used (registered in spectral-runner.ts post-Phase-3-integration):
+#   - camelize-collide-schema-property        (CL-3)
+#   - required-asymmetry-request-response     (CL-8)
+#   - int64-needs-string-alternative          (CL-16)
+#   - empty-body-2xx-4xx-discriminator        (CL-19)
+#   - response-ref-inconsistency              (CL-27)
+#   - nested-composition-depth                (CL-30)
+#   - field-name-length-balance               (CL-44)
+#   - crud-shape-consistency                  (CL-47)
+#   - params-order-required-first             (CL-51)
+#   - total-required-inputs-exceeds           (CL-53)
+#   - vendor-extension-prefix-consistency     (CL-61)
+#   - tag-casing-cross-spec-consistency       (CL-75)
+#   - read-only-required-conflict             (CL-80)
+#
+# All rules carry a 100% complete `apiq-meta` block per Welle-F schema:
+# pattern-id + lenses + sources (with verbatim+verifiedAt) + stakeholders +
+# lifecycle-phase + defect-class + iso25010 + codegen-targets (per-target
+# tagging where applicable, F7 — ≥50% concrete) + detection-precision +
+# auto-fix-safe + cost-impact + mttr-impact + agent-readiness-impact.
+
+extends:
+  - spectral:oas
+
+formats:
+  - oas3
+  - oas3_0
+  - oas3_1
+
+rules:
+  # =========================================================================
+  # CL-3 — Camelize-collide property×schema-name
+  # Targets: java, csharp, kotlin, typescript, python (camelize during codegen).
+  # Custom function: camelize-collide-schema-property.
+  # =========================================================================
+  # Source: openapi-generator #17909 (camelize-collision report);
+  #         rules-brainstorm.md CL-3 (P3)
+  # Lens: 4 (Client-Friction)
+  # Round: 2 (Welle D)
+  apiq-cl3-camelize-collide-property-schema:
+    description: >-
+      [CL-3] Property names that camelize to the same identifier (e.g. `user_id` and `userId` both → `userId`) cause SDK collision: codegen either renames silently or produces invalid output. Pick one naming convention per schema. Targets: java, csharp, kotlin, typescript, python.
+    message: "{{error}}"
+    severity: warn
+    given:
+      - "$.components.schemas[*]"
+      - "$..[?(@.type === 'object' && @.properties)]"
+    then:
+      function: camelize-collide-schema-property
+    apiq-meta:
+      pattern-id: CL-3
+      lenses: [ client-friction ]
+      sources:
+        - type: vendor
+          name: openapi-generator #17909
+          url: 'https://github.com/OpenAPITools/openapi-generator/issues/17909'
+          summary: 'property names that camelize to the same identifier collide in SDK output'
+        - type: mining
+          phase: round2
+          subagent: client-p3-builder
+      stakeholders: [ client-dev, codegen-tool, spec-author ]
+      lifecycle-phase: build-time
+      defect-class: ergonomic
+      iso25010: [ usability, compatibility ]
+      codegen-targets: [ java, csharp, kotlin, typescript, python ]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: medium
+      agent-readiness-impact: medium
+
+  # =========================================================================
+  # CL-8 — Property required-in-response not-in-request asymmetry
+  # Targets: typescript, java, csharp, kotlin (strict-typed langs surface
+  # the asymmetry as 3-state semantics).
+  # Custom function: required-asymmetry-request-response.
+  # =========================================================================
+  # Source: Speakeasy + openapi-gen #20213;
+  #         rules-brainstorm.md CL-8 (P3)
+  # Lens: 4 (Client-Friction), 3 (Evolution-Friction)
+  # Round: 2 (Welle D)
+  apiq-cl8-required-asymmetry-request-response:
+    description: >-
+      [CL-8] When the same property appears in both an operation's request and response schemas but is `required` in one and not the other, strictly-typed SDKs surface 3-state semantics (present/null/absent). Usually an authoring oversight — align the required-state across shapes or split the schema. Targets: typescript, java, csharp, kotlin.
+    message: "{{error}}"
+    severity: hint
+    given: "$"
+    then:
+      function: required-asymmetry-request-response
+    apiq-meta:
+      pattern-id: CL-8
+      lenses: [ client-friction, evolution-friction ]
+      sources:
+        - type: vendor
+          name: 'Speakeasy + openapi-gen #20213'
+          url: 'https://www.speakeasy.com/openapi'
+          summary: 'required-in-response-not-in-request asymmetry produces 3-state semantics'
+        - type: mining
+          phase: round2
+          subagent: client-p3-builder
+      stakeholders: [ client-dev, codegen-tool, spec-author ]
+      lifecycle-phase: build-time
+      defect-class: ergonomic
+      iso25010: [ compatibility, reliability ]
+      codegen-targets: [ typescript, java, csharp, kotlin ]
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: medium
+      agent-readiness-impact: medium
+
+  # =========================================================================
+  # CL-10 — Mixed text/plain + application/json same code
+  # Targets: * (codegen must pick one media-type or invent a union).
+  # =========================================================================
+  # Source: oapi-codegen #1897;
+  #         rules-brainstorm.md CL-10 (P3)
+  # Lens: 4 (Client-Friction)
+  # Round: 2 (Welle D)
+  apiq-cl10-no-mixed-text-json-same-code:
+    description: >-
+      [CL-10] When a single response status-code declares both `text/plain` and `application/json` content-types, SDK codegen tools must invent a union or pick one — typically discarding `text/plain`. Use a canonical content-type per status code or split into multiple status codes. Targets: java, csharp, kotlin, go, typescript (strict-typed langs surface the union as synthetic intermediate type).
+    message: "Response declares both `text/plain` and `application/json` on the same status code; codegen must pick one."
+    severity: warn
+    given: "$.paths[*][*].responses[?(@.content)]"
+    then:
+      field: content
+      function: schema
+      functionOptions:
+        schema:
+          type: object
+          # Forbid having BOTH text/plain AND application/json keys.
+          not:
+            allOf:
+              - required: [ 'text/plain' ]
+              - required: [ 'application/json' ]
+    apiq-meta:
+      pattern-id: CL-10
+      lenses: [ client-friction ]
+      sources:
+        - type: vendor
+          name: oapi-codegen #1897
+          url: 'https://github.com/oapi-codegen/oapi-codegen/issues/1897'
+          summary: 'mixed text/plain + application/json on same code forces codegen to pick'
+        - type: mining
+          phase: round2
+          subagent: client-p3-builder
+      stakeholders: [ client-dev, codegen-tool, spec-author ]
+      lifecycle-phase: build-time
+      defect-class: ergonomic
+      iso25010: [ usability, compatibility ]
+      codegen-targets: [ java, csharp, kotlin, go, typescript ]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: medium
+
+  # =========================================================================
+  # CL-14 — discriminator.propertyName leading underscore
+  # Targets: python, ruby (single-underscore identifier conventions)
+  # + java (private-by-convention). Stock pattern function.
+  # =========================================================================
+  # Source: openapi-gen #9444;
+  #         rules-brainstorm.md CL-14 (P3)
+  # Lens: 4 (Client-Friction)
+  # Round: 2 (Welle D)
+  apiq-cl14-discriminator-property-no-underscore-prefix:
+    description: >-
+      [CL-14] `discriminator.propertyName` should not start with an underscore — Python codegen treats `_name` as module-private/protected, and Java/Kotlin tools synthesise a mismatching getter. Use a public-style identifier. Targets: python, ruby, java, kotlin.
+    message: "discriminator.propertyName `{{value}}` starts with `_`; codegen treats this as private/protected in target SDKs."
+    severity: warn
+    given: "$..discriminator.propertyName"
+    then:
+      function: pattern
+      functionOptions:
+        notMatch: "^_"
+    apiq-meta:
+      pattern-id: CL-14
+      lenses: [ client-friction ]
+      sources:
+        - type: vendor
+          name: openapi-gen #9444
+          url: 'https://github.com/OpenAPITools/openapi-generator/issues/9444'
+          summary: 'discriminator propertyName starting with underscore breaks Python/Java private conventions'
+        - type: mining
+          phase: round2
+          subagent: client-p3-builder
+      stakeholders: [ client-dev, codegen-tool, spec-author ]
+      lifecycle-phase: build-time
+      defect-class: ergonomic
+      iso25010: [ compatibility, usability ]
+      codegen-targets: [ python, ruby, java, kotlin ]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: low
+
+  # =========================================================================
+  # CL-16 — int64 declared without string-alternative
+  # Targets: typescript, javascript (lose precision past 2^53).
+  # Custom function: int64-needs-string-alternative.
+  # =========================================================================
+  # Source: OAI + Speakeasy + Stripe (https://stripe.com/docs/api);
+  #         rules-brainstorm.md CL-16 (P3)
+  # Lens: 4 (Client-Friction)
+  # Round: 2 (Welle D)
+  apiq-cl16-int64-needs-string-alternative:
+    description: >-
+      [CL-16] Properties declared `format: int64` should provide a sibling string form (via `oneOf`/`anyOf`) for JavaScript SDK consumers — JS Number loses precision past 2^53. Stripe's public API serves both forms. Targets: typescript, javascript.
+    message: "{{error}}"
+    severity: hint
+    given:
+      - "$..[?(@.format === 'int64')]"
+    then:
+      function: int64-needs-string-alternative
+    apiq-meta:
+      pattern-id: CL-16
+      lenses: [ client-friction ]
+      sources:
+        - type: vendor
+          name: 'Stripe API style guide (int64 + string)'
+          url: 'https://stripe.com/docs/api'
+          summary: 'int64 IDs are returned as strings to preserve precision in JS clients'
+        - type: vendor
+          name: 'OAI + Speakeasy guidance'
+          url: 'https://www.speakeasy.com/openapi'
+          verifiedAt: '2026-05-09'
+        - type: mining
+          phase: round2
+          subagent: client-p3-builder
+      stakeholders: [ client-dev, codegen-tool, spec-author ]
+      lifecycle-phase: build-time
+      defect-class: incomplete
+      iso25010: [ reliability, compatibility ]
+      codegen-targets: [ typescript, javascript ]
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: medium
+      mttr-impact: medium
+      agent-readiness-impact: medium
+
+  # =========================================================================
+  # CL-19 — Empty-body 2xx + 4xx no discriminating header
+  # Targets: * (any SDK + any agent). Custom function.
+  # =========================================================================
+  # Source: openapi-typescript guidance;
+  #         rules-brainstorm.md CL-19 (P3)
+  # Lens: 4 (Client-Friction), 9 (AI-Agent-Consumability)
+  # Round: 2 (Welle D)
+  apiq-cl19-empty-body-2xx-4xx-discriminator:
+    description: >-
+      [CL-19] When an operation has both empty-bodied 2xx and empty-bodied 4xx responses without distinguishing data, SDK consumers and AI agents cannot disambiguate success from error from the body alone — they must rely on HTTP status. Provide at least minimal response bodies (e.g. `{ status: 'ok' }` vs `{ error: '...' }`). Targets: *.
+    message: "{{error}}"
+    severity: hint
+    given: "$"
+    then:
+      function: empty-body-2xx-4xx-discriminator
+    apiq-meta:
+      pattern-id: CL-19
+      lenses: [ client-friction, ai-agent-consumability ]
+      sources:
+        - type: vendor
+          name: openapi-typescript guidance
+          url: 'https://github.com/openapi-ts/openapi-typescript'
+          summary: 'empty-body responses with no discriminator force SDK consumers to rely solely on HTTP status'
+        - type: mining
+          phase: round2
+          subagent: client-p3-builder
+      stakeholders: [ client-dev, ai-agent, codegen-tool ]
+      lifecycle-phase: build-time
+      defect-class: ergonomic
+      iso25010: [ usability, compatibility ]
+      codegen-targets:
+        - java
+        - go
+        - python
+        - typescript
+        - rust
+        - csharp
+        - kotlin
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: high
+
+  # =========================================================================
+  # CL-23 — additionalProperties:true free-form-object
+  # Targets: java, csharp, kotlin, go (strict-typed languages produce
+  # Map<String, Object> with no narrowing). Stock DSL.
+  # =========================================================================
+  # Source: openapi-gen #796;
+  #         rules-brainstorm.md CL-23 (P3)
+  # Lens: 4 (Client-Friction)
+  # Round: 2 (Welle D)
+  apiq-cl23-no-free-form-additional-properties:
+    description: >-
+      [CL-23] Schemas declaring `additionalProperties: true` produce free-form objects that codegen tools render as `Map<String, Object>` / `Dictionary<string, object>` — type narrowing impossible. Either remove `additionalProperties` (closed schema) or set it to a concrete schema with a type. Targets: java, csharp, kotlin, go.
+    message: "Schema declares `additionalProperties: true`; codegen produces typeless Map<String,Object>."
+    severity: hint
+    given: "$..additionalProperties"
+    then:
+      function: falsy
+    apiq-meta:
+      pattern-id: CL-23
+      lenses: [ client-friction ]
+      sources:
+        - type: vendor
+          name: openapi-gen #796
+          url: 'https://github.com/OpenAPITools/openapi-generator/issues/796'
+          summary: 'additionalProperties:true loses type narrowing in strict-typed targets'
+        - type: mining
+          phase: round2
+          subagent: client-p3-builder
+      stakeholders: [ client-dev, codegen-tool, spec-author ]
+      lifecycle-phase: build-time
+      defect-class: incomplete
+      iso25010: [ usability, compatibility ]
+      codegen-targets: [ java, csharp, kotlin, go ]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: medium
+
+  # =========================================================================
+  # CL-27 — components.responses inconsistent $ref
+  # Targets: * (consistency-of-codegen-output for cross-op responses).
+  # Custom function: response-ref-inconsistency.
+  # =========================================================================
+  # Source: openapi-typescript #408;
+  #         rules-brainstorm.md CL-27 (P3)
+  # Lens: 4 (Client-Friction)
+  # Round: 2 (Welle D)
+  apiq-cl27-response-ref-consistent:
+    description: >-
+      [CL-27] Common error responses (401, 403, 404, 429, 500) should either always be inline or always `$ref` to a component-response. Mixed forms cause codegen to emit inconsistent SDK error-types (some `Unauthorized`, some `Response401`). Targets: *.
+    message: "{{error}}"
+    severity: hint
+    given: "$"
+    then:
+      function: response-ref-inconsistency
+    apiq-meta:
+      pattern-id: CL-27
+      lenses: [ client-friction ]
+      sources:
+        - type: vendor
+          name: openapi-typescript #408
+          url: 'https://github.com/openapi-ts/openapi-typescript/issues/408'
+          summary: 'inconsistent $ref of common responses produces mixed SDK error-types'
+        - type: mining
+          phase: round2
+          subagent: client-p3-builder
+      stakeholders: [ client-dev, codegen-tool, spec-author ]
+      lifecycle-phase: build-time
+      defect-class: ergonomic
+      iso25010: [ usability, maintainability ]
+      codegen-targets:
+        - java
+        - go
+        - python
+        - typescript
+        - rust
+        - csharp
+        - kotlin
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: medium
+
+  # =========================================================================
+  # CL-28 — Patterned status-codes (4XX/5XX)
+  # Targets: typescript, java, python, csharp, kotlin (codegen with
+  # exhaustive-error-class generation).
+  # =========================================================================
+  # Source: openapi-python-client #1271;
+  #         rules-brainstorm.md CL-28 (P3)
+  # Lens: 4 (Client-Friction)
+  # Round: 2 (Welle D)
+  apiq-cl28-no-patterned-status-codes:
+    description: >-
+      [CL-28] OAS 3.x allows wildcard status-codes like `4XX` / `5XX`, but codegen tools that synthesize exhaustive error-classes (openapi-python-client, java) cannot generate one class per individual code from a wildcard. Use specific status codes (404, 429, 500). Targets: typescript, java, python, csharp, kotlin.
+    message: "Status-code `{{property}}` is patterned (e.g. 4XX/5XX); codegen cannot synthesise exhaustive error-classes."
+    severity: warn
+    given: "$.paths[*][*].responses"
+    then:
+      field: '@key'
+      function: pattern
+      functionOptions:
+        notMatch: "^[1-5]XX$"
+    apiq-meta:
+      pattern-id: CL-28
+      lenses: [ client-friction ]
+      sources:
+        - type: vendor
+          name: openapi-python-client #1271
+          url: 'https://github.com/openapi-generators/openapi-python-client/issues/1271'
+          summary: 'patterned 4XX/5XX status codes break exhaustive error-class generation'
+        - type: mining
+          phase: round2
+          subagent: client-p3-builder
+      stakeholders: [ client-dev, codegen-tool, spec-author ]
+      lifecycle-phase: build-time
+      defect-class: incomplete
+      iso25010: [ compatibility, usability ]
+      codegen-targets: [ typescript, java, python, csharp, kotlin ]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: medium
+
+  # =========================================================================
+  # CL-30 — Deeply-nested allOf/oneOf chains (≥3 hops)
+  # Targets: * (all renderers + all codegens).
+  # Custom function: nested-composition-depth.
+  # =========================================================================
+  # Source: swagger-ui #7437;
+  #         rules-brainstorm.md CL-30 (P3)
+  # Lens: 4 (Client-Friction)
+  # Round: 2 (Welle D)
+  apiq-cl30-no-deep-composition-chains:
+    description: >-
+      [CL-30] `allOf`/`oneOf`/`anyOf` chains nested >3 hops deep (e.g. `allOf: [{ oneOf: [{ anyOf: [...] }] }]`) crash docs portals (swagger-ui #7437) and codegen produces synthetic intermediate types that obscure the SDK shape. Flatten via named components. Targets: java, csharp, kotlin, typescript, go (strict-typed langs synthesise wrapper types per hop).
+    message: "{{error}}"
+    severity: warn
+    given:
+      - "$.components.schemas[*]"
+      - "$.paths[*][*].requestBody.content[*].schema"
+      - "$.paths[*][*].responses[*].content[*].schema"
+    then:
+      function: nested-composition-depth
+      functionOptions:
+        maxDepth: 3
+    apiq-meta:
+      pattern-id: CL-30
+      lenses: [ client-friction ]
+      sources:
+        - type: vendor
+          name: swagger-ui #7437
+          url: 'https://github.com/swagger-api/swagger-ui/issues/7437'
+          summary: 'deeply-nested allOf/oneOf chains crash renderer + produce synthetic intermediates'
+        - type: mining
+          phase: round2
+          subagent: client-p3-builder
+      stakeholders: [ client-dev, codegen-tool, docs-tool, spec-author ]
+      lifecycle-phase: build-time
+      defect-class: ergonomic
+      iso25010: [ usability, maintainability ]
+      codegen-targets: [ java, csharp, kotlin, typescript, go ]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: medium
+      mttr-impact: medium
+      agent-readiness-impact: medium
+
+  # =========================================================================
+  # CL-32 / D-MIN-5 — array-of-array
+  # Targets: * (array-of-array structures are awkward in most SDK call-sites).
+  # Stock DSL: schema check via not.
+  # =========================================================================
+  # Source: MIN-32 IBM + stoplight #1418;
+  #         rules-brainstorm.md CL-32 (P3)
+  # Lens: 4 (Client-Friction)
+  # Round: 2 (Welle D)
+  apiq-cl32-no-array-of-array:
+    description: >-
+      [CL-32] Schema with `type: array` whose `items` is again `type: array` (array-of-array) is awkward in SDK call-sites and indicates the author should introduce a named row/cell type. Wrap in an object schema or flatten via a join. Targets: java, csharp, kotlin, go (strict-typed-array generics surface the awkwardness most).
+    message: "Array of array detected; consider wrapping inner-array in a named object-schema."
+    severity: hint
+    given: "$..[?(@.type === 'array' && @.items)]"
+    then:
+      field: items
+      function: schema
+      functionOptions:
+        schema:
+          type: object
+          not:
+            properties:
+              type:
+                const: array
+    apiq-meta:
+      pattern-id: CL-32
+      lenses: [ client-friction ]
+      sources:
+        - type: vendor
+          name: 'IBM MIN-32 + stoplight #1418'
+          url: 'https://github.com/IBM/openapi-validator'
+          summary: 'array-of-array structures produce awkward SDK call-sites'
+        - type: mining
+          phase: round2
+          subagent: client-p3-builder
+      stakeholders: [ client-dev, codegen-tool, spec-author ]
+      lifecycle-phase: build-time
+      defect-class: ergonomic
+      iso25010: [ usability, maintainability ]
+      codegen-targets: [ java, csharp, kotlin, go ]
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: medium
+      agent-readiness-impact: medium
+
+  # =========================================================================
+  # CL-34 — Property-name "Client" (Python SDK class collision)
+  # Targets: python (SDK class is named `Client` — property `Client`
+  # would collide).
+  # =========================================================================
+  # Source: openapi-python-client #1045;
+  #         rules-brainstorm.md CL-34 (P3)
+  # Lens: 4 (Client-Friction)
+  # Round: 2 (Welle D)
+  apiq-cl34-property-name-not-client:
+    description: >-
+      [CL-34] Property name `Client` (case-insensitive `client`) in a schema collides with the Python SDK base-class openapi-python-client generates (`Client`). Use a domain-prefix (e.g. `apiClient`, `userClient`). Targets: python, ruby.
+    message: "Property name `{{property}}` collides with the Python SDK base-class name `Client`."
+    severity: hint
+    given: "$..properties"
+    then:
+      field: '@key'
+      function: pattern
+      functionOptions:
+        notMatch: "^[Cc]lient$"
+    apiq-meta:
+      pattern-id: CL-34
+      lenses: [ client-friction ]
+      sources:
+        - type: vendor
+          name: openapi-python-client #1045
+          url: 'https://github.com/openapi-generators/openapi-python-client/issues/1045'
+          summary: 'property named Client collides with generated SDK Client base-class'
+        - type: mining
+          phase: round2
+          subagent: client-p3-builder
+      stakeholders: [ client-dev, codegen-tool, spec-author ]
+      lifecycle-phase: build-time
+      defect-class: ergonomic
+      iso25010: [ compatibility, usability ]
+      codegen-targets: [ python, ruby ]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: low
+
+  # =========================================================================
+  # CL-38 — Multi-line description leading-space stripped
+  # Targets: * (renderers + codegen description strings).
+  # Stock pattern function: detect leading-space lines in descriptions.
+  # =========================================================================
+  # Source: openapi-gen #8011 + oapi-codegen;
+  #         rules-brainstorm.md CL-38 (P3)
+  # Lens: 4 (Client-Friction)
+  # Round: 2 (Welle D)
+  apiq-cl38-description-no-leading-space-lines:
+    description: >-
+      [CL-38] Multi-line description strings with leading spaces on continuation lines (typical of YAML block-scalar typos, e.g. `description: |2\n  line1\n   line2`) get rendered with mid-paragraph indentation — codegen passes this verbatim into docstrings. Use folded `>-` block-scalar or strip leading whitespace. Targets: *.
+    message: "Description has continuation-lines with extra leading whitespace; renderers preserve it as mid-paragraph indent."
+    severity: hint
+    given: "$..description"
+    then:
+      function: pattern
+      functionOptions:
+        notMatch: "\\n[ \\t]{2,}[^ \\t\\n]"
+    apiq-meta:
+      pattern-id: CL-38
+      lenses: [ client-friction ]
+      sources:
+        - type: vendor
+          name: openapi-gen #8011 + oapi-codegen
+          url: 'https://github.com/OpenAPITools/openapi-generator/issues/8011'
+          summary: 'description leading-space gets preserved as indentation in docstrings'
+        - type: mining
+          phase: round2
+          subagent: client-p3-builder
+      stakeholders: [ client-dev, codegen-tool, docs-tool, spec-author ]
+      lifecycle-phase: build-time
+      defect-class: ergonomic
+      iso25010: [ usability ]
+      codegen-targets:
+        - java
+        - go
+        - python
+        - typescript
+        - rust
+        - csharp
+        - kotlin
+      detection-precision: medium
+      auto-fix-safe: true
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: low
+
+  # =========================================================================
+  # CL-39 / HTML-Walker — Description has HTML or complex Markdown
+  # Targets: * (codegen docstrings + plain-text rendering).
+  # =========================================================================
+  # Source: OAS + swagger-editor #2180;
+  #         rules-brainstorm.md CL-39 (P3)
+  # Lens: 4 (Client-Friction), 9 (AI-Agent-Consumability)
+  # Round: 2 (Welle D)
+  apiq-cl39-description-no-html-or-complex-markdown:
+    description: >-
+      [CL-39] Description fields should be plain text or simple Markdown (single-line emphasis, code-spans, headings). Embedded HTML tags (`<table>`, `<div>`, `<script>`), HTML entities (`&amp;`, `&lt;`), or complex Markdown (tables, footnote refs) breaks SDK docstrings (Python, Java, C# all strip HTML differently) and is lossy for AI agents. Targets: *.
+    message: "Description contains HTML/complex-Markdown — strip or convert to plain text for portable SDK docstrings."
+    severity: hint
+    given: "$..description"
+    then:
+      function: pattern
+      functionOptions:
+        notMatch: "<(table|div|script|style|iframe|object|embed|video|audio|canvas|svg|button|form|input)|&[a-zA-Z][a-zA-Z0-9]*;"
+    apiq-meta:
+      pattern-id: CL-39
+      lenses: [ client-friction, ai-agent-consumability ]
+      sources:
+        - type: vendor
+          name: 'OAS spec + swagger-editor #2180'
+          url: 'https://spec.openapis.org/oas/latest.html'
+          summary: 'description fields should be Markdown — embedded HTML degrades portable docstrings'
+        - type: mining
+          phase: round2
+          subagent: client-p3-builder
+      stakeholders: [ client-dev, codegen-tool, docs-tool, ai-agent ]
+      lifecycle-phase: build-time
+      defect-class: ergonomic
+      iso25010: [ usability, portability ]
+      codegen-targets:
+        - java
+        - go
+        - python
+        - typescript
+        - rust
+        - csharp
+        - kotlin
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: medium
+
+  # =========================================================================
+  # CL-41 — External $ref to relative-path file
+  # Targets: * (offline-bundling vs runtime-resolution).
+  # Stock pattern function on $ref strings.
+  # =========================================================================
+  # Source: openapi-gen + oapi-codegen;
+  #         rules-brainstorm.md CL-41 (P3)
+  # Lens: 4 (Client-Friction)
+  # Round: 2 (Welle D)
+  apiq-cl41-no-external-relative-ref:
+    description: >-
+      [CL-41] `$ref` values pointing to relative-path files (`./schemas.yaml#/Foo`, `../common/types.yaml`) require offline bundling before codegen — many SDK pipelines lack the bundler step and fail with "$ref not resolvable". Use an internal component-$ref or bundle pre-publication. Targets: *.
+    message: "External `$ref` to relative-path file `{{value}}` requires offline bundling step before codegen."
+    severity: hint
+    given: "$..$ref"
+    then:
+      function: pattern
+      functionOptions:
+        notMatch: "^(\\.{1,2}/|[a-zA-Z0-9_-]+\\.(yaml|yml|json)#?)"
+    apiq-meta:
+      pattern-id: CL-41
+      lenses: [ client-friction ]
+      sources:
+        - type: vendor
+          name: 'openapi-gen + oapi-codegen (offline-bundling reports)'
+          url: 'https://github.com/OpenAPITools/openapi-generator'
+          summary: 'external relative-path refs require bundling step before codegen'
+        - type: mining
+          phase: round2
+          subagent: client-p3-builder
+      stakeholders: [ client-dev, codegen-tool, spec-author ]
+      lifecycle-phase: build-time
+      defect-class: ergonomic
+      iso25010: [ maintainability, usability ]
+      codegen-targets:
+        - java
+        - go
+        - python
+        - typescript
+        - rust
+        - csharp
+        - kotlin
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: medium
+      mttr-impact: medium
+      agent-readiness-impact: low
+
+  # =========================================================================
+  # CL-42 — $ref to external HTTPS URLs
+  # Targets: * (runtime fetch breaks offline codegen + adds external
+  # dependency).
+  # =========================================================================
+  # Source: openapi-gen + oapi-codegen;
+  #         rules-brainstorm.md CL-42 (P3)
+  # Lens: 4 (Client-Friction)
+  # Round: 2 (Welle D)
+  apiq-cl42-no-external-https-ref:
+    description: >-
+      [CL-42] `$ref` values pointing to external HTTPS URLs (`https://example.com/schemas/foo.yaml`) require runtime fetch — most codegen pipelines run offline or behind firewalls and fail to resolve. Bundle external schemas pre-publication via `swagger-cli bundle` or equivalent. Targets: *.
+    message: "External `$ref` to HTTPS URL `{{value}}` requires runtime fetch + bundling step."
+    severity: warn
+    given: "$..$ref"
+    then:
+      function: pattern
+      functionOptions:
+        notMatch: "^https?://"
+    apiq-meta:
+      pattern-id: CL-42
+      lenses: [ client-friction ]
+      sources:
+        - type: vendor
+          name: 'openapi-gen + oapi-codegen (HTTPS-ref reports)'
+          url: 'https://github.com/OpenAPITools/openapi-generator'
+          summary: 'HTTPS-URL $refs require runtime fetch + bundling — fail in offline pipelines'
+        - type: mining
+          phase: round2
+          subagent: client-p3-builder
+      stakeholders: [ client-dev, codegen-tool, spec-author ]
+      lifecycle-phase: build-time
+      defect-class: ergonomic
+      iso25010: [ maintainability, reliability ]
+      codegen-targets:
+        - java
+        - go
+        - python
+        - typescript
+        - rust
+        - csharp
+        - kotlin
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: medium
+      mttr-impact: medium
+      agent-readiness-impact: low
+
+  # =========================================================================
+  # CL-43 — description has $ref-like-strings
+  # Targets: * (description should be human-prose, not JSON-pointer-link).
+  # =========================================================================
+  # Source: MIN-46 IBM;
+  #         rules-brainstorm.md CL-43 (P3)
+  # Lens: 4 (Client-Friction)
+  # Round: 2 (Welle D)
+  apiq-cl43-description-no-ref-like-strings:
+    description: >-
+      [CL-43] Description text containing `$ref:`-like strings (e.g. `"see $ref: '#/components/schemas/Foo'"`) is usually a copy-paste authoring artefact — codegen renders the raw string into docstrings. Use Markdown links or schema-cross-references via OAS-extensions instead. Targets: *.
+    message: "Description contains a literal `$ref:` string — likely an authoring copy-paste artefact."
+    severity: hint
+    given: "$..description"
+    then:
+      function: pattern
+      functionOptions:
+        notMatch: "\\$ref\\s*:\\s*['\"#/]"
+    apiq-meta:
+      pattern-id: CL-43
+      lenses: [ client-friction ]
+      sources:
+        - type: vendor
+          name: 'IBM openapi-validator MIN-46'
+          url: 'https://github.com/IBM/openapi-validator'
+          summary: 'description containing $ref-like strings is a copy-paste authoring artefact'
+        - type: mining
+          phase: round2
+          subagent: client-p3-builder
+      stakeholders: [ client-dev, codegen-tool, docs-tool, spec-author ]
+      lifecycle-phase: build-time
+      defect-class: ergonomic
+      iso25010: [ usability ]
+      codegen-targets:
+        - java
+        - go
+        - python
+        - typescript
+        - rust
+        - csharp
+        - kotlin
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: low
+
+  # =========================================================================
+  # CL-44 — Verbose vs cryptic field-names
+  # Targets: typescript, java, csharp, kotlin, python, go, rust
+  # (all SDK targets — DX guidance).
+  # Custom function: field-name-length-balance.
+  # =========================================================================
+  # Source: Speakeasy + Lens-4;
+  #         rules-brainstorm.md CL-44 (P3)
+  # Lens: 4 (Client-Friction)
+  # Round: 2 (Welle D)
+  apiq-cl44-field-name-length-balanced:
+    description: >-
+      [CL-44] Field names should be 3..30 chars. Below 3 = cryptic (`u`, `ix` — exception list: `id`, `os`, `ip`, etc.); above 30 = verbose (`usersOrganizationalGroupMembershipDetails`). Both extremes degrade SDK developer experience. Targets: typescript, java, csharp, kotlin, python, go, rust.
+    message: "{{error}}"
+    severity: hint
+    given: "$.components.schemas[*].properties.*~"
+    then:
+      function: field-name-length-balance
+    apiq-meta:
+      pattern-id: CL-44
+      lenses: [ client-friction ]
+      sources:
+        - type: vendor
+          name: 'Speakeasy + Lens-4 (field-name DX guidance)'
+          url: 'https://www.speakeasy.com/openapi'
+          summary: 'field names should be balanced 3..30 chars for clean SDK call-sites'
+        - type: mining
+          phase: round2
+          subagent: client-p3-builder
+      stakeholders: [ client-dev, codegen-tool, ai-agent, spec-author ]
+      lifecycle-phase: build-time
+      defect-class: ergonomic
+      iso25010: [ usability ]
+      codegen-targets: [ typescript, java, csharp, kotlin, python, go, rust ]
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: medium
+
+  # =========================================================================
+  # CL-47 / D-MIN-3 — POST/PUT/PATCH return-shape ≠ GET-shape
+  # Targets: * (CRUD-shape consistency for SDK ergonomics).
+  # Custom function: crud-shape-consistency.
+  # =========================================================================
+  # Source: MIN-35 IBM + Lens-4 (Stripe consensus);
+  #         rules-brainstorm.md CL-47 (P3)
+  # Lens: 4 (Client-Friction)
+  # Round: 2 (Welle D)
+  apiq-cl47-crud-shape-consistent:
+    description: >-
+      [CL-47] On a resource path (e.g. `/orders/{id}`), POST/PUT/PATCH should return the same shape as GET — Stripe-style. Mismatched shapes (e.g. POST returns `{id, status}` only, GET returns full `Order`) force SDK consumers to do an extra GET after every mutation. Targets: *.
+    message: "{{error}}"
+    severity: hint
+    given: "$"
+    then:
+      function: crud-shape-consistency
+    apiq-meta:
+      pattern-id: CL-47
+      lenses: [ client-friction ]
+      sources:
+        - type: vendor
+          name: 'IBM MIN-35 + Stripe public-API style'
+          url: 'https://stripe.com/docs/api'
+          summary: 'POST/PUT/PATCH return-shape should match GET-shape on the same resource'
+        - type: mining
+          phase: round2
+          subagent: client-p3-builder
+      stakeholders: [ client-dev, codegen-tool, spec-author ]
+      lifecycle-phase: build-time
+      defect-class: ergonomic
+      iso25010: [ usability ]
+      codegen-targets:
+        - java
+        - go
+        - python
+        - typescript
+        - rust
+        - csharp
+        - kotlin
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: medium
+      mttr-impact: medium
+      agent-readiness-impact: high
+
+  # =========================================================================
+  # CL-51 / R-MIN-1 — Required+optional params unordered
+  # Targets: typescript, python, go, rust (positional + named-args
+  # patterns benefit most from ordered params).
+  # Custom function: params-order-required-first.
+  # =========================================================================
+  # Source: MIN-27 IBM (parameters-order rule);
+  #         rules-brainstorm.md CL-51 (P3)
+  # Lens: 4 (Client-Friction)
+  # Round: 2 (Welle D)
+  apiq-cl51-params-order-required-first:
+    description: >-
+      [CL-51] In the `parameters` array, required parameters should precede optional ones. Codegen tools that produce positional or named-with-defaults SDK signatures (TypeScript, Python, Go, Rust) generate cleaner method signatures when the spec orders params consistently. Targets: typescript, python, go, rust.
+    message: "{{error}}"
+    severity: hint
+    given: "$.paths[*][*].parameters"
+    then:
+      function: params-order-required-first
+    apiq-meta:
+      pattern-id: CL-51
+      lenses: [ client-friction ]
+      sources:
+        - type: vendor
+          name: 'IBM openapi-validator MIN-27'
+          url: 'https://github.com/IBM/openapi-validator'
+          summary: 'parameters should be ordered: required first, optional last'
+        - type: mining
+          phase: round2
+          subagent: client-p3-builder
+      stakeholders: [ client-dev, codegen-tool, spec-author ]
+      lifecycle-phase: build-time
+      defect-class: ergonomic
+      iso25010: [ usability ]
+      codegen-targets: [ typescript, python, go, rust ]
+      detection-precision: high
+      auto-fix-safe: true
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: low
+
+  # =========================================================================
+  # CL-52 / M-SP-17 — additionalProperties dictionary inconsistent value-type
+  # Walker-territory (cross-property-walk to validate dict-value-type
+  # consistency across multiple sample-paths). Sentinel rule emits per-schema
+  # so the pattern-id is visible.
+  # =========================================================================
+  # Source: IBM openapi-validator (MIN);
+  #         rules-brainstorm.md CL-52 (P3)
+  # Lens: 4 (Client-Friction)
+  # Round: 2 (Welle D)
+  apiq-cl52-dict-value-type-consistent-walker-sentinel:
+    description: >-
+      [CL-52] Schemas using `additionalProperties` as a dictionary should declare a consistent value-type — when the value-type varies across sibling-keys (e.g. some `type: string`, some `type: integer`), codegen produces `Map<String, Object>` and SDK consumers lose narrowing. Cross-key consistency-walk lives in the schema-statistics walker; this rule is a catalog-visibility sentinel. Targets: java, csharp, kotlin, go, typescript.
+    message: "Schema present (sentinel rule for CL-52 — full value-type-consistency walk in schema-statistics walker)."
+    severity: hint
+    given: "$..[?(@.additionalProperties)]"
+    then:
+      function: truthy
+    apiq-meta:
+      pattern-id: CL-52
+      lenses: [ client-friction ]
+      sources:
+        - type: vendor
+          name: 'IBM openapi-validator MIN'
+          url: 'https://github.com/IBM/openapi-validator'
+          summary: 'inconsistent additionalProperties value-type forces typeless Map'
+        - type: mining
+          phase: round2
+          subagent: client-p3-builder
+      stakeholders: [ client-dev, codegen-tool, spec-author ]
+      lifecycle-phase: build-time
+      defect-class: ergonomic
+      iso25010: [ usability, compatibility ]
+      codegen-targets: [ java, csharp, kotlin, go, typescript ]
+      detection-precision: low
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: low
+
+  # =========================================================================
+  # CL-53 / R3 — parameters + requestBody both required total>5
+  # Targets: * (input-burden DX limit).
+  # Custom function: total-required-inputs-exceeds.
+  # =========================================================================
+  # Source: Speakeasy + Postman;
+  #         rules-brainstorm.md CL-53 (P3)
+  # Lens: 4 (Client-Friction), 9 (AI-Agent-Consumability)
+  # Round: 2 (Welle D)
+  apiq-cl53-total-required-inputs-bounded:
+    description: >-
+      [CL-53] Operations with >5 total required inputs (parameters + requestBody.required entries combined) are hard for SDK consumers and AI agents to construct correctly. Group related inputs into a structured object or relax to optional with sensible defaults. Targets: *.
+    message: "{{error}}"
+    severity: hint
+    given: "$.paths[*][get,post,put,patch,delete]"
+    then:
+      function: total-required-inputs-exceeds
+      functionOptions:
+        threshold: 5
+    apiq-meta:
+      pattern-id: CL-53
+      lenses: [ client-friction, ai-agent-consumability ]
+      sources:
+        - type: vendor
+          name: 'Speakeasy + Postman input-burden guidance'
+          url: 'https://www.speakeasy.com/openapi'
+          summary: 'operations with >5 required inputs hurt agent + SDK call-construction'
+        - type: mining
+          phase: round2
+          subagent: client-p3-builder
+      stakeholders: [ client-dev, ai-agent, codegen-tool, spec-author ]
+      lifecycle-phase: build-time
+      defect-class: ergonomic
+      iso25010: [ usability ]
+      codegen-targets:
+        - java
+        - go
+        - python
+        - typescript
+        - rust
+        - csharp
+        - kotlin
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: medium
+      mttr-impact: medium
+      agent-readiness-impact: high
+
+  # =========================================================================
+  # CL-61 — Vendor-extension prefix-inconsistency
+  # Targets: * (consistency for downstream tool detection).
+  # Custom function: vendor-extension-prefix-consistency.
+  # =========================================================================
+  # Source: Speakeasy + OAI;
+  #         rules-brainstorm.md CL-61 (P3)
+  # Lens: 4 (Client-Friction)
+  # Round: 2 (Welle D)
+  apiq-cl61-vendor-extension-prefix-consistent:
+    description: >-
+      [CL-61] Vendor-extension keys (`x-foo-*`) should use one canonical prefix per vendor across the spec. Mixed casings (`x-stripe-*` and `x-Stripe-*`) or separators (`x-stripe-*` vs `x-stripe_*`) confuse downstream tooling and codegen filters. Targets: *.
+    message: "{{error}}"
+    severity: hint
+    given: "$"
+    then:
+      function: vendor-extension-prefix-consistency
+    apiq-meta:
+      pattern-id: CL-61
+      lenses: [ client-friction ]
+      sources:
+        - type: vendor
+          name: 'Speakeasy + OAI vendor-extension guidance'
+          url: 'https://www.speakeasy.com/openapi'
+          summary: 'vendor-extension prefixes should use one canonical casing/separator per vendor'
+        - type: mining
+          phase: round2
+          subagent: client-p3-builder
+      stakeholders: [ client-dev, codegen-tool, spec-author ]
+      lifecycle-phase: build-time
+      defect-class: ergonomic
+      iso25010: [ maintainability, usability ]
+      codegen-targets:
+        - java
+        - go
+        - python
+        - typescript
+        - rust
+        - csharp
+        - kotlin
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: low
+
+  # =========================================================================
+  # CL-62 / Q5 — Operations same Resource varying tags
+  # Walker-territory (cross-op tag-consistency on resource paths). Sentinel.
+  # =========================================================================
+  # Source: Lens-4 + Postman;
+  #         rules-brainstorm.md CL-62 (P3)
+  # Lens: 4 (Client-Friction)
+  # Round: 2 (Welle D)
+  apiq-cl62-tags-coherent-on-resource-walker-sentinel:
+    description: >-
+      [CL-62] Operations on the same resource (e.g. `/orders` and `/orders/{id}`) should share at least one common tag — otherwise SDK consumers see split method-groupings (`OrdersApi` vs `OrderApi`) and AI agents lose resource-grouping. Cross-path tag-consistency-walk lives in the operations-classifier walker; this rule is a catalog-visibility sentinel. Targets: *.
+    message: "Path present (sentinel rule for CL-62 — full cross-path tag-consistency in operations-classifier walker)."
+    severity: hint
+    given: "$.paths[*]~"
+    then:
+      function: truthy
+    apiq-meta:
+      pattern-id: CL-62
+      lenses: [ client-friction ]
+      sources:
+        - type: vendor
+          name: 'Lens-4 + Postman tag-consistency guidance'
+          url: 'https://www.postman.com/api-platform/'
+          summary: 'operations on the same resource should share tags for SDK grouping'
+        - type: mining
+          phase: round2
+          subagent: client-p3-builder
+      stakeholders: [ client-dev, codegen-tool, ai-agent, spec-author ]
+      lifecycle-phase: build-time
+      defect-class: ergonomic
+      iso25010: [ usability ]
+      codegen-targets:
+        - java
+        - go
+        - python
+        - typescript
+        - rust
+        - csharp
+        - kotlin
+      detection-precision: low
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: medium
+
+  # =========================================================================
+  # CL-65 — Required boolean without default
+  # Targets: * (SDK call-site ergonomics — boolean without default
+  # forces explicit true/false at every call).
+  # Stock DSL via schema check on properties.
+  # =========================================================================
+  # Source: openapi-gen multi;
+  #         rules-brainstorm.md CL-65 (P3)
+  # Lens: 4 (Client-Friction)
+  # Round: 2 (Welle D)
+  apiq-cl65-required-boolean-needs-default:
+    description: >-
+      [CL-65] Boolean properties listed in `required` should declare a `default` value — otherwise the SDK consumer must pass `true`/`false` explicitly at every call-site. Specs with many such required-bool fields produce verbose SDK invocations. Targets: java, csharp, kotlin, go, rust (strict-default handling — JS/Python tolerate undefined-default).
+    message: "Required boolean property `{{property}}` lacks a `default`; SDK consumers must specify true/false at every call."
+    severity: hint
+    given: "$..[?(@.type === 'boolean')]"
+    then:
+      field: default
+      function: defined
+    apiq-meta:
+      pattern-id: CL-65
+      lenses: [ client-friction ]
+      sources:
+        - type: vendor
+          name: 'openapi-gen multi-issue (boolean-default reports)'
+          url: 'https://github.com/OpenAPITools/openapi-generator'
+          summary: 'required boolean fields without default produce verbose SDK call-sites'
+        - type: mining
+          phase: round2
+          subagent: client-p3-builder
+      stakeholders: [ client-dev, codegen-tool, spec-author ]
+      lifecycle-phase: build-time
+      defect-class: ergonomic
+      iso25010: [ usability ]
+      codegen-targets: [ java, csharp, kotlin, go, rust ]
+      detection-precision: medium
+      auto-fix-safe: true
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: low
+
+  # =========================================================================
+  # CL-67 / A13 — Schema oneOf with single element
+  # Targets: * (oneOf with 1 element is a no-op — codegen synthesises
+  # an unnecessary wrapper type).
+  # Stock DSL.
+  # =========================================================================
+  # Source: apiq A13;
+  #         rules-brainstorm.md CL-67 (P3)
+  # Lens: 4 (Client-Friction)
+  # Round: 2 (Welle D)
+  apiq-cl67-oneof-needs-multiple-elements:
+    description: >-
+      [CL-67] `oneOf` arrays with a single element are a no-op — codegen synthesises an unnecessary wrapper type (`OrderResultOneOf`) that obscures the actual shape. Use the inner schema directly or expand `oneOf` to ≥2 variants. Targets: java, csharp, kotlin, typescript, rust (strict-typed langs synthesise the wrapper class).
+    message: "`oneOf` has only 1 element — codegen synthesises a useless wrapper type. Use the inner schema directly."
+    severity: hint
+    given: "$..oneOf"
+    then:
+      function: length
+      functionOptions:
+        min: 2
+    apiq-meta:
+      pattern-id: CL-67
+      lenses: [ client-friction ]
+      sources:
+        - type: vendor
+          name: 'apiq A13 (heuristic — multi-codegen unanimous)'
+          summary: 'oneOf with one element produces useless synthetic wrapper type'
+        - type: mining
+          phase: round2
+          subagent: client-p3-builder
+      stakeholders: [ client-dev, codegen-tool, spec-author ]
+      lifecycle-phase: build-time
+      defect-class: ergonomic
+      iso25010: [ usability, maintainability ]
+      codegen-targets: [ java, csharp, kotlin, typescript, rust ]
+      detection-precision: high
+      auto-fix-safe: true
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: low
+
+  # =========================================================================
+  # CL-72 — multipart/mixed content-type
+  # Targets: * (rare media-type, broken codegen support across most tools).
+  # =========================================================================
+  # Source: swagger-ui + openapi-gen;
+  #         rules-brainstorm.md CL-72 (P3)
+  # Lens: 4 (Client-Friction)
+  # Round: 2 (Welle D)
+  apiq-cl72-no-multipart-mixed:
+    description: >-
+      [CL-72] `multipart/mixed` content-type has uneven codegen support — most SDK generators handle `multipart/form-data` well but produce broken `multipart/mixed` clients. Use `multipart/form-data` (file upload + form fields) or a clear single content-type. Targets: java, python, go, typescript, csharp (multipart-form-data is well-supported across these; multipart-mixed is not).
+    message: "multipart/mixed content-type has poor codegen support; use multipart/form-data instead."
+    severity: warn
+    given: "$.paths[*][*].requestBody.content"
+    then:
+      field: 'multipart/mixed'
+      function: undefined
+    apiq-meta:
+      pattern-id: CL-72
+      lenses: [ client-friction ]
+      sources:
+        - type: vendor
+          name: 'swagger-ui + openapi-gen (multipart-mixed-broken-codegen)'
+          url: 'https://github.com/swagger-api/swagger-ui'
+          summary: 'multipart/mixed has poor codegen support — use multipart/form-data instead'
+        - type: mining
+          phase: round2
+          subagent: client-p3-builder
+      stakeholders: [ client-dev, codegen-tool, spec-author ]
+      lifecycle-phase: build-time
+      defect-class: incomplete
+      iso25010: [ compatibility, usability ]
+      codegen-targets: [ java, python, go, typescript, csharp ]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: medium
+      mttr-impact: medium
+      agent-readiness-impact: low
+
+  # =========================================================================
+  # CL-74 / U — callbacks without webhooks-3.1 OR webhooks no signature
+  # Walker-territory (security-walker for webhook-signature-presence).
+  # Sentinel rule.
+  # =========================================================================
+  # Source: Lens-4 + Twilio;
+  #         rules-brainstorm.md CL-74 (P3)
+  # Lens: 4 (Client-Friction), 1 (Threat-Modeling)
+  # Round: 2 (Welle D)
+  apiq-cl74-webhook-signature-walker-sentinel:
+    description: >-
+      [CL-74] Specs with `callbacks` (3.0) or `webhooks` (3.1) MUST document signature verification (HMAC, JWS, X-Signature header). Without it, SDK consumers cannot reject spoofed webhook deliveries. Cross-section walk lives in the security-classifier walker; this rule is a sentinel. Per Twilio + Stripe webhook-best-practices. Targets: *.
+    message: "callbacks/webhooks present (sentinel rule for CL-74 — full signature-presence-walk in security-classifier walker)."
+    severity: hint
+    given:
+      - "$..callbacks"
+      - "$.webhooks"
+    then:
+      function: truthy
+    apiq-meta:
+      pattern-id: CL-74
+      lenses: [ client-friction, threat-modeling ]
+      sources:
+        - type: vendor
+          name: 'Twilio + Stripe webhook-signature best-practices'
+          url: 'https://www.twilio.com/docs/usage/webhooks/webhooks-security'
+          summary: 'webhook deliveries must be HMAC-signed for SDK consumers to reject spoofed traffic'
+        - type: mining
+          phase: round2
+          subagent: client-p3-builder
+      stakeholders: [ client-dev, security, ai-agent, spec-author ]
+      lifecycle-phase: build-time
+      defect-class: incomplete
+      iso25010: [ security, reliability ]
+      codegen-targets:
+        - java
+        - go
+        - python
+        - typescript
+        - rust
+        - csharp
+        - kotlin
+      detection-precision: low
+      auto-fix-safe: false
+      cost-impact: medium
+      mttr-impact: medium
+      agent-readiness-impact: medium
+
+  # =========================================================================
+  # CL-75 / G7 + Q-SP-5 — Mixed casing cross-Tag
+  # Targets: * (consistency of SDK method-group naming).
+  # Custom function: tag-casing-cross-spec-consistency.
+  # =========================================================================
+  # Source: MIN Q-SP-5;
+  #         rules-brainstorm.md CL-75 (P3)
+  # Lens: 4 (Client-Friction), 5 (Style-Coherence)
+  # Round: 2 (Welle D)
+  apiq-cl75-tag-casing-consistent:
+    description: >-
+      [CL-75] Tag names should follow ONE casing convention across the spec — all PascalCase OR all camelCase OR all kebab-case OR all snake_case. Mixed casings produce inconsistent SDK method-group names (`UsersApi`, `usersApi`, `users_api`) and broken docs sidebar. Targets: *.
+    message: "{{error}}"
+    severity: hint
+    given: "$"
+    then:
+      function: tag-casing-cross-spec-consistency
+    apiq-meta:
+      pattern-id: CL-75
+      lenses: [ client-friction, style-coherence ]
+      sources:
+        - type: vendor
+          name: 'IBM openapi-validator + Q-SP-5 mining'
+          url: 'https://github.com/IBM/openapi-validator'
+          summary: 'tag names should follow one canonical casing convention spec-wide'
+        - type: mining
+          phase: round2
+          subagent: client-p3-builder
+      stakeholders: [ client-dev, codegen-tool, docs-tool, spec-author ]
+      lifecycle-phase: build-time
+      defect-class: ergonomic
+      iso25010: [ usability, maintainability ]
+      codegen-targets:
+        - java
+        - go
+        - python
+        - typescript
+        - rust
+        - csharp
+        - kotlin
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: medium
+      agent-readiness-impact: low
+
+  # =========================================================================
+  # CL-78 — Schema combines allOf + oneOf + anyOf siblings
+  # Targets: * (composition-soup overwhelms codegen).
+  # Stock DSL: schema check.
+  # =========================================================================
+  # Source: Speakeasy;
+  #         rules-brainstorm.md CL-78 (P3)
+  # Lens: 4 (Client-Friction)
+  # Round: 2 (Welle D)
+  apiq-cl78-no-allof-oneof-anyof-siblings:
+    description: >-
+      [CL-78] A schema combining `allOf`, `oneOf`, AND `anyOf` as direct siblings is composition-soup — codegen produces synthetic intermediate types that obscure the SDK shape. Pick at most 2 of the 3 composition keywords and refactor the third via named components. Targets: java, csharp, kotlin, typescript, go (strict-typed-targets struggle most).
+    message: "Schema declares allOf, oneOf, AND anyOf as siblings — composition-soup confuses codegen."
+    severity: warn
+    given: "$..[?(@.allOf && @.oneOf && @.anyOf)]"
+    then:
+      function: falsy
+    apiq-meta:
+      pattern-id: CL-78
+      lenses: [ client-friction ]
+      sources:
+        - type: vendor
+          name: 'Speakeasy schema-composition guidance'
+          url: 'https://www.speakeasy.com/openapi'
+          summary: 'allOf+oneOf+anyOf together as siblings is composition-soup — confuses codegen'
+        - type: mining
+          phase: round2
+          subagent: client-p3-builder
+      stakeholders: [ client-dev, codegen-tool, spec-author ]
+      lifecycle-phase: build-time
+      defect-class: ergonomic
+      iso25010: [ maintainability, usability ]
+      codegen-targets: [ java, csharp, kotlin, typescript, go ]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: medium
+      mttr-impact: medium
+      agent-readiness-impact: low
+
+  # =========================================================================
+  # CL-79 — requestBody form-urlencoded + JSON simultaneously
+  # Targets: * (codegen has to pick one — typically JSON wins).
+  # Stock DSL.
+  # =========================================================================
+  # Source: openapi-gen #4908;
+  #         rules-brainstorm.md CL-79 (P3)
+  # Lens: 4 (Client-Friction)
+  # Round: 2 (Welle D)
+  apiq-cl79-no-form-and-json-same-request:
+    description: >-
+      [CL-79] Request bodies declaring both `application/json` AND `application/x-www-form-urlencoded` force codegen to pick one content-type — typically JSON wins, and form-urlencoded support is silently dropped. Pick one canonical content-type or split into two operations. Targets: java, csharp, kotlin, go, typescript (strict-typed targets surface the union as synthetic intermediate type).
+    message: "Request body declares both `application/json` and `application/x-www-form-urlencoded`; codegen picks one."
+    severity: warn
+    given: "$.paths[*][*].requestBody.content"
+    then:
+      function: schema
+      functionOptions:
+        schema:
+          type: object
+          not:
+            allOf:
+              - required: [ 'application/json' ]
+              - required: [ 'application/x-www-form-urlencoded' ]
+    apiq-meta:
+      pattern-id: CL-79
+      lenses: [ client-friction ]
+      sources:
+        - type: vendor
+          name: openapi-gen #4908
+          url: 'https://github.com/OpenAPITools/openapi-generator/issues/4908'
+          summary: 'requestBody form-urlencoded + JSON simultaneously forces codegen to pick'
+        - type: mining
+          phase: round2
+          subagent: client-p3-builder
+      stakeholders: [ client-dev, codegen-tool, spec-author ]
+      lifecycle-phase: build-time
+      defect-class: ergonomic
+      iso25010: [ usability, compatibility ]
+      codegen-targets: [ java, csharp, kotlin, go, typescript ]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: low
+
+  # =========================================================================
+  # CL-80 / M-SP-3 mirrors — readOnly:true AND required:true
+  # Targets: typescript, java, csharp, kotlin (strict-typed languages
+  # surface the conflict).
+  # Custom function: read-only-required-conflict.
+  # =========================================================================
+  # Source: M-SP-3 mirrors;
+  #         rules-brainstorm.md CL-80 (P3)
+  # Lens: 4 (Client-Friction), 3 (Evolution-Friction)
+  # Round: 2 (Welle D)
+  apiq-cl80-no-readonly-required-conflict:
+    description: >-
+      [CL-80] A property that is both `readOnly: true` AND in parent's `required` array creates an impossible contract: clients cannot satisfy the required-constraint on POST/PUT input (since readOnly fields are server-set), yet the spec demands it. Strict-typed SDKs produce uncomfortable "always-set-but-server-ignores" semantics. Pick one: either `readOnly` (server-managed) OR `required` (client-supplied). Targets: typescript, java, csharp, kotlin.
+    message: "{{error}}"
+    severity: hint
+    given:
+      - "$.components.schemas[*]"
+      - "$..[?(@.type === 'object' && @.required && @.properties)]"
+    then:
+      function: read-only-required-conflict
+    apiq-meta:
+      pattern-id: CL-80
+      lenses: [ client-friction, evolution-friction ]
+      sources:
+        - type: vendor
+          name: 'M-SP-3 mirrors (read-only-required-conflict)'
+          summary: 'readOnly:true + required:true creates impossible client-input contract'
+        - type: mining
+          phase: round2
+          subagent: client-p3-builder
+      stakeholders: [ client-dev, codegen-tool, spec-author ]
+      lifecycle-phase: build-time
+      defect-class: semantic
+      iso25010: [ reliability, compatibility ]
+      codegen-targets: [ typescript, java, csharp, kotlin ]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: medium
+      agent-readiness-impact: medium

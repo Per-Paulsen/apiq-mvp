@@ -1,0 +1,2060 @@
+# apiq Spectral Ruleset — P3 Other-Lens (T-Other-Lens, Welle D)
+#
+# 47 P3 lens-divers patterns covering Style/Convention (SC-Tier),
+# Structured-Format conformance (SCF-Tier), Lens-6 (Privacy), Lens-7
+# (Operations), Lens-9 (AI-Agent-Consumability), Lens-10 (Operational-
+# Metadata), and F-Tier (DOLAR + cross-vendor).
+#
+# Patterns covered:
+#   - SC-Tier (15):  SC-1, SC-2, SC-3, SC-4, SC-7, SC-12, SC-15, SC-16,
+#                    SC-17, SC-18, SC-19, SC-21, SC-22, SC-23, SC-25
+#   - SCF-Tier (15): SCF-2, SCF-3, SCF-4, SCF-5, SCF-6, SCF-7, SCF-8,
+#                    SCF-9, SCF-10, SCF-11, SCF-12, SCF-13, SCF-14,
+#                    SCF-15, SCF-17
+#   - Lens-6/7/9/10 (11): L6-3, L7-1, L9-2, L9-3, L9-4, L9-5, L9-6, L9-8,
+#                         L10-4, L10-5, L10-6
+#   - F-Tier (6):    F-2, F-3, F-5, F-15, F-19, F-20
+#                    (F-12, F-13 already implemented in apiq-ruleset-client-p2.yaml,
+#                     F-11, F-14 already covered there too)
+#
+# Total: 47 rules. Default severity = `hint` per Plan-Doc §7 P3-discipline.
+#
+# Authored 2026-05-09 (T-Other-Lens / Welle D, owner: other-p3-builder) from:
+#   - specs/big-spec-architecture-spike-stage-a-implementation-priority.md
+#     (P3 Other-Lens table, lines 366-405)
+#   - specs/big-spec-architecture-spike-stage-a-restwork-plan.md §0
+#     (Strategic Vision Constants — agent-readiness-positioning)
+#   - specs/E09-w-d-p3-trail.md T-Other-Lens section
+#   - scripts/spike/data/patterns.json (single-source pattern substrate)
+#   - rules-brainstorm.md (R1+R2+R3+R4 Mining round consolidations)
+#
+# Severity discipline (per Severity-Schema Final, T23):
+#   - error: RFC-2119 MUST violated; CI-blocking. (Not used in P3.)
+#   - warn:  RFC-2119 SHOULD violated, OR strong cross-source consensus.
+#   - hint:  Soft signal; informative; opinion-divided. (P3 default.)
+#
+# Strategic-Vision Coupling (Plan-Doc §0):
+#   L9-* and L10-* rules carry `agent-readiness-impact: high` or `medium`
+#   (NOT `none` / `low`) per Plan-Doc §0 — these are agent-readiness
+#   territory and feed Welle M2 + Welle Z post-V planning.
+#
+# Custom-functions used (registered in spectral-runner.ts as part of
+# Phase 3 Integration):
+#   - rest-vs-rpc-mixing (SC-1)
+#   - http-method-semantics-violated (SC-3)
+#   - crud-asymmetric-resources (SC-15)
+#   - field-name-casing-mixed (SC-18)
+#   - time-field-naming-mixed (SC-19)
+#   - filter-syntax-incoherent (SC-22)
+#   - sort-syntax-incoherent (SC-23)
+#   - status-code-distribution-per-op-type (SC-25)
+#   - odata-dollar-param-allowed-set (SCF-12)
+#   - aip-custom-method-uses-post (SCF-13)
+#   - aip-time-field-imperative (SCF-17)
+#   - phi-field-name-hint (L6-3)
+#   - list-endpoint-missing-cache-headers (L7-1)
+#   - description-parameter-ratio (L9-2)
+#   - error-schema-discoverability (L9-3)
+#   - pagination-cursor-stability (L9-4)
+#   - operation-id-machine-friendly (L9-5)
+#   - summary-concise (L9-6)
+#   - function-call-friendly-schema (L9-8)
+#   - external-docs-stub (L10-4)
+#   - info-contact-substantive (L10-5)
+#   - accept-language-on-user-facing-ops (F-2)
+#   - consistent-expand-fields-param (F-5)
+#   - polymorphism-wire-discriminator (F-15)
+#   - lazy-description (F-19)
+
+extends:
+  - spectral:oas
+
+formats:
+  - oas3
+  - oas3_0
+  - oas3_1
+
+rules:
+  # ===========================================================================
+  # SC-Tier — Style/Convention (Lens 5, primary)
+  # ===========================================================================
+
+  # Source: Microsoft REST API Guidelines + Google AIP-121 + Richardson
+  #         Maturity Model; patterns.json SC-1
+  # Lens: 5 (Style-Coherence), 4 (Client-Friction)
+  # Round: 2 (R2)
+  apiq-sc-1-rest-vs-rpc-mixing:
+    description: >-
+      [SC-1] Spec mixes REST-style and RPC-style paths (>10% each style). Pure REST or pure RPC is fine; mixing produces inconsistent SDK method names and confuses both human and agent consumers. Pick one style and apply consistently.
+    message: "{{error}}"
+    severity: hint
+    given: "$"
+    then:
+      function: rest-vs-rpc-mixing
+    apiq-meta:
+      pattern-id: SC-1
+      lenses: [ style-coherence, client-friction ]
+      sources:
+        - type: vendor
+          name: 'Microsoft REST API Guidelines'
+          url: 'https://github.com/microsoft/api-guidelines'
+          verifiedAt: '2026-05-09'
+        - type: vendor
+          name: 'Google AIP-121 (Resource oriented design)'
+          url: 'https://google.aip.dev/121'
+          verifiedAt: '2026-05-09'
+        - type: vendor
+          name: 'Richardson Maturity Model'
+          url: 'https://martinfowler.com/articles/richardsonMaturityModel.html'
+          verifiedAt: '2026-05-09'
+        - type: mining
+          phase: round2
+          subagent: other-p3-builder
+      stakeholders: [ spec-author, client-dev, ai-agent ]
+      lifecycle-phase: authoring-time
+      defect-class: ergonomic
+      iso25010: [ usability, maintainability ]
+      codegen-targets:
+        - java
+        - go
+        - python
+        - typescript
+        - rust
+        - csharp
+        - kotlin
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: medium
+      mttr-impact: low
+      agent-readiness-impact: medium
+
+  # Source: Google AIP-136 (custom methods) + Microsoft REST guidelines;
+  #         patterns.json SC-2
+  # Lens: 5 (Style-Coherence)
+  # Round: 2 (R2)
+  apiq-sc-2-custom-method-colon-verb:
+    description: >-
+      [SC-2] Custom-method paths (AIP-136 colon-verb form like `/users/{id}:cancel`) should use kebab-case OR lowerCamelCase verb consistently across the spec. Mixing `:cancelOrder` and `:cancel-order` produces inconsistent SDKs.
+    message: "Custom-method verb in path-key '{{value}}' deviates from kebab-case OR lowerCamelCase convention."
+    severity: hint
+    given: "$.paths"
+    then:
+      field: "@key"
+      function: pattern
+      functionOptions:
+        match: "^(/[^:/]*)*(:([a-z][a-zA-Z0-9]*|[a-z]+(-[a-z]+)*))?$"
+    apiq-meta:
+      pattern-id: SC-2
+      lenses: [ style-coherence ]
+      sources:
+        - type: vendor
+          name: 'Google AIP-136 (Custom methods)'
+          url: 'https://google.aip.dev/136'
+          verifiedAt: '2026-05-09'
+        - type: vendor
+          name: 'Microsoft REST API Guidelines'
+          url: 'https://github.com/microsoft/api-guidelines'
+          verifiedAt: '2026-05-09'
+        - type: mining
+          phase: round2
+          subagent: other-p3-builder
+      stakeholders: [ spec-author, client-dev ]
+      lifecycle-phase: authoring-time
+      defect-class: ergonomic
+      iso25010: [ usability ]
+      codegen-targets: [ '*' ]
+      detection-precision: low
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: low
+
+  # Source: Fielding REST dissertation + Microsoft REST guidelines + AIP-131;
+  #         patterns.json SC-3
+  # Lens: 5 (Style-Coherence), 4 (Client-Friction)
+  # Round: 2 (R2)
+  apiq-sc-3-http-method-semantics:
+    description: >-
+      [SC-3] GET operations whose operationId or path contains state-change verbs ("create", "delete", "cancel", "submit", ...) violate HTTP semantics — GET is cacheable + safe per RFC 9110 §9.2.1. Use POST for state-changing actions or remove the verb from naming.
+    message: "{{error}}"
+    severity: warn
+    given: "$.paths[*].get"
+    then:
+      function: http-method-semantics-violated
+    apiq-meta:
+      pattern-id: SC-3
+      lenses: [ style-coherence, client-friction, standards-compliance ]
+      sources:
+        - type: rfc
+          number: 9110
+          section: '9.2.1'
+          summary: 'GET is safe ... means that the request is essentially read-only'
+        - type: vendor
+          name: 'Fielding REST Dissertation §5.1'
+          url: 'https://www.ics.uci.edu/~fielding/pubs/dissertation/top.htm'
+          verifiedAt: '2026-05-09'
+        - type: vendor
+          name: 'Google AIP-131 (Standard methods)'
+          url: 'https://google.aip.dev/131'
+          verifiedAt: '2026-05-09'
+        - type: mining
+          phase: round2
+          subagent: other-p3-builder
+      stakeholders: [ spec-author, client-dev, ai-agent ]
+      lifecycle-phase: authoring-time
+      defect-class: semantic
+      iso25010: [ reliability, usability ]
+      codegen-targets:
+        - java
+        - go
+        - python
+        - typescript
+        - rust
+        - csharp
+        - kotlin
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: medium
+      mttr-impact: medium
+      agent-readiness-impact: medium
+
+  # Source: HAL + JSON:API + Siren + Fielding REST; patterns.json SC-4
+  # Lens: 5 (Style-Coherence), 4 (Client-Friction)
+  # Round: 2 (R2)
+  apiq-sc-4-hypermedia-marker-consistency:
+    description: >-
+      [SC-4] Responses that opt into hypermedia (HAL `_links`, JSON:API `data`/`relationships`, Siren `class`/`actions`) should use the hypermedia format consistently — not mix HAL with raw arrays in the same spec. Heuristic: detect schemas with `_links` properties — they should appear in ALL successful responses or NONE.
+    message: "Schema declares HAL/JSON-API/Siren marker but other responses don't."
+    severity: hint
+    given: "$..[?(@.properties && @.properties._links)]"
+    then:
+      field: properties._links
+      function: defined
+    apiq-meta:
+      pattern-id: SC-4
+      lenses: [ style-coherence, client-friction ]
+      sources:
+        - type: vendor
+          name: 'HAL spec'
+          url: 'https://stateless.group/hal_specification.html'
+          verifiedAt: '2026-05-09'
+        - type: vendor
+          name: 'JSON:API v1.1'
+          url: 'https://jsonapi.org/format/'
+          verifiedAt: '2026-05-09'
+        - type: vendor
+          name: 'Siren spec'
+          url: 'https://github.com/kevinswiber/siren'
+          verifiedAt: '2026-05-09'
+        - type: vendor
+          name: 'Fielding REST Dissertation §5.3'
+          url: 'https://www.ics.uci.edu/~fielding/pubs/dissertation/top.htm'
+          verifiedAt: '2026-05-09'
+        - type: mining
+          phase: round2
+          subagent: other-p3-builder
+      stakeholders: [ spec-author, client-dev, ai-agent ]
+      lifecycle-phase: authoring-time
+      defect-class: ergonomic
+      iso25010: [ usability, maintainability ]
+      codegen-targets:
+        - java
+        - go
+        - python
+        - typescript
+        - rust
+        - csharp
+        - kotlin
+      detection-precision: low
+      auto-fix-safe: false
+      cost-impact: medium
+      mttr-impact: low
+      agent-readiness-impact: medium
+
+  # Source: Google AIP-122 (Resource names) + Microsoft REST guidelines;
+  #         patterns.json SC-7
+  # Lens: 5 (Style-Coherence)
+  # Round: 2 (R2)
+  apiq-sc-7-path-segment-alternation:
+    description: >-
+      [SC-7] Resource paths should alternate collection / id segments (`/users/{id}/posts/{id}`) per AIP-122 — paths like `/users/{id}/{otherId}/{moreId}` skip collection segments and become ambiguous. Detection: path keys with two consecutive `{var}` segments.
+    message: "Path-key '{{value}}' contains consecutive path-template segments without intervening collection name."
+    severity: hint
+    given: "$.paths"
+    then:
+      field: "@key"
+      function: pattern
+      functionOptions:
+        notMatch: "/\\{[^}]+\\}/\\{"
+    apiq-meta:
+      pattern-id: SC-7
+      lenses: [ style-coherence ]
+      sources:
+        - type: vendor
+          name: 'Google AIP-122 (Resource names)'
+          url: 'https://google.aip.dev/122'
+          verifiedAt: '2026-05-09'
+        - type: vendor
+          name: 'Microsoft REST API Guidelines'
+          url: 'https://github.com/microsoft/api-guidelines'
+          verifiedAt: '2026-05-09'
+        - type: mining
+          phase: round2
+          subagent: other-p3-builder
+      stakeholders: [ spec-author, client-dev ]
+      lifecycle-phase: authoring-time
+      defect-class: ergonomic
+      iso25010: [ usability ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: medium
+      mttr-impact: low
+      agent-readiness-impact: medium
+
+  # Source: Siren spec; patterns.json SC-12
+  # Lens: 5 (Style-Coherence), 2 (Standards-Compliance)
+  # Round: 2 (R2)
+  apiq-sc-12-siren-class-array:
+    description: >-
+      [SC-12] Schemas with `class` property (Siren conformance) should declare it as an array per Siren §`class` MUST. Strings/objects in the `class` field break Siren-aware clients.
+    message: "Siren-conforming schema declares 'class' but not as an array."
+    severity: hint
+    given: "$..[?(@.properties && @.properties.class && @.properties.entities)]"
+    then:
+      field: properties.class.type
+      function: enumeration
+      functionOptions:
+        values: [ array ]
+    apiq-meta:
+      pattern-id: SC-12
+      lenses: [ style-coherence, standards-compliance ]
+      sources:
+        - type: vendor
+          name: 'Siren spec'
+          url: 'https://github.com/kevinswiber/siren'
+          summary: 'class is an array of strings'
+        - type: mining
+          phase: round2
+          subagent: other-p3-builder
+      stakeholders: [ spec-author, client-dev ]
+      lifecycle-phase: authoring-time
+      defect-class: norm
+      iso25010: [ compatibility ]
+      codegen-targets: [ '*' ]
+      detection-precision: medium
+      auto-fix-safe: true
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: low
+
+  # Source: Google AIP-121 + REST conventions; patterns.json SC-15
+  # Lens: 5 (Style-Coherence), 4 (Client-Friction)
+  # Round: 2 (R2)
+  apiq-sc-15-crud-symmetry-per-resource:
+    description: >-
+      [SC-15] Resources with item-operations (GET/PUT/PATCH/DELETE /resource/{id}) should have a corresponding collection-GET (GET /resource); collections with POST should have a corresponding item-GET. Asymmetric CRUD makes resources hard to discover for both humans and agents.
+    message: "{{error}}"
+    severity: hint
+    given: "$"
+    then:
+      function: crud-asymmetric-resources
+    apiq-meta:
+      pattern-id: SC-15
+      lenses: [ style-coherence, client-friction ]
+      sources:
+        - type: vendor
+          name: 'Google AIP-121 (Resource oriented design)'
+          url: 'https://google.aip.dev/121'
+          verifiedAt: '2026-05-09'
+        - type: vendor
+          name: 'REST conventions (Richardson)'
+          url: 'https://martinfowler.com/articles/richardsonMaturityModel.html'
+          verifiedAt: '2026-05-09'
+        - type: mining
+          phase: round2
+          subagent: other-p3-builder
+      stakeholders: [ spec-author, client-dev, ai-agent ]
+      lifecycle-phase: authoring-time
+      defect-class: incomplete
+      iso25010: [ usability, functional-suitability ]
+      codegen-targets:
+        - java
+        - go
+        - python
+        - typescript
+        - rust
+        - csharp
+        - kotlin
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: high
+      mttr-impact: medium
+      agent-readiness-impact: medium
+
+  # Source: Microsoft REST API Guidelines + Google AIP-136; patterns.json SC-16
+  # Lens: 5 (Style-Coherence)
+  # Round: 2 (R2)
+  apiq-sc-16-resource-vs-action-shape:
+    description: >-
+      [SC-16] Path segments should be either resource-nouns (plural, `/users`, `/orders`) OR explicit action verbs prefixed with colon (AIP-136 `:cancel`). Mixing flat `/cancelOrder` with both resource paths and colon-actions in the same spec breaks consumer expectations.
+    message: "Path-key '{{value}}' uses verb-prefix camelCase form (e.g. /getThing) — prefer resource-noun OR colon-action."
+    severity: hint
+    given: "$.paths"
+    then:
+      field: "@key"
+      function: pattern
+      functionOptions:
+        notMatch: "^/(get|create|delete|update|fetch|cancel|submit)[A-Z]"
+    apiq-meta:
+      pattern-id: SC-16
+      lenses: [ style-coherence ]
+      sources:
+        - type: vendor
+          name: 'Microsoft REST API Guidelines'
+          url: 'https://github.com/microsoft/api-guidelines'
+          verifiedAt: '2026-05-09'
+        - type: vendor
+          name: 'Google AIP-136 (Custom methods)'
+          url: 'https://google.aip.dev/136'
+          verifiedAt: '2026-05-09'
+        - type: mining
+          phase: round2
+          subagent: other-p3-builder
+      stakeholders: [ spec-author, client-dev ]
+      lifecycle-phase: authoring-time
+      defect-class: ergonomic
+      iso25010: [ usability, maintainability ]
+      codegen-targets: [ '*' ]
+      detection-precision: low
+      auto-fix-safe: false
+      cost-impact: medium
+      mttr-impact: low
+      agent-readiness-impact: low
+
+  # Source: Richardson Maturity Model + Google AIPs; patterns.json SC-17
+  # Lens: 5 (Style-Coherence), 4 (Client-Friction)
+  # Round: 2 (R2)
+  apiq-sc-17-http-method-coverage:
+    description: >-
+      [SC-17] Operations should declare `operationId` so HTTP-method-per-op distribution can be analyzed across SDK output. Heuristic: ALL operations must have operationId — if missing, agents and codegen cannot reliably address the op.
+    message: "Operation lacks operationId; HTTP-method semantics indistinguishable for agents."
+    severity: hint
+    given: "$.paths[*][get,put,post,delete,options,head,patch,trace]"
+    then:
+      field: operationId
+      function: defined
+    apiq-meta:
+      pattern-id: SC-17
+      lenses: [ style-coherence, client-friction, ai-agent-consumability ]
+      sources:
+        - type: vendor
+          name: 'Richardson Maturity Model'
+          url: 'https://martinfowler.com/articles/richardsonMaturityModel.html'
+          verifiedAt: '2026-05-09'
+        - type: vendor
+          name: 'Google AIP-131 (Standard methods)'
+          url: 'https://google.aip.dev/131'
+          verifiedAt: '2026-05-09'
+        - type: mining
+          phase: round2
+          subagent: other-p3-builder
+      stakeholders: [ spec-author, client-dev, ai-agent, codegen-tool ]
+      lifecycle-phase: authoring-time
+      defect-class: incomplete
+      iso25010: [ usability ]
+      codegen-targets:
+        - java
+        - go
+        - python
+        - typescript
+        - rust
+        - csharp
+        - kotlin
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: high
+
+  # Source: JSON:API v1.1 + Google AIP-140 (Field names); patterns.json SC-18
+  # Lens: 5 (Style-Coherence), 4 (Client-Friction)
+  # Round: 2 (R2)
+  apiq-sc-18-field-name-casing:
+    description: >-
+      [SC-18] Field names in object schemas should follow consistent casing (camelCase OR snake_case). Mixed `firstName` and `last_name` in the same spec produces inconsistent SDK output. JSON:API §Member-names requires snake-case; AIP-140 requires snake_case; OData/Microsoft prefer camelCase. Pick one.
+    message: "{{error}}"
+    severity: hint
+    given: "$"
+    then:
+      function: field-name-casing-mixed
+    apiq-meta:
+      pattern-id: SC-18
+      lenses: [ style-coherence, client-friction ]
+      sources:
+        - type: vendor
+          name: 'JSON:API v1.1 §Member-names'
+          url: 'https://jsonapi.org/format/#document-member-names'
+          verifiedAt: '2026-05-09'
+        - type: vendor
+          name: 'Google AIP-140 (Field names)'
+          url: 'https://google.aip.dev/140'
+          verifiedAt: '2026-05-09'
+        - type: mining
+          phase: round2
+          subagent: other-p3-builder
+      stakeholders: [ spec-author, client-dev, codegen-tool ]
+      lifecycle-phase: authoring-time
+      defect-class: ergonomic
+      iso25010: [ usability, compatibility ]
+      codegen-targets:
+        - java
+        - go
+        - python
+        - typescript
+        - rust
+        - csharp
+        - kotlin
+      detection-precision: low
+      auto-fix-safe: false
+      cost-impact: medium
+      mttr-impact: low
+      agent-readiness-impact: medium
+
+  # Source: Google AIP-142 + Stripe/Rails + Microsoft REST; patterns.json SC-19
+  # Lens: 5 (Style-Coherence), 4 (Client-Friction)
+  # Round: 2 (R2)
+  apiq-sc-19-time-field-naming:
+    description: >-
+      [SC-19] Spec mixes time-field naming styles (`*_time` AIP-142 vs `*_at` Stripe/Rails). Pick one convention and apply consistently — `created_time` AND `updated_at` in the same spec produces inconsistent SDK output and confuses agents.
+    message: "{{error}}"
+    severity: hint
+    given: "$"
+    then:
+      function: time-field-naming-mixed
+    apiq-meta:
+      pattern-id: SC-19
+      lenses: [ style-coherence, client-friction ]
+      sources:
+        - type: vendor
+          name: 'Google AIP-142 (Time fields)'
+          url: 'https://google.aip.dev/142'
+          verifiedAt: '2026-05-09'
+        - type: vendor
+          name: 'Stripe API Reference'
+          url: 'https://stripe.com/docs/api'
+          verifiedAt: '2026-05-09'
+        - type: vendor
+          name: 'Microsoft REST API Guidelines'
+          url: 'https://github.com/microsoft/api-guidelines'
+          verifiedAt: '2026-05-09'
+        - type: mining
+          phase: round2
+          subagent: other-p3-builder
+      stakeholders: [ spec-author, client-dev ]
+      lifecycle-phase: authoring-time
+      defect-class: ergonomic
+      iso25010: [ usability, maintainability ]
+      codegen-targets:
+        - java
+        - go
+        - python
+        - typescript
+        - rust
+        - csharp
+        - kotlin
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: medium
+      mttr-impact: low
+      agent-readiness-impact: medium
+
+  # Source: All hypermedia specs (HAL/JSON:API/Siren); patterns.json SC-21
+  # Lens: 5 (Style-Coherence)
+  # Round: 2 (R2)
+  apiq-sc-21-reserved-field-leakage:
+    description: >-
+      [SC-21] Field names should not collide with reserved hypermedia/format keywords from non-target styles. E.g. plain-JSON spec using `_links` (HAL-reserved) or `data` at top level (JSON:API-reserved) confuses tooling that auto-detects the format from these markers.
+    message: "Field name '{{property}}' is reserved by a non-target hypermedia/format spec."
+    severity: hint
+    given: "$..properties"
+    then:
+      function: schema
+      functionOptions:
+        schema:
+          type: object
+          not:
+            anyOf:
+              - required: [ _links ]
+              - required: [ _embedded ]
+              - required: [ jsonapi ]
+    apiq-meta:
+      pattern-id: SC-21
+      lenses: [ style-coherence ]
+      sources:
+        - type: vendor
+          name: 'HAL spec'
+          url: 'https://stateless.group/hal_specification.html'
+          verifiedAt: '2026-05-09'
+        - type: vendor
+          name: 'JSON:API v1.1'
+          url: 'https://jsonapi.org/format/'
+          verifiedAt: '2026-05-09'
+        - type: vendor
+          name: 'Siren spec'
+          url: 'https://github.com/kevinswiber/siren'
+          verifiedAt: '2026-05-09'
+        - type: mining
+          phase: round2
+          subagent: other-p3-builder
+      stakeholders: [ spec-author, client-dev ]
+      lifecycle-phase: authoring-time
+      defect-class: ergonomic
+      iso25010: [ compatibility ]
+      codegen-targets: [ '*' ]
+      detection-precision: low
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: low
+
+  # Source: Google AIP-160 + JSON:API + OData; patterns.json SC-22
+  # Lens: 5 (Style-Coherence), 4 (Client-Friction)
+  # Round: 2 (R2)
+  apiq-sc-22-filter-syntax-coherence:
+    description: >-
+      [SC-22] Spec mixes filter-syntax styles (AIP-160 `filter`, JSON:API `filter[field]`, OData `$filter`). Pick one convention. Mixed filtering across endpoints produces inconsistent SDK output and confuses agents that must learn each variant.
+    message: "{{error}}"
+    severity: hint
+    given: "$"
+    then:
+      function: filter-syntax-incoherent
+    apiq-meta:
+      pattern-id: SC-22
+      lenses: [ style-coherence, client-friction ]
+      sources:
+        - type: vendor
+          name: 'Google AIP-160 (Filtering)'
+          url: 'https://google.aip.dev/160'
+          verifiedAt: '2026-05-09'
+        - type: vendor
+          name: 'JSON:API v1.1 §Filtering'
+          url: 'https://jsonapi.org/format/#fetching-filtering'
+          verifiedAt: '2026-05-09'
+        - type: vendor
+          name: 'OData v4.01 §11.2.5.1'
+          url: 'https://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part2-url-conventions.html'
+          verifiedAt: '2026-05-09'
+        - type: mining
+          phase: round2
+          subagent: other-p3-builder
+      stakeholders: [ spec-author, client-dev, ai-agent ]
+      lifecycle-phase: authoring-time
+      defect-class: ergonomic
+      iso25010: [ usability, maintainability ]
+      codegen-targets:
+        - java
+        - go
+        - python
+        - typescript
+        - rust
+        - csharp
+        - kotlin
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: medium
+      mttr-impact: low
+      agent-readiness-impact: medium
+
+  # Source: Google AIP-132 + JSON:API + OData; patterns.json SC-23
+  # Lens: 5 (Style-Coherence), 4 (Client-Friction)
+  # Round: 2 (R2)
+  apiq-sc-23-sort-syntax-coherence:
+    description: >-
+      [SC-23] Spec mixes sort-syntax styles (AIP-132 `order_by`, JSON:API `sort=field,-other`, OData `$orderby`). Pick one convention and apply consistently across all list-endpoints.
+    message: "{{error}}"
+    severity: hint
+    given: "$"
+    then:
+      function: sort-syntax-incoherent
+    apiq-meta:
+      pattern-id: SC-23
+      lenses: [ style-coherence, client-friction ]
+      sources:
+        - type: vendor
+          name: 'Google AIP-132 (Standard methods: List)'
+          url: 'https://google.aip.dev/132'
+          verifiedAt: '2026-05-09'
+        - type: vendor
+          name: 'JSON:API v1.1 §Sorting'
+          url: 'https://jsonapi.org/format/#fetching-sorting'
+          verifiedAt: '2026-05-09'
+        - type: vendor
+          name: 'OData v4.01 §11.2.5.2'
+          url: 'https://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part2-url-conventions.html'
+          verifiedAt: '2026-05-09'
+        - type: mining
+          phase: round2
+          subagent: other-p3-builder
+      stakeholders: [ spec-author, client-dev, ai-agent ]
+      lifecycle-phase: authoring-time
+      defect-class: ergonomic
+      iso25010: [ usability, maintainability ]
+      codegen-targets:
+        - java
+        - go
+        - python
+        - typescript
+        - rust
+        - csharp
+        - kotlin
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: medium
+      mttr-impact: low
+      agent-readiness-impact: medium
+
+  # Source: RFC 7231 §6 + Microsoft REST + Google AIPs; patterns.json SC-25
+  # Lens: 5 (Style-Coherence), 2 (Standards-Compliance)
+  # Round: 2 (R2)
+  apiq-sc-25-status-code-distribution:
+    description: >-
+      [SC-25] Operations should declare success-status-codes that match their HTTP-method semantics: GET → 200, POST → 200/201/202/204, PUT → 200/201/204, PATCH → 200/204, DELETE → 200/202/204. Per RFC 7231 §6 the success-code distribution should align with the method.
+    message: "{{error}}"
+    severity: hint
+    given: "$.paths[*][get,put,post,delete,patch]"
+    then:
+      function: status-code-distribution-per-op-type
+    apiq-meta:
+      pattern-id: SC-25
+      lenses: [ style-coherence, standards-compliance ]
+      sources:
+        - type: rfc
+          number: 7231
+          section: '6'
+          summary: 'The first digit of the status-code defines the class of response'
+        - type: vendor
+          name: 'Microsoft REST API Guidelines'
+          url: 'https://github.com/microsoft/api-guidelines'
+          verifiedAt: '2026-05-09'
+        - type: mining
+          phase: round2
+          subagent: other-p3-builder
+      stakeholders: [ spec-author, client-dev ]
+      lifecycle-phase: authoring-time
+      defect-class: norm
+      iso25010: [ reliability, compatibility ]
+      codegen-targets: [ '*' ]
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: medium
+
+  # ===========================================================================
+  # SCF-Tier — Structured-Format conformance (Lens 5 + Lens 2)
+  # ===========================================================================
+
+  # Source: JSON:API v1.1 §Resource Object; patterns.json SCF-2
+  # Lens: 5 (Style-Coherence), 2 (Standards-Compliance)
+  # Round: 2 (R2)
+  apiq-scf-2-jsonapi-resource-type-id:
+    description: >-
+      [SCF-2] JSON:API resource objects MUST declare both `type` (string) and `id` (string) per JSON:API v1.1 §Resource Objects. Schemas with `attributes` + `relationships` (JSON:API markers) but missing type/id are non-conformant.
+    message: "JSON:API resource schema lacks 'type' and 'id' string properties."
+    severity: warn
+    given: "$..[?(@.properties && @.properties.attributes && @.properties.relationships)]"
+    then:
+      function: schema
+      functionOptions:
+        schema:
+          type: object
+          properties:
+            properties:
+              type: object
+              required: [ type, id ]
+    apiq-meta:
+      pattern-id: SCF-2
+      lenses: [ style-coherence, standards-compliance ]
+      sources:
+        - type: vendor
+          name: 'JSON:API v1.1 §Resource Objects'
+          url: 'https://jsonapi.org/format/#document-resource-objects'
+          summary: 'A resource object MUST contain at least the following top-level members: id, type'
+        - type: mining
+          phase: round2
+          subagent: other-p3-builder
+      stakeholders: [ spec-author, client-dev ]
+      lifecycle-phase: authoring-time
+      defect-class: norm
+      iso25010: [ compatibility, reliability ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: medium
+      agent-readiness-impact: medium
+
+  # Source: JSON:API v1.1 §Error Object; patterns.json SCF-3
+  # Lens: 5 (Style-Coherence), 2 (Standards-Compliance)
+  # Round: 2 (R2)
+  apiq-scf-3-jsonapi-error-object:
+    description: >-
+      [SCF-3] JSON:API error objects SHOULD have `id`, `status`, `code`, `title`, `detail`, `source`, `meta` members per JSON:API v1.1 §Error. Schemas in `errors` arrays should match this shape.
+    message: "JSON:API error schema deviates from §Error object shape."
+    severity: warn
+    given: "$..[?(@.properties && @.properties.errors)]"
+    then:
+      function: schema
+      functionOptions:
+        schema:
+          type: object
+          properties:
+            properties:
+              type: object
+              properties:
+                errors:
+                  type: object
+    apiq-meta:
+      pattern-id: SCF-3
+      lenses: [ style-coherence, standards-compliance ]
+      sources:
+        - type: vendor
+          name: 'JSON:API v1.1 §Error Objects'
+          url: 'https://jsonapi.org/format/#error-objects'
+          verifiedAt: '2026-05-09'
+        - type: mining
+          phase: round2
+          subagent: other-p3-builder
+      stakeholders: [ spec-author, client-dev ]
+      lifecycle-phase: authoring-time
+      defect-class: norm
+      iso25010: [ compatibility, reliability ]
+      codegen-targets: [ '*' ]
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: medium
+      agent-readiness-impact: medium
+
+  # Source: JSON:API v1.1 §Pagination; patterns.json SCF-4
+  # Lens: 5 (Style-Coherence), 2 (Standards-Compliance)
+  # Round: 2 (R2)
+  apiq-scf-4-jsonapi-pagination-params:
+    description: >-
+      [SCF-4] JSON:API pagination parameters use `page[number]` / `page[size]` form per JSON:API v1.1 §Pagination. Spec should declare these as parameters on list-endpoints in JSON:API specs.
+    message: "Pagination param '{{value}}' is non-JSON:API-shaped."
+    severity: hint
+    given: "$.paths[*][get].parameters[?(@.name && @.name.indexOf('page')==0)].name"
+    then:
+      function: pattern
+      functionOptions:
+        match: "^page(\\[(number|size|cursor|after|before|limit|offset)\\])?$"
+    apiq-meta:
+      pattern-id: SCF-4
+      lenses: [ style-coherence, standards-compliance ]
+      sources:
+        - type: vendor
+          name: 'JSON:API v1.1 §Pagination'
+          url: 'https://jsonapi.org/format/#fetching-pagination'
+          verifiedAt: '2026-05-09'
+        - type: mining
+          phase: round2
+          subagent: other-p3-builder
+      stakeholders: [ spec-author, client-dev ]
+      lifecycle-phase: authoring-time
+      defect-class: norm
+      iso25010: [ compatibility, usability ]
+      codegen-targets: [ '*' ]
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: low
+
+  # Source: JSON:API v1.1 §Pagination Links; patterns.json SCF-5
+  # Lens: 5 (Style-Coherence), 2 (Standards-Compliance)
+  # Round: 2 (R2)
+  apiq-scf-5-jsonapi-top-level-links:
+    description: >-
+      [SCF-5] JSON:API top-level `links` SHOULD contain `first`/`last`/ `prev`/`next` URL members on paginated resource collections per JSON:API v1.1 §Pagination Links. Schemas with top-level `data` (array) should also declare `links`.
+    message: "JSON:API list-response lacks top-level 'links' with first/last/prev/next."
+    severity: hint
+    given: "$..[?(@.properties && @.properties.data && @.properties.data.type=='array')]"
+    then:
+      field: properties.links
+      function: defined
+    apiq-meta:
+      pattern-id: SCF-5
+      lenses: [ style-coherence, standards-compliance ]
+      sources:
+        - type: vendor
+          name: 'JSON:API v1.1 §Pagination Links'
+          url: 'https://jsonapi.org/format/#fetching-pagination'
+          verifiedAt: '2026-05-09'
+        - type: mining
+          phase: round2
+          subagent: other-p3-builder
+      stakeholders: [ spec-author, client-dev ]
+      lifecycle-phase: authoring-time
+      defect-class: incomplete
+      iso25010: [ usability, compatibility ]
+      codegen-targets: [ '*' ]
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: medium
+
+  # Source: JSON:API v1.1 (verbatim "MUST NOT"); patterns.json SCF-6
+  # Lens: 5 (Style-Coherence), 2 (Standards-Compliance)
+  # Round: 2 (R2)
+  apiq-scf-6-jsonapi-no-extra-top-level:
+    description: >-
+      [SCF-6] JSON:API documents MUST NOT contain top-level members beyond `data`/`errors`/`meta`/`jsonapi`/`links`/`included` per JSON:API v1.1 (verbatim MUST NOT). Schemas with `attributes`/`type`/`id` at top level (instead of nested under `data`) are non-conformant.
+    message: "JSON:API document has top-level members beyond the allowed set."
+    severity: warn
+    given: "$..[?(@.properties && @.properties.jsonapi)]"
+    then:
+      function: schema
+      functionOptions:
+        schema:
+          type: object
+          properties:
+            properties:
+              type: object
+              propertyNames:
+                pattern: "^(data|errors|meta|jsonapi|links|included)$"
+    apiq-meta:
+      pattern-id: SCF-6
+      lenses: [ style-coherence, standards-compliance ]
+      sources:
+        - type: vendor
+          name: 'JSON:API v1.1 §Top-Level'
+          url: 'https://jsonapi.org/format/#document-top-level'
+          summary: 'A document MAY contain ONLY: data, errors, meta, jsonapi, links, included'
+        - type: mining
+          phase: round2
+          subagent: other-p3-builder
+      stakeholders: [ spec-author, client-dev ]
+      lifecycle-phase: authoring-time
+      defect-class: norm
+      iso25010: [ compatibility, reliability ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: medium
+      agent-readiness-impact: medium
+
+  # Source: HAL spec; patterns.json SCF-7
+  # Lens: 5 (Style-Coherence), 2 (Standards-Compliance)
+  # Round: 2 (R2)
+  apiq-scf-7-hal-response-has-links:
+    description: >-
+      [SCF-7] HAL responses SHOULD have a `_links` member per HAL spec. Schemas with `_embedded` but no `_links` are non-HAL-conformant.
+    message: "HAL-shaped schema (has _embedded) lacks `_links`."
+    severity: warn
+    given: "$..[?(@.properties && @.properties._embedded)]"
+    then:
+      field: properties._links
+      function: defined
+    apiq-meta:
+      pattern-id: SCF-7
+      lenses: [ style-coherence, standards-compliance ]
+      sources:
+        - type: vendor
+          name: 'HAL spec'
+          url: 'https://stateless.group/hal_specification.html'
+          summary: 'A HAL Resource Object MUST contain a "_links" property'
+        - type: mining
+          phase: round2
+          subagent: other-p3-builder
+      stakeholders: [ spec-author, client-dev ]
+      lifecycle-phase: authoring-time
+      defect-class: norm
+      iso25010: [ compatibility ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: low
+
+  # Source: HAL spec; patterns.json SCF-8
+  # Lens: 5 (Style-Coherence), 2 (Standards-Compliance)
+  # Round: 2 (R2)
+  apiq-scf-8-hal-embedded-shape:
+    description: >-
+      [SCF-8] HAL `_embedded` values MUST themselves be HAL-shaped (each embedded resource SHOULD have its own `_links`). Schemas with shallow embedded objects miss the recursive structure HAL clients expect.
+    message: "HAL embedded resources should themselves carry _links."
+    severity: hint
+    given: "$..[?(@.properties && @.properties._embedded && @.properties._embedded.type)]"
+    then:
+      function: defined
+      field: properties._embedded.properties
+    apiq-meta:
+      pattern-id: SCF-8
+      lenses: [ style-coherence, standards-compliance ]
+      sources:
+        - type: vendor
+          name: 'HAL spec'
+          url: 'https://stateless.group/hal_specification.html'
+          verifiedAt: '2026-05-09'
+        - type: mining
+          phase: round2
+          subagent: other-p3-builder
+      stakeholders: [ spec-author, client-dev ]
+      lifecycle-phase: authoring-time
+      defect-class: incomplete
+      iso25010: [ compatibility ]
+      codegen-targets: [ '*' ]
+      detection-precision: low
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: low
+
+  # Source: Siren spec; patterns.json SCF-9
+  # Lens: 5 (Style-Coherence), 2 (Standards-Compliance)
+  # Round: 2 (R2)
+  apiq-scf-9-siren-class-array:
+    description: >-
+      [SCF-9] Siren responses MUST declare `class` as an array of strings per Siren spec. Schemas using `properties` + `entities` + `actions` (Siren markers) without `class` array are non-conformant.
+    message: "Siren-shaped schema lacks `class` (string array)."
+    severity: warn
+    given: "$..[?(@.properties && @.properties.entities && @.properties.actions)]"
+    then:
+      function: schema
+      functionOptions:
+        schema:
+          type: object
+          properties:
+            properties:
+              type: object
+              required: [ class ]
+    apiq-meta:
+      pattern-id: SCF-9
+      lenses: [ style-coherence, standards-compliance ]
+      sources:
+        - type: vendor
+          name: 'Siren spec'
+          url: 'https://github.com/kevinswiber/siren'
+          summary: 'class is an array of strings'
+        - type: mining
+          phase: round2
+          subagent: other-p3-builder
+      stakeholders: [ spec-author, client-dev ]
+      lifecycle-phase: authoring-time
+      defect-class: norm
+      iso25010: [ compatibility ]
+      codegen-targets: [ '*' ]
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: low
+
+  # Source: Siren spec; patterns.json SCF-10
+  # Lens: 5 (Style-Coherence), 2 (Standards-Compliance)
+  # Round: 2 (R2)
+  apiq-scf-10-siren-actions-name-href:
+    description: >-
+      [SCF-10] Siren `actions` MUST have `name` and `href` per Siren spec. Action schemas in Siren responses without these required members break Siren-aware clients.
+    message: "Siren action schema lacks required `name` and/or `href`."
+    severity: warn
+    given: "$..[?(@.properties && @.properties.actions && @.properties.actions.items)]"
+    then:
+      function: schema
+      functionOptions:
+        schema:
+          type: object
+          properties:
+            properties:
+              type: object
+              properties:
+                actions:
+                  type: object
+                  properties:
+                    items:
+                      type: object
+                      required: [ name, href ]
+    apiq-meta:
+      pattern-id: SCF-10
+      lenses: [ style-coherence, standards-compliance ]
+      sources:
+        - type: vendor
+          name: 'Siren spec §Actions'
+          url: 'https://github.com/kevinswiber/siren#actions-1'
+          summary: 'Actions MUST have a name and href'
+        - type: mining
+          phase: round2
+          subagent: other-p3-builder
+      stakeholders: [ spec-author, client-dev ]
+      lifecycle-phase: authoring-time
+      defect-class: norm
+      iso25010: [ compatibility, reliability ]
+      codegen-targets: [ '*' ]
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: low
+
+  # Source: OData v4.01 §11.2; patterns.json SCF-11
+  # Lens: 5 (Style-Coherence), 2 (Standards-Compliance)
+  # Round: 2 (R2)
+  apiq-scf-11-odata-list-value-array:
+    description: >-
+      [SCF-11] OData list-responses MUST declare a `value` array property per OData v4.01. Schemas with `@odata.context` (OData marker) but missing `value` array are non-conformant.
+    message: "OData-shaped schema lacks `value` array."
+    severity: warn
+    given: "$..[?(@.properties && @.properties['@odata.context'])]"
+    then:
+      field: properties.value
+      function: defined
+    apiq-meta:
+      pattern-id: SCF-11
+      lenses: [ style-coherence, standards-compliance ]
+      sources:
+        - type: vendor
+          name: 'OData v4.01'
+          url: 'https://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html'
+          summary: 'collection responses include a value member containing the array'
+        - type: mining
+          phase: round2
+          subagent: other-p3-builder
+      stakeholders: [ spec-author, client-dev ]
+      lifecycle-phase: authoring-time
+      defect-class: norm
+      iso25010: [ compatibility ]
+      codegen-targets: [ '*' ]
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: low
+
+  # Source: OData v4.01 §11.2.5; patterns.json SCF-12
+  # Lens: 5 (Style-Coherence)
+  # Round: 2 (R2)
+  apiq-scf-12-odata-system-query-options:
+    description: >-
+      [SCF-12] OData `$`-prefix params should be from the allowed System-Query-Options set: `$filter`, `$orderby`, `$select`, `$expand`, `$top`, `$skip`, `$count`, `$search`, `$compute`, `$format`. Custom `$`-params are non-OData-conformant.
+    message: "{{error}}"
+    severity: hint
+    given: "$"
+    then:
+      function: odata-dollar-param-allowed-set
+    apiq-meta:
+      pattern-id: SCF-12
+      lenses: [ style-coherence, standards-compliance ]
+      sources:
+        - type: vendor
+          name: 'OData v4.01 §11.2.5 (System Query Options)'
+          url: 'https://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part2-url-conventions.html'
+          verifiedAt: '2026-05-09'
+        - type: mining
+          phase: round2
+          subagent: other-p3-builder
+      stakeholders: [ spec-author, client-dev ]
+      lifecycle-phase: authoring-time
+      defect-class: norm
+      iso25010: [ compatibility ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: low
+
+  # Source: Google AIP-136 (Custom methods); patterns.json SCF-13
+  # Lens: 5 (Style-Coherence)
+  # Round: 2 (R2)
+  apiq-scf-13-aip-custom-method-uses-post:
+    description: >-
+      [SCF-13] AIP-136 custom-method paths (colon-verb form `/users/{id}:cancel`) MUST use POST per AIP-136, except for read-only custom methods which MAY use GET. PUT/DELETE/PATCH on custom-method paths are non-conformant.
+    message: "{{error}}"
+    severity: warn
+    given: "$"
+    then:
+      function: aip-custom-method-uses-post
+    apiq-meta:
+      pattern-id: SCF-13
+      lenses: [ style-coherence, standards-compliance ]
+      sources:
+        - type: vendor
+          name: 'Google AIP-136 (Custom methods)'
+          url: 'https://google.aip.dev/136'
+          summary: 'Custom methods MUST use POST or GET HTTP verbs'
+        - type: mining
+          phase: round2
+          subagent: other-p3-builder
+      stakeholders: [ spec-author, client-dev ]
+      lifecycle-phase: authoring-time
+      defect-class: norm
+      iso25010: [ compatibility, reliability ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: low
+
+  # Source: Google AIP-132 (Standard methods: List); patterns.json SCF-14
+  # Lens: 5 (Style-Coherence)
+  # Round: 2 (R2)
+  apiq-scf-14-aip-list-standard-params:
+    description: >-
+      [SCF-14] AIP-132 list-operations should declare `parent`, `page_size`, `page_token` parameters per AIP-132 (verbatim "must"). Detection: list-endpoints (GET on collection paths) should have these params.
+    message: "AIP list-operation lacks one of: parent / page_size / page_token."
+    severity: hint
+    given: "$.paths[*].get"
+    then:
+      field: parameters
+      function: schema
+      functionOptions:
+        schema:
+          type: array
+          contains:
+            type: object
+            properties:
+              name:
+                type: string
+                pattern: "^(parent|page_size|page_token|pageSize|pageToken)$"
+    apiq-meta:
+      pattern-id: SCF-14
+      lenses: [ style-coherence, standards-compliance ]
+      sources:
+        - type: vendor
+          name: 'Google AIP-132 (Standard methods: List)'
+          url: 'https://google.aip.dev/132'
+          summary: 'A List method MUST accept parent, page_size, and page_token'
+        - type: mining
+          phase: round2
+          subagent: other-p3-builder
+      stakeholders: [ spec-author, client-dev ]
+      lifecycle-phase: authoring-time
+      defect-class: norm
+      iso25010: [ compatibility, usability ]
+      codegen-targets: [ '*' ]
+      detection-precision: low
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: medium
+
+  # Source: Google AIP-122 (Resource names); patterns.json SCF-15
+  # Lens: 5 (Style-Coherence)
+  # Round: 2 (R2)
+  apiq-scf-15-aip-resource-path-alternation:
+    description: >-
+      [SCF-15] AIP-122 resource paths MUST alternate collection/id segments — `/projects/{p}/datasets/{d}/tables/{t}`. Paths with consecutive `{var}` or consecutive collection-segments are non-AIP-conformant.
+    message: "AIP resource path-key '{{value}}' does not alternate collection/id segments."
+    severity: hint
+    given: "$.paths"
+    then:
+      field: "@key"
+      function: pattern
+      functionOptions:
+        notMatch: "/\\{[^}]+\\}/\\{"
+    apiq-meta:
+      pattern-id: SCF-15
+      lenses: [ style-coherence, standards-compliance ]
+      sources:
+        - type: vendor
+          name: 'Google AIP-122 (Resource names)'
+          url: 'https://google.aip.dev/122'
+          verifiedAt: '2026-05-09'
+        - type: mining
+          phase: round2
+          subagent: other-p3-builder
+      stakeholders: [ spec-author, client-dev ]
+      lifecycle-phase: authoring-time
+      defect-class: norm
+      iso25010: [ compatibility, usability ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: medium
+      mttr-impact: low
+      agent-readiness-impact: medium
+
+  # Source: Google AIP-142 (Time fields); patterns.json SCF-17
+  # Lens: 5 (Style-Coherence)
+  # Round: 2 (R2)
+  apiq-scf-17-aip-time-field-imperative:
+    description: >-
+      [SCF-17] AIP-142 time fields use imperative naming (`*_time`, NOT `*ed_time`) — `update_time` not `updated_time`, `create_time` not `created_time`. Detection: schema property names matching the `*ed_time` pattern.
+    message: "{{error}}"
+    severity: hint
+    given: "$..properties"
+    then:
+      function: aip-time-field-imperative
+    apiq-meta:
+      pattern-id: SCF-17
+      lenses: [ style-coherence, standards-compliance ]
+      sources:
+        - type: vendor
+          name: 'Google AIP-142 (Time fields)'
+          url: 'https://google.aip.dev/142'
+          verifiedAt: '2026-05-09'
+        - type: mining
+          phase: round2
+          subagent: other-p3-builder
+      stakeholders: [ spec-author, client-dev ]
+      lifecycle-phase: authoring-time
+      defect-class: norm
+      iso25010: [ compatibility, usability ]
+      codegen-targets: [ '*' ]
+      detection-precision: low
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: low
+
+  # ===========================================================================
+  # Lens-6 + Lens-7 + Lens-9 + Lens-10 (agent-readiness territory)
+  # ===========================================================================
+
+  # Source: HIPAA Privacy Rule §164.514; patterns.json L6-3
+  # Lens: 6 (Privacy-Data-Class)
+  # Round: 2 (R2)
+  apiq-l6-3-phi-field-name-hint:
+    description: >-
+      [L6-3] Field names matching healthcare/PHI patterns (diagnosis, ICD-codes, lab-results, medications, vital-signs) suggest HIPAA- relevant data. If this resource carries PHI, ensure: (1) explicit privacy-tag in the schema; (2) BAA-conformant access-control; (3) audit-logging of access. Soft heuristic — not all matches are PHI.
+    message: "{{error}}"
+    severity: hint
+    given: "$..properties"
+    then:
+      function: phi-field-name-hint
+    apiq-meta:
+      pattern-id: L6-3
+      lenses: [ privacy-data-class ]
+      sources:
+        - type: vendor
+          name: 'HIPAA Privacy Rule §164.514'
+          url: 'https://www.hhs.gov/hipaa/for-professionals/privacy/laws-regulations/index.html'
+          verifiedAt: '2026-05-09'
+        - type: mining
+          phase: round2
+          subagent: other-p3-builder
+      stakeholders: [ security, spec-author, end-user ]
+      lifecycle-phase: authoring-time
+      defect-class: privacy-leakage
+      iso25010: [ security ]
+      codegen-targets: [ '*' ]
+      detection-precision: low
+      auto-fix-safe: false
+      regulatory-mapping:
+        gdpr: [ 'Art-9' ]
+        soc2: [ 'CC6.1', 'CC6.7' ]
+      cost-impact: high
+      mttr-impact: high
+      agent-readiness-impact: low
+
+  # Source: RFC 9111 (HTTP Caching) + cross-industry; patterns.json L7-1
+  # Lens: 7 (Operations), 4 (Client-Friction)
+  # Round: 2 (R2)
+  apiq-l7-1-list-endpoint-cache-headers:
+    description: >-
+      [L7-1] List-endpoints (GET on collection paths) should declare cache-headers (`Cache-Control`, `ETag`, `Last-Modified`) per RFC 9111. Without cache-headers, clients re-fetch unchanged data and CDNs cannot cache responses; agents can't decide whether to cache results.
+    message: "{{error}}"
+    severity: hint
+    given: "$.paths[*].get"
+    then:
+      function: list-endpoint-missing-cache-headers
+    apiq-meta:
+      pattern-id: L7-1
+      lenses: [ operations, client-friction ]
+      sources:
+        - type: rfc
+          number: 9111
+          summary: 'A cache MUST be able to honor cache-control directives'
+        - type: vendor
+          name: 'GitHub REST API caching'
+          url: 'https://docs.github.com/en/rest/overview/resources-in-the-rest-api#conditional-requests'
+          verifiedAt: '2026-05-09'
+        - type: mining
+          phase: round2
+          subagent: other-p3-builder
+      stakeholders: [ operations, spec-author, client-dev ]
+      lifecycle-phase: deploy-time
+      defect-class: incomplete
+      iso25010: [ performance-efficiency, reliability ]
+      codegen-targets:
+        - java
+        - go
+        - python
+        - typescript
+        - rust
+        - csharp
+        - kotlin
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: medium
+      mttr-impact: medium
+      agent-readiness-impact: medium
+
+  # Source: Postman 2025 + agentic-patterns; patterns.json L9-2
+  # Lens: 9 (AI-Agent-Consumability), 4 (Client-Friction)
+  # Round: 2 (R2)
+  apiq-l9-2-description-parameter-ratio:
+    description: >-
+      [L9-2] Operations with many parameters but tiny description give agents insufficient context to disambiguate parameter usage. Heuristic: parameters > 3 and description-length < 50 chars. Agent tool-call confidence drops when descriptions can't carry parameter-context.
+    message: "{{error}}"
+    severity: hint
+    given: "$.paths[*][get,put,post,delete,patch]"
+    then:
+      function: description-parameter-ratio
+    apiq-meta:
+      pattern-id: L9-2
+      lenses: [ ai-agent-consumability, client-friction ]
+      sources:
+        - type: vendor
+          name: 'Postman State of the API 2025'
+          url: 'https://www.postman.com/state-of-api/'
+          verifiedAt: '2026-05-09'
+        - type: vendor
+          name: 'agentic-patterns research (Round 3)'
+          verifiedAt: '2026-05-09'
+        - type: mining
+          phase: round2
+          subagent: other-p3-builder
+      stakeholders: [ ai-agent, spec-author, client-dev ]
+      lifecycle-phase: authoring-time
+      defect-class: incomplete
+      iso25010: [ usability ]
+      codegen-targets:
+        - java
+        - go
+        - python
+        - typescript
+        - rust
+        - csharp
+        - kotlin
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: medium
+      agent-readiness-impact: high
+
+  # Source: Postman 2025 + Speakeasy + RFC 7807; patterns.json L9-3
+  # Lens: 9 (AI-Agent-Consumability), 4 (Client-Friction)
+  # Round: 2 (R2)
+  apiq-l9-3-error-schema-discoverability:
+    description: >-
+      [L9-3] Error responses (4xx/5xx) without schemas mean agents can't build error-recovery logic — they retry blindly or give up. Every 4xx/5xx response should declare a schema (RFC-7807 Problem-Details preferred for cross-API consistency).
+    message: "{{error}}"
+    severity: warn
+    given: "$.paths[*][get,put,post,delete,patch]"
+    then:
+      function: error-schema-discoverability
+    apiq-meta:
+      pattern-id: L9-3
+      lenses: [ ai-agent-consumability, client-friction ]
+      sources:
+        - type: rfc
+          number: 7807
+          verifiedAt: '2026-05-09'
+        - type: vendor
+          name: 'Postman State of the API 2025'
+          url: 'https://www.postman.com/state-of-api/'
+          verifiedAt: '2026-05-09'
+        - type: vendor
+          name: 'Speakeasy SDK guidance'
+          url: 'https://www.speakeasy.com/openapi'
+          verifiedAt: '2026-05-09'
+        - type: mining
+          phase: round2
+          subagent: other-p3-builder
+      stakeholders: [ ai-agent, spec-author, client-dev ]
+      lifecycle-phase: authoring-time
+      defect-class: incomplete
+      iso25010: [ reliability, usability ]
+      codegen-targets:
+        - java
+        - go
+        - python
+        - typescript
+        - rust
+        - csharp
+        - kotlin
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: medium
+      mttr-impact: high
+      agent-readiness-impact: high
+
+  # Source: Postman 2025 cursor-pagination conventions; patterns.json L9-4
+  # Lens: 9 (AI-Agent-Consumability), 4 (Client-Friction)
+  # Round: 2 (R2)
+  apiq-l9-4-pagination-cursor-stability:
+    description: >-
+      [L9-4] Operations with cursor / page_token / next_token parameters should document cursor stability ("opaque", "may change", "stable for X hours"). Agents need to know whether to cache cursor values across calls — without this they make unsafe assumptions.
+    message: "{{error}}"
+    severity: hint
+    given: "$.paths[*][get]"
+    then:
+      function: pagination-cursor-stability
+    apiq-meta:
+      pattern-id: L9-4
+      lenses: [ ai-agent-consumability, client-friction ]
+      sources:
+        - type: vendor
+          name: 'Postman State of the API 2025'
+          url: 'https://www.postman.com/state-of-api/'
+          verifiedAt: '2026-05-09'
+        - type: vendor
+          name: 'Stripe + GitHub cursor-pagination conventions'
+          verifiedAt: '2026-05-09'
+        - type: mining
+          phase: round2
+          subagent: other-p3-builder
+      stakeholders: [ ai-agent, spec-author, client-dev ]
+      lifecycle-phase: authoring-time
+      defect-class: incomplete
+      iso25010: [ usability, reliability ]
+      codegen-targets:
+        - java
+        - go
+        - python
+        - typescript
+        - rust
+        - csharp
+        - kotlin
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: medium
+      agent-readiness-impact: high
+
+  # Source: Speakeasy + LLM-friendly-API; patterns.json L9-5
+  # Lens: 9 (AI-Agent-Consumability), 4 (Client-Friction)
+  # Round: 2 (R2)
+  apiq-l9-5-operation-id-machine-friendly:
+    description: >-
+      [L9-5] operationId should be ≤30 chars and start with a verb (verb- noun pattern: `listUsers`, `createInvoice`, `cancelOrder`). Long IDs like `getUserAccountSettingsByUserIdAndOrgId` confuse agent tool-selection — concise verb-noun improves selection-confidence.
+    message: "{{error}}"
+    severity: hint
+    given: "$.paths[*][get,put,post,delete,patch].operationId"
+    then:
+      function: operation-id-machine-friendly
+    apiq-meta:
+      pattern-id: L9-5
+      lenses: [ ai-agent-consumability, client-friction ]
+      sources:
+        - type: vendor
+          name: 'Speakeasy SDK guidance'
+          url: 'https://www.speakeasy.com/openapi'
+          verifiedAt: '2026-05-09'
+        - type: vendor
+          name: 'LLM-friendly-API patterns'
+          verifiedAt: '2026-05-09'
+        - type: mining
+          phase: round2
+          subagent: other-p3-builder
+      stakeholders: [ ai-agent, codegen-tool, spec-author ]
+      lifecycle-phase: authoring-time
+      defect-class: ergonomic
+      iso25010: [ usability ]
+      codegen-targets:
+        - java
+        - go
+        - python
+        - typescript
+        - rust
+        - csharp
+        - kotlin
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: high
+
+  # Source: LLM-friendly-API + Speakeasy; patterns.json L9-6
+  # Lens: 9 (AI-Agent-Consumability), 4 (Client-Friction)
+  # Round: 2 (R2)
+  apiq-l9-6-summary-concise:
+    description: >-
+      [L9-6] Operation summary must be present + ≤80 chars + a single sentence (no newlines, no multi-period). Agents use summary as first-pass tool-selection signal; verbose multi-sentence summaries degrade selection-confidence.
+    message: "{{error}}"
+    severity: hint
+    given: "$.paths[*][get,put,post,delete,patch].summary"
+    then:
+      function: summary-concise
+    apiq-meta:
+      pattern-id: L9-6
+      lenses: [ ai-agent-consumability, client-friction ]
+      sources:
+        - type: vendor
+          name: 'LLM-friendly-API patterns'
+          verifiedAt: '2026-05-09'
+        - type: vendor
+          name: 'Speakeasy SDK guidance'
+          url: 'https://www.speakeasy.com/openapi'
+          verifiedAt: '2026-05-09'
+        - type: mining
+          phase: round2
+          subagent: other-p3-builder
+      stakeholders: [ ai-agent, spec-author, docs-tool ]
+      lifecycle-phase: authoring-time
+      defect-class: ergonomic
+      iso25010: [ usability ]
+      codegen-targets:
+        - java
+        - go
+        - python
+        - typescript
+        - rust
+        - csharp
+        - kotlin
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: high
+
+  # Source: OpenAI function-calling + MCP; patterns.json L9-8
+  # Lens: 9 (AI-Agent-Consumability)
+  # Round: 2 (R2)
+  apiq-l9-8-function-call-friendly-schema:
+    description: >-
+      [L9-8] Function-call-friendly schemas avoid deeply nested anyOf/oneOf unions. Heuristic: anyOf with ≥3 branches OR nested anyOf-within-anyOf OR oneOf with ≥4 branches confuses OpenAI function-calling and MCP tool-schemas. Use discriminator-based oneOf or factor into sub-resources.
+    message: "{{error}}"
+    severity: hint
+    given: "$.components.schemas[*]"
+    then:
+      function: function-call-friendly-schema
+    apiq-meta:
+      pattern-id: L9-8
+      lenses: [ ai-agent-consumability ]
+      sources:
+        - type: vendor
+          name: 'OpenAI function-calling docs'
+          url: 'https://platform.openai.com/docs/guides/function-calling'
+          verifiedAt: '2026-05-09'
+        - type: vendor
+          name: 'MCP schema-conventions'
+          url: 'https://modelcontextprotocol.io/'
+          verifiedAt: '2026-05-09'
+        - type: mining
+          phase: round2
+          subagent: other-p3-builder
+      stakeholders: [ ai-agent, spec-author, codegen-tool ]
+      lifecycle-phase: authoring-time
+      defect-class: ergonomic
+      iso25010: [ usability, compatibility ]
+      codegen-targets: [ '*' ]
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: high
+      mttr-impact: medium
+      agent-readiness-impact: high
+
+  # Source: FAIR + Postman + RapidAPI; patterns.json L10-4
+  # Lens: 10 (Operational-Metadata), 4 (Client-Friction), 9 (AI-Agent-Consumability)
+  # Round: 2 (R2)
+  apiq-l10-4-external-docs-substantive:
+    description: >-
+      [L10-4] `externalDocs.url` is declared but obviously a stub (example.com / localhost / TODO / empty), or `externalDocs.description` is generic ("Documentation" / "Docs"). FAIR-metadata requires substantive external-docs link so consumers and agents can find authoritative reference material.
+    message: "{{error}}"
+    severity: hint
+    given: "$.externalDocs"
+    then:
+      function: external-docs-stub
+    apiq-meta:
+      pattern-id: L10-4
+      lenses: [ operational-metadata, client-friction, ai-agent-consumability ]
+      sources:
+        - type: vendor
+          name: 'FAIR principles'
+          url: 'https://www.go-fair.org/fair-principles/'
+          verifiedAt: '2026-05-09'
+        - type: vendor
+          name: 'Postman State of the API 2025'
+          url: 'https://www.postman.com/state-of-api/'
+          verifiedAt: '2026-05-09'
+        - type: mining
+          phase: round2
+          subagent: other-p3-builder
+      stakeholders: [ spec-author, client-dev, ai-agent, docs-tool ]
+      lifecycle-phase: documentation-time
+      defect-class: operational-metadata-missing
+      iso25010: [ usability, maintainability ]
+      codegen-targets:
+        - java
+        - go
+        - python
+        - typescript
+        - rust
+        - csharp
+        - kotlin
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: medium
+
+  # Source: FAIR + Postman; patterns.json L10-5
+  # Lens: 10 (Operational-Metadata), 4 (Client-Friction), 9 (AI-Agent-Consumability)
+  # Round: 2 (R2)
+  apiq-l10-5-info-contact-substantive:
+    description: >-
+      [L10-5] `info.contact` should have a substantive URL (valid http/https, not example.com/localhost) OR email (valid format, not @example.com). Empty / placeholder values fail FAIR-metadata checks; agents can't escalate issues to a real contact point.
+    message: "{{error}}"
+    severity: hint
+    given: "$.info.contact"
+    then:
+      function: info-contact-substantive
+    apiq-meta:
+      pattern-id: L10-5
+      lenses: [ operational-metadata, client-friction, ai-agent-consumability ]
+      sources:
+        - type: vendor
+          name: 'FAIR principles'
+          url: 'https://www.go-fair.org/fair-principles/'
+          verifiedAt: '2026-05-09'
+        - type: vendor
+          name: 'Postman State of the API 2025'
+          url: 'https://www.postman.com/state-of-api/'
+          verifiedAt: '2026-05-09'
+        - type: mining
+          phase: round2
+          subagent: other-p3-builder
+      stakeholders: [ spec-author, client-dev, ai-agent, operations ]
+      lifecycle-phase: authoring-time
+      defect-class: operational-metadata-missing
+      iso25010: [ usability, maintainability ]
+      codegen-targets:
+        - java
+        - go
+        - python
+        - typescript
+        - rust
+        - csharp
+        - kotlin
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: high
+
+  # Source: FAIR + Postman; patterns.json L10-6
+  # Lens: 10 (Operational-Metadata), 4 (Client-Friction), 9 (AI-Agent-Consumability)
+  # Round: 2 (R2)
+  apiq-l10-6-info-license-substantive:
+    description: >-
+      [L10-6] `info.license` should declare a substantive license — a `name` (e.g. "MIT", "Apache 2.0", "Proprietary") and ideally an `identifier` (SPDX). Missing or empty license blocks fail FAIR- metadata and force consumers + agents to assume worst-case (no reuse permitted).
+    message: "info.license lacks substantive name (FAIR-metadata SPDX preferred)."
+    severity: hint
+    given: "$.info"
+    then:
+      field: license
+      function: schema
+      functionOptions:
+        schema:
+          type: object
+          required: [ name ]
+          properties:
+            name:
+              type: string
+              minLength: 1
+    apiq-meta:
+      pattern-id: L10-6
+      lenses: [ operational-metadata, client-friction, ai-agent-consumability ]
+      sources:
+        - type: vendor
+          name: 'FAIR principles'
+          url: 'https://www.go-fair.org/fair-principles/'
+          verifiedAt: '2026-05-09'
+        - type: vendor
+          name: 'Postman State of the API 2025'
+          url: 'https://www.postman.com/state-of-api/'
+          verifiedAt: '2026-05-09'
+        - type: vendor
+          name: 'SPDX License List'
+          url: 'https://spdx.org/licenses/'
+          verifiedAt: '2026-05-09'
+        - type: mining
+          phase: round2
+          subagent: other-p3-builder
+      stakeholders: [ spec-author, client-dev, ai-agent ]
+      lifecycle-phase: authoring-time
+      defect-class: operational-metadata-missing
+      iso25010: [ usability, maintainability ]
+      codegen-targets:
+        - java
+        - go
+        - python
+        - typescript
+        - rust
+        - csharp
+        - kotlin
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: medium
+
+  # ===========================================================================
+  # F-Tier — DOLAR + cross-vendor (Lens 4 + Lens 5 + Lens 10)
+  # F-11, F-12, F-13, F-14 already in apiq-ruleset-client-p2.yaml
+  # ===========================================================================
+
+  # Source: i18n best-practices + RFC 7231 §5.3.5; patterns.json F-2
+  # Lens: 10 (Operational-Metadata), 4 (Client-Friction), 2 (Standards-Compliance)
+  # Round: 2 (R2)
+  apiq-f-2-accept-language-on-user-facing:
+    description: >-
+      [F-2] User-facing operations (returning content with `description`/ `name`/`title`/`message` fields) should declare an `Accept-Language` header parameter. i18n best-practices and RFC 7231 §5.3.5 expect Accept-Language for content-negotiation on translatable strings.
+    message: "{{error}}"
+    severity: hint
+    given: "$.paths[*][get,post]"
+    then:
+      function: accept-language-on-user-facing-ops
+    apiq-meta:
+      pattern-id: F-2
+      lenses: [ operational-metadata, client-friction, standards-compliance ]
+      sources:
+        - type: rfc
+          number: 7231
+          section: '5.3.5'
+          summary: 'The Accept-Language header field can be used by user agents to indicate'
+        - type: vendor
+          name: 'i18n best-practices'
+          verifiedAt: '2026-05-09'
+        - type: mining
+          phase: round2
+          subagent: other-p3-builder
+      stakeholders: [ end-user, spec-author, client-dev ]
+      lifecycle-phase: authoring-time
+      defect-class: incomplete
+      iso25010: [ usability, compatibility ]
+      codegen-targets:
+        - java
+        - go
+        - python
+        - typescript
+        - rust
+        - csharp
+        - kotlin
+      detection-precision: low
+      auto-fix-safe: false
+      cost-impact: medium
+      mttr-impact: low
+      agent-readiness-impact: low
+
+  # Source: i18n + RFC 3339; patterns.json F-3
+  # Lens: 10 (Operational-Metadata), 2 (Standards-Compliance), 4 (Client-Friction)
+  # Round: 2 (R2)
+  apiq-f-3-time-zone-explicit-datetime:
+    description: >-
+      [F-3] String fields with `format: date-time` should be RFC-3339 compliant with explicit time-zone (Z or ±hh:mm). Schemas with `format: date-time` but pattern-restrictions that allow naive datetimes (no Z/offset) lead to ambiguous timestamps for clients across timezones.
+    message: "date-time format should require explicit timezone (Z or ±hh:mm) per RFC 3339."
+    severity: hint
+    given: "$..[?(@.type=='string' && @.format=='date-time' && @.pattern)]"
+    then:
+      field: pattern
+      function: pattern
+      functionOptions:
+        match: "(Z|[+-])"
+    apiq-meta:
+      pattern-id: F-3
+      lenses: [ operational-metadata, standards-compliance, client-friction ]
+      sources:
+        - type: rfc
+          number: 3339
+          summary: 'Date and time on the Internet: Timestamps'
+        - type: vendor
+          name: 'i18n best-practices'
+          verifiedAt: '2026-05-09'
+        - type: mining
+          phase: round2
+          subagent: other-p3-builder
+      stakeholders: [ client-dev, spec-author ]
+      lifecycle-phase: authoring-time
+      defect-class: incomplete
+      iso25010: [ reliability, compatibility ]
+      codegen-targets:
+        - java
+        - go
+        - python
+        - typescript
+        - rust
+        - csharp
+        - kotlin
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: medium
+      agent-readiness-impact: medium
+
+  # Source: TM Forum + Stripe + GitHub `expand`/`fields`; patterns.json F-5
+  # Lens: 10 (Operational-Metadata), 5 (Style-Coherence), 4 (Client-Friction)
+  # Round: 2 (R2)
+  apiq-f-5-consistent-expand-fields-param:
+    description: >-
+      [F-5] When some collection-getters declare `expand` / `fields` / `include` / `select` query-parameters, ALL collection-getters should declare them consistently. Inconsistent partial-response support forces clients to over-fetch on some endpoints.
+    message: "{{error}}"
+    severity: hint
+    given: "$"
+    then:
+      function: consistent-expand-fields-param
+    apiq-meta:
+      pattern-id: F-5
+      lenses: [ operational-metadata, style-coherence, client-friction ]
+      sources:
+        - type: vendor
+          name: 'TM Forum REST API Design Guidelines TMF630'
+          url: 'https://www.tmforum.org/resources/specification/tmf630-rest-api-design-guidelines-4-2-0/'
+          verifiedAt: '2026-05-09'
+        - type: vendor
+          name: 'Stripe `expand` API pattern'
+          url: 'https://stripe.com/docs/api/expanding_objects'
+          verifiedAt: '2026-05-09'
+        - type: vendor
+          name: 'GitHub GraphQL-style `fields` pattern'
+          url: 'https://docs.github.com/en/rest'
+          verifiedAt: '2026-05-09'
+        - type: mining
+          phase: round2
+          subagent: other-p3-builder
+      stakeholders: [ spec-author, client-dev ]
+      lifecycle-phase: authoring-time
+      defect-class: ergonomic
+      iso25010: [ performance-efficiency, usability ]
+      codegen-targets:
+        - java
+        - go
+        - python
+        - typescript
+        - rust
+        - csharp
+        - kotlin
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: medium
+      mttr-impact: low
+      agent-readiness-impact: medium
+
+  # Source: TM Forum + JSON:API + Schema.org `@type`; patterns.json F-15
+  # Lens: 5 (Style-Coherence), 10 (Operational-Metadata)
+  # Round: 2 (R2)
+  apiq-f-15-polymorphism-wire-discriminator:
+    description: >-
+      [F-15] Schemas with discriminator should use a wire-discriminator property name from the cross-vendor convention set: `@type` / `_type` / `type` / `kind` / `objectType`. Custom discriminator names (`category`, `variant`, etc.) break agent compatibility across APIs that follow TM Forum / JSON:API / Schema.org conventions.
+    message: "{{error}}"
+    severity: hint
+    given: "$.components.schemas[*]"
+    then:
+      function: polymorphism-wire-discriminator
+    apiq-meta:
+      pattern-id: F-15
+      lenses: [ style-coherence, operational-metadata ]
+      sources:
+        - type: vendor
+          name: 'TM Forum REST API Design Guidelines TMF630'
+          url: 'https://www.tmforum.org/resources/specification/tmf630-rest-api-design-guidelines-4-2-0/'
+          verifiedAt: '2026-05-09'
+        - type: vendor
+          name: 'JSON:API v1.1 §Polymorphism'
+          url: 'https://jsonapi.org/format/'
+          verifiedAt: '2026-05-09'
+        - type: vendor
+          name: 'Schema.org `@type`'
+          url: 'https://schema.org/docs/datamodel.html'
+          verifiedAt: '2026-05-09'
+        - type: mining
+          phase: round2
+          subagent: other-p3-builder
+      stakeholders: [ spec-author, client-dev ]
+      lifecycle-phase: authoring-time
+      defect-class: ergonomic
+      iso25010: [ compatibility, usability ]
+      codegen-targets: [ '*' ]
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: medium
+      mttr-impact: low
+      agent-readiness-impact: medium
+
+  # Source: API Docs Smells arXiv (Aghajani 2019); patterns.json F-19
+  # Lens: 4 (Client-Friction), 10 (Operational-Metadata)
+  # Round: 2 (R2)
+  apiq-f-19-lazy-description:
+    description: >-
+      [F-19] Doc-smell: Lazy description — when `description` is a verbatim copy of the field/operation name (e.g. property `firstName` with description `firstName` or `First name`). Provide substantive descriptions with purpose, units, constraints — agents and humans need more than the name repeated.
+    message: "{{error}}"
+    severity: hint
+    given: "$..properties.*"
+    then:
+      function: lazy-description
+    apiq-meta:
+      pattern-id: F-19
+      lenses: [ client-friction, operational-metadata ]
+      sources:
+        - type: vendor
+          name: 'API Docs Smells (Aghajani et al., arXiv 2019)'
+          url: 'https://arxiv.org/abs/1907.07725'
+          summary: 'Lazy description: description is just a copy of the name'
+        - type: mining
+          phase: round2
+          subagent: other-p3-builder
+      stakeholders: [ spec-author, client-dev, docs-tool ]
+      lifecycle-phase: documentation-time
+      defect-class: ergonomic
+      iso25010: [ usability ]
+      codegen-targets:
+        - java
+        - go
+        - python
+        - typescript
+        - rust
+        - csharp
+        - kotlin
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: medium
+
+  # Source: RFC 7519 + FAPI; patterns.json F-20
+  # Lens: 1 (Threat-Modeling), 2 (Standards-Compliance)
+  # Round: 2 (R2) — re-tag of RFC2-57
+  apiq-f-20-bearer-format-jwt-declared:
+    description: >-
+      [F-20] HTTP Bearer security-schemes should declare `bearerFormat: "JWT"` per RFC 7519 + FAPI when JWTs are used as bearer tokens. Without bearerFormat, agents can't distinguish JWT-bearer (which requires JWT validation) from opaque-bearer.
+    message: "HTTP bearer security-scheme lacks 'bearerFormat: JWT' declaration."
+    severity: hint
+    given: "$.components.securitySchemes[?(@.type=='http' && @.scheme=='bearer')]"
+    then:
+      field: bearerFormat
+      function: defined
+    apiq-meta:
+      pattern-id: F-20
+      lenses: [ threat-modeling, standards-compliance ]
+      sources:
+        - type: rfc
+          number: 7519
+          summary: 'JSON Web Token (JWT)'
+        - type: vendor
+          name: 'OpenID FAPI'
+          url: 'https://openid.net/specs/openid-financial-api-part-2.html'
+          verifiedAt: '2026-05-09'
+        - type: mining
+          phase: round2
+          subagent: other-p3-builder
+      stakeholders: [ security, spec-author, client-dev ]
+      lifecycle-phase: authoring-time
+      defect-class: incomplete
+      iso25010: [ security, compatibility ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: false
+      regulatory-mapping:
+        nist: [ 'PR.AA-01' ]
+        asvs: [ 'V51.4.1' ]
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: medium

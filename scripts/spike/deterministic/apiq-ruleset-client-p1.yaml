@@ -20,7 +20,7 @@
 #
 # CL-1 (multi-lang reserved-keywords) uses the custom Spectral function
 # `multi-lang-reserved-keywords` registered by spectral-runner.ts from
-# `spectral-functions/multi-lang-reserved-keywords.ts`. All other rules
+# `spectral-functions/client-p1-functions.ts`. All other rules
 # use the built-in functions Spectral ships.
 
 extends:
@@ -63,8 +63,7 @@ rules:
       sources:
         - type: vendor
           name: openapi-generator multi-issue (#1831, #7100)
-          verbatim: 'reserved word collides with target-language identifier'
-          verifiedAt: '2026-05-08'
+          summary: 'reserved word collides with target-language identifier'
         - type: vendor
           name: swagger-codegen #4805
           verifiedAt: '2026-05-08'
@@ -107,8 +106,7 @@ rules:
       sources:
         - type: vendor
           name: openapi-generator multi-issue (#1831, #7100)
-          verbatim: 'reserved word collides with target-language identifier'
-          verifiedAt: '2026-05-08'
+          summary: 'reserved word collides with target-language identifier'
         - type: vendor
           name: swagger-codegen #4805
           verifiedAt: '2026-05-08'
@@ -203,8 +201,7 @@ rules:
       sources:
         - type: vendor
           name: openapi-generator (operation-operationId)
-          verbatim: 'operationId is the canonical method-naming key'
-          verifiedAt: '2026-05-08'
+          summary: 'operationId is the canonical method-naming key'
         - type: vendor
           name: spectral:oas operation-operationId
           verifiedAt: '2026-05-08'
@@ -215,7 +212,7 @@ rules:
       lifecycle-phase: build-time
       defect-class: incomplete
       iso25010: [usability, maintainability]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin, php, ruby]
       detection-precision: high
       auto-fix-safe: false
       cost-impact: low
@@ -251,8 +248,7 @@ rules:
       sources:
         - type: vendor
           name: 'OAS 3.0 §4.7.25 (Discriminator)'
-          verbatim: 'discriminator hint to alternative schemas'
-          verifiedAt: '2026-05-08'
+          summary: 'discriminator hint to alternative schemas'
         - type: vendor
           name: Redocly + multi-codegen
           verifiedAt: '2026-05-08'
@@ -300,8 +296,7 @@ rules:
         - type: rfc
           number: 9110
           section: '15.3.5'
-          verbatim: 'A 204 response is terminated by the end of the header section; it cannot contain content'
-          verifiedAt: '2026-05-08'
+          summary: 'A 204 response is terminated by the end of the header section; it cannot contain content'
         - type: vendor
           name: OAI #3536
           verifiedAt: '2026-05-08'
@@ -312,7 +307,7 @@ rules:
       lifecycle-phase: build-time
       defect-class: norm
       iso25010: [compatibility, reliability]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
       detection-precision: high
       auto-fix-safe: true
       cost-impact: low
@@ -363,7 +358,7 @@ rules:
       lifecycle-phase: build-time
       defect-class: incomplete
       iso25010: [security, usability]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp]
       detection-precision: high
       auto-fix-safe: false
       cost-impact: low
@@ -491,9 +486,8 @@ rules:
       sources:
         - type: vendor
           name: 'OAS 3.0 §4.7.18 (Example Object)'
-          verbatim: 'value field and externalValue field are mutually exclusive'
+          summary: 'value field and externalValue field are mutually exclusive'
           url: 'https://spec.openapis.org/oas/v3.0.3#example-object'
-          verifiedAt: '2026-05-08'
         - type: vendor
           name: 'Redocly (MIN-48)'
           url: 'https://redocly.com/docs/cli/rules/'
@@ -505,7 +499,7 @@ rules:
       lifecycle-phase: build-time
       defect-class: syntax
       iso25010: [compatibility, usability]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
       detection-precision: high
       auto-fix-safe: false
       cost-impact: low
@@ -598,8 +592,7 @@ rules:
         - type: rfc
           number: 3986
           section: '3.4'
-          verbatim: 'The query component is indicated by the first question mark'
-          verifiedAt: '2026-05-08'
+          summary: 'The query component is indicated by the first question mark'
         - type: vendor
           name: 'spectral:oas path-not-include-query'
           verifiedAt: '2026-05-08'
@@ -610,7 +603,7 @@ rules:
       lifecycle-phase: build-time
       defect-class: syntax
       iso25010: [compatibility, usability]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
       detection-precision: high
       auto-fix-safe: false
       cost-impact: low
@@ -664,7 +657,7 @@ rules:
       lifecycle-phase: build-time
       defect-class: ergonomic
       iso25010: [usability, maintainability]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
       detection-precision: low
       auto-fix-safe: false
       cost-impact: medium
@@ -715,8 +708,7 @@ rules:
       sources:
         - type: rfc
           number: 9457
-          verbatim: 'Problem Details for HTTP APIs (supersedes RFC 7807)'
-          verifiedAt: '2026-05-08'
+          summary: 'Problem Details for HTTP APIs (supersedes RFC 7807)'
         - type: vendor
           name: Speakeasy (cross-endpoint error-coherence)
           url: 'https://www.speakeasy.com/openapi'
@@ -728,7 +720,7 @@ rules:
       lifecycle-phase: build-time
       defect-class: ergonomic
       iso25010: [usability, maintainability]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
       detection-precision: medium
       auto-fix-safe: false
       cost-impact: medium
@@ -925,7 +917,7 @@ rules:
       lifecycle-phase: build-time
       defect-class: ergonomic
       iso25010: [usability, reliability]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
       detection-precision: medium
       auto-fix-safe: false
       cost-impact: low
@@ -969,7 +961,7 @@ rules:
       lifecycle-phase: build-time
       defect-class: ergonomic
       iso25010: [usability, compatibility]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin, php, ruby]
       detection-precision: high
       auto-fix-safe: false
       cost-impact: low
@@ -1018,7 +1010,7 @@ rules:
       lifecycle-phase: documentation-time
       defect-class: incomplete
       iso25010: [usability, maintainability]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin, php, ruby]
       detection-precision: high
       auto-fix-safe: false
       cost-impact: low
@@ -1069,7 +1061,7 @@ rules:
       lifecycle-phase: build-time
       defect-class: syntax
       iso25010: [compatibility, reliability]
-      codegen-targets: ['*']
+      codegen-targets: [typescript, java, csharp, kotlin, go]
       detection-precision: high
       auto-fix-safe: false
       cost-impact: low
@@ -1112,7 +1104,7 @@ rules:
       lifecycle-phase: build-time
       defect-class: syntax
       iso25010: [compatibility, reliability]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
       detection-precision: high
       auto-fix-safe: false
       cost-impact: low
@@ -1163,7 +1155,7 @@ rules:
       lifecycle-phase: build-time
       defect-class: semantic
       iso25010: [usability, reliability]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
       detection-precision: high
       auto-fix-safe: false
       cost-impact: low
@@ -1213,7 +1205,7 @@ rules:
       lifecycle-phase: build-time
       defect-class: semantic
       iso25010: [reliability, compatibility]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
       detection-precision: high
       auto-fix-safe: false
       cost-impact: low
@@ -1259,7 +1251,7 @@ rules:
       lifecycle-phase: deploy-time
       defect-class: incomplete
       iso25010: [usability, reliability]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
       detection-precision: high
       auto-fix-safe: false
       cost-impact: low
@@ -1306,7 +1298,7 @@ rules:
       lifecycle-phase: build-time
       defect-class: syntax
       iso25010: [reliability, maintainability]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
       detection-precision: low
       auto-fix-safe: false
       cost-impact: low
@@ -1352,9 +1344,8 @@ rules:
       sources:
         - type: vendor
           name: 'OAS 3.0 §3.0 (Reference Object)'
-          verbatim: 'any other properties of a Reference Object SHALL be ignored'
+          summary: 'any other properties of a Reference Object SHALL be ignored'
           url: 'https://spec.openapis.org/oas/v3.0.3#reference-object'
-          verifiedAt: '2026-05-08'
         - type: vendor
           name: apiq-original (apiq-A1 stronger variant)
           verifiedAt: '2026-05-08'
@@ -1365,7 +1356,7 @@ rules:
       lifecycle-phase: build-time
       defect-class: syntax
       iso25010: [compatibility, reliability]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
       detection-precision: high
       auto-fix-safe: true
       cost-impact: low

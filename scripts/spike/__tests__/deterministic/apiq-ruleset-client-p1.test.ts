@@ -28,7 +28,7 @@ import {
   distinctIdentifierCount,
   multiLangReservedKeywords,
   type Target,
-} from '../../deterministic/spectral-functions/multi-lang-reserved-keywords.js';
+} from '../../deterministic/spectral-functions/client-p1-functions.js';
 import {
   runSpectralLayers,
   getClientP1RuleCodes,

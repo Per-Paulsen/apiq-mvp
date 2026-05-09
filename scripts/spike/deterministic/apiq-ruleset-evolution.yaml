@@ -100,13 +100,11 @@ rules:
         - type: rfc
           number: 8594
           section: '2'
-          verbatim: 'The Sunset HTTP response header field indicates that a URI is likely to become unresponsive at a specified point in the future.'
-          verifiedAt: '2026-05-08'
+          summary: 'The Sunset HTTP response header field indicates that a URI is likely to become unresponsive at a specified point in the future.'
         - type: rfc
           number: 9745
           section: '1'
-          verbatim: 'Deprecation is an Item Structured Header Field; its value MUST be a Date as per Section 3.3.7 of [RFC9651].'
-          verifiedAt: '2026-05-08'
+          summary: 'Deprecation is an Item Structured Header Field; its value MUST be a Date as per Section 3.3.7 of [RFC9651].'
         - type: vendor
           name: 'OASDIFF endpoint-deprecated-no-sunset'
           verifiedAt: '2026-05-08'
@@ -117,7 +115,7 @@ rules:
       lifecycle-phase: evolution-time
       defect-class: operational-metadata-missing
       iso25010: [reliability, maintainability, compatibility]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
       detection-precision: medium
       auto-fix-safe: false
       cost-impact: medium
@@ -156,7 +154,7 @@ rules:
       lifecycle-phase: evolution-time
       defect-class: over-specification
       iso25010: [maintainability, compatibility]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
       detection-precision: high
       auto-fix-safe: false
       cost-impact: high
@@ -190,7 +188,7 @@ rules:
       lifecycle-phase: evolution-time
       defect-class: over-specification
       iso25010: [maintainability, compatibility]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
       detection-precision: high
       auto-fix-safe: false
       cost-impact: high
@@ -239,7 +237,7 @@ rules:
       lifecycle-phase: evolution-time
       defect-class: incomplete
       iso25010: [security, maintainability]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
       detection-precision: medium
       auto-fix-safe: false
       regulatory-mapping:
@@ -288,7 +286,7 @@ rules:
       lifecycle-phase: authoring-time
       defect-class: incomplete
       iso25010: [maintainability, usability]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
       detection-precision: high
       auto-fix-safe: false
       cost-impact: low
@@ -738,7 +736,7 @@ rules:
       lifecycle-phase: authoring-time
       defect-class: semantic
       iso25010: [usability, maintainability]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
       detection-precision: high
       auto-fix-safe: false
       cost-impact: high
@@ -930,7 +928,7 @@ rules:
       lifecycle-phase: evolution-time
       defect-class: incomplete
       iso25010: [compatibility, maintainability]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
       detection-precision: medium
       auto-fix-safe: false
       cost-impact: medium
@@ -976,7 +974,7 @@ rules:
       lifecycle-phase: evolution-time
       defect-class: incomplete
       iso25010: [maintainability, compatibility]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
       detection-precision: high
       auto-fix-safe: false
       cost-impact: medium
@@ -1088,7 +1086,7 @@ rules:
       lifecycle-phase: authoring-time
       defect-class: incomplete
       iso25010: [reliability, usability]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
       detection-precision: high
       auto-fix-safe: false
       cost-impact: medium
@@ -1136,7 +1134,7 @@ rules:
       lifecycle-phase: authoring-time
       defect-class: incomplete
       iso25010: [usability, maintainability]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
       detection-precision: high
       auto-fix-safe: false
       cost-impact: low
@@ -1295,7 +1293,7 @@ rules:
       lifecycle-phase: authoring-time
       defect-class: semantic
       iso25010: [maintainability, compatibility]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
       detection-precision: high
       auto-fix-safe: false
       cost-impact: medium
@@ -1331,7 +1329,7 @@ rules:
       lifecycle-phase: authoring-time
       defect-class: semantic
       iso25010: [maintainability, compatibility]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
       detection-precision: high
       auto-fix-safe: false
       cost-impact: medium
@@ -1371,12 +1369,10 @@ rules:
       sources:
         - type: rfc
           number: 7396
-          verbatim: 'A JSON merge patch document describes changes to be made to a target JSON document.'
-          verifiedAt: '2026-05-08'
+          summary: 'A JSON merge patch document describes changes to be made to a target JSON document.'
         - type: rfc
           number: 6902
-          verbatim: 'JSON Patch defines a JSON document structure for expressing a sequence of operations to apply to a JSON document.'
-          verifiedAt: '2026-05-08'
+          summary: 'JSON Patch defines a JSON document structure for expressing a sequence of operations to apply to a JSON document.'
         - type: vendor
           name: 'Azure az-patch-content-type'
           verifiedAt: '2026-05-08'
@@ -1387,7 +1383,7 @@ rules:
       lifecycle-phase: authoring-time
       defect-class: norm
       iso25010: [compatibility, maintainability]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
       detection-precision: high
       auto-fix-safe: false
       cost-impact: medium

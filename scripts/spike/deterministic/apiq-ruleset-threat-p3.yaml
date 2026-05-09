@@ -1,0 +1,1233 @@
+# apiq Spectral Ruleset — P3 Threat-Modeling Rules (T16c, Welle D)
+#
+# 31 P3 (Defense-in-Depth + Nice-to-Have) Threat-Modeling rules per
+# implementation-priority.md §"P3 — Defense-in-Depth + Nice-to-Have" — patterns
+# that complement P1 (parity) + P2 (USP/differentiator) coverage.
+#
+# Authored 2026-05-09 (T16c / Welle D) from:
+#   - specs/big-spec-architecture-spike-stage-a-implementation-priority.md (P3 list)
+#   - specs/big-spec-architecture-spike-stage-a-restwork-plan.md §7 (Welle D)
+#   - scripts/spike/data/patterns.json (single-source pattern substrate)
+#   - rules-brainstorm.md (R1+R2+R3+R4 mining round consolidations)
+#
+# Severity discipline (per Severity-Schema Final, T23):
+#   - error: RFC-2119 MUST violated; CI-blocking. (Y-18, Y-20)
+#   - warn:  RFC-2119 SHOULD violated, OR strong cross-source consensus. (Y-6,
+#           Y-9, Y-11, TM-A30, TM-A31, TM-A33, TM-A43, TM-A48, TM-A51)
+#   - hint:  Soft signal; defense-in-depth; informative. (the rest — most P3.)
+#
+# Many P3 rules default to `hint` (off-by-default-overridable) — operators may
+# raise them to `warn`/`error` per project policy.
+#
+# apiq-meta block (Welle F schema): every rule carries pattern-id, lenses,
+# sources (with verbatim+verifiedAt where applicable), stakeholders,
+# lifecycle-phase, defect-class, iso25010 (array), codegen-targets,
+# detection-precision, auto-fix-safe, regulatory-mapping (NIST+ASVS+CIS for
+# Lens-1), cost-impact, mttr-impact, agent-readiness-impact.
+#
+# This file is loaded by spectral-runner.ts in addition to apiq-ruleset.yaml,
+# apiq-ruleset-threat-p1.yaml, apiq-ruleset-client-p1.yaml,
+# apiq-ruleset-evolution.yaml, apiq-ruleset-threat-p2.yaml, and
+# apiq-ruleset-client-p2.yaml.
+
+extends:
+  - spectral:oas
+
+formats:
+  - oas3
+  - oas3_0
+  - oas3_1
+
+rules:
+  # =========================================================================
+  # Y-6 — OAuth2: refreshUrl recommended
+  # OWASP F-SP-2 + RFC 6749 §6; severity: warn
+  # =========================================================================
+  # Source: OWASP F-SP-2 + RFC 6749 §6 (OAuth2 refresh_token);
+  #         patterns.json Y-6 (P3, Lens-1, severityHypothesis warn)
+  # Lens: 1 (Threat-Modeling)
+  # Round: 1
+  apiq-tm-y6-oauth2-refresh-url-recommended:
+    description: >-
+      OAuth2 password / clientCredentials / authorizationCode flows SHOULD declare `refreshUrl` so clients can rotate tokens without re-prompting the user — supports refresh-token rotation per RFC 6749 §6 + OAuth-BCP.
+    message: "OAuth2 flow lacks `refreshUrl` — refresh-token rotation undocumented (RFC 6749 §6)."
+    severity: warn
+    given: "$..flows[?(@property && @property.toString && @property.toString().match(/^(password|clientCredentials|authorizationCode)$/))]"
+    then:
+      function: defined
+      field: refreshUrl
+    apiq-meta:
+      pattern-id: Y-6
+      lenses: [ threat-modeling ]
+      sources:
+        - { type: rfc, number: 6749, section: '6', summary: 'refreshing an access token' }
+        - { type: vendor, name: 'OWASP F-SP-2 OAuth2-flow-completeness' }
+      stakeholders: [ security, client-dev, spec-author ]
+      lifecycle-phase: deploy-time
+      defect-class: incomplete
+      iso25010: [ security, usability ]
+      codegen-targets: [ '*' ]
+      detection-precision: medium
+      auto-fix-safe: false
+      regulatory-mapping:
+        nist: [ 'PR.AA-01', 'PR.AA-05' ]
+        asvs: [ 'V51.4.1', 'V51.4.4' ]
+        cis: [ 'CIS-6.1' ]
+      cost-impact: low
+      mttr-impact: medium
+      agent-readiness-impact: medium
+
+  # =========================================================================
+  # Y-9 — Auth-Schemes outdated (negotiate, OAuth1)
+  # OWASP F-SP-5 + IANA HTTP-Authentication-Schemes; severity: warn
+  # =========================================================================
+  # Source: OWASP F-SP-5 + IANA HTTP-Authentication-Schemes registry;
+  #         patterns.json Y-9 (P3, Lens-1)
+  # Lens: 1 (Threat-Modeling)
+  # Round: 1
+  apiq-tm-y9-auth-scheme-outdated:
+    description: >-
+      Security schemes using outdated mechanisms (negotiate, OAuth1, basic over plain HTTP, NTLM) carry known weaknesses — replace with OAuth2/OIDC, http-bearer, or http-basic-over-TLS.
+    message: "Security scheme uses outdated auth mechanism — prefer OAuth2/OIDC or http-bearer."
+    severity: warn
+    given: "$.components.securitySchemes[?(@ && @.type=='http')]"
+    then:
+      function: pattern
+      field: scheme
+      functionOptions:
+        notMatch: "^(negotiate|ntlm|oauth1|digest|hoba|mutual|vapid|scram-)"
+    apiq-meta:
+      pattern-id: Y-9
+      lenses: [ threat-modeling ]
+      sources:
+        - { type: vendor, name: 'OWASP F-SP-5 outdated-auth-schemes' }
+        - { type: vendor, name: 'IANA HTTP Authentication Schemes registry' }
+      stakeholders: [ security, client-dev, spec-author ]
+      lifecycle-phase: deploy-time
+      defect-class: norm
+      iso25010: [ security ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: false
+      regulatory-mapping:
+        nist: [ 'PR.AA-01', 'PR.AA-02' ]
+        asvs: [ 'V2.1.1', 'V51.4.1' ]
+        cis: [ 'CIS-6.1' ]
+      cost-impact: medium
+      mttr-impact: high
+      agent-readiness-impact: medium
+
+  # =========================================================================
+  # Y-11 — unevaluatedProperties:false (OAS 3.1 mass-assignment)
+  # OWASP X-SP-1 + OAS 3.1; severity: warn
+  # =========================================================================
+  # Source: OWASP X-SP-1 + OAS 3.1 spec (JSON Schema 2020-12);
+  #         patterns.json Y-11 (P3, Lens-1, OAS 3.1 only)
+  # Lens: 1 (Threat-Modeling)
+  # Round: 1
+  apiq-tm-y11-unevaluated-properties-false:
+    description: >-
+      OAS 3.1 component-level object schemas using `allOf`/`oneOf`/`anyOf` composition SHOULD declare `unevaluatedProperties: false` (the 2020-12 mass-assignment hardener that complements `additionalProperties`).
+    message: "Composed object schema '{{property}}' lacks `unevaluatedProperties: false` — mass-assignment risk in OAS 3.1."
+    severity: warn
+    given: "$.components.schemas[?(@ && @.type=='object' && (@.allOf || @.oneOf || @.anyOf))]"
+    then:
+      function: defined
+      field: unevaluatedProperties
+    apiq-meta:
+      pattern-id: Y-11
+      lenses: [ threat-modeling ]
+      sources:
+        - { type: vendor, name: 'OWASP X-SP-1 unevaluatedProperties-false' }
+        - { type: vendor, name: 'JSON Schema 2020-12 §11 unevaluatedProperties' }
+      stakeholders: [ security, spec-author, codegen-tool ]
+      lifecycle-phase: validation-time
+      defect-class: over-specification
+      iso25010: [ security, maintainability ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: false
+      regulatory-mapping:
+        nist: [ 'PR.AA-05', 'PR.DS-01' ]
+        asvs: [ 'V4.2.1', 'V13.2.4' ]
+        cis: [ 'CIS-6.7' ]
+      cost-impact: medium
+      mttr-impact: medium
+      agent-readiness-impact: medium
+
+  # =========================================================================
+  # Y-16 — Response-objects CORS Access-Control-Allow-Origin
+  # OWASP M-SP-12 + OWASP CORS-Misconfig; severity: hint
+  # =========================================================================
+  # Source: OWASP M-SP-12 + OWASP CORS-Misconfig + Fetch-spec CORS;
+  #         patterns.json Y-16 (P3, Lens-1, hint)
+  # Lens: 1 (Threat-Modeling)
+  # Round: 1
+  apiq-tm-y16-response-cors-allow-origin-documented:
+    description: >-
+      2xx response operations SHOULD document the `Access-Control-Allow-Origin` response header so cross-origin clients know whether the API accepts browser requests — undocumented CORS surface is browser-bypass-risk (OWASP CORS-Misconfig).
+    message: "2xx response of public API lacks Access-Control-Allow-Origin documentation — declare allowlist or remove CORS expectation."
+    severity: hint
+    given: "$.paths[*][get,post,put,patch,delete].responses[?(@property && @property.match && @property.match(/^2\\d\\d$/))]"
+    then:
+      function: defined
+      field: headers
+    apiq-meta:
+      pattern-id: Y-16
+      lenses: [ threat-modeling ]
+      sources:
+        - { type: vendor, name: 'OWASP M-SP-12 CORS-documentation' }
+        - { type: vendor, name: 'OWASP CORS-Misconfig' }
+      stakeholders: [ security, client-dev, spec-author ]
+      lifecycle-phase: documentation-time
+      defect-class: incomplete
+      iso25010: [ security, usability, compatibility ]
+      codegen-targets: [ '*' ]
+      detection-precision: low
+      auto-fix-safe: false
+      regulatory-mapping:
+        nist: [ 'PR.AA-05', 'PR.DS-02' ]
+        asvs: [ 'V14.4.1', 'V14.5.3' ]
+        cis: [ 'CIS-9.5' ]
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: low
+
+  # =========================================================================
+  # Y-18 — Sensitive Header-Names (Password/Token) rejected
+  # OWASP T-SP-9 + API8; severity: error
+  # Custom function `sensitive-header-name-rejected`.
+  # =========================================================================
+  # Source: OWASP API8 + T-SP-9 sensitive-header-rejection;
+  #         patterns.json Y-18 (P3, Lens-1, severityHypothesis error)
+  # Lens: 1 (Threat-Modeling)
+  # Round: 1
+  apiq-tm-y18-sensitive-header-name-rejected:
+    description: >-
+      Header parameters named "password" / "token" / "secret" / "api-key" (and similar credential-bearing names) MUST NOT be declared as ad-hoc header parameters — use a defined `securityScheme` (apiKey, http-bearer, oauth2) so credentials are tracked and not leaked into proxy logs.
+    message: "{{error}}"
+    severity: error
+    given: "$.paths[*][*].parameters[?(@ && @.in=='header')]"
+    then:
+      function: sensitive-header-name-rejected
+    apiq-meta:
+      pattern-id: Y-18
+      lenses: [ threat-modeling ]
+      sources:
+        - { type: vendor, name: 'OWASP API8:2023 (Security Misconfiguration)' }
+        - { type: vendor, name: 'OWASP T-SP-9 sensitive-header-rejection' }
+      stakeholders: [ security, end-user, spec-author ]
+      lifecycle-phase: validation-time
+      defect-class: norm
+      iso25010: [ security ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: false
+      regulatory-mapping:
+        nist: [ 'PR.AA-01', 'PR.DS-02' ]
+        asvs: [ 'V2.1.1', 'V14.5.3' ]
+        cis: [ 'CIS-3.10', 'CIS-6.1' ]
+      cost-impact: medium
+      mttr-impact: high
+      agent-readiness-impact: medium
+
+  # =========================================================================
+  # Y-20 — Path: no port in server-URL (außer localhost)
+  # OWASP P-SP-2 + RFC 3986; severity: error
+  # =========================================================================
+  # Source: OWASP P-SP-2 + RFC 3986 §3.2.3 (port-in-URL); patterns.json Y-20
+  #         (P3, Lens-1, severityHypothesis error)
+  # Lens: 1 (Threat-Modeling)
+  # Round: 1
+  apiq-tm-y20-server-url-no-port:
+    description: >-
+      Production server URLs MUST NOT declare an explicit port (`:8080`, `:3000`, etc.) — ports leak deployment details and bypass routing conventions. Localhost / 127.0.0.1 / dev-host URLs are exempt.
+    message: "Server URL '{{value}}' has explicit port — bind production to standard 443 (OWASP P-SP-2)."
+    severity: error
+    given: "$.servers[*].url"
+    then:
+      function: pattern
+      functionOptions:
+        notMatch: "^https?://(?!(localhost|127\\.0\\.0\\.1|0\\.0\\.0\\.0|.*\\.local(host)?|.*\\.test|.*\\.localhost))[^/:]+:\\d+"
+    apiq-meta:
+      pattern-id: Y-20
+      lenses: [ threat-modeling ]
+      sources:
+        - { type: vendor, name: 'OWASP P-SP-2 no-port-in-server-URL' }
+        - { type: rfc, number: 3986, section: '3.2.3', summary: 'authority component' }
+      stakeholders: [ security, operations, spec-author ]
+      lifecycle-phase: deploy-time
+      defect-class: semantic
+      iso25010: [ security, maintainability ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: false
+      regulatory-mapping:
+        nist: [ 'PR.AA-05', 'ID.AM-02' ]
+        asvs: [ 'V14.3.2' ]
+        cis: [ 'CIS-4.1' ]
+      cost-impact: low
+      mttr-impact: medium
+      agent-readiness-impact: low
+
+  # =========================================================================
+  # Y-22 — Admin-paths use distinct security-scheme
+  # OWASP SP-DM-17 differentSecuritySchemes; severity: hint
+  # =========================================================================
+  # Source: OWASP SP-DM-17 differentSecuritySchemes;
+  #         patterns.json Y-22 (P3, Lens-1, hint — covered by custom-fn TM-A27)
+  # Lens: 1 (Threat-Modeling)
+  # Round: 1
+  apiq-tm-y22-admin-distinct-security:
+    description: >-
+      Admin / internal paths (matching /admin, /internal, /backoffice) SHOULD declare a distinct `security` requirement at operation-level — sharing the public scheme means privilege-escalation has no scheme-boundary (companion to TM-A27 which checks the inverse cross-cut).
+    message: "Admin-style path '{{property}}' lacks distinct operation-level security — privilege-escalation surface (OWASP SP-DM-17)."
+    severity: hint
+    given: "$.paths[?(@property && @property.match && @property.match(/\\/(admin|internal|backoffice|management)\\b/i))]"
+    then:
+      function: defined
+      field: security
+    apiq-meta:
+      pattern-id: Y-22
+      lenses: [ threat-modeling ]
+      sources:
+        - { type: vendor, name: 'OWASP SP-DM-17 differentSecuritySchemes' }
+      stakeholders: [ security, spec-author ]
+      lifecycle-phase: deploy-time
+      defect-class: incomplete
+      iso25010: [ security ]
+      codegen-targets: [ '*' ]
+      detection-precision: low
+      auto-fix-safe: false
+      regulatory-mapping:
+        nist: [ 'PR.AA-01', 'PR.AA-05' ]
+        asvs: [ 'V4.1.1', 'V4.2.1' ]
+        cis: [ 'CIS-6.7' ]
+      cost-impact: medium
+      mttr-impact: medium
+      agent-readiness-impact: medium
+
+  # =========================================================================
+  # Y-24 — Read-Operations should be security-protected
+  # OWASP SP-G-OWASP-11; severity: hint
+  # =========================================================================
+  # Source: OWASP SP-G-OWASP-11; patterns.json Y-24 (P3, Lens-1, hint —
+  #         off-by-default; many APIs intentionally have unauthenticated reads)
+  # Lens: 1 (Threat-Modeling)
+  # Round: 1
+  apiq-tm-y24-read-ops-need-security:
+    description: >-
+      GET / HEAD operations SHOULD declare `security` — unauthenticated reads expose data inventory to scrapers / scrappers (OWASP SP-G-OWASP-11). Off-by-default-overridable; many specs intentionally have public reads.
+    message: "Read operation declares no `security` — confirm public access is intentional (OWASP SP-G-OWASP-11)."
+    severity: hint
+    given: "$.paths[*][get,head]"
+    then:
+      function: defined
+      field: security
+    apiq-meta:
+      pattern-id: Y-24
+      lenses: [ threat-modeling ]
+      sources:
+        - { type: vendor, name: 'OWASP SP-G-OWASP-11 read-ops-security' }
+      stakeholders: [ security, spec-author ]
+      lifecycle-phase: deploy-time
+      defect-class: incomplete
+      iso25010: [ security ]
+      codegen-targets: [ '*' ]
+      detection-precision: low
+      auto-fix-safe: false
+      regulatory-mapping:
+        nist: [ 'PR.AA-01' ]
+        asvs: [ 'V4.1.1' ]
+        cis: [ 'CIS-6.7' ]
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: low
+
+  # =========================================================================
+  # Y-25 / RFC2-90 — Idempotency-Key on POST creates
+  # draft-ietf-httpapi-idempotency-key; severity: hint
+  # Custom function `post-creates-need-idempotency-key`.
+  # =========================================================================
+  # Source: draft-ietf-httpapi-idempotency-key (IETF httpapi WG, 2024-2025);
+  #         patterns.json Y-25 = RFC2-90 (P3, Lens-1+Lens-2, hint)
+  # Lens: 1 (Threat-Modeling), 2 (Standards-Compliance)
+  # Round: 2
+  apiq-tm-y25-post-creates-need-idempotency-key:
+    description: >-
+      POST operations that create resources (declaring 201/202 responses on a non-{id}-tail collection path) SHOULD accept an `Idempotency-Key` request header — without it, retries silently double-create. Per draft-ietf-httpapi-idempotency-key (Stripe / Square / PayPal consensus).
+    message: "{{error}}"
+    severity: hint
+    given: "$.paths[*][post]"
+    then:
+      function: post-creates-need-idempotency-key
+    apiq-meta:
+      pattern-id: [ Y-25, RFC2-90 ]
+      lenses: [ threat-modeling, standards-compliance ]
+      sources:
+        - { type: vendor, name: 'draft-ietf-httpapi-idempotency-key (Stripe / PayPal / Square consensus)', url: 'https://datatracker.ietf.org/doc/draft-ietf-httpapi-idempotency-key/' }
+        - { type: mining, phase: round2, subagent: 'Y-25/RFC2-90', summary: 'IETF idempotency-key draft adopted by httpapi WG' }
+      stakeholders: [ security, client-dev, ai-agent, spec-author ]
+      lifecycle-phase: validation-time
+      defect-class: incomplete
+      iso25010: [ reliability, security ]
+      codegen-targets: [ '*' ]
+      detection-precision: medium
+      auto-fix-safe: false
+      regulatory-mapping:
+        nist: [ 'PR.PT-01', 'PR.IR-04' ]
+        asvs: [ 'V13.2.4' ]
+        cis: [ 'CIS-13.1' ]
+      cost-impact: medium
+      mttr-impact: medium
+      agent-readiness-impact: high
+
+  # =========================================================================
+  # TM-A3 — 3+ ID-params in one path → BOLA risk
+  # OWASP API1; severity: hint
+  # Custom function `three-or-more-id-params-bola`.
+  # =========================================================================
+  # Source: OWASP API1:2023 (BOLA); patterns.json TM-A3 (P3, Lens-1, hint)
+  # Lens: 1 (Threat-Modeling)
+  # Round: 2
+  apiq-tm-a3-three-or-more-id-params-bola:
+    description: >-
+      Paths with ≥3 `{id}`-style template segments deepen the BOLA attack surface — every additional ID is another authorization boundary the server must enforce (OWASP API1).
+    message: "{{error}}"
+    severity: hint
+    given: "$.paths"
+    then:
+      function: three-or-more-id-params-bola
+      field: "@key"
+    apiq-meta:
+      pattern-id: TM-A3
+      lenses: [ threat-modeling ]
+      sources:
+        - { type: vendor, name: 'OWASP API1:2023 (Broken Object Level Authorization)' }
+        - { type: mining, phase: round2, subagent: 'TM-A3', summary: 'multi-ID-path BOLA-multiplier' }
+      stakeholders: [ security, end-user, spec-author ]
+      lifecycle-phase: deploy-time
+      defect-class: semantic
+      iso25010: [ security ]
+      codegen-targets: [ '*' ]
+      detection-precision: medium
+      auto-fix-safe: false
+      regulatory-mapping:
+        nist: [ 'PR.AA-01', 'PR.AA-05' ]
+        asvs: [ 'V4.1.1', 'V4.2.1' ]
+        cis: [ 'CIS-6.7' ]
+      cost-impact: medium
+      mttr-impact: high
+      agent-readiness-impact: medium
+
+  # =========================================================================
+  # TM-A4 — Body has user_id/account_id on non-admin endpoint
+  # OWASP API1; severity: hint
+  # Custom function `body-contains-user-id-on-non-admin`.
+  # =========================================================================
+  # Source: OWASP API1:2023; patterns.json TM-A4 (P3, Lens-1, hint)
+  # Lens: 1 (Threat-Modeling)
+  # Round: 2
+  apiq-tm-a4-body-contains-user-id-on-non-admin:
+    description: >-
+      Non-admin POST/PUT/PATCH endpoints accepting `user_id` / `account_id` / `tenant_id` etc. in request body invite spoofing — the field overrides session-derived identity. Either rename to a per-resource reference, mark `readOnly: true`, or restrict to admin paths.
+    message: "{{error}}"
+    severity: hint
+    given: "$.paths[*][post,put,patch]"
+    then:
+      function: body-contains-user-id-on-non-admin
+    apiq-meta:
+      pattern-id: TM-A4
+      lenses: [ threat-modeling ]
+      sources:
+        - { type: vendor, name: 'OWASP API1:2023 (BOLA / parameter tampering)' }
+        - { type: mining, phase: round2, subagent: 'TM-A4', summary: 'identity-bearing-body-field server-side spoofing' }
+      stakeholders: [ security, end-user, spec-author ]
+      lifecycle-phase: validation-time
+      defect-class: semantic
+      iso25010: [ security ]
+      codegen-targets: [ '*' ]
+      detection-precision: medium
+      auto-fix-safe: false
+      regulatory-mapping:
+        nist: [ 'PR.AA-01', 'PR.AA-05' ]
+        asvs: [ 'V4.1.1', 'V13.1.4' ]
+        cis: [ 'CIS-6.7' ]
+      cost-impact: medium
+      mttr-impact: high
+      agent-readiness-impact: medium
+
+  # =========================================================================
+  # TM-A8 — Multiple AND securityRequirements same type
+  # OWASP API2; severity: hint
+  # Custom function `multiple-and-security-same-type`.
+  # =========================================================================
+  # Source: OWASP API2:2023; patterns.json TM-A8 (P3, Lens-1, hint)
+  # Lens: 1 (Threat-Modeling), 4 (Client-Friction)
+  # Round: 2
+  apiq-tm-a8-multiple-and-security-same-type:
+    description: >-
+      A `security` AND-requirement (single object with multiple keys) where all keys resolve to the same scheme-type (e.g. two apiKey schemes) is effectively single-factor — pseudo-MFA hides absence of real second factor (OWASP API2).
+    message: "{{error}}"
+    severity: hint
+    given: "$.paths[*][get,post,put,patch,delete,head,options,trace]"
+    then:
+      function: multiple-and-security-same-type
+    apiq-meta:
+      pattern-id: TM-A8
+      lenses: [ threat-modeling, client-friction ]
+      sources:
+        - { type: vendor, name: 'OWASP API2:2023 (Broken Authentication)' }
+        - { type: mining, phase: round2, subagent: 'TM-A8', summary: 'AND-security-of-same-type pseudo-MFA' }
+      stakeholders: [ security, spec-author ]
+      lifecycle-phase: deploy-time
+      defect-class: semantic
+      iso25010: [ security ]
+      codegen-targets:
+        - java
+        - go
+        - python
+        - typescript
+        - rust
+        - csharp
+        - kotlin
+      detection-precision: medium
+      auto-fix-safe: false
+      regulatory-mapping:
+        nist: [ 'PR.AA-01', 'PR.AA-02' ]
+        asvs: [ 'V2.1.1', 'V2.2.1' ]
+        cis: [ 'CIS-6.5' ]
+      cost-impact: low
+      mttr-impact: medium
+      agent-readiness-impact: low
+
+  # =========================================================================
+  # TM-A16 — email property SHOULD declare format:email
+  # OWASP + OAS; severity: hint
+  # =========================================================================
+  # Source: OWASP API3 + OAS-3 spec; patterns.json TM-A16 (P3, Lens-1, hint)
+  # Lens: 1 (Threat-Modeling)
+  # Round: 2
+  apiq-tm-a16-email-property-needs-format:
+    description: >-
+      Schema properties named `email` / `email_address` / `userEmail` etc. typed `string` SHOULD declare `format: email` so codegen tools enforce RFC 5322 validation at the boundary — defends against header-injection via malformed-email payloads.
+    message: "Email-named property '{{property}}' lacks `format: email` — declare format for codegen-side validation."
+    severity: hint
+    given: "$..properties[?(@property && @property.match && @property.match(/^([a-z_]*email|user_?email|emailAddress|email_address|primary_?email|contact_?email)$/i) && @ && @.type=='string')]"
+    then:
+      - function: defined
+        field: format
+      - function: pattern
+        field: format
+        functionOptions:
+          match: "^email$"
+    apiq-meta:
+      pattern-id: TM-A16
+      lenses: [ threat-modeling ]
+      sources:
+        - { type: vendor, name: 'OWASP API3:2023' }
+        - { type: vendor, name: 'OAS-3 format-email spec' }
+      stakeholders: [ security, codegen-tool, spec-author ]
+      lifecycle-phase: validation-time
+      defect-class: incomplete
+      iso25010: [ security, usability ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: true
+      regulatory-mapping:
+        nist: [ 'PR.DS-01' ]
+        asvs: [ 'V13.1.5', 'V5.1.3' ]
+        cis: [ 'CIS-3.13' ]
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: medium
+
+  # =========================================================================
+  # TM-A19 — object schema with >50 properties (DoS / unboundedness)
+  # OWASP API4 + 42Crunch; severity: hint
+  # =========================================================================
+  # Source: OWASP API4:2023 + 42Crunch security-rules;
+  #         patterns.json TM-A19 (P3, Lens-1, hint)
+  # Lens: 1 (Threat-Modeling)
+  # Round: 2
+  apiq-tm-a19-object-schema-property-count:
+    description: >-
+      Component object schemas declaring >50 properties suggest a "god object" — DoS-vector (large parse cost) AND mass-assignment-surface multiplier (OWASP API4). Decompose into smaller schemas via $ref.
+    message: "Component schema '{{property}}' has unusually many properties — review for decomposition (OWASP API4)."
+    severity: hint
+    given: "$.components.schemas[?(@ && @.type=='object' && @.properties)].properties"
+    then:
+      function: length
+      functionOptions:
+        max: 50
+    apiq-meta:
+      pattern-id: TM-A19
+      lenses: [ threat-modeling ]
+      sources:
+        - { type: vendor, name: 'OWASP API4:2023' }
+        - { type: vendor, name: '42Crunch security-rules' }
+      stakeholders: [ security, spec-author, codegen-tool ]
+      lifecycle-phase: validation-time
+      defect-class: over-specification
+      iso25010: [ security, performance-efficiency, maintainability ]
+      codegen-targets: [ '*' ]
+      detection-precision: medium
+      auto-fix-safe: false
+      regulatory-mapping:
+        nist: [ 'PR.PT-04' ]
+        asvs: [ 'V11.1.4', 'V13.4.1' ]
+        cis: [ 'CIS-13.1' ]
+      cost-impact: medium
+      mttr-impact: medium
+      agent-readiness-impact: medium
+
+  # =========================================================================
+  # TM-A20 — array maxItems > 10000 (defeats purpose)
+  # OWASP API4; severity: hint
+  # =========================================================================
+  # Source: OWASP API4:2023; patterns.json TM-A20 (P3, Lens-1, hint)
+  # Lens: 1 (Threat-Modeling)
+  # Round: 2
+  apiq-tm-a20-array-max-items-too-permissive:
+    description: >-
+      Array schemas declaring `maxItems > 10000` defeat the DoS-bound the property is meant to enforce — review the threat model: paginate instead of returning an enormous array.
+    message: "Array `maxItems` is unusually large — DoS bound likely ineffective (OWASP API4)."
+    severity: hint
+    given: "$..[?(@ && @.type=='array' && @.maxItems)]"
+    then:
+      function: schema
+      field: maxItems
+      functionOptions:
+        schema:
+          type: integer
+          maximum: 10000
+    apiq-meta:
+      pattern-id: TM-A20
+      lenses: [ threat-modeling ]
+      sources:
+        - { type: vendor, name: 'OWASP API4:2023' }
+      stakeholders: [ security, operations, spec-author ]
+      lifecycle-phase: runtime-at-scale
+      defect-class: over-specification
+      iso25010: [ security, performance-efficiency ]
+      codegen-targets: [ '*' ]
+      detection-precision: medium
+      auto-fix-safe: false
+      regulatory-mapping:
+        nist: [ 'PR.PT-04' ]
+        asvs: [ 'V11.1.4', 'V13.4.1' ]
+        cis: [ 'CIS-13.1' ]
+      cost-impact: medium
+      mttr-impact: medium
+      agent-readiness-impact: low
+
+  # =========================================================================
+  # TM-A21 — string maxLength > 1MB (defeats DoS bound)
+  # OWASP API4; severity: hint
+  # =========================================================================
+  # Source: OWASP API4:2023; patterns.json TM-A21 (P3, Lens-1, hint)
+  # Lens: 1 (Threat-Modeling)
+  # Round: 2
+  apiq-tm-a21-string-max-length-too-permissive:
+    description: >-
+      String schemas declaring `maxLength > 1048576` (1MB) treat the field as a blob — store binary content as object-storage references (presigned URLs) rather than embedding huge strings (OWASP API4).
+    message: "String `maxLength` exceeds 1MB — DoS bound effectively unbounded (OWASP API4)."
+    severity: hint
+    given: "$..[?(@ && @.type=='string' && @.maxLength)]"
+    then:
+      function: schema
+      field: maxLength
+      functionOptions:
+        schema:
+          type: integer
+          maximum: 1048576
+    apiq-meta:
+      pattern-id: TM-A21
+      lenses: [ threat-modeling ]
+      sources:
+        - { type: vendor, name: 'OWASP API4:2023' }
+      stakeholders: [ security, operations, spec-author ]
+      lifecycle-phase: runtime-at-scale
+      defect-class: over-specification
+      iso25010: [ security, performance-efficiency ]
+      codegen-targets: [ '*' ]
+      detection-precision: medium
+      auto-fix-safe: false
+      regulatory-mapping:
+        nist: [ 'PR.PT-04' ]
+        asvs: [ 'V11.1.4', 'V13.4.1' ]
+        cis: [ 'CIS-13.1' ]
+      cost-impact: medium
+      mttr-impact: medium
+      agent-readiness-impact: low
+
+  # =========================================================================
+  # TM-A25 — Long-running ops timeout / async pattern
+  # OWASP API4; severity: hint
+  # Custom function `long-running-op-async-pattern`.
+  # =========================================================================
+  # Source: OWASP API4:2023; patterns.json TM-A25 (P3, Lens-1, hint)
+  # Lens: 1 (Threat-Modeling)
+  # Round: 2
+  apiq-tm-a25-long-running-op-async-pattern:
+    description: >-
+      Operations whose summary/description hints at "long-running" / "asynchronous" / "polling" / "background" SHOULD use the 202 Accepted + Location async pattern instead of synchronous-only responses.
+    message: "{{error}}"
+    severity: hint
+    given: "$.paths[*][get,post,put,patch,delete]"
+    then:
+      function: long-running-op-async-pattern
+    apiq-meta:
+      pattern-id: TM-A25
+      lenses: [ threat-modeling ]
+      sources:
+        - { type: vendor, name: 'OWASP API4:2023 (Resource Consumption)' }
+        - { type: mining, phase: round2, subagent: 'TM-A25', summary: 'long-running-without-async-pattern timeout-DoS' }
+      stakeholders: [ security, client-dev, spec-author, ai-agent ]
+      lifecycle-phase: runtime-at-scale
+      defect-class: incomplete
+      iso25010: [ reliability, performance-efficiency, security ]
+      codegen-targets: [ '*' ]
+      detection-precision: medium
+      auto-fix-safe: false
+      regulatory-mapping:
+        nist: [ 'PR.PT-04', 'PR.IR-04' ]
+        asvs: [ 'V11.1.4' ]
+        cis: [ 'CIS-13.1' ]
+      cost-impact: medium
+      mttr-impact: medium
+      agent-readiness-impact: high
+
+  # =========================================================================
+  # TM-A26 — enum array length > 1000
+  # OWASP API4 + 42Crunch; severity: hint
+  # =========================================================================
+  # Source: OWASP API4:2023 + 42Crunch; patterns.json TM-A26 (P3, Lens-1, hint)
+  # Lens: 1 (Threat-Modeling)
+  # Round: 2
+  apiq-tm-a26-enum-too-large:
+    description: >-
+      Schemas declaring `enum` with >1000 values trade boundary-correctness for runtime cost (every request validates against the full set) and hint at a missing real validation. Replace with `pattern` / `format` / a typed reference (OWASP API4 + 42Crunch).
+    message: "Enum array exceeds 1000 values — replace with pattern/format/$ref (OWASP API4)."
+    severity: hint
+    given: "$..[?(@ && @.enum)].enum"
+    then:
+      function: length
+      functionOptions:
+        max: 1000
+    apiq-meta:
+      pattern-id: TM-A26
+      lenses: [ threat-modeling ]
+      sources:
+        - { type: vendor, name: 'OWASP API4:2023' }
+        - { type: vendor, name: '42Crunch security-rules' }
+      stakeholders: [ security, spec-author, codegen-tool ]
+      lifecycle-phase: validation-time
+      defect-class: over-specification
+      iso25010: [ security, performance-efficiency, maintainability ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: false
+      regulatory-mapping:
+        nist: [ 'PR.PT-04' ]
+        asvs: [ 'V11.1.4' ]
+        cis: [ 'CIS-13.1' ]
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: low
+
+  # =========================================================================
+  # TM-A27 — Admin paths share security-scheme with public
+  # OWASP API5; severity: hint
+  # Custom function `admin-shares-public-security`.
+  # =========================================================================
+  # Source: OWASP API5:2023 (Broken Function-Level Authorization);
+  #         patterns.json TM-A27 (P3, Lens-1, hint)
+  # Lens: 1 (Threat-Modeling)
+  # Round: 2
+  apiq-tm-a27-admin-shares-public-security:
+    description: >-
+      If admin / internal paths declare the SAME security scheme as public paths, privilege-escalation has no scheme-boundary — admin-paths SHOULD declare distinct schemes (e.g. additional mTLS / scoped JWT).
+    message: "{{error}}"
+    severity: hint
+    given: "$"
+    then:
+      function: admin-shares-public-security
+    apiq-meta:
+      pattern-id: TM-A27
+      lenses: [ threat-modeling ]
+      sources:
+        - { type: vendor, name: 'OWASP API5:2023 (Broken Function-Level Authorization)' }
+        - { type: mining, phase: round2, subagent: 'TM-A27', summary: 'admin-shares-public-security privilege-escalation surface' }
+      stakeholders: [ security, spec-author ]
+      lifecycle-phase: deploy-time
+      defect-class: semantic
+      iso25010: [ security ]
+      codegen-targets: [ '*' ]
+      detection-precision: medium
+      auto-fix-safe: false
+      regulatory-mapping:
+        nist: [ 'PR.AA-01', 'PR.AA-05' ]
+        asvs: [ 'V4.1.1', 'V4.2.1' ]
+        cis: [ 'CIS-6.7' ]
+      cost-impact: medium
+      mttr-impact: high
+      agent-readiness-impact: medium
+
+  # =========================================================================
+  # TM-A29 — GET-only resource without write-ops (review)
+  # OWASP API5; severity: hint
+  # Custom function `resource-only-get-no-write`.
+  # =========================================================================
+  # Source: OWASP API5:2023 (review-time signal);
+  #         patterns.json TM-A29 (P3, Lens-1, hint)
+  # Lens: 1 (Threat-Modeling)
+  # Round: 2
+  apiq-tm-a29-resource-only-get-no-write:
+    description: >-
+      A resource-tree (e.g. /things, /things/{id}) with only GET operations and no POST/PUT/PATCH/DELETE is a "read-only-API" smell — confirm this is intentional (catalog), not accidental (server only mounted readers).
+    message: "{{error}}"
+    severity: hint
+    given: "$"
+    then:
+      function: resource-only-get-no-write
+    apiq-meta:
+      pattern-id: TM-A29
+      lenses: [ threat-modeling ]
+      sources:
+        - { type: vendor, name: 'OWASP API5:2023 (review-time signal)' }
+        - { type: mining, phase: round2, subagent: 'TM-A29', summary: 'GET-only-tree review-flag' }
+      stakeholders: [ spec-author, security ]
+      lifecycle-phase: documentation-time
+      defect-class: incomplete
+      iso25010: [ usability, maintainability ]
+      codegen-targets: [ '*' ]
+      detection-precision: low
+      auto-fix-safe: false
+      regulatory-mapping:
+        nist: [ 'ID.AM-02' ]
+        asvs: [ 'V14.3.2' ]
+        cis: [ 'CIS-4.1' ]
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: low
+
+  # =========================================================================
+  # TM-A30 — Non-standard HTTP method without explicit security
+  # OWASP API5 + RFC 7231 §4.3.8; severity: warn
+  # Custom function `non-standard-method-needs-security` (shared with TM-A43).
+  # =========================================================================
+  # Source: OWASP API5:2023 + RFC 7231 §4.3.8 (TRACE in production);
+  #         patterns.json TM-A30 (P3, Lens-1, severityHypothesis warn)
+  # Lens: 1 (Threat-Modeling)
+  # Round: 2
+  apiq-tm-a30-non-standard-method-needs-security:
+    description: >-
+      Path-items declaring non-standard HTTP methods (TRACE, CONNECT, plus WebDAV verbs PROPFIND/PROPPATCH/MKCOL/COPY/MOVE/LOCK/UNLOCK) MUST declare explicit operation-level `security` — TRACE is XST-vulnerable per RFC 7231 §4.3.8, and WebDAV verbs are server-feature-leakage.
+    message: "{{error}}"
+    severity: warn
+    given: "$"
+    then:
+      function: non-standard-method-needs-security
+    apiq-meta:
+      pattern-id: TM-A30
+      lenses: [ threat-modeling ]
+      sources:
+        - { type: rfc, number: 7231, section: '4.3.8', summary: 'TRACE allows the client to see what is being received' }
+        - { type: vendor, name: 'OWASP API5:2023' }
+      stakeholders: [ security, operations, spec-author ]
+      lifecycle-phase: deploy-time
+      defect-class: norm
+      iso25010: [ security ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: false
+      regulatory-mapping:
+        nist: [ 'PR.AA-01', 'PR.AA-05' ]
+        asvs: [ 'V14.3.2', 'V14.5.1' ]
+        cis: [ 'CIS-3.10', 'CIS-4.8' ]
+      cost-impact: medium
+      mttr-impact: high
+      agent-readiness-impact: low
+
+  # =========================================================================
+  # TM-A31 — Signup-flow without CAPTCHA / rate-limit
+  # OWASP API6; severity: warn
+  # Custom function `signup-needs-rate-limit-or-captcha`.
+  # =========================================================================
+  # Source: OWASP API6:2023 (Unrestricted Sensitive Business Flows);
+  #         patterns.json TM-A31 (P3, Lens-1, severityHypothesis warn)
+  # Lens: 1 (Threat-Modeling)
+  # Round: 2
+  apiq-tm-a31-signup-needs-rate-limit-or-captcha:
+    description: >-
+      Signup / register endpoints SHOULD declare rate-limit headers OR a CAPTCHA hint (`x-captcha-required: true` or schema property `captcha`/`turnstile`/`recaptcha`). Without either, bot-signup attacks scale unboundedly (OWASP API6).
+    message: "{{error}}"
+    severity: warn
+    given: "$.paths[*][post,put]"
+    then:
+      function: signup-needs-rate-limit-or-captcha
+    apiq-meta:
+      pattern-id: TM-A31
+      lenses: [ threat-modeling ]
+      sources:
+        - { type: vendor, name: 'OWASP API6:2023 (Unrestricted Access to Sensitive Business Flows)' }
+        - { type: mining, phase: round2, subagent: 'TM-A31', summary: 'signup-flow rate-limit-or-CAPTCHA bot-flood' }
+      stakeholders: [ security, end-user, spec-author ]
+      lifecycle-phase: deploy-time
+      defect-class: incomplete
+      iso25010: [ security, reliability ]
+      codegen-targets: [ '*' ]
+      detection-precision: medium
+      auto-fix-safe: false
+      regulatory-mapping:
+        nist: [ 'PR.PT-04', 'PR.AA-01' ]
+        asvs: [ 'V11.1.1', 'V11.1.4' ]
+        cis: [ 'CIS-13.1' ]
+      cost-impact: medium
+      mttr-impact: medium
+      agent-readiness-impact: medium
+
+  # =========================================================================
+  # TM-A33 — Posting/comment flow SHOULD have rate-limit
+  # OWASP API6; severity: warn
+  # Custom function `posting-comment-needs-rate-limit`.
+  # =========================================================================
+  # Source: OWASP API6:2023; patterns.json TM-A33 (P3, Lens-1,
+  #         severityHypothesis warn)
+  # Lens: 1 (Threat-Modeling)
+  # Round: 2
+  apiq-tm-a33-posting-comment-needs-rate-limit:
+    description: >-
+      Comment / post / review write endpoints SHOULD declare rate-limit headers — without them spam-flood attacks scale unboundedly (OWASP API6).
+    message: "{{error}}"
+    severity: warn
+    given: "$.paths[*][post,put]"
+    then:
+      function: posting-comment-needs-rate-limit
+    apiq-meta:
+      pattern-id: TM-A33
+      lenses: [ threat-modeling ]
+      sources:
+        - { type: vendor, name: 'OWASP API6:2023' }
+        - { type: mining, phase: round2, subagent: 'TM-A33', summary: 'comment-write rate-limit spam-flood' }
+      stakeholders: [ security, end-user, spec-author ]
+      lifecycle-phase: runtime-at-scale
+      defect-class: incomplete
+      iso25010: [ security, reliability ]
+      codegen-targets: [ '*' ]
+      detection-precision: medium
+      auto-fix-safe: false
+      regulatory-mapping:
+        nist: [ 'PR.PT-04', 'PR.IR-04' ]
+        asvs: [ 'V11.1.4' ]
+        cis: [ 'CIS-13.1' ]
+      cost-impact: medium
+      mttr-impact: medium
+      agent-readiness-impact: low
+
+  # =========================================================================
+  # TM-A37 — host/hostname/server/origin params flagged for SSRF
+  # OWASP API7; severity: hint
+  # Custom function `host-param-flagged-for-ssrf`.
+  # =========================================================================
+  # Source: OWASP API7:2023 (SSRF); patterns.json TM-A37 (P3, Lens-1, hint)
+  # Lens: 1 (Threat-Modeling)
+  # Round: 2
+  apiq-tm-a37-host-param-flagged-for-ssrf:
+    description: >-
+      Parameters named `host` / `hostname` / `server` / `origin` / `target_host` raise the SSRF flag — even if the value is later validated, declaring such a parameter at all warrants explicit acknowledgement (description must mention "allowlist" / "validated" / "internal-blocked").
+    message: "{{error}}"
+    severity: hint
+    given: "$.paths[*][*].parameters[*]"
+    then:
+      function: host-param-flagged-for-ssrf
+    apiq-meta:
+      pattern-id: TM-A37
+      lenses: [ threat-modeling ]
+      sources:
+        - { type: vendor, name: 'OWASP API7:2023 (SSRF)' }
+        - { type: vendor, name: 'OWASP SSRF Prevention Cheat Sheet' }
+      stakeholders: [ security, spec-author, codegen-tool ]
+      lifecycle-phase: validation-time
+      defect-class: incomplete
+      iso25010: [ security ]
+      codegen-targets: [ '*' ]
+      detection-precision: medium
+      auto-fix-safe: false
+      regulatory-mapping:
+        nist: [ 'PR.PT-04', 'PR.AA-05' ]
+        asvs: [ 'V12.6.1', 'V13.4.2' ]
+        cis: [ 'CIS-13.1', 'CIS-13.10' ]
+      cost-impact: medium
+      mttr-impact: high
+      agent-readiness-impact: medium
+
+  # =========================================================================
+  # TM-A40 — Origin-reflection without allowlist
+  # OWASP CORS-Misconfig; severity: hint
+  # Custom function `cors-origin-reflection-without-allowlist`.
+  # =========================================================================
+  # Source: OWASP CORS Origin-Header-Scrutiny; patterns.json TM-A40
+  #         (P3, Lens-1, hint)
+  # Lens: 1 (Threat-Modeling)
+  # Round: 2
+  apiq-tm-a40-cors-origin-reflection-without-allowlist:
+    description: >-
+      `Access-Control-Allow-Origin` response headers documented with `*` or wildcard examples (without explicit allowlist mention in description) are over-permissive — any origin can read responses (OWASP CORS).
+    message: "{{error}}"
+    severity: hint
+    given: "$.paths[*][*].responses[*].headers"
+    then:
+      function: cors-origin-reflection-without-allowlist
+    apiq-meta:
+      pattern-id: TM-A40
+      lenses: [ threat-modeling ]
+      sources:
+        - { type: vendor, name: 'OWASP CORS Origin-Header-Scrutiny', url: 'https://owasp.org/www-community/attacks/CORS_OriginHeaderScrutiny' }
+      stakeholders: [ security, client-dev, spec-author ]
+      lifecycle-phase: deploy-time
+      defect-class: incomplete
+      iso25010: [ security, compatibility ]
+      codegen-targets: [ '*' ]
+      detection-precision: medium
+      auto-fix-safe: false
+      regulatory-mapping:
+        nist: [ 'PR.AA-05', 'PR.DS-02' ]
+        asvs: [ 'V14.4.1', 'V14.5.3' ]
+        cis: [ 'CIS-9.5' ]
+      cost-impact: medium
+      mttr-impact: medium
+      agent-readiness-impact: low
+
+  # =========================================================================
+  # TM-A41 — Browser-API security-headers (HSTS/CSP/etc.)
+  # OWASP HTTP-Headers; severity: hint
+  # Custom function `browser-api-needs-security-headers`.
+  # =========================================================================
+  # Source: OWASP Secure Headers Project; patterns.json TM-A41 (P3,
+  #         Lens-1+Lens-2, hint)
+  # Lens: 1 (Threat-Modeling), 2 (Standards-Compliance)
+  # Round: 2
+  apiq-tm-a41-browser-api-needs-security-headers:
+    description: >-
+      Operations declaring `text/html` 2xx responses SHOULD also declare Strict-Transport-Security / Content-Security-Policy / X-Frame-Options response headers — OWASP Secure Headers Project recommendations.
+    message: "{{error}}"
+    severity: hint
+    given: "$.paths[*][get,post,put,patch,delete]"
+    then:
+      function: browser-api-needs-security-headers
+    apiq-meta:
+      pattern-id: TM-A41
+      lenses: [ threat-modeling, standards-compliance ]
+      sources:
+        - { type: vendor, name: 'OWASP Secure Headers Project', url: 'https://owasp.org/www-project-secure-headers/' }
+      stakeholders: [ security, end-user, spec-author ]
+      lifecycle-phase: documentation-time
+      defect-class: incomplete
+      iso25010: [ security ]
+      codegen-targets: [ '*' ]
+      detection-precision: medium
+      auto-fix-safe: false
+      regulatory-mapping:
+        nist: [ 'PR.AA-05', 'PR.DS-02' ]
+        asvs: [ 'V14.4.1', 'V14.4.2', 'V14.4.3' ]
+        cis: [ 'CIS-9.5', 'CIS-3.10' ]
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: low
+
+  # =========================================================================
+  # TM-A43 — TRACE/CONNECT/PROPFIND etc. without security
+  # OWASP API8; severity: warn
+  # Same custom function as TM-A30 — different pattern-id, same logic since
+  # both flag non-standard methods missing security.
+  # =========================================================================
+  # Source: OWASP API8:2023 + RFC 7231 §4.3.8; patterns.json TM-A43
+  #         (P3, Lens-1, severityHypothesis warn)
+  # Lens: 1 (Threat-Modeling)
+  # Round: 2
+  apiq-tm-a43-non-standard-method-without-security:
+    description: >-
+      TRACE / CONNECT / PROPFIND and other non-standard HTTP methods MUST NOT appear in production specs without explicit operation-level security — they leak server-features and are XST-prone. Bundle-rule: shares logic with TM-A30 (different OWASP citation).
+    message: "{{error}}"
+    severity: warn
+    given: "$"
+    then:
+      function: non-standard-method-needs-security
+    apiq-meta:
+      pattern-id: TM-A43
+      lenses: [ threat-modeling ]
+      sources:
+        - { type: vendor, name: 'OWASP API8:2023 (Security Misconfiguration)' }
+        - { type: rfc, number: 7231, section: '4.3.8', summary: 'TRACE allows the client to see what is being received' }
+      stakeholders: [ security, operations, spec-author ]
+      lifecycle-phase: deploy-time
+      defect-class: norm
+      iso25010: [ security ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: false
+      regulatory-mapping:
+        nist: [ 'PR.AA-01', 'PR.AA-05' ]
+        asvs: [ 'V14.3.2', 'V14.5.1' ]
+        cis: [ 'CIS-3.10', 'CIS-4.8' ]
+      cost-impact: medium
+      mttr-impact: high
+      agent-readiness-impact: low
+
+  # =========================================================================
+  # TM-A48 — info.contact missing in production spec
+  # OWASP API9; severity: warn
+  # =========================================================================
+  # Source: OWASP API9:2023 (Improper Inventory Management);
+  #         patterns.json TM-A48 (P3, Lens-1, severityHypothesis warn)
+  # Lens: 1 (Threat-Modeling)
+  # Round: 2
+  apiq-tm-a48-info-contact-required:
+    description: >-
+      Production specs MUST declare `info.contact` with at minimum a `url` OR `email` field — without contact info, vulnerability disclosure and inventory tracking break down (OWASP API9).
+    message: "info.contact missing or incomplete — production specs require disclosure path (OWASP API9)."
+    severity: warn
+    given: "$.info.contact"
+    then:
+      - function: defined
+        field: email
+      - function: defined
+        field: url
+    apiq-meta:
+      pattern-id: TM-A48
+      lenses: [ threat-modeling ]
+      sources:
+        - { type: vendor, name: 'OWASP API9:2023 (Improper Inventory Management)' }
+      stakeholders: [ security, operations, spec-author ]
+      lifecycle-phase: documentation-time
+      defect-class: incomplete
+      iso25010: [ maintainability, usability, security ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: false
+      regulatory-mapping:
+        nist: [ 'ID.AM-02', 'ID.GV-04' ]
+        asvs: [ 'V1.1.1' ]
+        cis: [ 'CIS-2.5' ]
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: medium
+
+  # =========================================================================
+  # TM-A49 — Upstream-URL op lacks 502/503/504 declaration
+  # OWASP API10; severity: hint
+  # Custom function `upstream-url-op-needs-5xx-explicit`.
+  # Sharper than P2 TM-A36 (any 5xx) — TM-A49 requires explicit gateway
+  # failure shapes.
+  # =========================================================================
+  # Source: OWASP API10:2023 (Unsafe API Consumption);
+  #         patterns.json TM-A49 (P3, Lens-1+Lens-2, hint)
+  # Lens: 1 (Threat-Modeling), 2 (Standards-Compliance)
+  # Round: 2
+  apiq-tm-a49-upstream-url-op-needs-5xx-explicit:
+    description: >-
+      Sharper than P2 TM-A36 — operations consuming an upstream URL MUST declare 502 (Bad Gateway) AND 503 (Service Unavailable) AND 504 (Gateway Timeout) explicitly so clients can distinguish failure modes (OWASP API10).
+    message: "{{error}}"
+    severity: hint
+    given: "$.paths[*][get,post,put,patch,delete]"
+    then:
+      function: upstream-url-op-needs-5xx-explicit
+    apiq-meta:
+      pattern-id: TM-A49
+      lenses: [ threat-modeling, standards-compliance ]
+      sources:
+        - { type: vendor, name: 'OWASP API10:2023 (Unsafe Consumption of APIs)' }
+        - { type: mining, phase: round2, subagent: 'TM-A49', summary: 'gateway-failure-shapes 502/503/504 distinct' }
+      stakeholders: [ client-dev, spec-author, ai-agent ]
+      lifecycle-phase: validation-time
+      defect-class: incomplete
+      iso25010: [ reliability, usability ]
+      codegen-targets: [ '*' ]
+      detection-precision: medium
+      auto-fix-safe: false
+      regulatory-mapping:
+        nist: [ 'PR.PT-01', 'PR.IR-04' ]
+        asvs: [ 'V13.2.4' ]
+        cis: [ 'CIS-13.1' ]
+      cost-impact: medium
+      mttr-impact: high
+      agent-readiness-impact: high
+
+  # =========================================================================
+  # TM-A51 — Webhook accepts */* content-type
+  # OWASP API10 + GitHub webhook hardening; severity: warn
+  # Custom function `webhook-rejects-wildcard-content-type`.
+  # =========================================================================
+  # Source: OWASP API10:2023 + GitHub webhook-hardening guide;
+  #         patterns.json TM-A51 (P3, Lens-1+Lens-2, severityHypothesis warn)
+  # Lens: 1 (Threat-Modeling), 2 (Standards-Compliance)
+  # Round: 2
+  apiq-tm-a51-webhook-rejects-wildcard-content-type:
+    description: >-
+      Webhook receivers (paths matching /webhook|/hooks/|/event-receiver) MUST NOT accept `*\/*` / `application/*` / `text/*` content-types — strict media-type pinning blocks Content-Type-confusion bypass attempts (OWASP API10 + GitHub hardening).
+    message: "{{error}}"
+    severity: warn
+    given: "$.paths[*][post,put]"
+    then:
+      function: webhook-rejects-wildcard-content-type
+    apiq-meta:
+      pattern-id: TM-A51
+      lenses: [ threat-modeling, standards-compliance ]
+      sources:
+        - { type: vendor, name: 'OWASP API10:2023' }
+        - { type: vendor, name: 'GitHub webhook-hardening guide' }
+      stakeholders: [ security, spec-author ]
+      lifecycle-phase: validation-time
+      defect-class: norm
+      iso25010: [ security, reliability ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: false
+      regulatory-mapping:
+        nist: [ 'PR.AA-05', 'PR.DS-02' ]
+        asvs: [ 'V13.1.5', 'V13.2.4' ]
+        cis: [ 'CIS-3.13' ]
+      cost-impact: low
+      mttr-impact: medium
+      agent-readiness-impact: medium
+
+  # =========================================================================
+  # TM-A52 — info.description SHOULD have Security section
+  # OWASP REST cheat; severity: hint
+  # =========================================================================
+  # Source: OWASP REST Security Cheat Sheet; patterns.json TM-A52
+  #         (P3, Lens-1+Lens-2, hint)
+  # Lens: 1 (Threat-Modeling), 2 (Standards-Compliance)
+  # Round: 2
+  apiq-tm-a52-info-description-security-section:
+    description: >-
+      `info.description` SHOULD contain a Security or Authentication section so consumers know how to obtain credentials, what scopes exist, and how vulnerabilities are disclosed (OWASP REST cheat).
+    message: "info.description should have a Security/Authentication section (OWASP REST cheat)."
+    severity: hint
+    given: "$.info"
+    then:
+      function: pattern
+      field: description
+      functionOptions:
+        match: "(##\\s*([Ss][Ee][Cc][Uu][Rr][Ii][Tt][Yy]|[Aa][Uu][Tt][Hh][Ee][Nn][Tt][Ii][Cc][Aa][Tt][Ii][Oo][Nn]|[Aa][Uu][Tt][Hh])|\\*\\*([Ss][Ee][Cc][Uu][Rr][Ii][Tt][Yy]|[Aa][Uu][Tt][Hh][Ee][Nn][Tt][Ii][Cc][Aa][Tt][Ii][Oo][Nn])\\*\\*|<h[1-3][^>]*>\\s*([Ss][Ee][Cc][Uu][Rr][Ii][Tt][Yy]|[Aa][Uu][Tt][Hh][Ee][Nn][Tt][Ii][Cc][Aa][Tt][Ii][Oo][Nn]))"
+    apiq-meta:
+      pattern-id: TM-A52
+      lenses: [ threat-modeling, standards-compliance ]
+      sources:
+        - { type: vendor, name: 'OWASP REST Security Cheat Sheet', url: 'https://cheatsheetseries.owasp.org/cheatsheets/REST_Security_Cheat_Sheet.html' }
+      stakeholders: [ end-user, client-dev, spec-author, ai-agent ]
+      lifecycle-phase: documentation-time
+      defect-class: incomplete
+      iso25010: [ usability, security, maintainability ]
+      codegen-targets: [ '*' ]
+      detection-precision: low
+      auto-fix-safe: false
+      regulatory-mapping:
+        nist: [ 'ID.GV-04', 'PR.AT-01' ]
+        asvs: [ 'V1.1.1' ]
+        cis: [ 'CIS-2.5' ]
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: high

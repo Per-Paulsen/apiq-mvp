@@ -648,24 +648,55 @@ describe('Welle F — F8 RuleSource verbatim + verifiedAt on all 6 source-types'
     expect(RuleSourceSchema.parse(src)).toEqual(src);
   });
 
-  it('verbatim rejects strings >200 chars', () => {
+  it('quote rejects strings >200 chars (Welle-D Phase-3 schema-split)', () => {
     const tooLong = 'x'.repeat(201);
     const r = RuleSourceSchema.safeParse({
       type: 'rfc',
       number: 9110,
-      verbatim: tooLong,
+      quote: tooLong,
     });
     expect(r.success).toBe(false);
   });
 
-  it('verbatim accepts exactly 200 chars (boundary)', () => {
+  it('quote accepts exactly 200 chars (boundary)', () => {
     const exactly = 'x'.repeat(200);
     const r = RuleSourceSchema.safeParse({
       type: 'rfc',
       number: 9110,
-      verbatim: exactly,
+      quote: exactly,
     });
     expect(r.success).toBe(true);
+  });
+
+  it('summary accepts arbitrary length (paraphrase, not T25-checked)', () => {
+    const long = 'paraphrased sentence about API behavior. '.repeat(20);
+    const r = RuleSourceSchema.safeParse({
+      type: 'mining',
+      phase: 'round2',
+      subagent: 'long-paraphrase',
+      summary: long,
+    });
+    expect(r.success).toBe(true);
+  });
+
+  it('legacy verbatim field still accepted (passthrough during migration)', () => {
+    const r = RuleSourceSchema.safeParse({
+      type: 'rfc',
+      number: 9110,
+      verbatim: 'legacy-style text without quote/summary split',
+    });
+    expect(r.success).toBe(true);
+  });
+
+  it('quote + summary can coexist on the same source', () => {
+    const src = {
+      type: 'rfc' as const,
+      number: 9110,
+      quote: 'A sender MUST NOT generate the chunked transfer coding',
+      summary: 'Forbids chunked encoding in particular response shapes',
+      verifiedAt: '2026-05-09',
+    };
+    expect(RuleSourceSchema.parse(src)).toEqual(src);
   });
 
   it('verifiedAt rejects non-ISO date format', () => {
@@ -679,7 +710,7 @@ describe('Welle F — F8 RuleSource verbatim + verifiedAt on all 6 source-types'
     }
   });
 
-  it('verbatim + verifiedAt are both optional (existing sources still parse)', () => {
+  it('quote + summary + verifiedAt are all optional (existing sources still parse)', () => {
     const src = { type: 'rfc' as const, number: 9110, section: '15.5.6' };
     expect(RuleSourceSchema.parse(src)).toEqual(src);
   });

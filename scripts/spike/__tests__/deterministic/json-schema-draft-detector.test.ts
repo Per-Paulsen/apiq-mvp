@@ -468,6 +468,130 @@ describe("X5 — top-level webhooks in 3.0", () => {
 });
 
 // =============================================================================
+// CL-24 (Welle D / T-Sentinels) — unconstrained multi-type schemas
+// =============================================================================
+
+describe("CL-24 — unconstrained multi-type in OAS 3.0", () => {
+  it("flags type:[string, integer] in 3.0 as error (high) — multi-type without oneOf", async () => {
+    const spec = {
+      openapi: "3.0.0",
+      components: {
+        schemas: {
+          Foo: { type: ["string", "integer"] },
+        },
+      },
+    };
+    const findings = await runJsonSchemaDraftDetector(spec);
+    const f1 = findById(findings, "module:json-schema-draft-detector:cl-24-30");
+    expect(f1).toBeDefined();
+    expect(f1!.severity).toBe("high");
+    expect(f1!.category).toBe("correctness");
+    expect(f1!.meta?.patternId).toBe("CL-24");
+  });
+
+  it("does NOT flag type:[string, null] (that is X2 territory, not CL-24)", async () => {
+    const spec = {
+      openapi: "3.0.0",
+      components: {
+        schemas: {
+          Foo: { type: ["string", "null"] },
+        },
+      },
+    };
+    const findings = await runJsonSchemaDraftDetector(spec);
+    expect(findById(findings, "module:json-schema-draft-detector:cl-24-30")).toBeUndefined();
+  });
+
+  it("does NOT flag multi-type that is constrained by oneOf", async () => {
+    const spec = {
+      openapi: "3.0.0",
+      components: {
+        schemas: {
+          Foo: {
+            type: ["string", "integer"],
+            oneOf: [
+              { type: "string", maxLength: 10 },
+              { type: "integer", minimum: 0 },
+            ],
+          },
+        },
+      },
+    };
+    const findings = await runJsonSchemaDraftDetector(spec);
+    expect(findById(findings, "module:json-schema-draft-detector:cl-24-30")).toBeUndefined();
+  });
+});
+
+describe("CL-24 — unconstrained multi-type in OAS 3.1", () => {
+  it("flags type:[string, integer] in 3.1 as hint (low) — codegen-hostile", async () => {
+    const spec = {
+      openapi: "3.1.0",
+      jsonSchemaDialect: "https://spec.openapis.org/oas/3.1/dialect/base",
+      components: {
+        schemas: {
+          Foo: { type: ["string", "integer"] },
+        },
+      },
+    };
+    const findings = await runJsonSchemaDraftDetector(spec);
+    const f1 = findById(findings, "module:json-schema-draft-detector:cl-24-31");
+    expect(f1).toBeDefined();
+    expect(f1!.severity).toBe("low");
+    expect(f1!.category).toBe("design");
+    expect(f1!.meta?.patternId).toBe("CL-24");
+    expect(f1!.meta?.agentReadinessImpact).toBe("medium");
+  });
+
+  it("does NOT flag type:[string, null] in 3.1 (canonical nullable form)", async () => {
+    const spec = {
+      openapi: "3.1.0",
+      jsonSchemaDialect: "https://spec.openapis.org/oas/3.1/dialect/base",
+      components: {
+        schemas: {
+          Foo: { type: ["string", "null"] },
+        },
+      },
+    };
+    const findings = await runJsonSchemaDraftDetector(spec);
+    expect(findById(findings, "module:json-schema-draft-detector:cl-24-31")).toBeUndefined();
+  });
+
+  it("does NOT flag multi-type with anyOf branches", async () => {
+    const spec = {
+      openapi: "3.1.0",
+      components: {
+        schemas: {
+          Foo: {
+            type: ["string", "integer", "boolean"],
+            anyOf: [
+              { type: "string" },
+              { type: "integer" },
+              { type: "boolean" },
+            ],
+          },
+        },
+      },
+    };
+    const findings = await runJsonSchemaDraftDetector(spec);
+    expect(findById(findings, "module:json-schema-draft-detector:cl-24-31")).toBeUndefined();
+  });
+
+  it("does NOT flag single-type schemas", async () => {
+    const spec = {
+      openapi: "3.1.0",
+      components: {
+        schemas: {
+          Foo: { type: "string" },
+        },
+      },
+    };
+    const findings = await runJsonSchemaDraftDetector(spec);
+    expect(findById(findings, "module:json-schema-draft-detector:cl-24-31")).toBeUndefined();
+    expect(findById(findings, "module:json-schema-draft-detector:cl-24-30")).toBeUndefined();
+  });
+});
+
+// =============================================================================
 // Output-mapper compatibility — findings survive FindingSchema validation
 // =============================================================================
 

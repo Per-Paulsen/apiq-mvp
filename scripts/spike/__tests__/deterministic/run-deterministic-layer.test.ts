@@ -53,7 +53,7 @@ describe('runDeterministicLayer integration', () => {
     expect(Object.keys(result.perDetector).length).toBeGreaterThan(10);
     expect(result.findings.every(f => typeof f.title === 'string' && f.title.length > 0)).toBe(true);
     expect(result.perLayer['module-class']).toBeGreaterThan(0);
-  }, 600000); // 10min — generous for CPU/disk-load variance + codegen-typescript on stripe-full
+  }, 1800000); // 30min — Welle D bumped from 10min: 12-yaml ruleset (342 rules / 91 custom-fns) is ~2.4× the pre-Welle-D 6-yaml workload (170 rules / 25 fns) and stripe-full is the largest reference-spec. Welle-E sub-task T-Stripe-Perf will profile + optimize. Until then the timeout reflects the new workload-reality.
 
   it('runs end-to-end on pagerduty-full without crashing and produces findings', async () => {
     const specPath = path.join(REPO_ROOT, 'openapi-examples', 'pagerduty-full', 'spec.json');

@@ -408,6 +408,17 @@ Nach F4 (YAML-metadata-promotion): erste Migration-Welle erfolgreich + F5-Enforc
 - CI-Job: falls eine Springer-Delphi-Rule nicht fire + nicht explicit-skip → CI-Fail
 - Update CLAUDE.md / Memory: "27/28 covered + 1 partial" wird zu **verified statement** (oder corrigiert auf actual Zahl)
 
+### T-Stripe-Perf (NEU 2026-05-09 post-Welle-D)
+
+**Trigger:** Welle-D Phase-3-integration — `run-deterministic-layer.test.ts` stripe-full-test brauchte 23.7 min (vorher <10 min). 12-yaml ruleset (342 rules / 91 custom-fns) ist 2.4× workload vs pre-Welle-D 6-yaml (170/25). Test-timeout temporär auf 30 min gebumpt.
+
+**Sub-Task:**
+- Profile `runDeterministicLayer(stripe-full-spec)` — identify bottleneck-rules / custom-functions (CPU-time pro rule/function)
+- Suspect-classes: O(n²) custom-functions (schema-similarity walker, recursive-schema-walkers, multi-step pairwise-functions), JSONPath-compilation overhead, repeated-yaml-load (cachable?)
+- Optimization-options: rule-batching, single-pass JSONPath-compile + cache, lazy-eval for hint-severity-rules, parallelization
+- Target: stripe-full-test wieder unter 10 min (oder unter Welle-T's CI-time-budget)
+- Output: `specs/big-spec-architecture-spike-stage-a-stripe-perf-investigation.md` mit profiling-data + applied-optimizations
+
 ---
 
 ## 10. Welle Q — Code-Quality-Cleanup (orthogonal — parallel-möglich)

@@ -68,12 +68,12 @@ rules:
         - { type: vendor, name: 'OWASP API1:2023 (Broken Object Level Authorization)' }
         - { type: vendor, name: 'SP-AYWH no-numeric-ids' }
         - { type: vendor, name: 'SPS sps-no-numeric-ids' }
-        - { type: mining, phase: round1, subagent: 'Y-1', verbatim: 'mature-linters miss enumeration-via-int-id; apiq-USP', verifiedAt: '2026-05-08' }
+        - { type: mining, phase: round1, subagent: 'Y-1', summary: 'mature-linters miss enumeration-via-int-id; apiq-USP' }
       stakeholders: [security, end-user, spec-author]
       lifecycle-phase: deploy-time
       defect-class: semantic
       iso25010: [security]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
       detection-precision: medium
       auto-fix-safe: false
       regulatory-mapping:
@@ -110,9 +110,9 @@ rules:
       pattern-id: Y-8
       lenses: [threat-modeling, standards-compliance]
       sources:
-        - { type: rfc, number: 8725, section: '3.1', verbatim: 'JWTs that are sent as bearer tokens MUST be signed and integrity-protected', verifiedAt: '2026-05-08' }
+        - { type: rfc, number: 8725, section: '3.1', summary: 'JWTs that are sent as bearer tokens MUST be signed and integrity-protected' }
         - { type: vendor, name: 'OWASP JWT Cheatsheet' }
-        - { type: mining, phase: round1, subagent: 'Y-8', verbatim: 'apiq-USP — RFC-8725 BCP-mention heuristic', verifiedAt: '2026-05-08' }
+        - { type: mining, phase: round1, subagent: 'Y-8', summary: 'apiq-USP — RFC-8725 BCP-mention heuristic' }
       stakeholders: [security, end-user, spec-author]
       lifecycle-phase: documentation-time
       defect-class: incomplete
@@ -158,7 +158,7 @@ rules:
       sources:
         - { type: vendor, name: 'OWASP API3:2023 (Mass Assignment)' }
         - { type: vendor, name: 'Team-D no-additionalProperties' }
-        - { type: mining, phase: round1, subagent: 'Y-10', verbatim: 'per-schema rule sharper than P1 request-body-only', verifiedAt: '2026-05-08' }
+        - { type: mining, phase: round1, subagent: 'Y-10', summary: 'per-schema rule sharper than P1 request-body-only' }
       stakeholders: [security, spec-author, codegen-tool]
       lifecycle-phase: validation-time
       defect-class: over-specification
@@ -324,7 +324,7 @@ rules:
       sources:
         - { type: vendor, name: 'OWASP API7:2023 (Server Side Request Forgery)' }
         - { type: vendor, name: 'OWASP SSRF Cheat-Sheet' }
-        - { type: mining, phase: round1, subagent: 'Y-15', verbatim: 'extends-by-property-name SSRF flag', verifiedAt: '2026-05-08' }
+        - { type: mining, phase: round1, subagent: 'Y-15', summary: 'extends-by-property-name SSRF flag' }
       stakeholders: [security, end-user, spec-author]
       lifecycle-phase: deploy-time
       defect-class: incomplete
@@ -413,7 +413,7 @@ rules:
       sources:
         - { type: vendor, name: 'G-SP-6' }
         - { type: vendor, name: 'openapi-generator multi-language reserved-keyword lists' }
-        - { type: mining, phase: round1, subagent: 'Y-21', verbatim: 'codegen-correctness has security-impact', verifiedAt: '2026-05-08' }
+        - { type: mining, phase: round1, subagent: 'Y-21', summary: 'codegen-correctness has security-impact' }
       stakeholders: [security, codegen-tool, client-dev, spec-author]
       lifecycle-phase: build-time
       defect-class: semantic
@@ -454,7 +454,7 @@ rules:
       lenses: [threat-modeling, standards-compliance]
       sources:
         - { type: vendor, name: 'OWASP API1:2023 (Broken Object Level Authorization)' }
-        - { type: mining, phase: round2, subagent: 'TM-A2', verbatim: 'sharper than Y-23 — BOLA-prone subset', verifiedAt: '2026-05-08' }
+        - { type: mining, phase: round2, subagent: 'TM-A2', summary: 'sharper than Y-23 — BOLA-prone subset' }
       stakeholders: [security, end-user, spec-author]
       lifecycle-phase: deploy-time
       defect-class: incomplete
@@ -496,7 +496,7 @@ rules:
       pattern-id: TM-A5
       lenses: [threat-modeling, standards-compliance]
       sources:
-        - { type: rfc, number: 8725, section: '3.1', verbatim: 'JWTs that are sent as bearer tokens MUST be signed and integrity-protected', verifiedAt: '2026-05-08' }
+        - { type: rfc, number: 8725, section: '3.1', summary: 'JWTs that are sent as bearer tokens MUST be signed and integrity-protected' }
         - { type: vendor, name: 'OWASP JWT Cheatsheet' }
       stakeholders: [security, end-user, spec-author]
       lifecycle-phase: documentation-time
@@ -536,7 +536,7 @@ rules:
       pattern-id: TM-A7
       lenses: [threat-modeling, standards-compliance]
       sources:
-        - { type: bcp, number: 240, rfc: 9700, section: '2.1.1', verbatim: 'Clients MUST use PKCE', verifiedAt: '2026-05-08' }
+        - { type: bcp, number: 240, rfc: 9700, section: '2.1.1', summary: 'Clients MUST use PKCE' }
       stakeholders: [security, end-user, ai-agent, spec-author]
       lifecycle-phase: deploy-time
       defect-class: incomplete
@@ -576,12 +576,12 @@ rules:
       lenses: [threat-modeling, client-friction]
       sources:
         - { type: vendor, name: 'OWASP API2:2023 (Broken Authentication)' }
-        - { type: rfc, number: 9745, verbatim: 'RFC 9745 RateLimit-* HTTP headers (March 2025)', verifiedAt: '2026-05-08' }
+        - { type: rfc, number: 9745, summary: 'RFC 9745 RateLimit-* HTTP headers (March 2025)' }
       stakeholders: [security, end-user, operations]
       lifecycle-phase: runtime-at-scale
       defect-class: incomplete
       iso25010: [security, reliability]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
       detection-precision: medium
       auto-fix-safe: false
       regulatory-mapping:
@@ -661,7 +661,7 @@ rules:
       lifecycle-phase: validation-time
       defect-class: incomplete
       iso25010: [security, usability]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
       detection-precision: high
       auto-fix-safe: true
       regulatory-mapping:
@@ -702,7 +702,7 @@ rules:
       lifecycle-phase: validation-time
       defect-class: semantic
       iso25010: [security, maintainability]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
       detection-precision: medium
       auto-fix-safe: false
       regulatory-mapping:
@@ -741,7 +741,7 @@ rules:
       lifecycle-phase: runtime-at-scale
       defect-class: incomplete
       iso25010: [security, performance-efficiency]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
       detection-precision: medium
       auto-fix-safe: false
       regulatory-mapping:
@@ -939,8 +939,8 @@ rules:
       direction: loosen
       sources:
         - { type: vendor, name: 'OWASP API9:2023' }
-        - { type: rfc, number: 8594, verbatim: 'The Sunset HTTP Response Header Field', verifiedAt: '2026-05-08' }
-        - { type: rfc, number: 9745, verbatim: 'Deprecation HTTP Response Header Field (March 2025)', verifiedAt: '2026-05-08' }
+        - { type: rfc, number: 8594, summary: 'The Sunset HTTP Response Header Field' }
+        - { type: rfc, number: 9745, summary: 'Deprecation HTTP Response Header Field (March 2025)' }
       stakeholders: [security, end-user, ai-agent, spec-author]
       lifecycle-phase: evolution-time
       defect-class: operational-metadata-missing
@@ -1026,12 +1026,12 @@ rules:
       pattern-id: RFC2-1
       lenses: [standards-compliance, client-friction]
       sources:
-        - { type: rfc, number: 9457, section: '3.1', verbatim: 'A problem details object can have the following members: type ...', verifiedAt: '2026-05-08' }
+        - { type: rfc, number: 9457, section: '3.1', summary: 'A problem details object can have the following members: type ...' }
       stakeholders: [spec-author, client-dev, ai-agent]
       lifecycle-phase: validation-time
       defect-class: norm
       iso25010: [usability, maintainability]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
       detection-precision: high
       auto-fix-safe: false
       regulatory-mapping:
@@ -1066,7 +1066,7 @@ rules:
       pattern-id: RFC2-2
       lenses: [standards-compliance]
       sources:
-        - { type: rfc, number: 9457, section: '3.1.1', verbatim: 'A URI reference', verifiedAt: '2026-05-08' }
+        - { type: rfc, number: 9457, section: '3.1.1', summary: 'A URI reference' }
       stakeholders: [spec-author, client-dev, ai-agent]
       lifecycle-phase: validation-time
       defect-class: norm
@@ -1104,7 +1104,7 @@ rules:
       pattern-id: RFC2-3
       lenses: [standards-compliance, internal-consistency]
       sources:
-        - { type: rfc, number: 9457, section: '3.1.2', verbatim: 'the same as the HTTP response status', verifiedAt: '2026-05-08' }
+        - { type: rfc, number: 9457, section: '3.1.2', summary: 'the same as the HTTP response status' }
       stakeholders: [spec-author, client-dev, ai-agent]
       lifecycle-phase: validation-time
       defect-class: norm
@@ -1145,12 +1145,12 @@ rules:
       pattern-id: RFC2-11
       lenses: [client-friction]
       sources:
-        - { type: rfc, number: 9110, section: '5.1', verbatim: 'Field-Name conventions', verifiedAt: '2026-05-08' }
+        - { type: rfc, number: 9110, section: '5.1', summary: 'Field-Name conventions' }
       stakeholders: [client-dev, spec-author, codegen-tool]
       lifecycle-phase: documentation-time
       defect-class: ergonomic
       iso25010: [usability, maintainability]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
       detection-precision: high
       auto-fix-safe: true
       regulatory-mapping:
@@ -1184,10 +1184,10 @@ rules:
       pattern-id: RFC2-20
       lenses: [standards-compliance, operations]
       sources:
-        - { type: rfc, number: 9110, section: '13.1.1', verbatim: 'If-Match → 412 Precondition Failed', verifiedAt: '2026-05-08' }
-        - { type: rfc, number: 9110, section: '13.1.2', verbatim: 'If-None-Match → 304/412', verifiedAt: '2026-05-08' }
-        - { type: rfc, number: 9110, section: '15.4.5', verbatim: '304 → ETag/Last-Modified', verifiedAt: '2026-05-08' }
-        - { type: rfc, number: 9110, section: '15.5.13', verbatim: '412 → conditional param required', verifiedAt: '2026-05-08' }
+        - { type: rfc, number: 9110, section: '13.1.1', summary: 'If-Match → 412 Precondition Failed' }
+        - { type: rfc, number: 9110, section: '13.1.2', summary: 'If-None-Match → 304/412' }
+        - { type: rfc, number: 9110, section: '15.4.5', summary: '304 → ETag/Last-Modified' }
+        - { type: rfc, number: 9110, section: '15.5.13', summary: '412 → conditional param required' }
       stakeholders: [spec-author, client-dev, operations]
       lifecycle-phase: validation-time
       defect-class: norm
@@ -1225,7 +1225,7 @@ rules:
       pattern-id: RFC2-32
       lenses: [standards-compliance]
       sources:
-        - { type: rfc, number: 9110, section: '15.3.7', verbatim: 'MUST generate Content-Range', verifiedAt: '2026-05-08' }
+        - { type: rfc, number: 9110, section: '15.3.7', summary: 'MUST generate Content-Range' }
       stakeholders: [spec-author, client-dev]
       lifecycle-phase: validation-time
       defect-class: norm
@@ -1264,7 +1264,7 @@ rules:
       pattern-id: RFC2-58
       lenses: [standards-compliance, threat-modeling]
       sources:
-        - { type: rfc, number: 8725, section: '3.1', verbatim: 'JWTs that are sent as bearer tokens MUST be signed and integrity-protected', verifiedAt: '2026-05-08' }
+        - { type: rfc, number: 8725, section: '3.1', summary: 'JWTs that are sent as bearer tokens MUST be signed and integrity-protected' }
       stakeholders: [security, spec-author]
       lifecycle-phase: documentation-time
       defect-class: incomplete
@@ -1303,7 +1303,7 @@ rules:
       pattern-id: RFC2-59
       lenses: [standards-compliance]
       sources:
-        - { type: rfc, number: 6750, section: '3', verbatim: 'WWW-Authenticate: Bearer realm=', verifiedAt: '2026-05-08' }
+        - { type: rfc, number: 6750, section: '3', summary: 'WWW-Authenticate: Bearer realm=' }
       stakeholders: [security, client-dev, ai-agent]
       lifecycle-phase: runtime-edge
       defect-class: norm
@@ -1340,13 +1340,13 @@ rules:
       pattern-id: RFC2-65
       lenses: [standards-compliance, client-friction]
       sources:
-        - { type: rfc, number: 6749, section: '3.3', verbatim: 'scope-token = 1*( %x21 / %x23-5B / %x5D-7E )', verifiedAt: '2026-05-08' }
+        - { type: rfc, number: 6749, section: '3.3', summary: 'scope-token = 1*( %x21 / %x23-5B / %x5D-7E )' }
         - { type: vendor, name: 'OAS-3 OAuth Flows Object spec' }
       stakeholders: [spec-author, end-user, ai-agent]
       lifecycle-phase: documentation-time
       defect-class: incomplete
       iso25010: [usability, security]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
       detection-precision: high
       auto-fix-safe: false
       regulatory-mapping:
@@ -1380,7 +1380,7 @@ rules:
       pattern-id: RFC2-69
       lenses: [standards-compliance]
       sources:
-        - { type: rfc, number: 3986, section: '3.5', verbatim: 'fragment component is indicated by the presence of a number sign', verifiedAt: '2026-05-08' }
+        - { type: rfc, number: 3986, section: '3.5', summary: 'fragment component is indicated by the presence of a number sign' }
       stakeholders: [spec-author, client-dev]
       lifecycle-phase: validation-time
       defect-class: norm
@@ -1422,7 +1422,7 @@ rules:
       pattern-id: RFC2-70
       lenses: [standards-compliance]
       sources:
-        - { type: rfc, number: 6570, verbatim: 'URI Template (Level 1-4 expressions)', verifiedAt: '2026-05-08' }
+        - { type: rfc, number: 6570, summary: 'URI Template (Level 1-4 expressions)' }
         - { type: vendor, name: 'OAS-3 path-template spec' }
       stakeholders: [spec-author, codegen-tool]
       lifecycle-phase: validation-time
@@ -1462,13 +1462,13 @@ rules:
       pattern-id: RFC2-74
       lenses: [threat-modeling, client-friction, standards-compliance]
       sources:
-        - { type: rfc, number: 3986, section: '3.2.1', verbatim: 'Use of the format user:password in the userinfo field is deprecated', verifiedAt: '2026-05-08' }
+        - { type: rfc, number: 3986, section: '3.2.1', summary: 'Use of the format user:password in the userinfo field is deprecated' }
         - { type: vendor, name: 'OWASP API2:2023' }
       stakeholders: [security, end-user, spec-author]
       lifecycle-phase: deploy-time
       defect-class: norm
       iso25010: [security, usability]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
       detection-precision: high
       auto-fix-safe: false
       regulatory-mapping:
@@ -1502,14 +1502,14 @@ rules:
       pattern-id: RFC2-97
       lenses: [standards-compliance, client-friction]
       sources:
-        - { type: rfc, number: 7396, verbatim: 'JSON Merge Patch', verifiedAt: '2026-05-08' }
-        - { type: rfc, number: 6902, verbatim: 'JavaScript Object Notation (JSON) Patch', verifiedAt: '2026-05-08' }
-        - { type: rfc, number: 5789, section: '2', verbatim: 'PATCH method - support specific patch document formats', verifiedAt: '2026-05-08' }
+        - { type: rfc, number: 7396, summary: 'JSON Merge Patch' }
+        - { type: rfc, number: 6902, summary: 'JavaScript Object Notation (JSON) Patch' }
+        - { type: rfc, number: 5789, section: '2', summary: 'PATCH method - support specific patch document formats' }
       stakeholders: [spec-author, client-dev, codegen-tool]
       lifecycle-phase: validation-time
       defect-class: norm
       iso25010: [reliability, usability, compatibility]
-      codegen-targets: ['*']
+      codegen-targets: [java, go, python, typescript, rust, csharp, kotlin]
       detection-precision: high
       auto-fix-safe: false
       regulatory-mapping:
