@@ -1,5 +1,9 @@
 /**
- * Media-Type IANA Validator Module — Stage A, Welle B T13 (Module-Class).
+ * Media-Type IANA Classifier Module — Stage A, Welle B T13 (Classifier per
+ * Plan-Doc §13). Renamed + relocated from `modules/media-type-iana-validator.ts`
+ * during T13 classifier-promotion. Output-shape DetectorFinding[] mirrors
+ * `json-schema-draft-detector.ts` (also in classifiers/) — Stage-1 spec-axis
+ * checks that produce direct findings rather than gating other detectors.
  *
  * Sources: IANA media-types registry snapshot (T22, 2026-01)
  *          + RFC 6838 (Media Type Specifications and Registration)
@@ -37,10 +41,10 @@
  * Spec-agnostic — works on ANY OpenAPI 3.x spec.
  *
  * Public API:
- *   `runMediaTypeValidator(spec, opts) => Promise<DetectorFinding[]>`
+ *   `runMediaTypeClassifier(spec, opts) => Promise<DetectorFinding[]>`
  *
  * CLI:
- *   `npx tsx deterministic/media-type-iana-validator.ts <spec-name>`
+ *   `npx tsx deterministic/classifiers/media-type-iana-classifier.ts <spec-name>`
  */
 
 import type { DetectorFinding, DetectorOptions } from '../infra/types.js';
@@ -544,7 +548,7 @@ function buildFindingForPattern(
 // Public API
 // =============================================================================
 
-export async function runMediaTypeValidator(
+export async function runMediaTypeClassifier(
   spec: object,
   _opts?: DetectorOptions
 ): Promise<DetectorFinding[]> {
@@ -597,7 +601,7 @@ async function main(): Promise<void> {
   const EXAMPLES_DIR = pathMod.join(REPO_ROOT, 'openapi-examples');
   const specName = process.argv[2];
   if (!specName) {
-    console.error('Usage: tsx deterministic/media-type-iana-validator.ts <spec-name>');
+    console.error('Usage: tsx deterministic/classifiers/media-type-iana-classifier.ts <spec-name>');
     process.exit(1);
   }
   const specDir = pathMod.join(EXAMPLES_DIR, specName);
@@ -621,7 +625,7 @@ async function main(): Promise<void> {
   }
   console.log(`Loaded ${specPath}`);
   const startedAt = Date.now();
-  const findings = await runMediaTypeValidator(spec, { specName });
+  const findings = await runMediaTypeClassifier(spec, { specName });
   const durationMs = Date.now() - startedAt;
   console.log(`Ran in ${durationMs}ms — ${findings.length} finding(s).`);
   for (const f of findings) {

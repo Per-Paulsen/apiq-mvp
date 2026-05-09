@@ -31,8 +31,8 @@ import { runSecretScanner } from './secret-scanner.js';
 import { runWebhookSignature } from './webhook-signature.js';
 import { walkHttpProtocolPairings } from './http-protocol-pairings.js';
 import { validateProblemJson } from './problem-json-validator.js';
-import { runOAuth2FlowValidator } from './oauth2-flow-validator.js';
-import { runMediaTypeValidator } from './media-type-iana-validator.js';
+import { runOAuth2FlowClassifier } from '../classifiers/oauth2-flow-classifier.js';
+import { runMediaTypeClassifier } from '../classifiers/media-type-iana-classifier.js';
 import { runJsonSchemaDraftDetector } from '../classifiers/json-schema-draft-detector.js';
 import { runStyleCoherenceChecks } from './per-style-coherence.js';
 
@@ -65,8 +65,8 @@ const ALL_MODULES: ModuleEntry[] = [
   { name: 'webhook-signature', fn: runWebhookSignature, layer: 'module-class' },
   { name: 'http-protocol-pairings', fn: walkHttpProtocolPairings, layer: 'module-class' },
   { name: 'problem-json-validator', fn: validateProblemJson, layer: 'module-class' },
-  { name: 'oauth2-flow-validator', fn: runOAuth2FlowValidator, layer: 'module-class' },
-  { name: 'media-type-iana-validator', fn: runMediaTypeValidator, layer: 'module-class' },
+  { name: 'oauth2-flow-classifier', fn: runOAuth2FlowClassifier, layer: 'module-class' },
+  { name: 'media-type-iana-classifier', fn: runMediaTypeClassifier, layer: 'module-class' },
   { name: 'json-schema-draft-detector', fn: runJsonSchemaDraftDetector, layer: 'module-class' },
   { name: 'per-style-coherence', fn: runStyleCoherence, layer: 'module-class' },
 ];

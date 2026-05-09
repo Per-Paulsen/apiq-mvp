@@ -1,5 +1,5 @@
 /**
- * Tests for oauth2-flow-validator (T12) - RFC 9700 BCP-240 + RFC 6749 + RFC 8725
+ * Tests for oauth2-flow-classifier (T12) - RFC 9700 BCP-240 + RFC 6749 + RFC 8725
  * compliance.
  *
  * Coverage targets per the implementation-priority spec:
@@ -26,10 +26,10 @@ import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
-  runOAuth2FlowValidator,
+  runOAuth2FlowClassifier,
   validateOAuth2Schemes,
   OAUTH2_PATTERN_IDS,
-} from "../../deterministic/modules/oauth2-flow-validator.js";
+} from "../../deterministic/classifiers/oauth2-flow-classifier.js";
 import { mapDetectorFindings } from "../../deterministic/infra/output-mapper.js";
 import { FindingSchema } from "../../schema.js";
 
@@ -507,7 +507,7 @@ describe("validateOAuth2Schemes - empty / edge cases", () => {
 // FindingSchema validation
 // =============================================================================
 
-describe("runOAuth2FlowValidator - output validates against FindingSchema", () => {
+describe("runOAuth2FlowClassifier - output validates against FindingSchema", () => {
   it("produces canonical Finding-shape that round-trips through output-mapper", async () => {
     const spec = {
       components: {
@@ -528,7 +528,7 @@ describe("runOAuth2FlowValidator - output validates against FindingSchema", () =
         },
       },
     };
-    const detectorFindings = await runOAuth2FlowValidator(spec);
+    const detectorFindings = await runOAuth2FlowClassifier(spec);
     expect(detectorFindings.length).toBeGreaterThan(0);
 
     const llmFindings = mapDetectorFindings(detectorFindings);
@@ -554,7 +554,7 @@ describe("runOAuth2FlowValidator - output validates against FindingSchema", () =
         },
       },
     };
-    const detectorFindings = await runOAuth2FlowValidator(spec);
+    const detectorFindings = await runOAuth2FlowClassifier(spec);
     const llm = mapDetectorFindings(detectorFindings);
     expect(llm.length).toBeGreaterThan(0);
     for (const f of llm) {
@@ -628,7 +628,7 @@ describe("runs cleanly on reference specs", () => {
       const raw = fs.readFileSync(specPath, "utf8");
       const spec = JSON.parse(raw) as object;
 
-      const findings = await runOAuth2FlowValidator(spec, { specName });
+      const findings = await runOAuth2FlowClassifier(spec, { specName });
       const mapped = mapDetectorFindings(findings);
       expect(mapped.length).toBe(findings.length);
       for (const f of mapped) {

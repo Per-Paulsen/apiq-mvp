@@ -527,8 +527,8 @@ scripts/spike/deterministic/
 ├── classifiers/         # Stage-1 classifiers (kein Finding-Output, gate other detectors)
 │   ├── style-classifier.ts
 │   ├── json-schema-draft-detector.ts
-│   ├── oauth2-flow-classifier.ts (T12 als classifier umbenannt)
-│   └── media-type-iana-classifier.ts (T13)
+│   ├── oauth2-flow-classifier.ts ✓ (T12 promoted Welle-D-task-22, 2026-05-09)
+│   └── media-type-iana-classifier.ts ✓ (T13 promoted Welle-D-task-22, 2026-05-09)
 ├── aggregators/         # Statistical aggregators (Walker-class)
 │   └── (was walkers/ ist — umbenannt für Konsistenz)
 ├── modules/             # Deep-mechanic modules (already existing)
@@ -570,6 +570,8 @@ scripts/spike/deterministic/
 - spec-diff bleibt orphan in modules/ (oder eigener `experimental/` subtree?)
 
 **Pre-Condition:** Welle F done (Schema-Erweiterungen abgeschlossen, sonst doppelarbeit beim refactor).
+
+**Status (2026-05-09 Welle-D-task-22):** T12+T13 classifier-promotions DONE. Beide files git-mv'd `modules/` → `classifiers/`, function-rename `runOAuth2FlowValidator → runOAuth2FlowClassifier` + `runMediaTypeValidator → runMediaTypeClassifier`. Konsumenten-update: `modules/index.ts` + `eval/profile-deterministic-layer.ts` + Test-files (renamed + updated). Output-shape (`DetectorFinding[]`) bleibt unverändert — konsistent mit Präzedenz `json-schema-draft-detector.ts` (also in classifiers/, also returns DetectorFinding[]). `detectorId`-Telemetry-Prefixes (`oauth2-flow-validator:*`, `media-type-iana:*`) bleiben für reference-findings-Stabilität. Tests: 49/49 pass post-rename.
 
 ### Arch2 — DetectorLayer-Type erweitert um module-class
 

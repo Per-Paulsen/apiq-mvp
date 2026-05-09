@@ -1,5 +1,9 @@
 /**
- * OAuth2-Flow-Validator Module — Stage A, Welle B T12 (Module-Class).
+ * OAuth2-Flow-Classifier Module — Stage A, Welle B T12 (Classifier per
+ * Plan-Doc §13). Renamed + relocated from `modules/oauth2-flow-validator.ts`
+ * during T12 classifier-promotion. Output-shape DetectorFinding[] mirrors
+ * `json-schema-draft-detector.ts` (also in classifiers/) — Stage-1 spec-axis
+ * checks that produce direct findings rather than gating other detectors.
  *
  * Sources: RFC 9700 BCP-240 (2025-Jan, OAuth 2.0 Security Best Current Practice)
  *          + RFC 6749 (OAuth 2.0 Authorization Framework, §3.1 verbatim TLS)
@@ -41,11 +45,11 @@
  * `spec.components.securitySchemes`). Cycle-safe. No HTTP / runtime probing.
  *
  * Public API:
- *   `runOAuth2FlowValidator(spec, opts) => Promise<DetectorFinding[]>`
+ *   `runOAuth2FlowClassifier(spec, opts) => Promise<DetectorFinding[]>`
  *   `validateOAuth2Schemes(spec) => Array<RawIssue>`  (exported for tests)
  *
  * CLI:
- *   `npx tsx deterministic/oauth2-flow-validator.ts <spec-name>`
+ *   `npx tsx deterministic/classifiers/oauth2-flow-classifier.ts <spec-name>`
  */
 
 import type { DetectorFinding, DetectorOptions } from "../infra/types.js";
@@ -555,7 +559,7 @@ function buildFinding(issue: RawIssue): DetectorFinding {
  *   - pagerduty-full: apiKey-only       -> 0 findings
  *   - dnd5eapi / github-rest: no securitySchemes -> 0 findings
  */
-export async function runOAuth2FlowValidator(
+export async function runOAuth2FlowClassifier(
   spec: object,
   _opts?: DetectorOptions,
 ): Promise<DetectorFinding[]> {
@@ -580,8 +584,8 @@ async function main(): Promise<void> {
 
   const specName = process.argv[2];
   if (!specName) {
-    console.error("Usage: tsx deterministic/oauth2-flow-validator.ts <spec-name>");
-    console.error("  e.g. tsx deterministic/oauth2-flow-validator.ts stripe-full");
+    console.error("Usage: tsx deterministic/classifiers/oauth2-flow-classifier.ts <spec-name>");
+    console.error("  e.g. tsx deterministic/classifiers/oauth2-flow-classifier.ts stripe-full");
     process.exit(1);
   }
 
@@ -615,7 +619,7 @@ async function main(): Promise<void> {
 
   console.log("Loaded spec: " + specPath);
   const startedAt = Date.now();
-  const findings = await runOAuth2FlowValidator(spec, { specName });
+  const findings = await runOAuth2FlowClassifier(spec, { specName });
   const durationMs = Date.now() - startedAt;
 
   console.log(

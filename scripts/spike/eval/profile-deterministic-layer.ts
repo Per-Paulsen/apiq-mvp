@@ -61,8 +61,8 @@ import { runSecretScanner } from '../deterministic/modules/secret-scanner.js';
 import { runWebhookSignature } from '../deterministic/modules/webhook-signature.js';
 import { walkHttpProtocolPairings } from '../deterministic/modules/http-protocol-pairings.js';
 import { validateProblemJson } from '../deterministic/modules/problem-json-validator.js';
-import { runOAuth2FlowValidator } from '../deterministic/modules/oauth2-flow-validator.js';
-import { runMediaTypeValidator } from '../deterministic/modules/media-type-iana-validator.js';
+import { runOAuth2FlowClassifier } from '../deterministic/classifiers/oauth2-flow-classifier.js';
+import { runMediaTypeClassifier } from '../deterministic/classifiers/media-type-iana-classifier.js';
 import { runJsonSchemaDraftDetector } from '../deterministic/classifiers/json-schema-draft-detector.js';
 import { runStyleCoherenceChecks } from '../deterministic/modules/per-style-coherence.js';
 
@@ -116,8 +116,8 @@ const ALL_MODULES: Array<{ name: string; fn: (spec: object, opts?: { specName?: 
   { name: 'webhook-signature', fn: runWebhookSignature },
   { name: 'http-protocol-pairings', fn: walkHttpProtocolPairings },
   { name: 'problem-json-validator', fn: validateProblemJson },
-  { name: 'oauth2-flow-validator', fn: runOAuth2FlowValidator },
-  { name: 'media-type-iana-validator', fn: runMediaTypeValidator },
+  { name: 'oauth2-flow-classifier', fn: runOAuth2FlowClassifier },
+  { name: 'media-type-iana-classifier', fn: runMediaTypeClassifier },
   { name: 'json-schema-draft-detector', fn: runJsonSchemaDraftDetector },
   // per-style-coherence is sync + returns CoherenceResult; wrap.
   { name: 'per-style-coherence', fn: async (spec, opts) => runStyleCoherenceChecks(spec, opts).findings },
