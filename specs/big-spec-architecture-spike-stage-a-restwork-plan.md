@@ -95,7 +95,7 @@ Pro Welle entscheiden: was passt besser?
 | D | direkt | P3-Patterns klar in `implementation-priority.md` |
 | D2 | direkt | P4+P5-Patterns klar in `implementation-priority.md` |
 | E | direkt | T24 Putz-Niveau-Benchmark hat klare 28-Springer-Delphi-Regeln |
-| T | direkt | T1-T3 sind klar (Integration-Tests + Snapshot + CI) |
+| T | direkt | T2+T3 sind klar (Snapshot-Tests + CI-Pipeline; T1 absorbed in Welle E E1 per 2026-05-10 restructure) |
 | Doc | brainstorming | Doc-Style + Audience + Tiefe nicht voll definiert; Discussion-Wert |
 | Arch | brainstorming | Refactor-Strategy + welche Files in welche subtree + spec-diff in modules/ vs experimental/ braucht Diskussion |
 | R | brainstorming | R2-Reviewer-Auswahl (welches Modell) + Disagreement-Workflow braucht Diskussion |
@@ -120,8 +120,8 @@ Pro Welle entscheiden: was passt besser?
 | **C** | P2 Spectral (T16b Threat ~25 + T18b Client ~20 inkl. 4 DOLAR) | F done | ✓ T16b + T18b parallel |
 | **D** | P3 Trail (T16c Threat ~30 + T18c Client ~30 + T25 Source-Verify-CI) | C done | ✓ 3 Subagents parallel |
 | **D2** | P4 + P5 Niche/Vendor-Patterns (~25 patterns) | D done | — |
-| **E** | T24 Putz-Niveau-Benchmark (gegen 28 Springer-Delphi-Rules) | D2 done (alle target rules implementiert) |
-| **T** | Test-Coverage (Integration-all-specs + Snapshot-Tests + CI-Pipeline) | C done | ✓ parallel zu D/D2/E |
+| **E** | T24 Putz-Niveau-Benchmark — E0 Mapping-Authoring + E1 Multi-Spec-Test-Runner (subsumiert ehem. T1) + E2 Per-Delphi-Rule fires-on-spec assertion + E3 verified statement | D2 done | ✓ E0+E1 parallel innerhalb der Welle |
+| **T** | Test-Coverage Reststück — T2 Snapshot-Tests pro Module-Output + T3 CI-Pipeline (T1 Integration-Tests-all-specs absorbed in Welle E E1) | E done (T3 braucht E's CI-Job; T2 ist orthogonal) | ✓ T2 parallel-möglich ab Welle E done |
 | **Doc** | Documentation (dev-README + Architecture-Diagram + Contributor-Guide) | M+F+Arch done | — |
 | **Arch** | Architectural Refactoring (flat → classifiers/aggregators/modules/rules) | F done | — |
 | **R** | Reference-Hardening (R1 isPureSpectralDetectable + R2 Second-LLM-Review) | keine | ✓ orthogonal — parallel zu allem ab Welle C |
@@ -401,27 +401,73 @@ Nach F4 (YAML-metadata-promotion): erste Migration-Welle erfolgreich + F5-Enforc
 
 ---
 
-## 9. Welle E — Putz-Niveau-Benchmark T24
+## 9. Welle E — Putz-Niveau-Benchmark T24 (umstrukturiert 2026-05-10 post-Pre-Welle-E-Audit)
 
-**Inhalt:** ehrlicher Test der "27/28 Springer-Delphi covered + 1 partial" Behauptung. apiq gegen 4 Reference-Specs, prüfe dass alle 28 high-importance Springer-Delphi-Rules entweder fire OR explicit-skip-with-rationale haben.
+**Inhalt:** ehrlicher Test der "27/28 Springer-Delphi covered + 1 partial" Behauptung. apiq gegen 4 Reference-Specs, prüfe dass alle 28 high-importance Springer-Delphi-Rules entweder fire ODER explicit-skip-with-rationale haben.
+
+**Pre-Welle-E-Audit-Befund (2026-05-10):** Die Coverage-Tabelle in `rules-brainstorm.md:1729-1758` ist Stand 2026-05-05 — vor Welle M-R3+R4 / F / C / D / Arch+ / D2. Cited Pattern-IDs nutzen alte Round-1-Nomenclature (`B-SP-2/3/9`, `S-SP-*`, `R-SP-1`, `K1/K4`, `S7`, `SC-6/9`, `G1/G2`, `H1`, `M9/M10`, `A-MIN-1`, `E1/E2/E3`, `Y-A48`, `RFC2-7/8/16/36-39/43/60-62`, `C10`) — viele existieren NUR in patterns.json (substrate), NICHT als yaml-active rules. Audit ergab: nur 5/28 fully-covered, 18/28 partially-covered, 5/28 unmappable (wildcard-references nie expandiert). **Die "27/28"-Behauptung ist nicht empirisch; das Mapping muss neu geschrieben werden.** Außerdem: Pattern-IDs sind unzuverlässige Proxies für "Rule-Konzeption ist abgedeckt" — manche Konzeptionen sind via mehrere yaml-rules + module-detections abgedeckt obwohl die historisch-zitierten Pattern-IDs nicht mehr existieren.
 
 **Pre-Condition:** Welle D2 done — alle target-Rules implementiert.
 
-**Output:**
-- `specs/big-spec-architecture-spike-stage-a-putz-benchmark.md` — Test-Report
-- CI-Job: falls eine Springer-Delphi-Rule nicht fire + nicht explicit-skip → CI-Fail
-- Update CLAUDE.md / Memory: "27/28 covered + 1 partial" wird zu **verified statement** (oder corrigiert auf actual Zahl)
+### Sub-Tasks (1 Welle, ~3 parallele Subagents pro Phase)
 
-### T-Stripe-Perf (NEU 2026-05-09 post-Welle-D)
+#### E0 — Authoritative Springer-Delphi-Mapping (data-authoring)
 
-**Trigger:** Welle-D Phase-3-integration — `run-deterministic-layer.test.ts` stripe-full-test brauchte 23.7 min (vorher <10 min). 12-yaml ruleset (342 rules / 91 custom-fns) ist 2.4× workload vs pre-Welle-D 6-yaml (170/25). Test-timeout temporär auf 30 min gebumpt.
+Schreibe `scripts/spike/data/springer-delphi-mapping.ts` mit 28 Einträgen:
 
-**Sub-Task:**
-- Profile `runDeterministicLayer(stripe-full-spec)` — identify bottleneck-rules / custom-functions (CPU-time pro rule/function)
-- Suspect-classes: O(n²) custom-functions (schema-similarity walker, recursive-schema-walkers, multi-step pairwise-functions), JSONPath-compilation overhead, repeated-yaml-load (cachable?)
-- Optimization-options: rule-batching, single-pass JSONPath-compile + cache, lazy-eval for hint-severity-rules, parallelization
-- Target: stripe-full-test wieder unter 10 min (oder unter Welle-T's CI-time-budget)
-- Output: `specs/big-spec-architecture-spike-stage-a-stripe-perf-investigation.md` mit profiling-data + applied-optimizations
+```typescript
+type DelphiMapping = {
+  delphi_id: number;            // 1-28
+  delphi_rule: string;          // verbatim from arXiv 2108.00033
+  yaml_rules: string[];         // active rule-names from 12 yamls
+  module_detections: string[];  // module/aggregator/classifier inline detections
+  walker_detections: string[];  // walker-based detections
+  applicable_to_specs: ('stripe-full' | 'pagerduty-full' | 'github-rest' | 'dnd5eapi')[];
+  skip_rationale: string | null; // explicit reason if Stage-A out-of-scope
+  notes: string;                // any context (e.g. "split across 4 RFC2-bundles")
+};
+```
+
+Manuelles Mapping pro 28-Rules: für jede Konzeption (nicht nur cited Pattern-ID) prüfe welche aktuellen yaml-rules / modules / walkers / classifiers sie abdecken. Konsultiere `rules-brainstorm.md:1729-1758` als Ausgangspunkt aber treat es als stale-hint, nicht als source-of-truth.
+
+**Erwartete Outputs:**
+- 28 Mapping-Einträge (vollständig)
+- ~5-8 Einträge mit `skip_rationale` (z.B. "Rule applicable to webhook-APIs only; current 4-spec set has none" für Idempotency-keys)
+- ~3-5 Konzeptionen die über erwartetes Mapping hinaus abgedeckt sind (z.B. 6 yaml-rules + 2 module-detections für error-message-consistency)
+
+#### E1 — Multi-Spec Test-Runner Infrastructure (subsumiert ehem. T1)
+
+Erweiterung von `scripts/spike/__tests__/deterministic/run-deterministic-layer.test.ts`:
+- Parametrisiert über alle 4 Specs (`stripe-full`, `pagerduty-full`, `github-rest`, `dnd5eapi`)
+- Helper `runFullPipelineOnSpec(specPath) → { findings, durationMs, byDetector }`
+- Per-Spec timeout (stripe-full bis 30 min per CLAUDE.md, andere kürzer)
+- Per-detector breakdown sane checks (no detector dominates absurd, no detector silent if expected)
+- Gemeinsamer fixture-loader für die 4 Specs
+- **Reuse durch E2 + zukünftige Welle V (Cross-Linter-Comparison) + Welle T2 (Snapshot-Tests)**
+
+#### E2 — Per-Delphi-Rule fires-on-spec assertion + skip-rationale-check
+
+Test-Helper `assertDelphiCoverage(mapping[N], findingsBySpec)`:
+- Pro Mapping-Eintrag: prüfe dass mindestens 1 yaml_rule / module_detection / walker_detection eine finding emittiert auf mindestens 1 applicable_to_specs-Spec ODER `skip_rationale != null`.
+- Failure-modes:
+  - `skip_rationale == null && fires_count == 0` → Test-Fail (uncovered Delphi-rule)
+  - `skip_rationale != null && fires_count > 0` → Test-Warn (skip-rationale obsolet)
+
+**Output:** `specs/big-spec-architecture-spike-stage-a-putz-benchmark.md` — automatisch-generiert nach Test-Run, Mapping-Status pro 28-Rules + per-spec fire-counts.
+
+#### E3 — verified statement + CI-Job + status-updates
+
+- CI-Job: GitHub Actions workflow `.github/workflows/putz-benchmark.yml` der bei jedem PR die E2-Asserts laufen lässt; bei Coverage-Regression → Fail.
+- Update CLAUDE.md + Memory + Plan-Doc: "27/28 covered + 1 partial" wird zu **verified statement** (z.B. "23/28 fully-covered + 4 skip-with-rationale + 1 Stage-B-deferred") oder bleibt 27/28 wenn das aktuelle Mapping diese Zahl tatsächlich ergibt.
+- Append `*-results.md` mit final coverage-table + CI-job-status + decisions.
+
+### Stripe-Perf-Considerations
+
+E1 läuft `runDeterministicLayer` auf alle 4 Specs. Stripe-full braucht ~22.85min post-Welle-Arch+. 4-Spec-Run sequenziell ≈ 30-45min. Parallel ggf. ≈ 25min. CI-time-budget: separater workflow von normalem `npm run test` (E2 als nightly/weekly cron oder als opt-in label-triggered).
+
+### T-Stripe-Perf (post-Welle-D verbleibend, in Arch+ angefangen)
+
+War ursprünglich Welle-E sub-task; in Welle Arch+ via OQ-3 vorgezogen + 5 Optimizations applied (dnd5eapi 21.5s → 10.3s; stripe-full 23.7min → 22.85min, Spectral.run dominates 95%, inherent). Final-Optimization auf <10min explizit deferred zu Welle V (braucht Cross-Linter-Daten zur Decision ob lohnt). **Kein Welle-E-Sub-Task mehr.**
 
 ---
 
@@ -449,35 +495,27 @@ Q1 ist Pre-Condition für Phase B → muss vor Phase B done. Q2-Q5 sind nice-to-
 
 ---
 
-## 11. Welle T — Test-Coverage (NEU für Maximalismus)
+## 11. Welle T — Test-Coverage Reststück (umstrukturiert 2026-05-10 post-Welle-E-Restructure)
 
-Aktuell genau **1 Integration-Test** (run-deterministic-layer.test.ts auf dnd5eapi). Bei Maximalismus: vollständige Test-Coverage-Maximierung.
-
-### T1 — Integration-Tests auf alle 4 Specs
-
-**Ziel:** je 1 Integration-Test pro `openapi-examples/{stripe-full,pagerduty-full,github-rest,dnd5eapi}/spec.json`. Pro Test:
-- runDeterministicLayer end-to-end
-- Findings > expected-threshold
-- Per-detector breakdown sane (no detector dominates absurd, no detector silent if expected)
-- Duration < timeout (codegen-validation auf stripe-full kann 30s+ — angemessener timeout)
-
-**Pre-Condition:** Welle C done (stable Rule-Set). Vorher würde Test-fixtures bei jeder neuen Rule brechen.
+**Update 2026-05-10:** ehemaliges T1 (Integration-Tests-all-specs) wurde in Welle E E1 absorbed (E baut buchstäblich denselben Multi-Spec-Test-Runner — separate T1-Welle wäre duplicate scaffolding). Welle T enthält jetzt nur noch T2 (Snapshot-Tests) + T3 (CI-Pipeline-maturity).
 
 ### T2 — Snapshot-Tests pro Module-Output
 
-**Ziel:** für jedes der 15 wired Module-Classes ein Snapshot-Test der das DetectorFinding[]-Output gegen einen baseline-snapshot vergleicht. Hilft regression-detection bei Welle C/D Erweiterungen — wenn ein neuer Rule die Output-Shape eines Moduls ändert, snapshot-test fängt das.
+**Ziel:** für jedes der 15 wired Module-Classes ein Snapshot-Test der das DetectorFinding[]-Output gegen einen baseline-snapshot vergleicht. Hilft regression-detection bei zukünftigen Welles — wenn ein neuer Rule die Output-Shape eines Moduls ändert, snapshot-test fängt das.
 
 **Tools:** Vitest's snapshot-feature (`expect(...).toMatchSnapshot()`).
+
+**Pre-Condition:** Welle E done (E1 Multi-Spec-Test-Runner als Substrate für reuse).
 
 ### T3 — CI-Pipeline mit Putz-Benchmark + Source-Verify als Gates
 
 **Ziel:** GitHub Actions workflow der:
-1. `npx vitest run` (alle 791+ tests)
+1. `npx vitest run` (alle Tests)
 2. `npx tsx scripts/spike/eval/stage-a-validation.ts` (Coverage-Run, fail-bei-Regression vs baseline)
-3. T24 Putz-Niveau-Benchmark als Gate (28/28 Springer-Delphi-Rules fire)
+3. Welle-E Putz-Niveau-Benchmark als Gate (28/28 Springer-Delphi-Rules fire ODER skip-with-rationale)
 4. T25 Source-Verify-CI als Quarterly-Cron
 
-**Pre-Condition:** T2 done. Welle E done (T24 verfügbar). Welle D done (T25 verfügbar).
+**Pre-Condition:** Welle E done (E3 hat den Putz-Benchmark-CI-Job bereits angelegt; T3 wickelt ihn in den Gesamt-Workflow). Welle D done (T25 verfügbar). T2 done.
 
 ---
 
@@ -916,8 +954,8 @@ Wird bei jedem `/dev`-Run aktualisiert.
 | C | `specs/E09-w-c-p2-spectral-rules.md` (+ `*-results.md`) | ✓ 2026-05-08 | ~1130 / 4 skip / 0 fail (war 944 baseline; +187 neue Tests) | `e62ff05` (feat) | done; 2 parallele Subagents (T16b + T18b) + Phase-2-Integration; **T16b apiq-ruleset-threat-p2.yaml** 36 rules (Y-1/8/10/12/13/14/15/19/21 + TM-A2/5/7/9/12/13/14/18/28/35/36/45/46/47 + RFC2-1/2/3/11/conditional-bundle/32/58/59/65/69/70/74/97) + 15 custom-functions in `threat-p2-functions.ts`, 100% NIST+ASVS regulatoryMapping (Lens-1 mandatory), 83 tests; **T18b apiq-ruleset-client-p2.yaml** 25 rules (CL-4/5/7/9/13/15/17/18/21/22/24/25/29/35/48/54/56/64×3/77 + DOLAR F-11/12/13/14) + 5 custom-functions in `client-p2-functions.ts`, 12 rules mit concrete codegen-targets per F7, 102 tests; **Phase 2** spectral-runner liest beide neue yamls + 20 custom-functions registriert + F5 coverage-gate erweitert auf 6 yamls; 100% apiq-meta-coverage auf alle ~170 active rules |
 | D | `specs/E09-w-d-p3-trail.md` (+ `*-results.md`) | ✓ 2026-05-09 | 1681+ / 4 skip / 0 fail (war 1130 baseline; +~550 neue Tests) | `8c80ef7` (feat) | done; **9 parallele Subagents** (T16c + T18c + T-EV + T-RFC2 + T-Other-Lens + T-Sentinels + T25 + T-Funcs-Rename + Phase-3 + T-Verbatim-Cleanup); **5 NEUE yamls (171 P3-rules):** threat-p3 (31) + client-p3 (32) + evolution-p3 (25) + standards-p3 (36, 4 bundles) + other-p3 (47); **Total Spectral rules: 342 across 11 yamls** (war 170/6); **66 NEUE custom-functions** (Total 91, war 25): threat-p3 16 + client-p3 13 + evolution-p3 18 + standards-p3 19 + style-p3 24 + verbatim-cleanup migration-tool; **3 NEUE walkers** (CL-48 schema-similarity + F-14 pluralised-nodes + CL-24 multi-type extension in json-schema-draft-detector) für Welle-C-sentinel-resolution; **T25 Source-Verify-CI:** CLI + workflow `0 0 1 1,4,7,10 *` + 17 tests + baseline (post-cleanup: 0 drift); **T-Funcs-Rename:** multi-lang-reserved-keywords.ts → client-p1-functions.ts (file-discipline consistency); **T-F7:** language-affinity-rules ≥80% concrete codegen-targets (war 28%); **T-Verbatim-Cleanup (User-direktive Option 1):** RuleSourceSchema split `verbatim` → `quote` (T25-verifiable) + `summary` (mining-paraphrase) + `verifiedAt`; 213 entries migriert (alle zu summary, none qualified als quote per heuristic — "when in doubt, summary"); T25 baseline jetzt 0 false-drifts; **Stripe-full perf:** test-timeout 10min → 30min (12-yaml ruleset = 2.4× workload); Welle-E sub-task T-Stripe-Perf in Plan-Doc §9 dokumentiert |
 | **D2** | `specs/E09-w-d2-niche-vendor.md` (+ `*-results.md`) | ✓ 2026-05-10 | 2772 / 4 skip / 3 pre-existing-flake (war 2230 baseline; +542 neue Tests via expanded P3-runs + niche-suite) | TBD (this commit) | done; **3 parallele Subagents** (funcs-agent + yaml-agent + wiring-agent) + Reconciliation-Pass; **Pre-D2-Audit:** 15 von 26 Plan-Doc-§8-Patterns bereits implementiert in vorigen Wellen (Arch+ T13 media-type-iana 5 + Welle B http-protocol-pairings RFC2-96 + Welle D standards-p3 RFC2-50 + Welle F info-tier walkers F-10/L9-7/F-16 + privacy-data-class L6-2) — D2 deduplicate + implementiert nur 11 echt-neue P4/P5-Patterns; **1 NEUE yaml** `apiq-ruleset-niche.yaml` (12 rules: 4 P4 + 8 P5 — F-18 split in length-mode + boilerplate-mode); **11 NEUE custom-functions** in `spectral-functions/niche-functions.ts` (Total 127, war 116); **F5-coverage-gate** erweitert auf 12 yamls; **Reconciliation:** 6 patterns.json severityHypothesis-Updates (RFC2-71/72/73/95/105 + CL-60) zur Alignment mit yaml-truth post-implementation, drift-baseline-stable bei 18; **3 pre-existing flakes** unter parallel-load (prisma-import 5s timeout + client-p2-rules CL-4 5s timeout + intermittent severity-schema imports) — alle isoliert PASS; nicht-D2-related; **1 pre-existing build-error** severity-schema.ts:495 Zod-API-Mismatch (Welle Arch+ A2 leftover, out-of-D2-scope, dokumentiert für Cleanup-Pass) |
-| E | TBD | — | — | — | wartet auf D2 ✓ |
-| T | TBD | — | — | — | wartet auf C; parallel zu D/D2/E |
+| E | TBD | — | — | — | wartet auf D2 ✓; restructured 2026-05-10 zu E0+E1+E2+E3 (E1 subsumiert ehem. T1 Multi-Spec-Test-Runner); siehe §9 |
+| T | TBD | — | — | — | wartet auf E (E1 ist Pre-Condition für T2 reuse); reduced scope post-2026-05-10: nur noch T2 (Snapshot-Tests) + T3 (CI-Pipeline); T1 absorbed in Welle E E1 |
 | Doc | TBD | — | — | — | wartet auf M+F+Arch |
 | **Arch+** | `specs/E09-w-arch-architecture-cleanup.md` (+ `*-results.md`) | ✓ 2026-05-09 | 1830+ / 4 skip / 0 fail | `e3521d3` (feat) | done; Welle-Arch+ erweitert vom Plan-Doc-§13-original-scope auf full architectural cleanup — 7 sub-tasks (5 parallel + 2 sequential): OQ-1 cron monthly + A1 drift-lint + A2 zod-schemas + A3 FunctionMetadata + OQ-3 stripe-perf-investigation (vorgezogen) + OQ-2 verbatim-population (vorgezogen) + OQ-4 function-consolidation + File-Tree-Refactor; **342 rules + 116 custom-functions + 3 _helpers/-modules** (rate-limit/request-body/security); **layered tree** classifiers/aggregators/modules/rules/infra/spectral-functions/iana/index.ts (60 files moved git-mv); **34 RFC-quotes verifiziert** (T25 baseline now meaningful); drift-lint surfaced 15 class-2 errors (concrete follow-up); 5 patternIds drift in functionMetadata (KNOWN_DRIFT in test); github-rest 45min timeout unverified |
 | R | TBD | — | — | — | startbar ab Welle C |
