@@ -70,3 +70,11 @@ scripts/spike/data/healthy-corpus/
 # regenerable on each CI run. The CLI itself + workflow + baseline-snapshot
 # (specs/E09-w-d-source-verify-baseline.json) ARE committed.
 scripts/source-verify/.cache.json
+
+# Welle I — inventory + coverage-map outputs. JSON sources are regenerated
+# via `npm run build-inventory` (fast, ~1s) and `npm run build-coverage`
+# (~45min). The committed views are INVENTORY.md / COVERAGE.md; the JSON
+# sources + per-spec partials are gitignored.
+scripts/spike/eval/inventory.json
+scripts/spike/eval/coverage.json
+scripts/spike/eval/coverage-partial-*.json

@@ -13,7 +13,14 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "capture-demo-fixtures": "npx tsx scripts/capture-demo-fixtures.ts",
-    "seed-demo": "npx tsx scripts/seed-demo.ts"
+    "seed-demo": "npx tsx scripts/seed-demo.ts",
+    "build-inventory": "npx tsx scripts/spike/eval/build-inventory.ts",
+    "build-coverage": "npx tsx scripts/spike/eval/build-coverage-map.ts",
+    "cross-refs": "npx tsx scripts/spike/eval/build-cross-references.ts",
+    "drift-report": "npx tsx scripts/spike/eval/build-drift-report.ts",
+    "test-coverage-map": "npx tsx scripts/spike/eval/build-test-coverage-map.ts",
+    "api-surface": "npx tsx scripts/spike/eval/build-api-surface.ts",
+    "inventory-all": "npm run build-inventory && npm run cross-refs && npm run drift-report && npm run test-coverage-map && npm run api-surface"
   },
   "dependencies": {
     "@apidevtools/swagger-parser": "^12.1.0",

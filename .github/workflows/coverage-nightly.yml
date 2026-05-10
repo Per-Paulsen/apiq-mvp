@@ -1,0 +1,100 @@
+name: Coverage Nightly Refresh
+
+# Welle I (2026-05-10) — nightly refresh of `scripts/spike/eval/COVERAGE.md`
+# (and dependent CROSS-REFERENCES.md / DRIFT-REPORT.md views) by running
+# the full 4-spec `runDeterministicLayer` capability-map build.
+#
+# This is split out from the per-PR `inventory-drift.yml` because the
+# 4-spec run is slow (~45min — stripe-full ~23min, github-rest ~15min,
+# pagerduty ~5min, dnd5e <1min). Per-PR enforcement would be infeasible.
+#
+# Schedule: 03:00 UTC nightly + manual `workflow_dispatch`.
+# On diff → opens an automated PR with the refreshed markdown via
+# peter-evans/create-pull-request@v6.
+
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  coverage:
+    name: Rebuild capability-map + open PR on drift
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Rebuild coverage-map (4-spec runDeterministicLayer, ~45min)
+        timeout-minutes: 60
+        run: npm run build-coverage
+
+      - name: Regenerate cross-references + drift-report (consume new coverage.json)
+        run: |
+          npm run cross-refs
+          npm run drift-report
+
+      - name: Detect changes in committed markdown
+        id: diff-check
+        run: |
+          set +e
+          git diff --quiet -- \
+            scripts/spike/eval/COVERAGE.md \
+            scripts/spike/eval/CROSS-REFERENCES.md \
+            scripts/spike/eval/DRIFT-REPORT.md
+          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+          set -e
+
+      - name: No-op if no drift
+        if: steps.diff-check.outputs.exit_code == '0'
+        run: echo "Coverage artifacts unchanged — no PR needed."
+
+      - name: Open PR with refreshed COVERAGE / CROSS-REFERENCES / DRIFT-REPORT
+        if: steps.diff-check.outputs.exit_code != '0'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: automated/coverage-update-${{ github.run_id }}
+          delete-branch: true
+          base: v1-launch
+          add-paths: |
+            scripts/spike/eval/COVERAGE.md
+            scripts/spike/eval/CROSS-REFERENCES.md
+            scripts/spike/eval/DRIFT-REPORT.md
+          commit-message: |
+            chore: nightly coverage refresh
+
+            Automated rebuild of `scripts/spike/eval/COVERAGE.md` (4-spec
+            runDeterministicLayer run) plus dependent CROSS-REFERENCES.md /
+            DRIFT-REPORT.md views.
+          title: 'chore: nightly coverage refresh'
+          body: |
+            Automated nightly refresh of the capability-map artifacts.
+
+            **Refreshed files:**
+            - `scripts/spike/eval/COVERAGE.md` (4-spec `runDeterministicLayer` run)
+            - `scripts/spike/eval/CROSS-REFERENCES.md` (regenerated, consumes new coverage.json)
+            - `scripts/spike/eval/DRIFT-REPORT.md` (regenerated, consumes new coverage.json)
+
+            Triggered by `.github/workflows/coverage-nightly.yml` (cron `0 3 * * *`
+            or manual `workflow_dispatch`).
+
+            See the workflow run for the full per-spec runtime breakdown.
+          labels: |
+            chore
+            inventory
+            automated

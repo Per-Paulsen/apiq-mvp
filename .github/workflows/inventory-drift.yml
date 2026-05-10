@@ -1,0 +1,118 @@
+name: Inventory Drift Check
+
+# Welle I (2026-05-10) — per-PR drift-gate for the auto-generated inventory
+# artifacts under `scripts/spike/eval/`. Regenerates the FAST artifacts
+# (INVENTORY / CROSS-REFERENCES / DRIFT-REPORT / TEST-COVERAGE / API-SURFACE)
+# and fails the PR if any committed markdown is stale.
+#
+# COVERAGE.md is intentionally NOT regenerated here — it depends on a 4-spec
+# `runDeterministicLayer` run (~45min) and is refreshed nightly by
+# `coverage-nightly.yml`.
+#
+# On drift → comments on the PR telling the author to run
+# `npm run inventory-all` locally and commit the regenerated files.
+
+on:
+  pull_request:
+    branches:
+      - main
+      - v1-launch
+  push:
+    branches:
+      - main
+      - v1-launch
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  drift-check:
+    name: Verify INVENTORY artifacts are fresh
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Regenerate fast inventory artifacts
+        run: npm run inventory-all
+
+      - name: Diff committed markdown vs freshly-generated
+        id: diff-check
+        run: |
+          set +e
+          git diff --exit-code -- \
+            scripts/spike/eval/INVENTORY.md \
+            scripts/spike/eval/CROSS-REFERENCES.md \
+            scripts/spike/eval/DRIFT-REPORT.md \
+            scripts/spike/eval/TEST-COVERAGE.md \
+            scripts/spike/eval/API-SURFACE.md
+          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+          set -e
+
+      - name: Capture drift summary
+        if: steps.diff-check.outputs.exit_code != '0'
+        id: drift-summary
+        run: |
+          {
+            echo 'summary<<EOF'
+            git diff --stat -- \
+              scripts/spike/eval/INVENTORY.md \
+              scripts/spike/eval/CROSS-REFERENCES.md \
+              scripts/spike/eval/DRIFT-REPORT.md \
+              scripts/spike/eval/TEST-COVERAGE.md \
+              scripts/spike/eval/API-SURFACE.md
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Comment on PR if drift detected
+        if: steps.diff-check.outputs.exit_code != '0' && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const summary = `${{ steps.drift-summary.outputs.summary }}`;
+            const body = [
+              '### INVENTORY artifacts are stale',
+              '',
+              'The auto-generated single-source-of-truth files under `scripts/spike/eval/`',
+              'are out of sync with the current code state. Run the regeneration locally and',
+              'commit the updated markdown files:',
+              '',
+              '```bash',
+              'npm run inventory-all',
+              'git add scripts/spike/eval/INVENTORY.md scripts/spike/eval/CROSS-REFERENCES.md \\',
+              '        scripts/spike/eval/DRIFT-REPORT.md scripts/spike/eval/TEST-COVERAGE.md \\',
+              '        scripts/spike/eval/API-SURFACE.md',
+              'git commit -m "chore(inventory): regenerate INVENTORY artifacts"',
+              '```',
+              '',
+              '**Drift summary:**',
+              '```',
+              summary.trim() || '(no diff stats captured)',
+              '```',
+              '',
+              'See `scripts/spike/eval/INVENTORY.md` header banner for the regeneration workflow.',
+              'Memory: `feedback_consult_inventory_first.md`.',
+            ].join('\n');
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body,
+            });
+
+      - name: Fail the job on drift
+        if: steps.diff-check.outputs.exit_code != '0'
+        run: |
+          echo "::error::INVENTORY artifacts are stale. Run 'npm run inventory-all' locally and commit the changes."
+          exit 1
