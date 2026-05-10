@@ -104,6 +104,10 @@ Pro Welle entscheiden: was passt besser?
 
 **Append-Workflow:** sobald eine Welle done ist, Plan-Doc §21 Welle-Status-Tracker aktualisieren mit Spec-Pfad + commit-Hash + Test-Stand. Memory-Handoff aktualisieren falls signifikante Erkenntnisse.
 
+**Welle-Reconciliation-Standard (NEU 2026-05-10 ab Welle E):** Wenn eine Welle yaml-rules adds, MUSS sie nach yaml-implementation einen Reconciliation-Pass machen — drift-lint run + alle class-3-drifts zwischen yaml-severity und patterns.json severityHypothesis durch patterns.json-Updates auflösen (yaml = source-of-truth post-implementation), NICHT durch baseline-bumps. Verhindert cumulative-drift. Welle D2 (2026-05-10) etablierte diesen Pattern: 6 patterns.json severityHypothesis-Updates statt baseline-bump 18→24. Memory: `feedback_yaml_truth_reconciliation.md`.
+
+**Pre-Welle-Audit-Standard (NEU 2026-05-10 ab Welle E):** Wenn das Plan-Doc für eine Welle eine Pattern-Liste enumeriert, MUSS Pre-Welle-Audit gemacht werden (grep auf patternId in `scripts/spike/deterministic/`) zur Identifikation bereits-implementierter Patterns. D2 (2026-05-10) hatte 15 von 26 nominellen Patterns bereits in vorigen Wellen — 60% Doppelarbeit-Risiko ohne Audit. Audit-Result wird im Welle-Spec als "Bestandsaufnahme"-Section dokumentiert; D2-deduplicate-Implementation baut nur die echten neuen Patterns.
+
 ---
 
 ## 3. Wellen-Übersicht (erweitert v2)

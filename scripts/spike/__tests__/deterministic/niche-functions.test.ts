@@ -596,4 +596,51 @@ describe('aipStandardFieldPresence (SC-20)', () => {
     };
     expect(arr(aipStandardFieldPresence(paths, {}, ctx))).toEqual([]);
   });
+
+  it('flags multi-segment nested AIP-style path missing standard fields', () => {
+    const paths = {
+      '/v1/parents/{parentId}/children/{childId}': {
+        get: {
+          responses: {
+            '200': {
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: { id: { type: 'string' } },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+    const out = arr(aipStandardFieldPresence(paths, {}, ctx));
+    expect(out.length).toBeGreaterThan(0);
+    expect(out[0].message).toMatch(/name/);
+  });
+
+  it('flags 3-level-nested AIP-style path missing standard fields', () => {
+    const paths = {
+      '/v2/orgs/{orgId}/projects/{projectId}/secrets/{secretId}': {
+        get: {
+          responses: {
+            '200': {
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: { value: { type: 'string' } },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+    const out = arr(aipStandardFieldPresence(paths, {}, ctx));
+    expect(out.length).toBeGreaterThan(0);
+  });
 });

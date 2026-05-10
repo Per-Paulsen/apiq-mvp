@@ -125,7 +125,7 @@ const ALL_MODULES: Array<{ name: string; fn: (spec: object, opts?: { specName?: 
 
 function nowMs(): number {
   const t = process.hrtime.bigint();
-  return Number(t / 1000n) / 1000; // ns → ms
+  return Number(t / BigInt(1000)) / 1000; // ns → ms
 }
 
 async function timeIt<T>(label: string, fn: () => Promise<T> | T): Promise<{ label: string; ms: number; result: T }> {

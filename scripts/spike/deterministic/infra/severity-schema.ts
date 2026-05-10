@@ -492,7 +492,7 @@ export function validateMetadata(input: unknown): RuleMetadata {
 /** Non-throwing variant — returns a Zod safeParse result. */
 export function safeValidateMetadata(
   input: unknown
-): z.ZodSafeParseResult<RuleMetadata> {
+): z.SafeParseReturnType<unknown, RuleMetadata> {
   return RuleMetadataSchema.safeParse(input);
 }
 
@@ -503,7 +503,7 @@ export function validateFindingMetadata(input: unknown): FindingMetadata {
 
 export function safeValidateFindingMetadata(
   input: unknown
-): z.ZodSafeParseResult<FindingMetadata> {
+): z.SafeParseReturnType<unknown, FindingMetadata> {
   return FindingMetadataSchema.safeParse(input);
 }
 

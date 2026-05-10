@@ -229,6 +229,9 @@ rules:
             type: rfc,
             number: 9110,
             section: '10.2.3',
+            url: 'https://www.rfc-editor.org/rfc/rfc9110#section-10.2.3',
+            quote: 'The "Retry-After" response header field indicates how long the user agent ought to wait before making a follow-up request.',
+            verifiedAt: '2026-05-10',
             summary: 'Retry-After: HTTP-date OR delta-seconds (non-negative integer)'
           }
         - {
@@ -280,6 +283,9 @@ rules:
             type: rfc,
             number: 8259,
             section: '2',
+            url: 'https://www.rfc-editor.org/rfc/rfc8259#section-2',
+            quote: 'A JSON text is a sequence of tokens.  The set of tokens includes six structural characters, strings, numbers, and three literal names.',
+            verifiedAt: '2026-05-10',
             summary: 'JSON grammar — no trailing commas, no single-quotes, no JS-literals'
           }
         - {
@@ -381,6 +387,9 @@ rules:
             type: rfc,
             number: 6585,
             section: '3',
+            url: 'https://www.rfc-editor.org/rfc/rfc6585#section-3',
+            quote: 'The 428 status code indicates that the origin server requires the request to be conditional.',
+            verifiedAt: '2026-05-10',
             summary: '428 Precondition Required — server requires the request be conditional'
           }
         - {
@@ -427,6 +436,9 @@ rules:
             type: rfc,
             number: 6585,
             section: '6',
+            url: 'https://www.rfc-editor.org/rfc/rfc6585#section-6',
+            quote: 'The 511 status code indicates that the client needs to authenticate to gain network access.',
+            verifiedAt: '2026-05-10',
             summary: '511 Network Authentication Required — captive-portal signal'
           }
         - {

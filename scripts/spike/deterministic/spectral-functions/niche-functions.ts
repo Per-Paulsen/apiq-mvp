@@ -706,7 +706,14 @@ export const bloatedDescription: IFunction = function (
 // GET response with an inline schema, check the schema.properties keys.
 // =============================================================================
 
-const AIP_PATH_RE = /^\/v\d+\/[a-z][a-z0-9_-]*\/\{[a-zA-Z_][a-zA-Z0-9_]*\}\/?$/;
+// AIP-style resource path: `/v{N}/{collection}/{id}` (single-segment) OR
+// `/v{N}/{parents}/{p}/.../{collection}/{id}` (multi-segment / nested-resource).
+// Matches one-or-more `/{collection}/{id}` pairs after the version-prefix
+// per AIP-122 §"Resource Names". Examples:
+//   /v1/users/{userId}                                  ✓ single
+//   /v1/parents/{parentId}/children/{childId}           ✓ nested-2
+//   /v2/orgs/{orgId}/projects/{projectId}/secrets/{id}  ✓ nested-3
+const AIP_PATH_RE = /^\/v\d+(?:\/[a-z][a-z0-9_-]*\/\{[a-zA-Z_][a-zA-Z0-9_]*\})+\/?$/;
 const AIP_REQUIRED_FIELDS = ['name'] as const;
 const AIP_RECOMMENDED_FIELDS = ['display_name', 'create_time', 'update_time'] as const;
 
