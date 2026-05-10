@@ -178,6 +178,7 @@ User-Direktiven aus inline-comments oben adressiert. Resolution-Status pro OQ:
 
 **OQ #2 — F-18-boilerplate severity vs recommended** ("alles was jetzt implementiert werden kann, wird jetzt implementiert"):
 - ✗ Skipped (legitimately, nicht jetzt implementierbar): User-recommendation war "keep as-is; bewerten nach Welle V Cross-Linter-Validation". Welle V ist post-Welle-D2; Bewertung erfordert Cross-Linter-Daten die noch nicht existieren. Welle-V-territory.
+- **Tracked in:** Plan-Doc §15 "Welle V — Validation" → V3-Section "Heuristic-Rule-Severity-Reviews" → Backlog-Tabelle mit Trigger + Decision-Pfad. V3 ist ein expliziter Welle-V-sub-task; Workflow-Note dokumentiert dass zukünftige analoge deferred-items (z.B. wenn Welle E weitere heuristic-rules deferred) ebenfalls in die V3-Tabelle einzutragen sind.
 
 **OQ #3 — SC-20 AIP-Detection multi-segment** ("alles was jetzt implementiert werden kann, wird jetzt implementiert"):
 - ✓ Done: `AIP_PATH_RE` regex erweitert von single-segment-only auf multi-segment via `(?:\/[a-z][a-z0-9_-]*\/\{...\})+` quantifier. Detects jetzt auch `/v1/parents/{p}/children/{c}` und `/v2/orgs/{o}/projects/{p}/secrets/{s}`. 2 neue Tests in `niche-functions.test.ts` (60/60 pass, war 58).

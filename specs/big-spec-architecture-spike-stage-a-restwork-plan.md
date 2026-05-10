@@ -626,6 +626,18 @@ Beide R1 + R2 verpflichtend für Maximalismus. References-Authenticity wird dami
 ### V2 — Final Stage-A Validation Re-Run
 `stage-a-validation.ts` final auf alle 4 Specs (mit Embedding-Scorer dank Q2 + R-hardened references). STAGE-A-RESULTS.md final regenerate. Final Coverage-Numbers post-M+F+C+D+D2+E+Q+T+Doc+Arch+R.
 
+### V3 — Heuristic-Rule-Severity-Reviews (NEU 2026-05-10 deferred-from-D2)
+
+Heuristic-rules deren initial-severity unsicher gewählt wurde brauchen Cross-Linter-Daten zur Bewertung der false-positive-Rate. Wenn V1-Cross-Linter-Output zeigt dass apiq-Findings divergieren von 4-way-consensus auf diesen rules → severity-downgrade von `hint` → `info` oder ggf. `recommended: false` setzen.
+
+**Backlog-Items für V3-Review:**
+
+| Pattern-ID | Aktuelles Setting | Trigger zur Bewertung | Decision-Pfad |
+|---|---|---|---|
+| F-18-boilerplate (`apiq-bloated-description-boilerplate`) | severity `hint`, `recommended: false` | Welle D2 deferred. Boilerplate-detection ist heuristic (>80% common-prefix in >50% operations) — false-positive-Rate erst nach Cross-Linter-Daten bewertbar. | Falls V1 zeigt apiq-only catches → keep; falls Vacuum/Redocly auch flaggt → keep; falls keiner sonst flaggt + apiq gegen 4-way-consensus divergiert → downgrade `hint` → `info`. |
+
+**Ergänzungs-Workflow:** Wenn zukünftige Welles deferred-Severity-Items produzieren (analog D2 OQ #2) → Zeile zu V3-Tabelle hinzufügen mit Trigger + Decision-Pfad. Verhindert vergessen-werden über mehrere Wellen.
+
 ### V-Decision-Point
 **Nach V1+V2 echte Phase-B-Decision.** Drei mögliche Outcomes:
 1. **Stage A schlägt Konkurrenz + Coverage gegen R-hardened references >50%:** Phase-B-Engineering ist klare next step
