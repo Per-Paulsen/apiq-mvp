@@ -94,7 +94,8 @@ Pro Welle entscheiden: was passt besser?
 | C | direkt | P2-Patterns klar in `implementation-priority.md` |
 | D | direkt | P3-Patterns klar in `implementation-priority.md` |
 | D2 | direkt | P4+P5-Patterns klar in `implementation-priority.md` |
-| E | direkt | T24 Putz-Niveau-Benchmark hat klare 28-Springer-Delphi-Regeln |
+| I | direkt | Inventory+CapabilityMap-Scope ist klar definiert (NEU 2026-05-10 als Folge der drift-discoveries in D2 + E-Pre-Survey) |
+| E | direkt | T24 Putz-Niveau-Benchmark hat klare 28-Springer-Delphi-Regeln; mit Welle I als Pre-Condition trivial |
 | T | direkt | T2+T3 sind klar (Snapshot-Tests + CI-Pipeline; T1 absorbed in Welle E E1 per 2026-05-10 restructure) |
 | Doc | brainstorming | Doc-Style + Audience + Tiefe nicht voll definiert; Discussion-Wert |
 | Arch | brainstorming | Refactor-Strategy + welche Files in welche subtree + spec-diff in modules/ vs experimental/ braucht Diskussion |
@@ -120,7 +121,8 @@ Pro Welle entscheiden: was passt besser?
 | **C** | P2 Spectral (T16b Threat ~25 + T18b Client ~20 inkl. 4 DOLAR) | F done | ✓ T16b + T18b parallel |
 | **D** | P3 Trail (T16c Threat ~30 + T18c Client ~30 + T25 Source-Verify-CI) | C done | ✓ 3 Subagents parallel |
 | **D2** | P4 + P5 Niche/Vendor-Patterns (~25 patterns) | D done | — |
-| **E** | T24 Putz-Niveau-Benchmark — E0 Mapping-Authoring + E1 Multi-Spec-Test-Runner (subsumiert ehem. T1) + E2 Per-Delphi-Rule fires-on-spec assertion + E3 verified statement | D2 done | ✓ E0+E1 parallel innerhalb der Welle |
+| **I** | Inventory + Capability-Map (build-inventory + build-coverage + cross-references + drift-detection + CI-job + workflow-doctrine) | D2 done | ✓ orthogonal — kann auch parallel zu späteren Welles laufen, aber Pre-Condition für E |
+| **E** | T24 Putz-Niveau-Benchmark — E0 Mapping-Overlay (consume inventory.json + coverage.json) + E1 Multi-Spec-Test-Runner-Helpers (extract from existing Q4-tests) + E2 Per-Delphi-Rule fires-on-spec assertion + E3 verified statement | D2 + I done | ✓ E0+E1 parallel innerhalb der Welle |
 | **T** | Test-Coverage Reststück — T2 Snapshot-Tests pro Module-Output + T3 CI-Pipeline (T1 Integration-Tests-all-specs absorbed in Welle E E1) | E done (T3 braucht E's CI-Job; T2 ist orthogonal) | ✓ T2 parallel-möglich ab Welle E done |
 | **Doc** | Documentation (dev-README + Architecture-Diagram + Contributor-Guide) | M+F+Arch done | — |
 | **Arch** | Architectural Refactoring (flat → classifiers/aggregators/modules/rules) | F done | — |
@@ -492,6 +494,104 @@ Header anhängen: "Phase-0 hypothesis. W4 measured large negative deltas (-20.7p
 
 ### Q-Subset wann
 Q1 ist Pre-Condition für Phase B → muss vor Phase B done. Q2-Q5 sind nice-to-have. Q ist orthogonal — kann parallel zu Welle M oder F laufen.
+
+---
+
+## 10a. Welle I — Inventory + Capability-Map (NEU 2026-05-10 post-Welle-E-Pre-Survey)
+
+**Trigger:** Drift-discoveries in D2 (15/26 patterns bereits implementiert) + E-Pre-Survey (Plan-Doc §11 sagte "T1 nicht da" — Welle Q4 hatte schon alle 4 Specs gemacht). Plan-Doc + CLAUDE.md + memory drift gegen Code-State weil manuell-gepflegt. Niemand hat Überblick über 354 yaml-rules + 127 functions + 25 walkers + 15 module-classes + 4 classifiers + 63 test-files + 972 patterns + ~10 doc-artifacts.
+
+**Inhalt:** Auto-generated Inventory + Capability-Map als single-source-of-truth für "was existiert wo". Ersetzt manuelle Pre-Welle-Audits durch konsultierbare data-files.
+
+**Pre-Condition:** Welle D2 done (genug yaml-rules + functions + tests damit Inventory load-bearing wird).
+
+**Maximalismus-Direktive: minimal-scope + ALLE ideal-scope-erweiterungen** (User 2026-05-10).
+
+### I1 — `scripts/spike/eval/build-inventory.ts`
+
+Scannt codebase + extrahiert:
+- **YAML-rules:** alle 12 yamls → Liste of `{ name, file, patternId, severity, recommended, given, function, lenses, defectClass, codegenTargets, agentReadinessImpact }` + alle apiq-meta-Felder
+- **Module-classes:** alle in `modules/` → Liste of `{ file, patternIds_handled, wired_in_index_ts, exports }` (parsed via TypeScript-AST oder regex)
+- **Walkers/Aggregators:** alle in `aggregators/` → analog
+- **Classifiers:** alle in `classifiers/` → analog
+- **Custom-Functions:** alle in `spectral-functions/` → `{ file, exports, used_by_yaml_rules }` (cross-ref via YAML function-key lookups)
+- **Test-files:** alle `__tests__/**/*.test.ts` → `{ file, target_module, test_count, describe_blocks }`
+- **Patterns.json substrate:** alle 972 patterns → mapped per patternId
+
+**Output:** `scripts/spike/eval/inventory.json` (gitignored, regenerable) + `scripts/spike/eval/INVENTORY.md` (committed, auto-generated markdown view)
+
+### I2 — `scripts/spike/eval/build-coverage-map.ts`
+
+Läuft EINMAL `runDeterministicLayer` auf alle 4 Specs + outputs:
+- **Per detector:** `{ detectorId, fires_on_specs: ['stripe-full', ...], total_findings_count }`
+- **Per Pattern-ID:** welche detectorIds sind gemappt + welche specs fire es (resolves Pattern-ID → detector-id chain)
+- **Per Lens:** aggregated coverage (count of patternIds + detectors per Lens)
+- **Per Spec:** total findings + per-detector breakdown + duration
+
+**Output:** `scripts/spike/eval/coverage.json` (gitignored, regenerable; runtime ~45min sequenziell) + `scripts/spike/eval/COVERAGE.md` (committed view)
+
+### I3 — Cross-References + Drift-Detection
+
+Inventory + coverage cross-correlated:
+- **Per Lens cross-reference:** "Lens-1 (Threat) wird von 60 yaml-rules + 4 modules + 8 functions abgedeckt; fires auf X Specs"
+- **Per Pattern-Family:** "RFC2-* family: 122 patterns in patterns.json, 47 als yaml-rules realized, 6 als modules, fires-on summary"
+- **Drift-Detection:**
+  - Patterns.json claims X but no detector exists → drift class "patternId-substrate-only"
+  - Detector exists but never fires on any of 4 Specs → drift class "dead-code-suspicion"
+  - Module-class file exists but not wired in `modules/index.ts` → drift class "orphan-module" (catches `spec-diff.ts`)
+  - YAML-rule has function-name but no matching custom-function export → drift class "function-binding-broken"
+- **Doc-claims-vs-actual:** parse Plan-Doc + CLAUDE.md für concrete-claims (z.B. "354 yaml-rules") + verify gegen inventory.json → drift-report
+
+**Output:** `scripts/spike/eval/CROSS-REFERENCES.md` + `scripts/spike/eval/DRIFT-REPORT.md` (beide committed)
+
+### I4 — Test-Coverage-Map
+
+Wie I2/I3 aber für Tests:
+- Pro test-file: welche detector(s) wird getested
+- Pro detector: welche test-files covered es
+- Pro yaml-rule: welche tests covered es
+- Identifiziert untested-detectors + test-orphans (test-file refs detector der nicht mehr existiert)
+
+**Output:** `scripts/spike/eval/TEST-COVERAGE.md` (committed)
+
+### I5 — API-Surface-Export
+
+Was wird wo konsumiert:
+- `index.ts`-exports per file → who imports them (cross-repo grep)
+- Public-API surface von `deterministic/` package
+- Internal-only-functions die accidentally exported sind
+
+**Output:** `scripts/spike/eval/API-SURFACE.md` (committed)
+
+### I6 — CI-Integration
+
+- `.github/workflows/inventory-drift.yml`: bei jedem PR re-run I1+I3 (NICHT I2, das ist 45min) + diff committed `INVENTORY.md` / `CROSS-REFERENCES.md` / `DRIFT-REPORT.md` — fail wenn drift
+- I2 (coverage) als nightly-cron: regen + commit COVERAGE.md falls geändert
+- Pre-commit-hook (optional, opt-in) der I1+I3 lokal vor commit re-runs
+
+### I7 — Plan-Doc Workflow-Standard-Update
+
+Plan-Doc §2 erweitert um:
+- "**Pre-Welle-Audit-Standard (post-Welle-I):** statt manuellem grep, konsultiere `scripts/spike/eval/INVENTORY.md` + `COVERAGE.md` + `CROSS-REFERENCES.md` + `DRIFT-REPORT.md`. Welle-Specs zitieren explizit aus diesen Files."
+- Memory: NEU `feedback_consult_inventory_first.md`
+
+### I8 — Welle-Spec-Update für E (Folge-Welle)
+
+Welle-E-Spec wird nach Welle-I done updated:
+- **E0:** statt manual-mining-pro-Delphi-Rule wird zu "consume inventory.json + write delphi-mapping-overlay" (nur explicit-skip-rationale + applicable_to_specs noch manuell)
+- **E1:** Helper extraction reduziert sich weiter (coverage.json hat schon fires-on-spec-data)
+- **E2:** baseline-coverage.json als input statt eigene 45min-Run
+
+### Acceptance criteria
+- 1 NEW yaml-section + 6 new evaluator-scripts (I1-I6 outputs)
+- INVENTORY.md + CROSS-REFERENCES.md + DRIFT-REPORT.md + TEST-COVERAGE.md + API-SURFACE.md + COVERAGE.md committed
+- inventory.json + coverage.json gitignored (regenerable)
+- CI-workflow validates drift on PR
+- Plan-Doc §2 + Memory updated
+- All existing tests still pass; build clean
+
+### Maximalismus-Begründung
+Drift-Risiko wächst mit jeder Welle. I löst es einmalig + spart manuelle Pre-Audits in allen Folge-Welles (D3, F2, E, T2/T3, Doc, Arch, R, V, M2, Z, Phase B). Plus catches existing drift (orphan-modules, dead-code, broken-function-bindings, doc-claim-mismatches).
 
 ---
 
@@ -954,7 +1054,8 @@ Wird bei jedem `/dev`-Run aktualisiert.
 | C | `specs/E09-w-c-p2-spectral-rules.md` (+ `*-results.md`) | ✓ 2026-05-08 | ~1130 / 4 skip / 0 fail (war 944 baseline; +187 neue Tests) | `e62ff05` (feat) | done; 2 parallele Subagents (T16b + T18b) + Phase-2-Integration; **T16b apiq-ruleset-threat-p2.yaml** 36 rules (Y-1/8/10/12/13/14/15/19/21 + TM-A2/5/7/9/12/13/14/18/28/35/36/45/46/47 + RFC2-1/2/3/11/conditional-bundle/32/58/59/65/69/70/74/97) + 15 custom-functions in `threat-p2-functions.ts`, 100% NIST+ASVS regulatoryMapping (Lens-1 mandatory), 83 tests; **T18b apiq-ruleset-client-p2.yaml** 25 rules (CL-4/5/7/9/13/15/17/18/21/22/24/25/29/35/48/54/56/64×3/77 + DOLAR F-11/12/13/14) + 5 custom-functions in `client-p2-functions.ts`, 12 rules mit concrete codegen-targets per F7, 102 tests; **Phase 2** spectral-runner liest beide neue yamls + 20 custom-functions registriert + F5 coverage-gate erweitert auf 6 yamls; 100% apiq-meta-coverage auf alle ~170 active rules |
 | D | `specs/E09-w-d-p3-trail.md` (+ `*-results.md`) | ✓ 2026-05-09 | 1681+ / 4 skip / 0 fail (war 1130 baseline; +~550 neue Tests) | `8c80ef7` (feat) | done; **9 parallele Subagents** (T16c + T18c + T-EV + T-RFC2 + T-Other-Lens + T-Sentinels + T25 + T-Funcs-Rename + Phase-3 + T-Verbatim-Cleanup); **5 NEUE yamls (171 P3-rules):** threat-p3 (31) + client-p3 (32) + evolution-p3 (25) + standards-p3 (36, 4 bundles) + other-p3 (47); **Total Spectral rules: 342 across 11 yamls** (war 170/6); **66 NEUE custom-functions** (Total 91, war 25): threat-p3 16 + client-p3 13 + evolution-p3 18 + standards-p3 19 + style-p3 24 + verbatim-cleanup migration-tool; **3 NEUE walkers** (CL-48 schema-similarity + F-14 pluralised-nodes + CL-24 multi-type extension in json-schema-draft-detector) für Welle-C-sentinel-resolution; **T25 Source-Verify-CI:** CLI + workflow `0 0 1 1,4,7,10 *` + 17 tests + baseline (post-cleanup: 0 drift); **T-Funcs-Rename:** multi-lang-reserved-keywords.ts → client-p1-functions.ts (file-discipline consistency); **T-F7:** language-affinity-rules ≥80% concrete codegen-targets (war 28%); **T-Verbatim-Cleanup (User-direktive Option 1):** RuleSourceSchema split `verbatim` → `quote` (T25-verifiable) + `summary` (mining-paraphrase) + `verifiedAt`; 213 entries migriert (alle zu summary, none qualified als quote per heuristic — "when in doubt, summary"); T25 baseline jetzt 0 false-drifts; **Stripe-full perf:** test-timeout 10min → 30min (12-yaml ruleset = 2.4× workload); Welle-E sub-task T-Stripe-Perf in Plan-Doc §9 dokumentiert |
 | **D2** | `specs/E09-w-d2-niche-vendor.md` (+ `*-results.md`) | ✓ 2026-05-10 | 2772 / 4 skip / 3 pre-existing-flake (war 2230 baseline; +542 neue Tests via expanded P3-runs + niche-suite) | TBD (this commit) | done; **3 parallele Subagents** (funcs-agent + yaml-agent + wiring-agent) + Reconciliation-Pass; **Pre-D2-Audit:** 15 von 26 Plan-Doc-§8-Patterns bereits implementiert in vorigen Wellen (Arch+ T13 media-type-iana 5 + Welle B http-protocol-pairings RFC2-96 + Welle D standards-p3 RFC2-50 + Welle F info-tier walkers F-10/L9-7/F-16 + privacy-data-class L6-2) — D2 deduplicate + implementiert nur 11 echt-neue P4/P5-Patterns; **1 NEUE yaml** `apiq-ruleset-niche.yaml` (12 rules: 4 P4 + 8 P5 — F-18 split in length-mode + boilerplate-mode); **11 NEUE custom-functions** in `spectral-functions/niche-functions.ts` (Total 127, war 116); **F5-coverage-gate** erweitert auf 12 yamls; **Reconciliation:** 6 patterns.json severityHypothesis-Updates (RFC2-71/72/73/95/105 + CL-60) zur Alignment mit yaml-truth post-implementation, drift-baseline-stable bei 18; **3 pre-existing flakes** unter parallel-load (prisma-import 5s timeout + client-p2-rules CL-4 5s timeout + intermittent severity-schema imports) — alle isoliert PASS; nicht-D2-related; **1 pre-existing build-error** severity-schema.ts:495 Zod-API-Mismatch (Welle Arch+ A2 leftover, out-of-D2-scope, dokumentiert für Cleanup-Pass) |
-| E | TBD | — | — | — | wartet auf D2 ✓; restructured 2026-05-10 zu E0+E1+E2+E3 (E1 subsumiert ehem. T1 Multi-Spec-Test-Runner); siehe §9 |
+| **I** | TBD | — | — | — | NEU 2026-05-10 als Folge der drift-discoveries in D2 + E-Pre-Survey; Inventory + Capability-Map als single-source-of-truth; siehe §10a; Pre-Condition für E |
+| E | TBD | — | — | — | wartet auf D2 ✓ + I; restructured 2026-05-10 zu E0+E1+E2+E3 (E1 subsumiert ehem. T1 Multi-Spec-Test-Runner; E0 consumiert Welle-I inventory.json); siehe §9 |
 | T | TBD | — | — | — | wartet auf E (E1 ist Pre-Condition für T2 reuse); reduced scope post-2026-05-10: nur noch T2 (Snapshot-Tests) + T3 (CI-Pipeline); T1 absorbed in Welle E E1 |
 | Doc | TBD | — | — | — | wartet auf M+F+Arch |
 | **Arch+** | `specs/E09-w-arch-architecture-cleanup.md` (+ `*-results.md`) | ✓ 2026-05-09 | 1830+ / 4 skip / 0 fail | `e3521d3` (feat) | done; Welle-Arch+ erweitert vom Plan-Doc-§13-original-scope auf full architectural cleanup — 7 sub-tasks (5 parallel + 2 sequential): OQ-1 cron monthly + A1 drift-lint + A2 zod-schemas + A3 FunctionMetadata + OQ-3 stripe-perf-investigation (vorgezogen) + OQ-2 verbatim-population (vorgezogen) + OQ-4 function-consolidation + File-Tree-Refactor; **342 rules + 116 custom-functions + 3 _helpers/-modules** (rate-limit/request-body/security); **layered tree** classifiers/aggregators/modules/rules/infra/spectral-functions/iana/index.ts (60 files moved git-mv); **34 RFC-quotes verifiziert** (T25 baseline now meaningful); drift-lint surfaced 15 class-2 errors (concrete follow-up); 5 patternIds drift in functionMetadata (KNOWN_DRIFT in test); github-rest 45min timeout unverified |
