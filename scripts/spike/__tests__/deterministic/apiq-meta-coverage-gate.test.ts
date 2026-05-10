@@ -35,6 +35,8 @@ const RULES_DIR = path.resolve(DETERMINISTIC_DIR, 'rules');
 // `apiq-ruleset-standards-p3.yaml`, `apiq-ruleset-other-p3.yaml`. We filter
 // to existing files at module-load to keep the test resilient against
 // partial parallel execution during /dev.
+// Welle D2 (2026-05-10) — added niche ruleset `apiq-ruleset-niche.yaml`
+// (12 rules: 4 P4 + 8 P5 [F-18 split into length+boilerplate]).
 const ALL_YAML_FILES = [
   'apiq-ruleset.yaml',
   'apiq-ruleset-threat-p1.yaml',
@@ -47,6 +49,7 @@ const ALL_YAML_FILES = [
   'apiq-ruleset-evolution-p3.yaml',
   'apiq-ruleset-standards-p3.yaml',
   'apiq-ruleset-other-p3.yaml',
+  'apiq-ruleset-niche.yaml',
 ] as const;
 const YAML_FILES = ALL_YAML_FILES.filter((f) =>
   fs.existsSync(path.join(RULES_DIR, f))

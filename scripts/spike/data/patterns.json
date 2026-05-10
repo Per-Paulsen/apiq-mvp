@@ -10079,7 +10079,7 @@
       "citation": "RFC 3986 §3.2.2",
       "url": "https://www.rfc-editor.org/rfc/rfc3986"
     },
-    "severityHypothesis": "hint",
+    "severityHypothesis": "info",
     "codegenTargets": [
       "*"
     ],
@@ -10099,7 +10099,7 @@
       "citation": "RFC 3986 §3.1",
       "url": "https://www.rfc-editor.org/rfc/rfc3986"
     },
-    "severityHypothesis": "hint",
+    "severityHypothesis": "info",
     "codegenTargets": [
       "*"
     ],
@@ -10119,7 +10119,7 @@
       "citation": "RFC 3986 §6.2.2.3",
       "url": "https://www.rfc-editor.org/rfc/rfc3986"
     },
-    "severityHypothesis": "hint",
+    "severityHypothesis": "info",
     "codegenTargets": [
       "*"
     ],
@@ -10559,7 +10559,7 @@
       "citation": "RFC 9110 §10.2.3",
       "url": "https://www.rfc-editor.org/rfc/rfc9110"
     },
-    "severityHypothesis": "hint",
+    "severityHypothesis": "warn",
     "codegenTargets": [
       "*"
     ],
@@ -10759,7 +10759,7 @@
       "citation": "RFC 6585 §6",
       "url": "https://www.rfc-editor.org/rfc/rfc6585"
     },
-    "severityHypothesis": "hint",
+    "severityHypothesis": "info",
     "codegenTargets": [
       "*"
     ],
@@ -12963,7 +12963,7 @@
       "citation": "OpenAPI + Speakeasy + Stripe",
       "url": "https://spec.openapis.org/oas/latest.html"
     },
-    "severityHypothesis": "hint",
+    "severityHypothesis": "info",
     "codegenTargets": [
       "*"
     ],

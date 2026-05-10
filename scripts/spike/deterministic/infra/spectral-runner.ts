@@ -14,6 +14,7 @@
  *   10. apiq-ruleset-evolution-p3.yaml     (Welle D — Evolution-Friction P3)
  *   11. apiq-ruleset-standards-p3.yaml     (Welle D — Standards/RFC2-* P3)
  *   12. apiq-ruleset-other-p3.yaml         (Welle D — Other Lenses / Style P3)
+ *   13. apiq-ruleset-niche.yaml            (Welle D2 — P4 + P5 Niche / Vendor Patterns, 12 rules)
  *
  *   Each file is loaded best-effort: missing files emit a warn + skip
  *   (the runner falls back to OAS3-default-only when no apiq YAML loads).
@@ -219,6 +220,21 @@ import {
   lazyDescription,
   FUNCTION_METADATA as StyleP3Metadata,
 } from '../spectral-functions/style-p3-functions.js';
+// Welle D2 — P4 + P5 Niche/Vendor custom functions:
+import {
+  serverUrlHostLowercase,
+  serverUrlSchemeLowercase,
+  serverUrlPathNormalized,
+  retryAfterGrammar,
+  defaultExampleStrictJson,
+  contentEncodingOnOAS30,
+  precondition428Awareness,
+  status511Awareness,
+  xInternalUsage,
+  bloatedDescription,
+  aipStandardFieldPresence,
+  FUNCTION_METADATA as NicheMetadata,
+} from '../spectral-functions/niche-functions.js';
 import type { FunctionMetadata } from '../spectral-functions/_metadata.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -388,6 +404,20 @@ const APIQ_RULESET_OTHER_P3_PATH = path.join(
   '..',
   'rules',
   'apiq-ruleset-other-p3.yaml'
+);
+
+/**
+ * Welle D2 — P4 + P5 Niche/Vendor ruleset — 12 rules (4 P4 RFC2-71/72/73/95
+ * + 8 P5 RFC2-83/89/103/105 + CL-60 + F-18[length+boilerplate split] + SC-20).
+ * Uses 11 custom Spectral functions registered below; the F-18 dual-mode
+ * detector is referenced by 2 rules (length + boilerplate) sharing one
+ * `bloatedDescription` callable.
+ */
+const APIQ_RULESET_NICHE_PATH = path.join(
+  __dirname,
+  '..',
+  'rules',
+  'apiq-ruleset-niche.yaml'
 );
 
 /**
@@ -696,6 +726,38 @@ export const APIQ_CUSTOM_FUNCTIONS: Record<string, (...args: any[]) => any> = {
   'polymorphism-wire-discriminator':
     polymorphismWireDiscriminator as unknown as (...args: any[]) => any,
   'lazy-description': lazyDescription as unknown as (...args: any[]) => any,
+  // Welle D2 — P4 + P5 Niche/Vendor custom functions:
+  'server-url-host-lowercase': serverUrlHostLowercase as unknown as (
+    ...args: any[]
+  ) => any,
+  'server-url-scheme-lowercase': serverUrlSchemeLowercase as unknown as (
+    ...args: any[]
+  ) => any,
+  'server-url-path-normalized': serverUrlPathNormalized as unknown as (
+    ...args: any[]
+  ) => any,
+  'retry-after-grammar': retryAfterGrammar as unknown as (
+    ...args: any[]
+  ) => any,
+  'default-example-strict-json': defaultExampleStrictJson as unknown as (
+    ...args: any[]
+  ) => any,
+  'content-encoding-on-oas30': contentEncodingOnOAS30 as unknown as (
+    ...args: any[]
+  ) => any,
+  'precondition-428-awareness': precondition428Awareness as unknown as (
+    ...args: any[]
+  ) => any,
+  'status-511-awareness': status511Awareness as unknown as (
+    ...args: any[]
+  ) => any,
+  'x-internal-usage': xInternalUsage as unknown as (...args: any[]) => any,
+  'bloated-description': bloatedDescription as unknown as (
+    ...args: any[]
+  ) => any,
+  'aip-standard-field-presence': aipStandardFieldPresence as unknown as (
+    ...args: any[]
+  ) => any,
 };
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
@@ -715,6 +777,7 @@ export const APIQ_CUSTOM_FUNCTION_METADATA: Record<string, FunctionMetadata> = {
   ...EvolutionP3Metadata,
   ...StandardsP3Metadata,
   ...StyleP3Metadata,
+  ...NicheMetadata,
 };
 
 // =============================================================================
@@ -957,6 +1020,18 @@ const SUPPORTED_FUNCTIONS = new Set([
   'consistent-expand-fields-param',
   'polymorphism-wire-discriminator',
   'lazy-description',
+  // Welle D2 — P4 + P5 Niche/Vendor custom functions:
+  'server-url-host-lowercase',
+  'server-url-scheme-lowercase',
+  'server-url-path-normalized',
+  'retry-after-grammar',
+  'default-example-strict-json',
+  'content-encoding-on-oas30',
+  'precondition-428-awareness',
+  'status-511-awareness',
+  'x-internal-usage',
+  'bloated-description',
+  'aip-standard-field-presence',
 ]);
 
 /**
@@ -1263,6 +1338,11 @@ function buildSpectral(): SpectralCore.Spectral {
     APIQ_RULESET_OTHER_P3_PATH,
     'apiq-ruleset-other-p3.yaml'
   );
+  // Welle D2 — P4 + P5 Niche/Vendor ruleset (12 rules).
+  const nicheRules = loadYamlRules(
+    APIQ_RULESET_NICHE_PATH,
+    'apiq-ruleset-niche.yaml'
+  );
 
   /* eslint-disable @typescript-eslint/no-explicit-any */
   const merged: Record<string, any> = {};
@@ -1277,6 +1357,7 @@ function buildSpectral(): SpectralCore.Spectral {
   if (evolutionP3Rules) Object.assign(merged, evolutionP3Rules);
   if (standardsP3Rules) Object.assign(merged, standardsP3Rules);
   if (otherP3Rules) Object.assign(merged, otherP3Rules);
+  if (nicheRules) Object.assign(merged, nicheRules);
   /* eslint-enable @typescript-eslint/no-explicit-any */
 
   if (Object.keys(merged).length > 0) {

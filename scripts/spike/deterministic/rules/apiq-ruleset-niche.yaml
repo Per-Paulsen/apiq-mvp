@@ -1,0 +1,638 @@
+# apiq Spectral Ruleset — P4 + P5 Niche/Vendor (T-D2-P4 + T-D2-P5, Welle D2)
+#
+# 11 niche/vendor patterns covering the residual P4 (Niche / Low-Frequency)
+# + P5 (Vendor-Extension / Information-only / Niche) tiers per
+# implementation-priority.md after the Welle-D2 Bestandsaufnahme deduplicated
+# the 15 P4/P5-patterns already implemented in earlier waves
+# (Welle B / D / Arch+ T13 / F).
+#
+# Patterns covered:
+#   - P4 (4):
+#       - RFC2-71 — Server-URL host lowercase             (RFC 3986 §3.2.2)
+#       - RFC2-72 — Server-URL scheme lowercase           (RFC 3986 §3.1)
+#       - RFC2-73 — Server-URL path normalized            (RFC 3986 §6)
+#       - RFC2-95 — Retry-After grammar (HTTP-date|int)   (RFC 9110 §10.2.3)
+#   - P5 (7):
+#       - RFC2-83  — default/example strict-JSON          (RFC 8259 §2)
+#       - RFC2-89  — contentEncoding/contentMediaType ignored on OAS 3.0
+#                                                         (JSON-Schema d-07 + OAS 3.1)
+#       - RFC2-103 — 428 Precondition Required awareness  (RFC 6585 §3)
+#       - RFC2-105 — 511 Network Authentication awareness (RFC 6585 §6)
+#       - CL-60    — x-internal: true vendor-extension    (Stripe / OAI ext-pattern)
+#       - F-18     — bloated-description doc-smell        (Aghajani et al. 2021)
+#       - SC-20    — AIP-148 standard-field-presence      (Google AIP-148)
+#
+# Total: 11 rules. Default severity per Plan-Doc §8 niche-tier discipline:
+#   - P4 RFC2-71/72/73 → `info` (style-hygiene, low-frequency).
+#   - P4 RFC2-95       → `warn` (RFC SHOULD violation when present).
+#   - P5 all 7         → `info` or `hint`; off-by-default-overridable where
+#     niche / vendor-specific (RFC2-83/103, SC-20).
+#
+# Authored 2026-05-10 (Welle D2 / yaml-agent) from:
+#   - specs/E09-w-d2-niche-vendor.md (T-D2-P4 + T-D2-P5)
+#   - specs/big-spec-architecture-spike-stage-a-restwork-plan.md §8
+#   - specs/big-spec-architecture-spike-stage-a-implementation-priority.md
+#     (P4 lines 410-421 + P5 lines 425-441)
+#   - scripts/spike/data/patterns.json (single-source pattern substrate)
+#
+# Custom-functions used (registered in spectral-runner.ts via Task #3):
+#   - server-url-host-lowercase     (RFC2-71)
+#   - server-url-scheme-lowercase   (RFC2-72)
+#   - server-url-path-normalized    (RFC2-73)
+#   - retry-after-grammar           (RFC2-95)
+#   - default-example-strict-json   (RFC2-83)
+#   - content-encoding-on-oas30     (RFC2-89)
+#   - precondition-428-awareness    (RFC2-103)
+#   - status-511-awareness          (RFC2-105)
+#   - x-internal-usage              (CL-60)
+#   - bloated-description           (F-18)
+#   - aip-standard-field-presence   (SC-20)
+#
+# All implemented in `scripts/spike/deterministic/spectral-functions/niche-functions.ts`.
+#
+# Severity discipline (per Severity-Schema Final, T23):
+#   - error: RFC-2119 MUST violated; CI-blocking. (Not used in D2.)
+#   - warn:  RFC-2119 SHOULD violated, OR strong cross-source consensus.
+#   - hint:  Soft signal; informative; opinion-divided.
+#   - info:  Positive-marker / observation; not a "finding" per se.
+
+extends:
+  - spectral:oas
+
+formats:
+  - oas3
+  - oas3_0
+  - oas3_1
+
+rules:
+  # ===========================================================================
+  # P4 — Niche / Low-Frequency
+  # ===========================================================================
+
+  # =========================================================================
+  # RFC2-71 — Server-URL host MUST be lowercase per RFC 3986 §3.2.2
+  # (case-insensitive comparison; mixed-case = hygiene smell).
+  # Source: RFC 3986 §3.2.2 (Host). patterns.json RFC2-71 (P4).
+  # Lens: 2 (standards-compliance) + style-hygiene affinity.
+  # Round: 2 / Welle D2.
+  # =========================================================================
+  apiq-server-url-host-lowercase:
+    description: >-
+      Server URL host should be lowercase per RFC 3986 §3.2.2 — host comparison
+      is case-insensitive; mixed-case hosts are a hygiene smell that confuses
+      consumers and breaks string-equality comparisons across SDKs.
+    message: "Server URL host should be lowercase per RFC 3986 §3.2.2 (case-insensitive)."
+    severity: info
+    given: "$.servers[*].url"
+    then:
+      function: server-url-host-lowercase
+    apiq-meta:
+      pattern-id: RFC2-71
+      lenses: [ standards-compliance, style-coherence ]
+      sources:
+        - {
+            type: rfc,
+            number: 3986,
+            section: '3.2.2',
+            summary: 'Host case-insensitive comparison; lowercase canonical form'
+          }
+        - {
+            type: mining,
+            phase: round2,
+            subagent: 'yaml-agent',
+            summary: 'Welle D2 P4 — RFC2-71 server-url-host-lowercase'
+          }
+      stakeholders: [ spec-author, client-dev ]
+      lifecycle-phase: authoring-time
+      defect-class: norm
+      iso25010: [ usability, maintainability ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: true
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: low
+
+  # =========================================================================
+  # RFC2-72 — Server-URL scheme MUST be lowercase per RFC 3986 §3.1
+  # (`HTTP://` smell). Same case-insensitive principle as host.
+  # Source: RFC 3986 §3.1 (Scheme). patterns.json RFC2-72 (P4).
+  # Lens: 2 + style-hygiene.
+  # Round: 2 / Welle D2.
+  # =========================================================================
+  apiq-server-url-scheme-lowercase:
+    description: >-
+      Server URL scheme should be lowercase per RFC 3986 §3.1 — schemes are
+      case-insensitive; canonical form is lowercase. `HTTP://` or `HTTPS://`
+      are valid but a hygiene smell.
+    message: "Server URL scheme should be lowercase per RFC 3986 §3.1."
+    severity: info
+    given: "$.servers[*].url"
+    then:
+      function: server-url-scheme-lowercase
+    apiq-meta:
+      pattern-id: RFC2-72
+      lenses: [ standards-compliance, style-coherence ]
+      sources:
+        - {
+            type: rfc,
+            number: 3986,
+            section: '3.1',
+            summary: 'Scheme case-insensitive; lowercase canonical form'
+          }
+        - {
+            type: mining,
+            phase: round2,
+            subagent: 'yaml-agent',
+            summary: 'Welle D2 P4 — RFC2-72 server-url-scheme-lowercase'
+          }
+      stakeholders: [ spec-author, client-dev ]
+      lifecycle-phase: authoring-time
+      defect-class: norm
+      iso25010: [ usability, maintainability ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: true
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: low
+
+  # =========================================================================
+  # RFC2-73 — Server-URL path normalization per RFC 3986 §6
+  # (no `/./`, no `/../`, no double-slashes, no trailing slash on non-root).
+  # Source: RFC 3986 §6 (Normalization and Comparison).
+  #         patterns.json RFC2-73 (P4).
+  # Lens: 2 + style-hygiene.
+  # Round: 2 / Welle D2.
+  # =========================================================================
+  apiq-server-url-path-normalized:
+    description: >-
+      Server URL path should be RFC 3986 §6 normalized — no `/./` segments,
+      no `/../` segments, no consecutive slashes (`//`), and no trailing slash
+      on non-root paths. Unnormalized paths cause silent route-mismatches
+      between clients and servers that normalize differently.
+    message: "Server URL path should be RFC 3986 §6 normalized (no /./, /../, //, no trailing slash on non-root)."
+    severity: info
+    given: "$.servers[*].url"
+    then:
+      function: server-url-path-normalized
+    apiq-meta:
+      pattern-id: RFC2-73
+      lenses: [ standards-compliance, style-coherence ]
+      sources:
+        - {
+            type: rfc,
+            number: 3986,
+            section: '6',
+            summary: 'URI normalization rules; remove dot-segments, collapse slashes'
+          }
+        - {
+            type: mining,
+            phase: round2,
+            subagent: 'yaml-agent',
+            summary: 'Welle D2 P4 — RFC2-73 server-url-path-normalized'
+          }
+      stakeholders: [ spec-author, client-dev ]
+      lifecycle-phase: authoring-time
+      defect-class: norm
+      iso25010: [ usability, maintainability, reliability ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: true
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: low
+
+  # =========================================================================
+  # RFC2-95 — Retry-After header value grammar per RFC 9110 §10.2.3
+  # (HTTP-date OR delta-seconds non-negative integer).
+  # Source: RFC 9110 §10.2.3 (Retry-After). patterns.json RFC2-95 (P4).
+  # Lens: 2 (standards-compliance).
+  # Round: 2 / Welle D2.
+  # =========================================================================
+  apiq-retry-after-grammar:
+    description: >-
+      Retry-After header example/schema must conform to RFC 9110 §10.2.3
+      grammar — either an HTTP-date (RFC 9110 §5.6.7) or a non-negative
+      delta-seconds integer. Free-form strings (e.g. "1m", "soon") will not
+      be parseable by clients and break automatic retry-loops.
+    message: "Retry-After example must be HTTP-date or non-negative integer per RFC 9110 §10.2.3."
+    severity: warn
+    given: "$.paths[*][*].responses[429,503].headers[?(@property == 'Retry-After' || @property == 'retry-after')]"
+    then:
+      function: retry-after-grammar
+    apiq-meta:
+      pattern-id: RFC2-95
+      lenses: [ standards-compliance, client-friction ]
+      sources:
+        - {
+            type: rfc,
+            number: 9110,
+            section: '10.2.3',
+            summary: 'Retry-After: HTTP-date OR delta-seconds (non-negative integer)'
+          }
+        - {
+            type: mining,
+            phase: round2,
+            subagent: 'yaml-agent',
+            summary: 'Welle D2 P4 — RFC2-95 retry-after-grammar'
+          }
+      stakeholders: [ spec-author, client-dev ]
+      lifecycle-phase: documentation-time
+      defect-class: norm
+      iso25010: [ reliability, usability ]
+      codegen-targets: [ typescript, python, java, go, rust, csharp ]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: medium
+      agent-readiness-impact: medium
+
+  # ===========================================================================
+  # P5 — Vendor-Extension / Information-only / Niche
+  # ===========================================================================
+
+  # =========================================================================
+  # RFC2-83 — JSON-Schema `default`/`example` value strict-JSON parsing
+  # per RFC 8259 §2 (no trailing commas, no single-quoted strings, no
+  # JS-literals like `undefined`/`NaN`).
+  # Source: RFC 8259 §2 (JSON Grammar). patterns.json RFC2-83 (P5).
+  # Lens: 2 (standards-compliance).
+  # Round: 2 / Welle D2.
+  # =========================================================================
+  apiq-default-example-strict-json:
+    description: >-
+      `default` and `example` values that are encoded as strings should parse
+      as strict JSON per RFC 8259 §2. Trailing commas, single-quoted strings,
+      and JS-literals (`undefined`, `NaN`, `Infinity`) are JS-only and will
+      not round-trip through standard JSON parsers in clients.
+    message: "default/example value should be embedded JSON, not a stringified JSON literal (RFC 8259 §2)."
+    severity: hint
+    recommended: false
+    given: "$..[?(@.default || @.example)]"
+    then:
+      function: default-example-strict-json
+    apiq-meta:
+      pattern-id: RFC2-83
+      lenses: [ standards-compliance ]
+      sources:
+        - {
+            type: rfc,
+            number: 8259,
+            section: '2',
+            summary: 'JSON grammar — no trailing commas, no single-quotes, no JS-literals'
+          }
+        - {
+            type: mining,
+            phase: round2,
+            subagent: 'yaml-agent',
+            summary: 'Welle D2 P5 — RFC2-83 default-example-strict-json'
+          }
+      stakeholders: [ spec-author, client-dev ]
+      lifecycle-phase: authoring-time
+      defect-class: norm
+      iso25010: [ compatibility, reliability ]
+      codegen-targets: [ '*' ]
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: medium
+
+  # =========================================================================
+  # RFC2-89 — `contentEncoding` / `contentMediaType` are JSON-Schema draft-07+
+  # keywords; in OpenAPI 3.0 they are silently ignored. Valid only in OAS 3.1.
+  # Source: JSON-Schema draft-07 §8 + OAS 3.1 spec.
+  #         patterns.json RFC2-89 (P5).
+  # Lens: 2 (standards-compliance) + 3 (evolution-friction).
+  # Round: 2 / Welle D2.
+  # =========================================================================
+  apiq-content-encoding-on-oas30:
+    description: >-
+      `contentEncoding` and `contentMediaType` are JSON-Schema draft-07+
+      keywords. In OpenAPI 3.0 they are silently ignored by the OAS 3.0
+      schema-subset. Either upgrade the spec to OpenAPI 3.1 or remove them
+      and use `format: byte` / `format: binary` + `requestBody.content[*]`
+      instead.
+    message: "contentEncoding/contentMediaType are JSON Schema draft-07+ keywords; in OpenAPI 3.0 they are ignored. Upgrade to 3.1 or remove."
+    severity: hint
+    given: "$"
+    then:
+      function: content-encoding-on-oas30
+    apiq-meta:
+      pattern-id: RFC2-89
+      lenses: [ standards-compliance, evolution-friction ]
+      sources:
+        - {
+            type: vendor,
+            name: 'JSON Schema draft-07 §8 (contentEncoding/contentMediaType)',
+            url: 'https://json-schema.org/draft-07/json-schema-validation.html#rfc.section.8',
+            summary: 'JSON-Schema draft-07 introduces contentEncoding + contentMediaType'
+          }
+        - {
+            type: vendor,
+            name: 'OpenAPI Specification 3.1',
+            url: 'https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.1.0.md',
+            summary: 'OAS 3.1 aligns with JSON-Schema 2020-12; OAS 3.0 does not'
+          }
+        - {
+            type: mining,
+            phase: round2,
+            subagent: 'yaml-agent',
+            summary: 'Welle D2 P5 — RFC2-89 content-encoding-on-oas30'
+          }
+      stakeholders: [ spec-author, client-dev ]
+      lifecycle-phase: authoring-time
+      defect-class: semantic
+      iso25010: [ compatibility, maintainability ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: medium
+      mttr-impact: low
+      agent-readiness-impact: low
+
+  # =========================================================================
+  # RFC2-103 — 428 Precondition Required status awareness per RFC 6585 §3.
+  # Info-finding: ETag-bearing GET resources whose corresponding write-ops
+  # (PUT/PATCH/DELETE) lack a 428 response are missing the
+  # mandatory-precondition signal.
+  # Source: RFC 6585 §3. patterns.json RFC2-103 (P5).
+  # Lens: 2 (standards-compliance).
+  # Round: 2 / Welle D2.
+  # =========================================================================
+  apiq-precondition-428-awareness:
+    description: >-
+      ETag-bearing resources whose write-operations (PUT/PATCH/DELETE) do not
+      declare a 428 Precondition Required response (RFC 6585 §3) are missing
+      the signal that conditional headers (If-Match / If-None-Match) are
+      required to prevent the lost-update problem.
+    message: "ETag-bearing resources lack 428 Precondition Required response on write-ops (RFC 6585 §3)."
+    severity: hint
+    recommended: false
+    given: "$.paths"
+    then:
+      function: precondition-428-awareness
+    apiq-meta:
+      pattern-id: RFC2-103
+      lenses: [ standards-compliance, threat-modeling ]
+      sources:
+        - {
+            type: rfc,
+            number: 6585,
+            section: '3',
+            summary: '428 Precondition Required — server requires the request be conditional'
+          }
+        - {
+            type: mining,
+            phase: round2,
+            subagent: 'yaml-agent',
+            summary: 'Welle D2 P5 — RFC2-103 precondition-428-awareness'
+          }
+      stakeholders: [ spec-author, client-dev, security ]
+      lifecycle-phase: authoring-time
+      defect-class: incomplete
+      iso25010: [ reliability, security ]
+      codegen-targets: [ '*' ]
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: medium
+      mttr-impact: medium
+      agent-readiness-impact: low
+
+  # =========================================================================
+  # RFC2-105 — 511 Network Authentication Required status awareness
+  # per RFC 6585 §6. Rare, but useful for captive-portal APIs.
+  # Source: RFC 6585 §6. patterns.json RFC2-105 (P5).
+  # Lens: 2 (standards-compliance).
+  # Round: 2 / Welle D2.
+  # =========================================================================
+  apiq-status-511-awareness:
+    description: >-
+      511 Network Authentication Required (RFC 6585 §6) is a rare status code
+      indicating the client must authenticate to gain network access (e.g.
+      captive-portal). Useful for APIs that may transit captive-portal
+      networks (mobile, IoT). Pure positive-marker / awareness signal.
+    message: "511 Network Authentication Required is rare but useful for captive-portal APIs (RFC 6585 §6)."
+    severity: info
+    recommended: false
+    given: "$.paths"
+    then:
+      function: status-511-awareness
+    apiq-meta:
+      pattern-id: RFC2-105
+      lenses: [ standards-compliance ]
+      sources:
+        - {
+            type: rfc,
+            number: 6585,
+            section: '6',
+            summary: '511 Network Authentication Required — captive-portal signal'
+          }
+        - {
+            type: mining,
+            phase: round2,
+            subagent: 'yaml-agent',
+            summary: 'Welle D2 P5 — RFC2-105 status-511-awareness'
+          }
+      stakeholders: [ spec-author ]
+      lifecycle-phase: authoring-time
+      defect-class: incomplete
+      iso25010: [ compatibility ]
+      codegen-targets: [ '*' ]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: none
+
+  # =========================================================================
+  # CL-60 — `x-internal: true` vendor-extension presence info-finding.
+  # Stripe + Speakeasy + OpenAPI ext-pattern for hiding operations from
+  # public docs / SDK-codegen output.
+  # Source: OpenAPI Specification Extensions + Stripe + Speakeasy.
+  #         patterns.json CL-60 (P5).
+  # Lens: 4 (client-friction) + 9 (ai-agent-consumability) — agents need
+  # signal that an op is internal-only.
+  # Round: 2 / Welle D2.
+  # =========================================================================
+  apiq-x-internal-usage:
+    description: >-
+      `x-internal: true` is a widely-used vendor-extension (Stripe, Speakeasy,
+      Microsoft) marking operations as hidden from public documentation /
+      SDK-codegen output. Pure positive-marker / discovery rule — useful for
+      agents and codegen tools to know which operations to skip.
+    message: "x-internal: true extension marks operations hidden from public docs."
+    severity: info
+    given: "$.paths"
+    then:
+      function: x-internal-usage
+    apiq-meta:
+      pattern-id: CL-60
+      lenses: [ client-friction, ai-agent-consumability ]
+      sources:
+        - {
+            type: vendor,
+            name: 'OpenAPI Specification — Specification Extensions',
+            url: 'https://swagger.io/specification/#specification-extensions',
+            summary: 'OAS extension-mechanism via x-* keys (Stripe, Speakeasy, Microsoft pattern)'
+          }
+        - {
+            type: mining,
+            phase: round2,
+            subagent: 'yaml-agent',
+            summary: 'Welle D2 P5 — CL-60 x-internal vendor-extension'
+          }
+      stakeholders: [ spec-author, client-dev, codegen-tool, ai-agent ]
+      lifecycle-phase: authoring-time
+      defect-class: incomplete
+      iso25010: [ usability, maintainability ]
+      codegen-targets: [ typescript, python, java, go, rust, csharp, kotlin ]
+      detection-precision: high
+      auto-fix-safe: false
+      cost-impact: low
+      mttr-impact: low
+      agent-readiness-impact: medium
+
+  # =========================================================================
+  # F-18 — Bloated description doc-smell.
+  # Operation/schema descriptions >1000 chars OR repeated boilerplate
+  # (e.g. same description-prefix on >50% of operations).
+  # Source: Aghajani et al. "Software Documentation: The Practitioners'
+  # Perspective" arXiv 2102.07336. patterns.json F-18 (P5).
+  # Lens: 4 (client-friction) + 9 (ai-agent-consumability) — agents and
+  # human readers both lose signal in bloated descriptions.
+  # Round: 2 / Welle D2.
+  # =========================================================================
+  apiq-bloated-description-length:
+    description: >-
+      Description fields >1000 chars are a doc-smell (Aghajani et al. 2021,
+      arXiv 2102.07336). Long descriptions bury operation-specific signal in
+      noise and hurt both human readers and LLM-agent comprehension.
+    message: "Description >1000 chars — bloated-description length-mode."
+    severity: hint
+    given: "$..description"
+    then:
+      function: bloated-description
+    apiq-meta:
+      pattern-id: F-18
+      lenses: [ client-friction, ai-agent-consumability, operational-metadata ]
+      sources:
+        - {
+            type: vendor,
+            name: 'Aghajani et al. — Software Documentation: The Practitioners Perspective',
+            url: 'https://arxiv.org/abs/2102.07336',
+            summary: 'Welle D2 P5 — F-18 bloated-description length-mode (per-description char-length check)'
+          }
+        - {
+            type: mining,
+            phase: round2,
+            subagent: 'yaml-agent',
+            summary: 'Welle D2 P5 — F-18 bloated-description length-mode'
+          }
+      stakeholders: [ spec-author, client-dev, ai-agent ]
+      lifecycle-phase: documentation-time
+      defect-class: ergonomic
+      iso25010: [ usability, maintainability ]
+      codegen-targets: [ typescript, python, java, go, rust, csharp, kotlin ]
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: medium
+      mttr-impact: low
+      agent-readiness-impact: high
+
+  # =========================================================================
+  # SC-20 — AIP-148 standard-field-presence on AIP-style resources.
+  # `name`, `display_name`, `create_time`, `update_time` standard-fields
+  # per Google AIP-148 (Standard fields). Off-by-default — only relevant
+  # to AIP-style APIs.
+  # Source: Google AIP-148 (Standard fields).
+  #         patterns.json SC-20 (P5).
+  # Lens: 5 (style-coherence).
+  # Round: 2 / Welle D2.
+  # =========================================================================
+  apiq-aip-standard-field-presence:
+    description: >-
+      AIP-style resource paths (e.g. `/v1/{collection}/{id}`) should expose
+      the AIP-148 standard fields `name`, `display_name`, `create_time`,
+      `update_time` on their resource schemas. Off-by-default — only enable
+      when targeting Google AIP-style API conventions.
+    message: "AIP-style resource missing standard fields (name/display_name/create_time/update_time) per Google AIP-148."
+    severity: hint
+    recommended: false
+    given: "$.paths"
+    then:
+      function: aip-standard-field-presence
+    apiq-meta:
+      pattern-id: SC-20
+      lenses: [ style-coherence ]
+      sources:
+        - {
+            type: vendor,
+            name: 'Google AIP-148 (Standard fields)',
+            url: 'https://google.aip.dev/148',
+            summary: 'AIP-148 standard fields: name, display_name, create_time, update_time'
+          }
+        - {
+            type: mining,
+            phase: round2,
+            subagent: 'yaml-agent',
+            summary: 'Welle D2 P5 — SC-20 aip-standard-field-presence'
+          }
+      stakeholders: [ spec-author, client-dev ]
+      lifecycle-phase: authoring-time
+      defect-class: incomplete
+      iso25010: [ usability, maintainability ]
+      codegen-targets: [ '*' ]
+      detection-precision: low
+      auto-fix-safe: false
+      cost-impact: medium
+      mttr-impact: low
+      agent-readiness-impact: low
+
+  # =========================================================================
+  # F-18 (boilerplate-mode) — Operation descriptions share long common
+  # prefixes — likely template-bleed. Same patternId as the length-mode
+  # rule (apiq-bloated-description-length) — together they cover the
+  # dual-mode F-18 detector.
+  # Source: Aghajani et al. arXiv 2102.07336. patterns.json F-18 (P5).
+  # Lens: 4 (client-friction) + 9 (ai-agent-consumability).
+  # Round: 2 / Welle D2.
+  # =========================================================================
+  apiq-bloated-description-boilerplate:
+    description: |
+      [F-18] Operation-descriptions share long common prefixes — likely
+      template-bleed. Both human and LLM-agent readers struggle to extract
+      operation-specific intent when boilerplate dominates description text.
+    message: "{{error}}"
+    given: "$"
+    severity: hint
+    recommended: false
+    then:
+      function: bloated-description
+    apiq-meta:
+      pattern-id: F-18
+      lenses: [ client-friction, ai-agent-consumability, operational-metadata ]
+      sources:
+        - {
+            type: vendor,
+            name: 'Aghajani et al. — Software Documentation: The Practitioners Perspective',
+            url: 'https://arxiv.org/abs/2102.07336',
+            summary: 'Welle D2 P5 — F-18 bloated-description boilerplate-detection mode (cross-operation prefix-frequency analysis)'
+          }
+        - {
+            type: mining,
+            phase: round2,
+            subagent: 'yaml-agent',
+            summary: 'Welle D2 P5 — F-18 bloated-description boilerplate-mode'
+          }
+      stakeholders: [ spec-author, client-dev, ai-agent ]
+      lifecycle-phase: documentation-time
+      defect-class: ergonomic
+      iso25010: [ usability, maintainability ]
+      codegen-targets: [ typescript, python, java, go, rust, csharp, kotlin ]
+      detection-precision: medium
+      auto-fix-safe: false
+      cost-impact: medium
+      mttr-impact: low
+      agent-readiness-impact: high
