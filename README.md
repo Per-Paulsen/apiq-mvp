@@ -6,22 +6,22 @@ Sibling project to [Expliq AI](https://github.com/Per-Paulsen/expliq-mvp): same 
 
 ## Live demo
 
-🌐 **[apiq-mvp.vercel.app](https://apiq-mvp.vercel.app)** — pre-seeded portfolio demo. State resets daily at 03:00 UTC.
+🌐 **[apiq-mvp.vercel.app](https://apiq-mvp.vercel.app)**: pre-seeded portfolio demo. State resets daily at 03:00 UTC.
 
 ```
 email:    demo@example.com
 password: demo
 ```
 
-The demo workspace ships with one analyzed spec (Swagger Petstore 3.0 — score 32, 14 findings) so you can immediately explore the apply-loop, version history, and export. Apply patches, undo, re-analyze — daily reset undoes everything for the next visitor.
+The demo workspace ships with one analyzed spec (Swagger Petstore 3.0, score 32, 14 findings) so you can immediately explore the apply-loop, version history, and export. Apply patches, undo, re-analyze. Daily reset undoes everything for the next visitor.
 
-![APIQ — analyzed Swagger Petstore spec with categorized findings and version history drawer](docs/screenshots/epic-06-versions-drawer.png)
+![APIQ: analyzed Swagger Petstore spec with categorized findings and version history drawer](docs/screenshots/epic-06-versions-drawer.png)
 
 ## What it does
 
 Drop in an OpenAPI spec (URL or paste). APIQ:
 
-1. **Analyzes** the spec with an LLM, producing a quality score and a categorized list of findings — auth, errors, naming, schema, examples.
+1. **Analyzes** the spec with an LLM, producing a quality score and a categorized list of findings: auth, errors, naming, schema, examples.
 2. **Narrates each finding** in plain language: what's wrong, why it matters, what to change.
 3. **Proposes one-click patches** for each finding. Apply, undo, or skip individually.
 4. **Versions every change**, so you can roll back, diff, or export at any point.
