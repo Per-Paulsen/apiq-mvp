@@ -14,8 +14,25 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "apiq",
-  description: "API Intelligence",
+  metadataBase: new URL("https://apiq-mvp.vercel.app"),
+  title: "APIQ — API Intelligence",
+  description:
+    "A knowledgeable second opinion for your OpenAPI specs. Detects spec drift, vendor patterns, and architecture issues.",
+  openGraph: {
+    title: "APIQ — API Intelligence",
+    description:
+      "A knowledgeable second opinion for your OpenAPI specs. Detects spec drift, vendor patterns, and architecture issues.",
+    url: "https://apiq-mvp.vercel.app",
+    siteName: "APIQ",
+    type: "website",
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "APIQ — API Intelligence",
+    description:
+      "A knowledgeable second opinion for your OpenAPI specs.",
+  },
 };
 
 export default function RootLayout({
