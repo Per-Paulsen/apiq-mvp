@@ -124,6 +124,19 @@ cd scripts/spike && npx tsx run-prompt.ts <variant> <spec>
 - **Server actions**: `"use server"` at top, `getRequiredSession()` first, return `{success}|{error}` with `error.kind`, never throw to client.
 - **Dynamic route params async** (Next.js 15+): `{ params }: { params: Promise<{ id }> }` — must `await params`.
 
+## E2E / Real-Data Verification (mandatory for every epic + behavior-changing patch)
+
+After automated checks pass, verify the full stack with real data. This catches data-shape mismatches between LLM output and UI expectations. Pick the method by what the change builds (both may combine):
+
+**A) UI changes** — Playwright browser verification with a real spec processed end-to-end:
+- Pre-flight: `npx kill-port 3000` before starting. **NEVER** `taskkill /IM node.exe /F` (kills the Playwright MCP server). If the dev server fails to compile (Turbopack panic, CSS errors), `rm -rf .next` and retry once.
+- Steps (single browser session): start `npm run dev` in the background → load Playwright via ToolSearch (`+playwright navigate`) → run the real pipeline: navigate to `http://localhost:3000/login`, log in as the configured test user (credentials in the test-infrastructure epic's results files), upload/select a sample OpenAPI spec from `openapi-examples/`, trigger analysis, wait for completion → verify the pages affected by the epic render correctly with real pipeline data, screenshot to the results file → **always** close the browser (`mcp__plugin_playwright_playwright__browser_close`).
+- Cleanup (always, pass or fail): close browser + `npx kill-port 3000`.
+
+**B) Backend-only changes** — write a permanent verification script: `scripts/verify-{epic-name}.ts`, run with `npx tsx scripts/verify-{epic-name}.ts`. Committed + kept for regression. Connects to the real DB via `dotenv/config` + standalone `PrismaClient`, imports project code via `@/` aliases.
+
+> Migrated 2026-06-26 from the former project-local `/dev` + `/patch` skill copies, removed in favor of the central `per-claude-skills` plugin. The plugin provides the generic TDD + E2E mechanics; the steps above are the apiq-specific run details the generic skills do not carry.
+
 ## Workflow rules
 
 - **Do not modify spec files.** If unclear, ask.
